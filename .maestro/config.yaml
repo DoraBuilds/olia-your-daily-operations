@@ -1,0 +1,13 @@
+---
+# Maestro global config for Olia
+# Run all flows: maestro test .maestro/flows
+# Run one flow:  maestro test .maestro/flows/01-kiosk-setup.yaml
+#
+# Prerequisites:
+#   iOS:     open Simulator before running
+#   Android: start AVD emulator before running
+#
+# Install: export PATH="$PATH:$HOME/.maestro/bin"
+
+flows:
+  - .maestro/flows/*.yaml

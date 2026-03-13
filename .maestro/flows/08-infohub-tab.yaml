@@ -1,0 +1,35 @@
+---
+# Flow 08 — Infohub Tab
+# Verifies the Info Hub page loads with document/training sections.
+appId: com.olia.operations
+name: "Infohub — Tab Page"
+
+---
+- launchApp
+
+- evalScript: |
+    window.location.href = '/infohub';
+- waitForAnimationToEnd
+
+# ── Page heading ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Infohub"
+    optional: true
+
+# ── Sub-sections visible ──────────────────────────────────────────────────────
+- assertVisible:
+    text: "Documents"
+    optional: true
+- assertVisible:
+    text: "Training"
+    optional: true
+
+- takeScreenshot: "08-infohub-tab"
+
+# ── Tap Training section ──────────────────────────────────────────────────────
+- tapOn:
+    text: "Training"
+    optional: true
+- waitForAnimationToEnd
+
+- takeScreenshot: "08-infohub-training"

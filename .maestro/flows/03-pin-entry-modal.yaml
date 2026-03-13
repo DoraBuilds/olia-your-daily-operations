@@ -1,0 +1,70 @@
+---
+# Flow 03 — PIN Entry Modal
+# Navigates to the grid, taps a checklist card, and verifies:
+# - PIN modal appears with correct UI
+# - Numpad digits are tappable
+# - Backspace works
+# - START button dismisses the modal
+appId: com.olia.operations
+name: "Kiosk — PIN Entry Modal"
+
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# ── Navigate through setup screen ────────────────────────────────────────────
+- tapOn:
+    text: "Launch Kiosk"
+
+- waitForAnimationToEnd
+
+# ── Tap checklist card to open PIN modal ─────────────────────────────────────
+- assertVisible:
+    text: "Table Setup Check"
+
+- tapOn:
+    text: "Table Setup Check"
+
+- waitForAnimationToEnd
+
+# ── PIN modal UI ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Insert PIN"
+- assertVisible:
+    text: "Authorize personnel access"
+- assertVisible:
+    text: "START"
+
+- takeScreenshot: "03-pin-modal-open"
+
+# ── Numpad: tap 4 digits ──────────────────────────────────────────────────────
+- tapOn:
+    text: "1"
+- tapOn:
+    text: "2"
+- tapOn:
+    text: "3"
+- tapOn:
+    text: "4"
+
+- waitForAnimationToEnd
+- takeScreenshot: "03-pin-modal-digits-entered"
+
+# ── PIN error visible (invalid in test env) ───────────────────────────────────
+- assertVisible:
+    text: "PIN not recognised"
+    optional: true
+
+# ── Dismiss with START ────────────────────────────────────────────────────────
+- tapOn:
+    text: "START"
+
+- waitForAnimationToEnd
+
+# ── Back on grid ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "What's on the agenda"
+
+- takeScreenshot: "03-pin-modal-dismissed"

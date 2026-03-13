@@ -1,0 +1,50 @@
+---
+# Flow 02 — Kiosk Grid Screen
+# Navigates through the setup screen (selects Terrace → Launch Kiosk)
+# then verifies the agenda grid, stat strip, checklist cards, and footer.
+# Terrace has a "Table Setup Check" (anytime) visible at all hours.
+appId: com.olia.operations
+name: "Kiosk — Grid Screen"
+
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# ── Setup screen: Terrace is default (mock fallback) ─────────────────────────
+- assertVisible:
+    text: "Launch Kiosk"
+
+- tapOn:
+    text: "Launch Kiosk"
+
+- waitForAnimationToEnd
+
+# ── Grid heading ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "What's on the agenda"
+
+# ── Stat strip ────────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Total"
+- assertVisible:
+    text: "Completed"
+- assertVisible:
+    text: "Remaining"
+
+# ── Header ────────────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Olia"
+- assertVisible:
+    text: "Admin"
+
+# ── Anytime checklist always visible ─────────────────────────────────────────
+- assertVisible:
+    text: "Table Setup Check"
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "System Online"
+
+- takeScreenshot: "02-kiosk-grid-screen"

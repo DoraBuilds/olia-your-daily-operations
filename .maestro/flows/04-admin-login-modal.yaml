@@ -1,0 +1,73 @@
+---
+# Flow 04 — Admin Login Modal
+# Verifies the Admin login modal: opens from kiosk grid, shows form fields,
+# validates empty submit, accepts text input, and can be closed.
+appId: com.olia.operations
+name: "Kiosk — Admin Login Modal"
+
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# ── Navigate through setup screen ────────────────────────────────────────────
+- tapOn:
+    text: "Launch Kiosk"
+
+- waitForAnimationToEnd
+
+# ── Open Admin login modal ────────────────────────────────────────────────────
+- assertVisible:
+    text: "Admin"
+
+- tapOn:
+    text: "Admin"
+
+- waitForAnimationToEnd
+
+# ── Modal assertions ──────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Admin login"
+- assertVisible:
+    text: "Email"
+- assertVisible:
+    text: "Password"
+- assertVisible:
+    text: "Sign in"
+
+- takeScreenshot: "04-admin-login-modal-open"
+
+# ── Enter email via placeholder tap ──────────────────────────────────────────
+- tapOn:
+    text: "your@email.com"
+- inputText: "test@example.com"
+
+# ── Enter password ────────────────────────────────────────────────────────────
+- tapOn:
+    text: "Password"
+- inputText: "wrongpassword"
+
+- tapOn:
+    text: "Sign in"
+
+- waitForAnimationToEnd
+
+# ── Error message (Supabase rejects invalid creds) ────────────────────────────
+- assertVisible:
+    text: "Invalid email or password."
+    optional: true
+
+- takeScreenshot: "04-admin-login-invalid-creds"
+
+# ── Close modal by tapping backdrop (outside card) ────────────────────────────
+- tapOn:
+    point: "10%, 15%"
+
+- waitForAnimationToEnd
+
+# ── Back on grid ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "What's on the agenda"
+
+- takeScreenshot: "04-admin-login-closed"

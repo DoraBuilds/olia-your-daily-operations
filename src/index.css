@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Olia Brand Colors — all HSL */
+    --sage:            219 46% 19%;   /* midnight blue #1A2A47 */
+    --sage-deep:       219 52% 13%;   /* hover/active */
+    --sage-light:      219 40% 93%;   /* light blue tint for badges */
+
+    --lavender:        273 24% 72%;   /* dusty lavender #B8A5C8 */
+    --lavender-deep:   273 32% 50%;   /* WCAG AA on lavender-light */
+    --lavender-light:  273 20% 93%;   /* light lavender tint */
+
+    --powder-blue:       210 44% 78%;   /* structural #B0C8E0 */
+    --powder-blue-deep:  210 52% 42%;
+    --powder-blue-light: 210 35% 93%;
+
+    --background:      30 60% 98%;   /* alabaster white #FDFAF7 */
+    --foreground:      17 30% 9%;    /* espresso #1E1410 */
+
+    --card:            0 0% 100%;    /* pure white #FFFFFF */
+    --card-foreground: 17 30% 9%;
+
+    --popover:         0 0% 100%;
+    --popover-foreground: 17 30% 9%;
+
+    --primary:         219 46% 19%;  /* midnight blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:       273 24% 72%;
+    --secondary-foreground: 17 30% 9%;
+
+    --muted:           37 20% 95%;
+    --muted-foreground: 0 0% 50%;    /* warm gray #857B72 approx */
+
+    --accent:          219 40% 93%;  /* light midnight tint */
+    --accent-foreground: 219 46% 19%;
+
+    --border:          37 13% 83%;   /* warm stone #DDD5C8 */
+    --input:           37 13% 83%;
+    --ring:            219 46% 19%;
+
+    /* Status — semantically distinct from brand primary */
+    --status-ok:       146 30% 32%;  /* forest green #3A6B4F */
+    --status-ok-bg:    146 25% 93%;
+    --status-warn:     29 51% 53%;   /* warm amber #C4854A */
+    --status-warn-bg:  29 45% 93%;
+    --status-error:    351 50% 37%;  /* deep rose #8E2F3E */
+    --status-error-bg: 351 40% 94%;
+
+    --radius: 0.875rem;
+
+    --sidebar-background:          30 30% 97%;   /* near-alabaster sidebar */
+    --sidebar-foreground:          17 30% 9%;
+    --sidebar-primary:             219 46% 19%;  /* midnight blue */
+    --sidebar-primary-foreground:  0 0% 100%;
+    --sidebar-accent:              219 40% 93%;
+    --sidebar-accent-foreground:   219 46% 19%;
+    --sidebar-border:              37 13% 83%;
+    --sidebar-ring:                219 46% 19%;
+
+    /* Typography */
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+
+    /* Shadows — espresso hue */
+    --shadow-sm: 0 1px 3px 0 hsl(17 30% 9% / 0.06), 0 1px 2px -1px hsl(17 30% 9% / 0.04);
+    --shadow-md: 0 4px 12px 0 hsl(17 30% 9% / 0.07), 0 2px 6px -2px hsl(17 30% 9% / 0.05);
+    --shadow-card: 0 2px 8px 0 hsl(17 30% 9% / 0.06);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  /* Status badge helpers */
+  .status-ok {
+    background-color: hsl(var(--status-ok-bg));
+    color: hsl(var(--status-ok));
+  }
+  .status-warn {
+    background-color: hsl(var(--status-warn-bg));
+    color: hsl(var(--status-warn));
+  }
+  .status-error {
+    background-color: hsl(var(--status-error-bg));
+    color: hsl(var(--status-error));
+  }
+
+  /* Card elevation */
+  .card-surface {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Section label */
+  .section-label {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Score ring helpers */
+  .score-ring {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid hsl(var(--border));
+  }
+
+  /* ── Safe area utilities (Capacitor / iOS notch / Android edge-to-edge) ── */
+
+  /* Bottom nav sits above the home indicator */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Top content respects status bar height */
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Full-bleed page wrapper fills behind status bar + home indicator */
+  #root {
+    /* Prevents content from being obscured by iOS home indicator or
+       Android gesture nav bar when running in Capacitor */
+    min-height: 100dvh;
+  }
+}

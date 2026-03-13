@@ -1,0 +1,34 @@
+---
+# Flow 01 — Kiosk Setup Screen
+# Verifies the setup screen UI when no location is stored.
+# Mock fallback locations appear automatically when Supabase has no data.
+appId: com.olia.operations
+name: "Kiosk — Setup Screen"
+
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# Branding
+- assertVisible:
+    text: "Olia Kiosk"
+
+# Location prompt
+- assertVisible:
+    text: "Select a location to launch"
+
+# Mock fallback location visible in the dropdown
+- assertVisible:
+    text: "Terrace"
+
+# Launch button
+- assertVisible:
+    text: "Launch Kiosk"
+
+# System Online footer
+- assertVisible:
+    text: "System Online"
+
+- takeScreenshot: "01-kiosk-setup-screen"

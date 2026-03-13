@@ -1,0 +1,61 @@
+---
+# Flow 09 — Checklist Runner
+# Full flow: setup screen → grid → tap checklist → PIN modal → enter digits → error → dismiss
+appId: com.olia.operations
+name: "Kiosk — Checklist Runner"
+
+---
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# ── Navigate through setup screen ────────────────────────────────────────────
+- tapOn:
+    text: "Launch Kiosk"
+
+- waitForAnimationToEnd
+
+# ── Tap Table Setup Check ─────────────────────────────────────────────────────
+- assertVisible:
+    text: "Table Setup Check"
+
+- tapOn:
+    text: "Table Setup Check"
+
+- waitForAnimationToEnd
+
+# ── PIN modal ─────────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Insert PIN"
+
+- takeScreenshot: "09-runner-pin-modal"
+
+# ── Enter test PIN ────────────────────────────────────────────────────────────
+- tapOn:
+    text: "1"
+- tapOn:
+    text: "2"
+- tapOn:
+    text: "3"
+- tapOn:
+    text: "4"
+
+- waitForAnimationToEnd
+- takeScreenshot: "09-runner-pin-entered"
+
+# ── Verify error state (PIN invalid in test env) ──────────────────────────────
+- assertVisible:
+    text: "PIN not recognised"
+    optional: true
+
+# ── Dismiss ───────────────────────────────────────────────────────────────────
+- tapOn:
+    text: "START"
+
+- waitForAnimationToEnd
+
+- assertVisible:
+    text: "What's on the agenda"
+
+- takeScreenshot: "09-runner-back-to-grid"

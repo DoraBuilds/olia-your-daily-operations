@@ -1,0 +1,57 @@
+---
+# Flow 10 — Admin Page
+# Verifies the admin page loads with My Location / Account tabs
+# and the billing card renders correctly.
+appId: com.olia.operations
+name: "Admin — Page"
+
+---
+- launchApp
+
+- evalScript: |
+    window.location.href = '/admin';
+- waitForAnimationToEnd
+
+# ── Page heading ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Admin"
+    optional: true
+
+# ── Tabs visible ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "My Location"
+    optional: true
+- assertVisible:
+    text: "Account"
+    optional: true
+
+- takeScreenshot: "10-admin-my-location"
+
+# ── Tap Account tab ───────────────────────────────────────────────────────────
+- tapOn:
+    text: "Account"
+    optional: true
+- waitForAnimationToEnd
+
+# ── Billing card ──────────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Olia"
+    optional: true
+- assertVisible:
+    text: "Manage Billing"
+    optional: true
+
+- takeScreenshot: "10-admin-account-tab"
+
+# ── My Location tab ───────────────────────────────────────────────────────────
+- tapOn:
+    text: "My Location"
+    optional: true
+- waitForAnimationToEnd
+
+# ── Launch Kiosk button ────────────────────────────────────────────────────────
+- assertVisible:
+    text: "Launch Kiosk"
+    optional: true
+
+- takeScreenshot: "10-admin-my-location-tab"

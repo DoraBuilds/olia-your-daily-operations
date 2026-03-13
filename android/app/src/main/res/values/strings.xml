@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Olia</string>
+    <string name="title_activity_main">Olia</string>
+    <string name="package_name">com.olia.operations</string>
+    <string name="custom_url_scheme">com.olia.operations</string>
+</resources>

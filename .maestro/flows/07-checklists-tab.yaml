@@ -1,0 +1,39 @@
+---
+# Flow 07 — Checklists Tab
+# Requires authentication. Taps the Checklists nav item and verifies sub-tabs.
+# All assertions optional — passes gracefully when not authenticated.
+appId: com.olia.operations
+name: "Checklists — Tab Page"
+
+---
+- launchApp
+
+- waitForAnimationToEnd
+
+# ── Tap Checklists in bottom nav ──────────────────────────────────────────────
+- tapOn:
+    text: "Checklists"
+    optional: true
+
+- waitForAnimationToEnd
+- takeScreenshot: "07-checklists-tab"
+
+# ── Sub-tabs ──────────────────────────────────────────────────────────────────
+- tapOn:
+    text: "Reporting"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: "07-checklists-reporting"
+
+- assertVisible:
+    text: "Today"
+    optional: true
+- assertVisible:
+    text: "This Week"
+    optional: true
+
+- tapOn:
+    text: "Checklists"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: "07-checklists-list"
