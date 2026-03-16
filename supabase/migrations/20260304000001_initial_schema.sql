@@ -105,6 +105,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists checklists_updated_at on checklists;
 create trigger checklists_updated_at
   before update on checklists
   for each row execute function update_updated_at();

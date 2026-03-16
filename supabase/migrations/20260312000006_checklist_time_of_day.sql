@@ -9,6 +9,9 @@ ALTER TABLE checklists
   ADD COLUMN IF NOT EXISTS time_of_day text NOT NULL DEFAULT 'anytime'
   CHECK (time_of_day IN ('morning', 'afternoon', 'evening', 'anytime'));
 
+-- Drop old version first so we can change the return type (adding time_of_day column)
+DROP FUNCTION IF EXISTS get_kiosk_checklists(uuid);
+
 -- Update the kiosk RPC to include time_of_day
 CREATE OR REPLACE FUNCTION get_kiosk_checklists(p_location_id uuid)
 RETURNS TABLE(
