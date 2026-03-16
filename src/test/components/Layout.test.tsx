@@ -1,30 +1,38 @@
-import { screen } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-    },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    }),
-  },
+// ─── Hoist mock vars ──────────────────────────────────────────────────────────
+const { mockSignOut, mockNavigate, mockUseAuth } = vi.hoisted(() => ({
+  mockSignOut: vi.fn().mockResolvedValue({}),
+  mockNavigate: vi.fn(),
+  mockUseAuth: vi.fn(),
 }));
 
+// Default: not logged in
+mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: mockUseAuth,
+}));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const MOCK_USER = { id: "user-1", email: "owner@example.com" };
+
 describe("Layout", () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
+    mockSignOut.mockClear();
+    mockNavigate.mockClear();
+  });
+
   it("renders children content", () => {
-    renderWithProviders(
-      <Layout>
-        <p>Hello children</p>
-      </Layout>
-    );
+    renderWithProviders(<Layout><p>Hello children</p></Layout>);
     expect(screen.getByText("Hello children")).toBeInTheDocument();
   });
 
@@ -42,7 +50,6 @@ describe("Layout", () => {
 
   it("does NOT render a header element when title is omitted", () => {
     renderWithProviders(<Layout><p>no title</p></Layout>);
-    // header element should not be present
     expect(document.querySelector("header")).toBeNull();
   });
 
@@ -62,8 +69,40 @@ describe("Layout", () => {
 
   it("renders the BottomNav", () => {
     renderWithProviders(<Layout title="T"><span /></Layout>);
-    // BottomNav renders 4 nav links
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Checklists")).toBeInTheDocument();
+  });
+
+  it("does NOT show logout button when user is not authenticated", () => {
+    mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
+    renderWithProviders(<Layout title="T"><span /></Layout>);
+    expect(screen.queryByRole("button", { name: /log out/i })).toBeNull();
+  });
+
+  it("shows logout button when user is authenticated", () => {
+    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
+    renderWithProviders(<Layout title="T"><span /></Layout>);
+    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+  });
+
+  it("logout button is visible alongside custom headerRight content", () => {
+    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
+    renderWithProviders(
+      <Layout title="T" headerRight={<button>Action</button>}><span /></Layout>
+    );
+    expect(screen.getByText("Action")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+  });
+
+  it("calls signOut and navigates to / when logout button is clicked", async () => {
+    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
+    renderWithProviders(<Layout title="T"><span /></Layout>);
+
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith("/");
+    });
   });
 });
