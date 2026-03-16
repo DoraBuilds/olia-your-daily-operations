@@ -95,6 +95,18 @@ vi.mock("@/hooks/useTeamMembers", () => ({
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
 }));
 
+const mockChecklists = [
+  { id: "c1", title: "Opening Checklist", folder_id: null, location_id: "l1", schedule: null, sections: [], time_of_day: "morning", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: "c2", title: "Closing Checklist", folder_id: null, location_id: "l1", schedule: null, sections: [], time_of_day: "evening", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+];
+
+vi.mock("@/hooks/useChecklists", () => ({
+  useChecklists: () => ({ data: mockChecklists, isLoading: false }),
+  useFolders: () => ({ data: [], isLoading: false }),
+  useSaveChecklist: () => ({ mutate: vi.fn() }),
+  useDeleteChecklist: () => ({ mutate: vi.fn() }),
+}));
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Admin page", () => {
@@ -241,9 +253,10 @@ describe("Admin page", () => {
   it("clicking 'Archived' toggle shows archived staff (Bob Jones)", async () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      expect(screen.getByText("Archived")).toBeInTheDocument();
+      // the toggle button has accessible name "Archived" (distinct from "Archive" action buttons)
+      expect(screen.getByRole("button", { name: /^archived$/i })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("Archived"));
+    fireEvent.click(screen.getByRole("button", { name: /^archived$/i }));
     await waitFor(() => {
       expect(screen.getByText("Bob Jones")).toBeInTheDocument();
     });
@@ -253,9 +266,9 @@ describe("Admin page", () => {
   it("archived staff has Restore button", async () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      expect(screen.getByText("Archived")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^archived$/i })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("Archived"));
+    fireEvent.click(screen.getByRole("button", { name: /^archived$/i }));
     await waitFor(() => {
       const restoreBtns = screen.getAllByRole("button", { name: /restore/i });
       expect(restoreBtns.length).toBeGreaterThanOrEqual(1);
@@ -265,8 +278,8 @@ describe("Admin page", () => {
   // 18. Archived staff has Delete permanently button
   it("archived staff has 'Delete permanently' button", async () => {
     renderWithProviders(<Admin />);
-    await waitFor(() => expect(screen.getByText("Archived")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Archived"));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^archived$/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /^archived$/i }));
     await waitFor(() => {
       const deleteBtns = screen.getAllByRole("button", { name: /delete permanently/i });
       expect(deleteBtns.length).toBeGreaterThanOrEqual(1);
@@ -420,7 +433,7 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByText("Main Branch")).toBeInTheDocument();
+      expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1);
     });
     // Find the "All locations" section and grab its trash (delete) buttons
     // Each location row: [MapPin] [name/addr] [Pencil btn] [Trash btn]
@@ -453,7 +466,7 @@ describe("Admin page", () => {
   it("confirm modal has Cancel button", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
-    await waitFor(() => expect(screen.getByText("Main Branch")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
     const allLocationsHeading = screen.getByText("All locations");
     const section = allLocationsHeading.closest("section");
     if (section) {
@@ -647,6 +660,103 @@ describe("Admin page", () => {
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
       expect(screen.getByText("Checklist assignment")).toBeInTheDocument();
+    });
+  });
+
+  // ── Opening hours & checklists ─────────────────────────────────────────────
+
+  it("location detail shows formatted opening hours when trading_hours is structured JSON", async () => {
+    const jsonHours = JSON.stringify({
+      mon: { open: true, start: "09:00", end: "18:00" },
+      tue: { open: true, start: "09:00", end: "18:00" },
+      wed: { open: true, start: "09:00", end: "18:00" },
+      thu: { open: true, start: "09:00", end: "18:00" },
+      fri: { open: true, start: "09:00", end: "18:00" },
+      sat: { open: true, start: "10:00", end: "16:00" },
+      sun: { open: false, start: "10:00", end: "18:00" },
+    });
+    // use mockReturnValue (not Once) so all re-renders get the JSON data
+    mockUseLocations.mockReturnValue({
+      data: [{ ...mockLocations[0], trading_hours: jsonHours }, mockLocations[1]],
+      isLoading: false,
+    });
+    renderWithProviders(<Admin />);
+    await waitFor(() => {
+      // When trading_hours is JSON, the detail view shows formatted text with day abbreviations
+      const allParas = document.querySelectorAll("p");
+      const formattedEl = Array.from(allParas).find(el =>
+        el.textContent?.includes("Mon:") && el.textContent?.includes("09:00")
+      );
+      expect(formattedEl).toBeTruthy();
+    });
+    // Restore default mock for subsequent tests
+    mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
+  });
+
+  it("location form shows Opening hours with time inputs for open days and 'Closed' for closed days", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
+    // click the pencil/edit button on the first location
+    const allLocationsSection = screen.getByText("All locations").closest("section");
+    if (allLocationsSection) {
+      const pencilBtns = Array.from(allLocationsSection.querySelectorAll("button")).filter(btn => !btn.textContent?.trim());
+      if (pencilBtns.length > 0) {
+        fireEvent.click(pencilBtns[0] as HTMLElement);
+        await waitFor(() => {
+          expect(screen.getByText("Opening hours")).toBeInTheDocument();
+          // Sun is closed by default in parseHours
+          expect(screen.getByText("Closed")).toBeInTheDocument();
+        });
+      }
+    }
+  });
+
+  it("My Location tab shows assigned checklist names for current location", async () => {
+    renderWithProviders(<Admin />);
+    await waitFor(() => {
+      expect(screen.getByText("Assigned checklists")).toBeInTheDocument();
+      expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+      expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    });
+  });
+
+  it("My Location tab shows 'no checklists' message for a location with no assigned checklists", async () => {
+    // Switch to a location with no checklists (City Centre, id=l2, no checklists in mock)
+    renderWithProviders(<Admin />);
+    // Change location selector to l2
+    await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
+    const locationSelect = document.querySelector("select");
+    if (locationSelect) {
+      fireEvent.change(locationSelect, { target: { value: "l2" } });
+      await waitFor(() => {
+        expect(screen.getByText(/No checklists assigned/i)).toBeInTheDocument();
+      });
+    }
+  });
+
+  it("staff edit form shows 'New PIN (optional)' label for existing profiles", async () => {
+    renderWithProviders(<Admin />);
+    await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
+    // click the edit pencil on Alice Smith
+    const staffSection = screen.getByText("Staff profiles").closest("section");
+    if (staffSection) {
+      const editBtns = Array.from(staffSection.querySelectorAll("button[aria-label='Edit']"));
+      if (editBtns.length > 0) {
+        fireEvent.click(editBtns[0] as HTMLElement);
+        await waitFor(() => {
+          expect(screen.getByText("New PIN (optional)")).toBeInTheDocument();
+        });
+      }
+    }
+  });
+
+  it("Account tab shows checklist assignment with checklist titles", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => {
+      expect(screen.getByText("Checklist assignment")).toBeInTheDocument();
+      expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);
     });
   });
 

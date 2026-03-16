@@ -22,6 +22,7 @@ import {
   useRestoreStaffProfile, useDeleteStaffProfile,
 } from "@/hooks/useStaffProfiles";
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
+import { useChecklists, type ChecklistItem } from "@/hooks/useChecklists";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -45,10 +46,40 @@ const ROLE_COLOR_MAP: Record<string, string> = {
   Cleaner: "bg-muted text-muted-foreground",
 };
 
-const MOCK_CHECKLISTS: Record<string, string[]> = {
-  l1: ["Opening Checklist", "Closing Checklist", "Kitchen Safety Check"],
-  l2: ["Terrace Opening", "End of Day", "Table Setup"],
+// ─── Opening hours helpers ────────────────────────────────────────────────────
+
+type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+interface DayHours { open: boolean; start: string; end: string; }
+type WeeklyHours = Record<DayKey, DayHours>;
+
+const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const DAY_LABELS: Record<DayKey, string> = {
+  mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
 };
+const DEFAULT_HOURS: WeeklyHours = {
+  mon: { open: true, start: "08:00", end: "22:00" },
+  tue: { open: true, start: "08:00", end: "22:00" },
+  wed: { open: true, start: "08:00", end: "22:00" },
+  thu: { open: true, start: "08:00", end: "22:00" },
+  fri: { open: true, start: "08:00", end: "22:00" },
+  sat: { open: true, start: "08:00", end: "22:00" },
+  sun: { open: false, start: "10:00", end: "18:00" },
+};
+
+function parseHours(raw: string | null | undefined): WeeklyHours {
+  if (!raw) return { ...DEFAULT_HOURS };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && "mon" in parsed) return parsed as WeeklyHours;
+  } catch { /* not JSON — old plain-text value */ }
+  return { ...DEFAULT_HOURS };
+}
+
+function formatHoursText(hours: WeeklyHours): string {
+  const openDays = DAY_KEYS.filter(d => hours[d].open);
+  if (!openDays.length) return "Closed all week";
+  return openDays.map(d => `${DAY_LABELS[d]}: ${hours[d].start}–${hours[d].end}`).join(" · ");
+}
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
@@ -140,18 +171,20 @@ function StaffProfileModal({
   profile, locations, roles, onClose, onSave,
 }: {
   profile: StaffProfile | null; locations: Location[]; roles: string[];
-  onClose: () => void; onSave: (p: StaffProfile) => void;
+  onClose: () => void; onSave: (p: StaffProfile & { rawPin?: string }) => void;
 }) {
   const isEdit = !!profile;
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
   const [locationId, setLocationId] = useState(profile?.location_id ?? locations[0]?.id ?? "");
   const [role, setRole] = useState(profile?.role ?? roles[0] ?? "");
-  const [pin, setPin] = useState(() => profile?.pin ?? generatePin());
+  // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
+  const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !locationId) return;
+    if (!isEdit && !pin) return; // new staff must have a PIN
     const now = new Date().toISOString();
     onSave({
       id: profile?.id ?? "",
@@ -160,7 +193,10 @@ function StaffProfileModal({
       last_name: lastName.trim(),
       role,
       status: profile?.status ?? "active",
-      pin,
+      // rawPin triggers SHA-256 hashing in useSaveStaffProfile;
+      // omit for edits where the manager didn't enter a new PIN (existing PIN preserved)
+      ...(pin ? { rawPin: pin } : {}),
+      pin: profile?.pin ?? "",   // satisfies StaffProfile type; hook uses rawPin when present
       last_used_at: profile?.last_used_at ?? null,
       archived_at: profile?.archived_at ?? null,
       created_at: profile?.created_at ?? now,
@@ -220,8 +256,12 @@ function StaffProfileModal({
             ))}
           </div>
         </FormField>
-        <FormField label={isEdit ? "PIN" : "Staff PIN"}>
-          {!isEdit && (
+        <FormField label={isEdit ? "New PIN (optional)" : "Staff PIN"}>
+          {isEdit ? (
+            <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+              Leave blank to keep the existing PIN. Enter a new 4-digit PIN to change it.
+            </p>
+          ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
               Note this PIN and share it with the staff member — they'll use it to log in on the kiosk.
             </p>
@@ -231,7 +271,7 @@ function StaffProfileModal({
               type="text" value={pin} maxLength={4}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               className={cn(inputCls, "text-center font-mono text-lg tracking-widest flex-1")}
-              placeholder="4-digit PIN"
+              placeholder={isEdit ? "Enter new PIN to change" : "4-digit PIN"}
             />
             <button type="button" onClick={() => setPin(generatePin())}
               className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors">
@@ -239,7 +279,7 @@ function StaffProfileModal({
             </button>
           </div>
         </FormField>
-        <SaveButton disabled={!firstName.trim() || !locationId} label={isEdit ? "Save changes" : "Add profile"} />
+        <SaveButton disabled={!firstName.trim() || !locationId || (!isEdit && !pin)} label={isEdit ? "Save changes" : "Add profile"} />
       </form>
     </BottomSheet>
   );
@@ -359,10 +399,12 @@ function LocationModal({
 }) {
   const [name, setName] = useState(location?.name ?? "");
   const [address, setAddress] = useState(location?.address ?? "");
-  const [tradingHours, setTradingHours] = useState(location?.trading_hours ?? "");
+  const [hours, setHours] = useState<WeeklyHours>(() => parseHours(location?.trading_hours));
   const [email, setEmail] = useState(location?.contact_email ?? "");
   const [phone, setPhone] = useState(location?.contact_phone ?? "");
-  const [threshold, setThreshold] = useState(location?.archive_threshold_days ?? 90);
+
+  const updateDay = (day: DayKey, patch: Partial<DayHours>) =>
+    setHours(prev => ({ ...prev, [day]: { ...prev[day], ...patch } }));
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -371,10 +413,11 @@ function LocationModal({
       id: location?.id ?? "",
       name: name.trim(),
       address: address.trim(),
-      trading_hours: tradingHours.trim(),
+      trading_hours: JSON.stringify(hours),
       contact_email: email.trim(),
       contact_phone: phone.trim(),
-      archive_threshold_days: threshold,
+      // preserve existing archive threshold (or default for new locations)
+      archive_threshold_days: location?.archive_threshold_days ?? 90,
     });
     onClose();
   };
@@ -397,12 +440,39 @@ function LocationModal({
             placeholder="e.g. 14 Rue de la Paix, Lyon" className={inputCls}
           />
         </FormField>
-        <FormField label="Trading hours">
-          <input
-            type="text" value={tradingHours}
-            onChange={e => setTradingHours(e.target.value)}
-            placeholder="e.g. Mon–Sat 08:00–22:00" className={inputCls}
-          />
+        <FormField label="Opening hours">
+          <div className="space-y-1.5">
+            {DAY_KEYS.map(day => (
+              <div key={day} className="flex items-center gap-2.5 py-0.5">
+                <Switch
+                  checked={hours[day].open}
+                  onCheckedChange={val => updateDay(day, { open: val })}
+                />
+                <span className="w-8 text-xs font-medium text-muted-foreground shrink-0">
+                  {DAY_LABELS[day]}
+                </span>
+                {hours[day].open ? (
+                  <>
+                    <input
+                      type="time"
+                      value={hours[day].start}
+                      onChange={e => updateDay(day, { start: e.target.value })}
+                      className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <span className="text-xs text-muted-foreground">–</span>
+                    <input
+                      type="time"
+                      value={hours[day].end}
+                      onChange={e => updateDay(day, { end: e.target.value })}
+                      className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Closed</span>
+                )}
+              </div>
+            ))}
+          </div>
         </FormField>
         <FormField label="Contact email">
           <input
@@ -418,13 +488,6 @@ function LocationModal({
             placeholder="e.g. +33 4 78 00 11 22" className={inputCls}
           />
         </FormField>
-        <FormField label="Archive threshold (days)">
-          <input
-            type="number" value={threshold}
-            onChange={e => setThreshold(Number(e.target.value))}
-            min={1} className={inputCls}
-          />
-        </FormField>
         <SaveButton disabled={!name.trim()} label={location ? "Save changes" : "Add location"} />
       </form>
     </BottomSheet>
@@ -436,6 +499,7 @@ function LocationModal({
 interface MyLocationTabProps {
   locations: Location[];
   staffProfiles: StaffProfile[];
+  checklists: ChecklistItem[];
   roles: string[];
   currentLocationId: string;
   setCurrentLocationId: (id: string) => void;
@@ -453,7 +517,7 @@ interface MyLocationTabProps {
 }
 
 function MyLocationTab({
-  locations, staffProfiles, roles, currentLocationId, setCurrentLocationId,
+  locations, staffProfiles, checklists, roles, currentLocationId, setCurrentLocationId,
   isOwner, permissions,
   onAddLocation, onEditLocation, onUpdateLocation, onAddStaff, onEditStaff, onArchiveStaff, onRestoreStaff, onDeleteStaff,
   onLaunchKiosk,
@@ -547,12 +611,21 @@ function MyLocationTab({
               <p className="text-sm text-foreground">{currentLocation.address}</p>
             </div>
           )}
-          {currentLocation.trading_hours && (
-            <div className="flex items-start gap-2">
-              <Clock size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-sm text-foreground">{currentLocation.trading_hours}</p>
-            </div>
-          )}
+          {currentLocation.trading_hours && (() => {
+            let display = currentLocation.trading_hours;
+            try {
+              const parsed = JSON.parse(currentLocation.trading_hours) as WeeklyHours;
+              if (parsed && typeof parsed === "object" && "mon" in parsed) {
+                display = formatHoursText(parsed);
+              }
+            } catch { /* plain-text fallback */ }
+            return (
+              <div className="flex items-start gap-2">
+                <Clock size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-foreground">{display}</p>
+              </div>
+            );
+          })()}
           {currentLocation.contact_email && (
             <div className="flex items-start gap-2">
               <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
@@ -622,13 +695,17 @@ function MyLocationTab({
           <button
             onClick={() => setShowArchived(!showArchived)}
             className={cn(
-              "text-xs font-medium px-3 py-2 rounded-xl border transition-colors whitespace-nowrap",
+              "flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border transition-colors whitespace-nowrap",
               showArchived
                 ? "bg-muted text-foreground border-border"
-                : "text-muted-foreground border-transparent hover:text-foreground",
+                : "text-muted-foreground border-border hover:text-foreground hover:bg-muted",
             )}
           >
-            {showArchived ? "Active" : "Archived"}
+            {showArchived ? (
+              <><RotateCcw size={11} /> Active</>
+            ) : (
+              <><Archive size={11} /> Archived</>
+            )}
           </button>
         </div>
 
@@ -699,14 +776,23 @@ function MyLocationTab({
       {/* Assigned Checklists */}
       <div className="card-surface p-4">
         <p className="section-label mb-3">Assigned checklists</p>
-        <div className="space-y-2">
-          {(MOCK_CHECKLISTS[currentLocation.id] ?? []).map(name => (
-            <div key={name} className="flex items-center gap-2 py-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-sage shrink-0" />
-              <p className="text-sm text-foreground">{name}</p>
+        {(() => {
+          const locationChecklists = checklists.filter(c => c.location_id === currentLocation.id);
+          return locationChecklists.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No checklists assigned to this location yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {locationChecklists.map(c => (
+                <div key={c.id} className="flex items-center gap-2 py-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sage shrink-0" />
+                  <p className="text-sm text-foreground">{c.title}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </div>
 
       {/* Notifications & Alerts */}
@@ -741,6 +827,7 @@ interface AccountTabProps {
   locations: Location[];
   staffProfiles: StaffProfile[];
   teamMembers: TeamMember[];
+  checklists: ChecklistItem[];
   onSavePerms: (memberId: string, perms: ManagerPermissions) => void;
   roles: string[];
   setRoles: React.Dispatch<React.SetStateAction<string[]>>;
@@ -754,7 +841,7 @@ interface AccountTabProps {
 }
 
 function AccountTab({
-  locations, staffProfiles, teamMembers, onSavePerms,
+  locations, staffProfiles, teamMembers, checklists, onSavePerms,
   roles, setRoles, auditLog,
   onAddLocation, onEditLocation, onDeleteLocation,
   onInviteMember, onEditMember, onDeleteMember,
@@ -937,10 +1024,23 @@ function AccountTab({
 
       {/* Checklist Assignment placeholder */}
       <div className="card-surface p-4">
-        <p className="section-label mb-2">Checklist assignment</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Assign checklists to team members across locations. Full assignment management coming soon.
-        </p>
+        <p className="section-label mb-3">Checklist assignment</p>
+        {checklists.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No checklists created yet.</p>
+        ) : (
+          <div className="card-surface divide-y divide-border">
+            {checklists.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">{c.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {locations.find(l => l.id === c.location_id)?.name ?? "All locations"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Audit Log */}
@@ -972,7 +1072,6 @@ function AccountTab({
         <p className="section-label mb-3">Role management</p>
         <div className="card-surface divide-y divide-border">
           {roles.map((role, index) => {
-            const isDefault = DEFAULT_STAFF_ROLES.includes(role);
             const isInUse = staffProfiles.some(sp => sp.role === role);
             const isRenaming = renamingRole?.index === index;
             return (
@@ -1003,12 +1102,6 @@ function AccountTab({
                 ) : (
                   <>
                     <p className="flex-1 text-sm text-foreground">{role}</p>
-                    <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                      isDefault ? "bg-sage-light text-sage-deep" : "bg-lavender-light text-lavender-deep",
-                    )}>
-                      {isDefault ? "Default" : "Custom"}
-                    </span>
                     <button
                       onClick={() => setRenamingRole({ index, value: role })}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
@@ -1103,6 +1196,7 @@ export default function Admin() {
   const { data: locations = [] } = useLocations();
   const { data: staffProfiles = [] } = useStaffProfiles();
   const { data: teamMembers = [] } = useTeamMembers();
+  const { data: checklists = [] } = useChecklists();
   const saveLocationMut = useSaveLocation();
   const deleteLocationMut = useDeleteLocation();
   const saveStaffMut = useSaveStaffProfile();
@@ -1292,6 +1386,7 @@ export default function Admin() {
           <MyLocationTab
             locations={locations}
             staffProfiles={staffProfiles}
+            checklists={checklists}
             roles={roles}
             currentLocationId={currentLocationId}
             setCurrentLocationId={setCurrentLocationId}
@@ -1314,6 +1409,7 @@ export default function Admin() {
             locations={locations}
             staffProfiles={staffProfiles}
             teamMembers={teamMembers}
+            checklists={checklists}
             onSavePerms={savePerms}
             roles={roles}
             setRoles={setRoles}
