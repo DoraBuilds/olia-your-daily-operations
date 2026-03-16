@@ -70,8 +70,13 @@ const mockTeam = [
   { id: "tm2", name: "Mike Manager", email: "mike@example.com", role: "Manager", initials: "MM", location_ids: ["l2"], permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: false, view_reporting: true, edit_location_details: false, manage_alerts: false, export_data: false, override_inactivity_threshold: false } },
 ];
 
+const { mockUseLocations } = vi.hoisted(() => ({
+  mockUseLocations: vi.fn(),
+}));
+mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
+
 vi.mock("@/hooks/useLocations", () => ({
-  useLocations: () => ({ data: mockLocations, isLoading: false }),
+  useLocations: mockUseLocations,
   useSaveLocation: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
   useDeleteLocation: () => ({ mutate: vi.fn() }),
 }));
@@ -642,6 +647,26 @@ describe("Admin page", () => {
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
       expect(screen.getByText("Checklist assignment")).toBeInTheDocument();
+    });
+  });
+
+  // ── My Location empty state (new user with no locations) ───────────────────
+
+  it("My Location tab shows onboarding empty state when user has no locations", async () => {
+    mockUseLocations.mockReturnValueOnce({ data: [], isLoading: false });
+    renderWithProviders(<Admin />);
+    await waitFor(() => {
+      // Both the h2 heading and the CTA button contain this text
+      const matches = screen.getAllByText("Add your first location");
+      expect(matches.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("My Location empty state includes an explanatory message", async () => {
+    mockUseLocations.mockReturnValueOnce({ data: [], isLoading: false });
+    renderWithProviders(<Admin />);
+    await waitFor(() => {
+      expect(screen.getByText(/locations are where your team works/i)).toBeInTheDocument();
     });
   });
 });

@@ -34,12 +34,20 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <MemoryRouter>{children}</MemoryRouter>;
 }
 
+// ─── Helper: fill all required fields ────────────────────────────────────────
+function fillValidForm() {
+  fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme Café" } });
+  fireEvent.change(screen.getByPlaceholderText(/^Sarah$/i), { target: { value: "Sarah" } });
+  fireEvent.change(screen.getByPlaceholderText(/^Johnson$/i), { target: { value: "Johnson" } });
+  fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "sarah@acme.com" } });
+  fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "securepass1" } });
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 describe("Signup page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    // Default: signup returns session (email confirm disabled)
     mockSignUp.mockResolvedValue({
       data: {
         user: { id: "new-user-1" },
@@ -48,6 +56,8 @@ describe("Signup page", () => {
       error: null,
     });
   });
+
+  // ── Field presence ──────────────────────────────────────────────────────────
 
   it("renders without crashing", () => {
     render(<Signup />, { wrapper });
@@ -59,14 +69,19 @@ describe("Signup page", () => {
     expect(screen.getByPlaceholderText(/Crown Restaurant/i)).toBeInTheDocument();
   });
 
-  it("shows first location name input", () => {
+  it("shows helper text for business name field", () => {
     render(<Signup />, { wrapper });
-    expect(screen.getByPlaceholderText(/Main Branch/i)).toBeInTheDocument();
+    expect(screen.getByText(/name of your restaurant brand or business/i)).toBeInTheDocument();
   });
 
-  it("shows your name input", () => {
+  it("shows first name input", () => {
     render(<Signup />, { wrapper });
-    expect(screen.getByPlaceholderText(/Sarah Johnson/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/^Sarah$/i)).toBeInTheDocument();
+  });
+
+  it("shows last name input", () => {
+    render(<Signup />, { wrapper });
+    expect(screen.getByPlaceholderText(/^Johnson$/i)).toBeInTheDocument();
   });
 
   it("shows email input", () => {
@@ -79,94 +94,127 @@ describe("Signup page", () => {
     expect(screen.getByPlaceholderText(/At least 8 characters/i)).toBeInTheDocument();
   });
 
-  it("has a Create account button", () => {
+  it("does NOT show a location name field", () => {
+    render(<Signup />, { wrapper });
+    expect(screen.queryByPlaceholderText(/Main Branch/i)).toBeNull();
+    expect(screen.queryByText(/first location name/i)).toBeNull();
+  });
+
+  it("has a 'Create account' button", () => {
     render(<Signup />, { wrapper });
     expect(screen.getByText("Create account")).toBeInTheDocument();
   });
 
+  it("shows 'Set up Olia for your business' subtitle", () => {
+    render(<Signup />, { wrapper });
+    expect(screen.getByText("Set up Olia for your business")).toBeInTheDocument();
+  });
+
+  // ── Validation ──────────────────────────────────────────────────────────────
+
   it("Create account button is disabled when form is empty", () => {
     render(<Signup />, { wrapper });
-    const btn = screen.getByText("Create account").closest("button")!;
-    expect(btn).toBeDisabled();
+    expect(screen.getByText("Create account").closest("button")).toBeDisabled();
+  });
+
+  it("Create account button is disabled when first name is missing", () => {
+    render(<Signup />, { wrapper });
+    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
+    // skip first name
+    fireEvent.change(screen.getByPlaceholderText(/^Johnson$/i), { target: { value: "Smith" } });
+    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password1" } });
+    expect(screen.getByText("Create account").closest("button")).toBeDisabled();
+  });
+
+  it("Create account button is disabled when last name is missing", () => {
+    render(<Signup />, { wrapper });
+    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
+    fireEvent.change(screen.getByPlaceholderText(/^Sarah$/i), { target: { value: "Sarah" } });
+    // skip last name
+    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
+    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password1" } });
+    expect(screen.getByText("Create account").closest("button")).toBeDisabled();
   });
 
   it("Create account button is disabled when password is too short", () => {
     render(<Signup />, { wrapper });
     fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "HQ" } });
+    fireEvent.change(screen.getByPlaceholderText(/^Sarah$/i), { target: { value: "Sarah" } });
+    fireEvent.change(screen.getByPlaceholderText(/^Johnson$/i), { target: { value: "Smith" } });
     fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
     fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "short" } });
-    const btn = screen.getByText("Create account").closest("button")!;
-    expect(btn).toBeDisabled();
+    expect(screen.getByText("Create account").closest("button")).toBeDisabled();
   });
 
-  it("Create account button is enabled when form is valid", () => {
+  it("Create account button is enabled when all fields are valid", () => {
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme Café" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "Main Branch" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "owner@acme.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "securepass1" } });
-    const btn = screen.getByText("Create account").closest("button")!;
-    expect(btn).not.toBeDisabled();
+    fillValidForm();
+    expect(screen.getByText("Create account").closest("button")).not.toBeDisabled();
   });
 
-  it("calls supabase.auth.signUp with correct values on submit", async () => {
+  // ── Submission ──────────────────────────────────────────────────────────────
+
+  it("calls supabase.auth.signUp with correct email and password", async () => {
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme Café" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "City Centre" } });
-    fireEvent.change(screen.getByPlaceholderText(/Sarah Johnson/i), { target: { value: "Jane Doe" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "jane@acme.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
     await waitFor(() => expect(mockSignUp).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: "jane@acme.com",
-        password: "password123",
-      })
+      expect.objectContaining({ email: "sarah@acme.com", password: "securepass1" })
     ));
   });
 
-  it("stores onboarding data in localStorage before signUp", async () => {
+  it("passes full_name as 'First Last' in signUp metadata", async () => {
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "My Business" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "First Location" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
-    // localStorage should be set at the moment signUp is called
-    await waitFor(() => expect(mockSignUp).toHaveBeenCalled());
-    // Either it's still in storage (signUp returned session, AuthContext cleared it)
-    // or it was already processed — either way, signUp was called
-    expect(mockSignUp).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockSignUp).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { data: { full_name: "Sarah Johnson" } } })
+    ));
   });
 
-  it("shows check-email screen when signUp returns no session", async () => {
-    mockSignUp.mockResolvedValue({
-      data: { user: { id: "u1" }, session: null },
-      error: null,
-    });
+  it("onboarding payload has businessName and ownerName but no locationName", async () => {
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "HQ" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
+    fireEvent.click(screen.getByText("Create account"));
+    await waitFor(() => expect(mockSignUp).toHaveBeenCalled());
+    // If payload was already cleared by AuthContext that's fine — signUp was called
+    const raw = localStorage.getItem("olia_pending_onboarding");
+    if (raw !== null) {
+      const payload = JSON.parse(raw);
+      expect(payload).toHaveProperty("businessName");
+      expect(payload).toHaveProperty("ownerName");
+      expect(payload).not.toHaveProperty("locationName");
+    }
+  });
+
+  // ── Check-email screen ──────────────────────────────────────────────────────
+
+  it("shows check-email screen when signUp returns no session", async () => {
+    mockSignUp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
+    render(<Signup />, { wrapper });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
     await waitFor(() => expect(screen.getByText("Check your email")).toBeInTheDocument());
   });
 
-  it("shows check-email screen with user's email address", async () => {
-    mockSignUp.mockResolvedValue({
-      data: { user: { id: "u1" }, session: null },
-      error: null,
-    });
+  it("shows the user's email on the check-email screen", async () => {
+    mockSignUp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "HQ" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "founder@acme.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
-    await waitFor(() => expect(screen.getByText("founder@acme.com")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("sarah@acme.com")).toBeInTheDocument());
   });
+
+  it("check-email screen says 'workspace' not 'dashboard'", async () => {
+    mockSignUp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
+    render(<Signup />, { wrapper });
+    fillValidForm();
+    fireEvent.click(screen.getByText("Create account"));
+    await waitFor(() => expect(screen.getByText(/workspace/i)).toBeInTheDocument());
+  });
+
+  // ── Error handling ──────────────────────────────────────────────────────────
 
   it("shows auth error message on signUp failure", async () => {
     mockSignUp.mockResolvedValue({
@@ -174,10 +222,7 @@ describe("Signup page", () => {
       error: { message: "Email already registered" },
     });
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "HQ" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "taken@acme.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
     await waitFor(() => expect(screen.getByText("Email already registered")).toBeInTheDocument());
   });
@@ -188,23 +233,17 @@ describe("Signup page", () => {
       error: { message: "Something went wrong" },
     });
     render(<Signup />, { wrapper });
-    fireEvent.change(screen.getByPlaceholderText(/Crown Restaurant/i), { target: { value: "Acme" } });
-    fireEvent.change(screen.getByPlaceholderText(/Main Branch/i), { target: { value: "HQ" } });
-    fireEvent.change(screen.getByPlaceholderText(/yourbusiness\.com/i), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByPlaceholderText(/At least 8 characters/i), { target: { value: "password123" } });
+    fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
     await waitFor(() => expect(screen.getByText("Something went wrong")).toBeInTheDocument());
     expect(localStorage.getItem("olia_pending_onboarding")).toBeNull();
   });
 
-  it("has a 'Sign in' link pointing to kiosk", () => {
+  // ── Navigation links ────────────────────────────────────────────────────────
+
+  it("has a 'Sign in' link pointing to /kiosk", () => {
     render(<Signup />, { wrapper });
     const link = screen.getByRole("link", { name: /Sign in/i });
     expect(link).toHaveAttribute("href", "/kiosk");
-  });
-
-  it("shows 'Set up Olia for your business' subtitle", () => {
-    render(<Signup />, { wrapper });
-    expect(screen.getByText("Set up Olia for your business")).toBeInTheDocument();
   });
 });

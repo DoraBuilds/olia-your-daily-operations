@@ -49,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const pending = JSON.parse(pendingRaw);
           await supabase.rpc("setup_new_organization", {
             p_business_name: pending.businessName,
-            p_location_name: pending.locationName,
             p_owner_name: pending.ownerName ?? null,
           });
           localStorage.removeItem("olia_pending_onboarding");

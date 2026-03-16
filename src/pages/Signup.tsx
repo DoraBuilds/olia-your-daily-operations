@@ -12,21 +12,22 @@ export default function Signup() {
   const [step, setStep] = useState<Step>("form");
 
   const [businessName, setBusinessName] = useState("");
-  const [locationName, setLocationName] = useState("");
-  const [ownerName, setOwnerName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Already authenticated → go to dashboard
+  // Already authenticated → go to admin (new users add their first location there)
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
+    if (user) navigate("/admin", { replace: true });
   }, [user, navigate]);
 
   const isFormValid =
     businessName.trim().length > 0 &&
-    locationName.trim().length > 0 &&
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
     email.trim().length > 0 &&
     password.length >= 8;
 
@@ -37,14 +38,15 @@ export default function Signup() {
     setLoading(true);
     setError(null);
 
+    const ownerName = `${firstName.trim()} ${lastName.trim()}`;
+
     // Store onboarding data before signUp — AuthContext reads this after the
     // user's session is established (either immediately or post-email-confirm).
     localStorage.setItem(
       "olia_pending_onboarding",
       JSON.stringify({
         businessName: businessName.trim(),
-        locationName: locationName.trim(),
-        ownerName: ownerName.trim() || businessName.trim(),
+        ownerName,
       })
     );
 
@@ -52,7 +54,7 @@ export default function Signup() {
       email: email.trim(),
       password,
       options: {
-        data: { full_name: ownerName.trim() || businessName.trim() },
+        data: { full_name: ownerName },
       },
     });
 
@@ -87,7 +89,7 @@ export default function Signup() {
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               We sent a confirmation link to{" "}
               <span className="text-foreground font-medium">{email}</span>.
-              Click it and you'll land straight in your dashboard.
+              Click it and you'll land straight in your workspace.
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -114,6 +116,7 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Business name */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Business name</label>
             <input
@@ -126,33 +129,37 @@ export default function Signup() {
               required
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              The name of your restaurant brand or business.
+            </p>
           </div>
 
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">First location name</label>
-            <input
-              id="signup-location-name"
-              type="text"
-              value={locationName}
-              onChange={e => setLocationName(e.target.value)}
-              placeholder="e.g. Main Branch"
-              required
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">
-              Your name <span className="text-muted-foreground/60">(optional)</span>
-            </label>
-            <input
-              id="signup-owner-name"
-              type="text"
-              value={ownerName}
-              onChange={e => setOwnerName(e.target.value)}
-              placeholder="e.g. Sarah Johnson"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+          {/* First name + Last name */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground mb-1 block">First name</label>
+              <input
+                id="signup-first-name"
+                type="text"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                placeholder="Sarah"
+                required
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground mb-1 block">Last name</label>
+              <input
+                id="signup-last-name"
+                type="text"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                placeholder="Johnson"
+                required
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
           </div>
 
           <div>

@@ -441,6 +441,7 @@ interface MyLocationTabProps {
   setCurrentLocationId: (id: string) => void;
   isOwner: boolean;
   permissions: ManagerPermissions | null;
+  onAddLocation: () => void;
   onEditLocation: (loc: Location) => void;
   onUpdateLocation: (loc: Location) => void;
   onAddStaff: () => void;
@@ -454,7 +455,7 @@ interface MyLocationTabProps {
 function MyLocationTab({
   locations, staffProfiles, roles, currentLocationId, setCurrentLocationId,
   isOwner, permissions,
-  onEditLocation, onUpdateLocation, onAddStaff, onEditStaff, onArchiveStaff, onRestoreStaff, onDeleteStaff,
+  onAddLocation, onEditLocation, onUpdateLocation, onAddStaff, onEditStaff, onArchiveStaff, onRestoreStaff, onDeleteStaff,
   onLaunchKiosk,
 }: MyLocationTabProps) {
   const [staffSearch, setStaffSearch] = useState("");
@@ -475,6 +476,31 @@ function MyLocationTab({
     if (!staffSearch.trim()) return true;
     return staffDisplayName(sp).toLowerCase().includes(staffSearch.toLowerCase());
   });
+
+  // ── No locations yet → onboarding empty state ─────────────────────────────
+  if (locations.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
+        <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center">
+          <MapPin size={28} className="text-sage" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-display text-xl text-foreground">Add your first location</h2>
+          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+            Locations are where your team works. Set up your first one to start
+            creating checklists, managing staff, and using the kiosk.
+          </p>
+        </div>
+        <button
+          onClick={onAddLocation}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+        >
+          <Plus size={15} />
+          Add your first location
+        </button>
+      </div>
+    );
+  }
 
   if (!currentLocation) return null;
 
@@ -1271,6 +1297,7 @@ export default function Admin() {
             setCurrentLocationId={setCurrentLocationId}
             isOwner={isOwner}
             permissions={permissions}
+            onAddLocation={() => setLocationModal("new")}
             onEditLocation={loc => setLocationModal(loc)}
             onUpdateLocation={saveLocation}
             onAddStaff={() => setStaffModal("new")}
