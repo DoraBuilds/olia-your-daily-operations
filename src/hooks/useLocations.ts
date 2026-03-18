@@ -9,7 +9,9 @@ export function useLocations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
-        .select("id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days")
+        .select(
+          "id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, lat, lng, place_id",
+        )
         .order("name");
       if (error) throw error;
       return (data ?? []) as Location[];
@@ -22,15 +24,21 @@ export function useSaveLocation() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (loc: Location) => {
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+      }
       const { error } = await supabase.from("locations").upsert({
         id: loc.id || undefined,
-        organization_id: teamMember!.organization_id,
+        organization_id: teamMember.organization_id,
         name: loc.name,
         address: loc.address ?? null,
         contact_email: loc.contact_email ?? null,
         contact_phone: loc.contact_phone ?? null,
         trading_hours: loc.trading_hours ?? null,
         archive_threshold_days: loc.archive_threshold_days ?? 90,
+        lat: loc.lat ?? null,
+        lng: loc.lng ?? null,
+        place_id: loc.place_id ?? null,
       });
       if (error) throw error;
     },

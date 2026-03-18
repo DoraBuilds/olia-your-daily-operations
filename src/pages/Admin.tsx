@@ -7,6 +7,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/sonner";
+import {
+  PlacesAutocompleteInput, StaticMapPreview, type PlaceResult,
+} from "@/components/PlacesAutocompleteInput";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry, type AccountRole,
@@ -15,7 +19,7 @@ import {
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlan } from "@/hooks/usePlan";
-import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
+import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
 import {
   useStaffProfiles, useSaveStaffProfile, useArchiveStaffProfile,
@@ -402,9 +406,28 @@ function LocationModal({
   const [hours, setHours] = useState<WeeklyHours>(() => parseHours(location?.trading_hours));
   const [email, setEmail] = useState(location?.contact_email ?? "");
   const [phone, setPhone] = useState(location?.contact_phone ?? "");
+  // Google Maps fields — set when user picks from autocomplete dropdown
+  const [lat, setLat] = useState<number | null>(location?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(location?.lng ?? null);
+  const [placeId, setPlaceId] = useState<string | null>(location?.place_id ?? null);
 
   const updateDay = (day: DayKey, patch: Partial<DayHours>) =>
     setHours(prev => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+
+  const handlePlaceSelect = (place: PlaceResult) => {
+    setAddress(place.address);
+    setLat(place.lat);
+    setLng(place.lng);
+    setPlaceId(place.placeId);
+  };
+
+  const handleAddressChange = (val: string) => {
+    setAddress(val);
+    // Clear map data when user types manually (they may have changed the address)
+    setLat(null);
+    setLng(null);
+    setPlaceId(null);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -418,6 +441,9 @@ function LocationModal({
       contact_phone: phone.trim(),
       // preserve existing archive threshold (or default for new locations)
       archive_threshold_days: location?.archive_threshold_days ?? 90,
+      lat: lat ?? null,
+      lng: lng ?? null,
+      place_id: placeId ?? null,
     });
     onClose();
   };
@@ -434,11 +460,16 @@ function LocationModal({
           />
         </FormField>
         <FormField label="Address">
-          <input
-            type="text" value={address}
-            onChange={e => setAddress(e.target.value)}
-            placeholder="e.g. 14 Rue de la Paix, Lyon" className={inputCls}
+          <PlacesAutocompleteInput
+            value={address}
+            onChange={handleAddressChange}
+            onPlaceSelect={handlePlaceSelect}
+            className={inputCls}
+            placeholder="e.g. 14 Rue de la Paix, Lyon"
           />
+          {lat !== null && lng !== null && (
+            <StaticMapPreview lat={lat} lng={lng} className="mt-2" />
+          )}
         </FormField>
         <FormField label="Opening hours">
           <div className="space-y-1.5">
@@ -892,18 +923,94 @@ function AccountTab({
     setRoles(prev => prev.filter(r => r !== role));
   };
 
+  // Plan limit check — Starter allows 1 location, Growth allows 10
+  const maxLocations = PLAN_FEATURES[plan].maxLocations; // -1 = unlimited
+  const atLocationLimit = maxLocations !== -1 && locations.length >= maxLocations;
+  const [showLocationLimitModal, setShowLocationLimitModal] = useState(false);
+
+  const handleAddLocationClick = () => {
+    if (atLocationLimit) {
+      setShowLocationLimitModal(true);
+    } else {
+      onAddLocation();
+    }
+  };
+
   return (
     <div className="space-y-4">
+
+      {/* Location limit upgrade modal */}
+      {showLocationLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-end bg-foreground/20 backdrop-blur-sm" onClick={() => setShowLocationLimitModal(false)}>
+          <div className="w-full bg-card rounded-t-2xl p-6 space-y-4 max-w-[480px] mx-auto" onClick={e => e.stopPropagation()}>
+            {/* Icon */}
+            <div className="flex justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-sage/10 flex items-center justify-center">
+                <MapPin size={22} className="text-sage" />
+              </div>
+            </div>
+            {/* Copy */}
+            <div className="text-center space-y-2">
+              <h2 className="font-display text-xl text-foreground">Add more locations with Growth</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Starter includes {maxLocations} location. Upgrade to Growth to manage multiple venues and teams from one account.
+              </p>
+              {/* Price hint */}
+              <p className="text-xs font-medium text-foreground/70">
+                Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
+              </p>
+              {/* Current plan badge */}
+              <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
+              {/* Low-pressure learn-more link */}
+              <button
+                onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
+              >
+                View plans
+              </button>
+            </div>
+            {/* Actions */}
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+              >
+                Upgrade to Growth
+              </button>
+              <button
+                onClick={() => setShowLocationLimitModal(false)}
+                className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* All Locations */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        {/* Header row: title + button */}
+        <div className="flex items-center justify-between mb-1">
           <p className="section-label">All locations</p>
           <button
-            onClick={onAddLocation}
+            onClick={handleAddLocationClick}
             className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
           >
             <Plus size={12} /> Add location
           </button>
+        </div>
+        {/* Usage + plan line */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
+            {PLAN_LABELS[plan]}
+          </span>
+          <span className={cn(
+            "text-xs",
+            atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
+          )}>
+            {locations.length} / {maxLocations === -1 ? "∞" : maxLocations} locations used
+          </span>
         </div>
         <div className="card-surface divide-y divide-border">
           {locations.map(loc => (
@@ -1190,7 +1297,7 @@ export default function Admin() {
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
   const userId = searchParams.get("userId");
-  const { teamMember: authMember } = useAuth();
+  const { teamMember: authMember, setupError, retrySetup } = useAuth();
 
   // Data — from Supabase
   const { data: locations = [] } = useLocations();
@@ -1259,7 +1366,26 @@ export default function Admin() {
   // ─── CRUD Handlers ──────────────────────────────────────────────────────────
 
   const saveLocation = (loc: Location) => {
-    saveLocationMut.mutate(loc);
+    saveLocationMut.mutate(loc, {
+      onSuccess: () => toast.success(loc.id ? "Location updated" : "Location created"),
+      onError: (err: Error) => {
+        // Translate the raw Postgres RLS error into a product-level message
+        const isLimitError =
+          err.message?.toLowerCase().includes("row-level security") ||
+          err.message?.toLowerCase().includes("violates") ||
+          err.message?.toLowerCase().includes("policy");
+        if (isLimitError && !loc.id) {
+          // Only INSERT can hit the limit; UPDATE (loc.id truthy) never will
+          const max = PLAN_FEATURES[plan].maxLocations;
+          toast.error(
+            `Starter includes ${max} location. Upgrade to Growth to add more locations.`,
+            { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
+          );
+        } else {
+          toast.error(`Failed to save location: ${err.message}`);
+        }
+      },
+    });
   };
 
   const deleteLocation = (id: string) => {
@@ -1268,14 +1394,20 @@ export default function Admin() {
       message: "This will permanently remove the location and cannot be undone.",
       actionLabel: "Delete",
       onConfirm: () => {
-        deleteLocationMut.mutate(id);
+        deleteLocationMut.mutate(id, {
+          onSuccess: () => toast.success("Location deleted"),
+          onError: (err: Error) => toast.error(`Failed to delete location: ${err.message}`),
+        });
         setConfirmModal(null);
       },
     });
   };
 
   const saveStaff = (sp: StaffProfile) => {
-    saveStaffMut.mutate(sp);
+    saveStaffMut.mutate(sp, {
+      onSuccess: () => toast.success(sp.id ? "Staff profile updated" : "Staff profile created"),
+      onError: (err: Error) => toast.error(`Failed to save staff profile: ${err.message}`),
+    });
   };
 
   const archiveStaff = (sp: StaffProfile) => {
@@ -1351,6 +1483,33 @@ export default function Admin() {
     { key: "location" as const, label: "My Location" },
     ...(isOwner ? [{ key: "account" as const, label: "Account" }] : []),
   ];
+
+  // ── Setup error screen — shown when setup_new_organization failed ────────────
+  if (setupError) {
+    return (
+      <Layout title="Admin" subtitle="Setup required">
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-status-error/10 flex items-center justify-center">
+            <X size={28} className="text-status-error" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-display text-xl text-foreground">Account setup incomplete</h2>
+            <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+              Your account was created but the database setup did not complete.
+              Run migration <span className="font-mono text-xs bg-muted px-1 rounded">20260316000001</span> in
+              your Supabase SQL Editor, then tap <strong>Try again</strong>.
+            </p>
+          </div>
+          <button
+            onClick={retrySetup}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <>

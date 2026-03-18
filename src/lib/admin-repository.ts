@@ -38,6 +38,10 @@ export interface Location {
   contact_phone: string;
   trading_hours: string;
   archive_threshold_days: number;
+  // Google Maps / Places fields (populated by autocomplete)
+  lat?: number | null;
+  lng?: number | null;
+  place_id?: string | null;
 }
 
 export interface StaffProfile {

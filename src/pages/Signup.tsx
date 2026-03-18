@@ -54,7 +54,13 @@ export default function Signup() {
       email: email.trim(),
       password,
       options: {
-        data: { full_name: ownerName },
+        // Store both fields in auth user metadata so AuthContext can call
+        // setup_new_organization even if localStorage is cleared (e.g.
+        // when email is confirmed on a different device or browser).
+        data: {
+          full_name: ownerName,
+          business_name: businessName.trim(),
+        },
       },
     });
 
