@@ -5,7 +5,7 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")!;
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -15,22 +15,38 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Helper: always return HTTP 200 with { error } so supabase-js routes the
+// response to `data` (not `fnError`). This avoids relying on
+// FunctionsHttpError.context body-parsing, which silently fails in some
+// versions of @supabase/functions-js because the response body may already
+// be consumed before the error reaches the caller.
+const ok  = (body: unknown) =>
+  new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+const err = (message: string) =>
+  new Response(JSON.stringify({ error: message }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
 
   try {
+    // Guard: fail fast with a clear, readable message if Stripe is not configured.
+    // Returned as HTTP 200 so supabase-js puts it in `data.error`, not `fnError`.
+    if (!STRIPE_SECRET_KEY) {
+      return err("Stripe is not configured. Set STRIPE_SECRET_KEY in Supabase Edge Function secrets.");
+    }
+
     // Verify the user's JWT from the Authorization header
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Not authenticated");
+    if (!authHeader) return err("Not authenticated");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Get the calling user's ID from the JWT
     const jwt = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-    if (authError || !user) throw new Error("Invalid session");
+    if (authError || !user) return err("Invalid session");
 
     // Look up the team member's org
     const { data: member, error: memberError } = await supabase
@@ -38,7 +54,7 @@ Deno.serve(async (req) => {
       .select("organization_id")
       .eq("id", user.id)
       .single();
-    if (memberError || !member) throw new Error("Team member not found");
+    if (memberError || !member) return err("Team member not found");
 
     // Look up the org to get/create the Stripe customer
     const { data: org, error: orgError } = await supabase
@@ -46,14 +62,15 @@ Deno.serve(async (req) => {
       .select("id, name, stripe_customer_id")
       .eq("id", member.organization_id)
       .single();
-    if (orgError || !org) throw new Error("Organization not found");
+    if (orgError || !org) return err("Organization not found");
 
-    const { priceId, returnUrl } = await req.json() as {
+    const { priceId, planName, returnUrl } = await req.json() as {
       priceId: string;
+      planName: string;   // e.g. "growth" — used to stamp olia_plan on the subscription
       returnUrl: string;
     };
 
-    const stripe = new Stripe(STRIPE_SECRET_KEY, {
+    const stripe = new Stripe(STRIPE_SECRET_KEY!, {
       apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
@@ -74,26 +91,31 @@ Deno.serve(async (req) => {
         .eq("id", org.id);
     }
 
-    // Create the Stripe Checkout session
+    // Create the Stripe Checkout session.
+    // subscription_data.metadata carries both:
+    //   organization_id — so the webhook can find the right org row
+    //   olia_plan       — so the webhook knows which plan tier to write
+    // Without olia_plan here, planFromMetadata() falls back to "starter"
+    // and the webhook would silently downgrade the org after a successful checkout.
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       success_url: `${returnUrl}?upgraded=1`,
-      cancel_url: `${returnUrl}?canceled=1`,
+      cancel_url:  `${returnUrl}?canceled=1`,
       subscription_data: {
-        metadata: { organization_id: org.id },
+        metadata: {
+          organization_id: org.id,
+          olia_plan: planName ?? "growth",
+        },
       },
     });
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
-    );
+    return ok({ url: session.url });
+
+  } catch (e: unknown) {
+    // Unexpected crash — still return 200 so the message reaches the frontend.
+    const message = e instanceof Error ? e.message : "Internal error";
+    return err(message);
   }
 });

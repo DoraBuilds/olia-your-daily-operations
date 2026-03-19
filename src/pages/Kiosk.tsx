@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Module-level persistence (survives in-app navigation) ───────────────────
 let _kioskLocationId: string | null = null;
@@ -246,10 +247,22 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
 // ─── AdminLoginModal (centered) ───────────────────────────────────────────────
 function AdminLoginModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Set to true after a successful signInWithPassword call.
+  // The useEffect below watches for the auth context to update (user becomes
+  // non-null) BEFORE navigating — this prevents ProtectedRoute from
+  // redirecting back to /kiosk because auth state hadn't updated yet.
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  useEffect(() => {
+    if (loginSuccess && user) {
+      navigate("/admin");
+    }
+  }, [loginSuccess, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,7 +281,9 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    navigate("/dashboard");
+    // Don't navigate immediately — wait for onAuthStateChange to fire and
+    // update the auth context, then the useEffect above handles navigation.
+    setLoginSuccess(true);
   };
 
   return (

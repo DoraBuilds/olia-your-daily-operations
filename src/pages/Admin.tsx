@@ -324,7 +324,7 @@ function TeamMemberModal({
 
   return (
     <BottomSheet onClose={onClose}>
-      <ModalHeader title={member ? "Edit team member" : "Invite team member"} onClose={onClose} />
+      <ModalHeader title={member ? "Edit team member" : "Add team member"} onClose={onClose} />
       <form onSubmit={handleSave} className="space-y-3">
         <FormField label="Full name">
           <input
@@ -388,7 +388,12 @@ function TeamMemberModal({
             ))}
           </div>
         )}
-        <SaveButton disabled={!name.trim()} label={member ? "Save changes" : "Send invitation"} />
+        {!member && (
+          <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
+            This creates a placeholder record. No invitation email is sent — full email invite is coming soon. The team member will not be able to log in until that feature is live.
+          </p>
+        )}
+        <SaveButton disabled={!name.trim()} label={member ? "Save changes" : "Add team member"} />
       </form>
     </BottomSheet>
   );
@@ -555,14 +560,16 @@ function MyLocationTab({
 }: MyLocationTabProps) {
   const [staffSearch, setStaffSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
-  const [notifAlerts, setNotifAlerts] = useState({ critical: true, digest: false, activity: true });
+  // Local state for archive threshold — string so the user can clear the field
+  // freely while typing. null = not editing (show saved value).
+  // Save is only enabled when the draft is a valid integer >= 1 AND differs from saved.
+  const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
 
   const currentLocation = locations.find(l => l.id === currentLocationId) ?? locations[0];
 
   const canEditLocation = !permissions || permissions.edit_location_details;
   const canEditThreshold = !permissions || permissions.override_inactivity_threshold;
   const canManageStaff = !permissions || permissions.manage_staff_profiles;
-  const canManageAlerts = !permissions || permissions.manage_alerts;
 
   const filteredStaff = staffProfiles.filter(sp => {
     if (sp.location_id !== (currentLocation?.id ?? "")) return false;
@@ -605,15 +612,18 @@ function MyLocationTab({
       {isOwner ? (
         <div>
           <p className="section-label mb-2">Location</p>
-          <select
-            value={currentLocationId}
-            onChange={e => setCurrentLocationId(e.target.value)}
-            className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={currentLocationId}
+              onChange={e => setCurrentLocationId(e.target.value)}
+              className="w-full border border-border rounded-xl px-4 py-3 pr-10 text-sm bg-muted appearance-none focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
       ) : (
         <div className="flex items-center gap-2 py-1">
@@ -679,25 +689,6 @@ function MyLocationTab({
       >
         <Tablet size={16} /> Launch Kiosk Mode
       </button>
-
-      {/* Auto-archive card */}
-      <div className="card-surface p-4">
-        <p className="section-label mb-1">Auto-archive threshold</p>
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          Staff profiles inactive for this many days will be automatically archived.
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            value={currentLocation.archive_threshold_days}
-            onChange={e => onUpdateLocation({ ...currentLocation, archive_threshold_days: Number(e.target.value) })}
-            min={1}
-            readOnly={!canEditThreshold}
-            className={cn("w-28 border border-border rounded-xl px-4 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring", !canEditThreshold && "opacity-50 cursor-not-allowed")}
-          />
-          <span className="text-sm text-muted-foreground">days</span>
-        </div>
-      </div>
 
       {/* Staff Profiles */}
       <section>
@@ -802,6 +793,63 @@ function MyLocationTab({
             );
           })}
         </div>
+
+        {/* Auto-archive threshold — only shown when viewing archived staff,
+            where the setting is contextually relevant. Hidden in active view. */}
+        {showArchived && canEditThreshold && (
+          <div className="border border-border rounded-2xl px-4 py-3 bg-muted/30 mt-3">
+            <p className="section-label mb-1">Auto-archive threshold</p>
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+              Staff profiles inactive for this many days are automatically archived.
+            </p>
+            {(() => {
+              const parsedDraft = thresholdDraft !== null
+                ? (thresholdDraft.trim() !== "" && /^\d+$/.test(thresholdDraft.trim())
+                    ? parseInt(thresholdDraft.trim(), 10)
+                    : null)
+                : null;
+              const isDraftValid   = parsedDraft !== null && parsedDraft >= 1;
+              const isDraftChanged = isDraftValid && parsedDraft !== currentLocation.archive_threshold_days;
+
+              return (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    value={thresholdDraft ?? String(currentLocation.archive_threshold_days)}
+                    onChange={e => setThresholdDraft(e.target.value)}
+                    onFocus={() => setThresholdDraft(String(currentLocation.archive_threshold_days))}
+                    onBlur={() => {
+                      if (thresholdDraft !== null && !isDraftValid) setThresholdDraft(null);
+                    }}
+                    min={1}
+                    className={cn(
+                      "w-24 border rounded-xl px-3 py-2 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring",
+                      thresholdDraft !== null && !isDraftValid ? "border-status-error" : "border-border",
+                    )}
+                  />
+                  <span className="text-sm text-muted-foreground">days</span>
+                  {thresholdDraft !== null && (
+                    isDraftValid ? (
+                      isDraftChanged ? (
+                        <button
+                          onClick={() => {
+                            onUpdateLocation({ ...currentLocation, archive_threshold_days: parsedDraft! });
+                            setThresholdDraft(null);
+                          }}
+                          className="px-3 py-2 rounded-xl text-xs font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
+                        >
+                          Save
+                        </button>
+                      ) : null
+                    ) : (
+                      <span className="text-xs text-status-error">Enter a number ≥ 1</span>
+                    )
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </section>
 
       {/* Assigned Checklists */}
@@ -826,28 +874,6 @@ function MyLocationTab({
         })()}
       </div>
 
-      {/* Notifications & Alerts */}
-      {canManageAlerts && (
-        <div className="card-surface p-4 space-y-4">
-          <p className="section-label">Notifications & alerts</p>
-          {[
-            { key: "critical" as const, label: "Critical alerts", desc: "Get notified for urgent operational issues" },
-            { key: "digest" as const, label: "Daily digest", desc: "Summary of completed checklists each morning" },
-            { key: "activity" as const, label: "Staff activity", desc: "Notifications for staff login and profile changes" },
-          ].map(item => (
-            <div key={item.key} className="flex items-start gap-3">
-              <Switch
-                checked={notifAlerts[item.key]}
-                onCheckedChange={val => setNotifAlerts(prev => ({ ...prev, [item.key]: val }))}
-              />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground leading-tight">{item.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -863,7 +889,9 @@ interface AccountTabProps {
   roles: string[];
   setRoles: React.Dispatch<React.SetStateAction<string[]>>;
   auditLog: AuditLogEntry[];
+  authMemberId: string | undefined;
   onAddLocation: () => void;
+  onLocationLimitReached: () => void;
   onEditLocation: (loc: Location) => void;
   onDeleteLocation: (id: string) => void;
   onInviteMember: () => void;
@@ -873,8 +901,8 @@ interface AccountTabProps {
 
 function AccountTab({
   locations, staffProfiles, teamMembers, checklists, onSavePerms,
-  roles, setRoles, auditLog,
-  onAddLocation, onEditLocation, onDeleteLocation,
+  roles, setRoles, auditLog, authMemberId,
+  onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation,
   onInviteMember, onEditMember, onDeleteMember,
 }: AccountTabProps) {
   const navigate = useNavigate();
@@ -923,14 +951,15 @@ function AccountTab({
     setRoles(prev => prev.filter(r => r !== role));
   };
 
-  // Plan limit check — Starter allows 1 location, Growth allows 10
+  // Plan limit check — checked here so the "Add" button can be disabled-adjacent.
+  // The modal itself lives at Admin level (outside Layout) so position:fixed is
+  // viewport-relative and not trapped inside the animate-fade-in containing block.
   const maxLocations = PLAN_FEATURES[plan].maxLocations; // -1 = unlimited
   const atLocationLimit = maxLocations !== -1 && locations.length >= maxLocations;
-  const [showLocationLimitModal, setShowLocationLimitModal] = useState(false);
 
   const handleAddLocationClick = () => {
     if (atLocationLimit) {
-      setShowLocationLimitModal(true);
+      onLocationLimitReached();
     } else {
       onAddLocation();
     }
@@ -938,55 +967,6 @@ function AccountTab({
 
   return (
     <div className="space-y-4">
-
-      {/* Location limit upgrade modal */}
-      {showLocationLimitModal && (
-        <div className="fixed inset-0 z-50 flex items-end bg-foreground/20 backdrop-blur-sm" onClick={() => setShowLocationLimitModal(false)}>
-          <div className="w-full bg-card rounded-t-2xl p-6 space-y-4 max-w-[480px] mx-auto" onClick={e => e.stopPropagation()}>
-            {/* Icon */}
-            <div className="flex justify-center">
-              <div className="w-12 h-12 rounded-2xl bg-sage/10 flex items-center justify-center">
-                <MapPin size={22} className="text-sage" />
-              </div>
-            </div>
-            {/* Copy */}
-            <div className="text-center space-y-2">
-              <h2 className="font-display text-xl text-foreground">Add more locations with Growth</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Starter includes {maxLocations} location. Upgrade to Growth to manage multiple venues and teams from one account.
-              </p>
-              {/* Price hint */}
-              <p className="text-xs font-medium text-foreground/70">
-                Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
-              </p>
-              {/* Current plan badge */}
-              <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
-              {/* Low-pressure learn-more link */}
-              <button
-                onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
-              >
-                View plans
-              </button>
-            </div>
-            {/* Actions */}
-            <div className="space-y-2 pt-1">
-              <button
-                onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
-              >
-                Upgrade to Growth
-              </button>
-              <button
-                onClick={() => setShowLocationLimitModal(false)}
-                className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
-              >
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* All Locations */}
       <section>
@@ -1045,7 +1025,7 @@ function AccountTab({
             onClick={onInviteMember}
             className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
           >
-            <Plus size={12} /> Invite
+            <Plus size={12} /> Add
           </button>
         </div>
         <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
@@ -1085,12 +1065,14 @@ function AccountTab({
                       ? <ChevronUp size={14} className="text-muted-foreground" />
                       : <ChevronDown size={14} className="text-muted-foreground" />}
                   </button>
-                  <button
-                    onClick={() => onDeleteMember(member)}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <Trash2 size={14} className="text-status-error" />
-                  </button>
+                  {member.id !== authMemberId && (
+                    <button
+                      onClick={() => onDeleteMember(member)}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Trash2 size={14} className="text-status-error" />
+                    </button>
+                  )}
                 </div>
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-2 bg-muted/30 space-y-3">
@@ -1298,6 +1280,7 @@ export default function Admin() {
   const fromKiosk = searchParams.get("from") === "kiosk";
   const userId = searchParams.get("userId");
   const { teamMember: authMember, setupError, retrySetup } = useAuth();
+  const { plan } = usePlan();
 
   // Data — from Supabase
   const { data: locations = [] } = useLocations();
@@ -1333,6 +1316,9 @@ export default function Admin() {
   const [staffModal, setStaffModal] = useState<StaffProfile | null | "new">(null);
   const [memberModal, setMemberModal] = useState<TeamMember | null | "new">(null);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
+  // Location-limit upgrade prompt — rendered AFTER </Layout> so position:fixed
+  // escapes the animate-fade-in containing block on <main>.
+  const [showLocationLimitModal, setShowLocationLimitModal] = useState(false);
 
   // Determine active user from URL param
   const activeUser = userId ? (teamMembers.find(m => m.id === userId) ?? null) : null;
@@ -1375,12 +1361,20 @@ export default function Admin() {
           err.message?.toLowerCase().includes("violates") ||
           err.message?.toLowerCase().includes("policy");
         if (isLimitError && !loc.id) {
-          // Only INSERT can hit the limit; UPDATE (loc.id truthy) never will
-          const max = PLAN_FEATURES[plan].maxLocations;
-          toast.error(
-            `Starter includes ${max} location. Upgrade to Growth to add more locations.`,
-            { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
-          );
+          // Only INSERT can hit the limit; UPDATE (loc.id truthy) never will.
+          // Message and CTA are plan-aware so a Growth user doesn't see "upgrade to Growth".
+          if (plan === "growth") {
+            toast.error(
+              "Growth includes up to 10 locations. Contact us to move to Enterprise for unlimited locations.",
+              { action: { label: "Book a demo", onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
+            );
+          } else {
+            const max = PLAN_FEATURES[plan].maxLocations;
+            toast.error(
+              `Starter includes ${max} location. Upgrade to Growth to add more locations.`,
+              { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
+            );
+          }
         } else {
           toast.error(`Failed to save location: ${err.message}`);
         }
@@ -1421,14 +1415,20 @@ export default function Admin() {
       ),
       actionLabel: "Archive",
       onConfirm: () => {
-        archiveStaffMut.mutate(sp.id);
+        archiveStaffMut.mutate(sp.id, {
+          onSuccess: () => toast.success(`${staffDisplayName(sp)} archived`),
+          onError: (err: Error) => toast.error(`Could not archive: ${err.message}`),
+        });
         setConfirmModal(null);
       },
     });
   };
 
   const restoreStaff = (id: string) => {
-    restoreStaffMut.mutate(id);
+    restoreStaffMut.mutate(id, {
+      onSuccess: () => toast.success("Profile restored"),
+      onError: (err: Error) => toast.error(`Could not restore: ${err.message}`),
+    });
   };
 
   const deleteStaff = (sp: StaffProfile) => {
@@ -1458,6 +1458,15 @@ export default function Admin() {
   };
 
   const deleteMember = (m: TeamMember) => {
+    // CRITICAL: Never allow deleting your own team_members row.
+    // If you delete yourself, fetchTeamMember finds no row on next load,
+    // calls setup_new_organization, and creates a brand-new org — leaving
+    // all existing locations, staff, and checklists under the old org_id.
+    // RLS then silently blocks every write operation.
+    if (m.id === authMember?.id) {
+      toast.error("You cannot remove yourself from the team.");
+      return;
+    }
     setConfirmModal({
       title: "Remove team member",
       message: (
@@ -1573,7 +1582,9 @@ export default function Admin() {
             roles={roles}
             setRoles={setRoles}
             auditLog={auditLog}
+            authMemberId={authMember?.id}
             onAddLocation={() => setLocationModal("new")}
+            onLocationLimitReached={() => setShowLocationLimitModal(true)}
             onEditLocation={loc => setLocationModal(loc)}
             onDeleteLocation={deleteLocation}
             onInviteMember={() => setMemberModal("new")}
@@ -1584,6 +1595,100 @@ export default function Admin() {
       </Layout>
 
       {/* ─── Modals ──────────────────────────────────────────────────────────── */}
+
+      {/* Location plan-limit upgrade prompt.
+          Rendered here (outside Layout/main) so position:fixed is viewport-relative.
+          The animate-fade-in keyframe on <main> uses transform, which creates a
+          CSS containing block — any fixed element inside it is positioned relative
+          to <main> rather than the viewport, causing the modal to appear off-screen
+          or require scrolling to see. */}
+      {showLocationLimitModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-foreground/20 backdrop-blur-sm"
+          onClick={() => setShowLocationLimitModal(false)}
+        >
+          <div
+            className="w-full bg-card rounded-t-2xl p-6 space-y-4 max-w-[480px] mx-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="flex justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-sage/10 flex items-center justify-center">
+                <MapPin size={22} className="text-sage" />
+              </div>
+            </div>
+
+            {plan === "growth" ? (
+              /* ── Growth → Enterprise prompt ────────────────────────────── */
+              <>
+                <div className="text-center space-y-2">
+                  <h2 className="font-display text-xl text-foreground">
+                    Scale beyond 10 locations with Enterprise
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Growth supports up to 10 locations. Enterprise is built for larger
+                    hospitality groups that need unlimited locations, a dedicated account
+                    manager, and custom onboarding.
+                  </p>
+                  <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
+                </div>
+                <div className="space-y-2 pt-1">
+                  <a
+                    href="mailto:enterprise@olia.com"
+                    onClick={() => setShowLocationLimitModal(false)}
+                    className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
+                  >
+                    Book a demo
+                  </a>
+                  <button
+                    onClick={() => setShowLocationLimitModal(false)}
+                    className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Not now
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── Starter → Growth prompt ────────────────────────────────── */
+              <>
+                <div className="text-center space-y-2">
+                  <h2 className="font-display text-xl text-foreground">
+                    Add more locations with Growth
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Starter includes 1 location. Growth supports up to 10 locations so
+                    you can manage multiple venues and teams from one account.
+                  </p>
+                  <p className="text-xs font-medium text-foreground/70">
+                    Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
+                  </p>
+                  <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
+                  <button
+                    onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                    className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
+                  >
+                    View plans
+                  </button>
+                </div>
+                <div className="space-y-2 pt-1">
+                  <button
+                    onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                    className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+                  >
+                    Upgrade to Growth
+                  </button>
+                  <button
+                    onClick={() => setShowLocationLimitModal(false)}
+                    className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Not now
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {locationModal !== null && (
         <LocationModal

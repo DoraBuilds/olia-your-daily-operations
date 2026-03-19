@@ -1,19 +1,21 @@
 import { useState } from "react";
 import {
-  Check, Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
+  Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
-  GitBranch, Upload, Link2
+  GitBranch, Upload, Link2, MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCreateAlert } from "@/hooks/useAlerts";
+import { useLocations } from "@/hooks/useLocations";
+import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
   QuestionDef, LogicComparator, LogicTrigger, LogicTriggerType, LogicRule, ResponseType
 } from "./types";
-import { locations, RESPONSE_TYPES, multipleChoiceSets } from "./data";
+import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 
@@ -28,6 +30,8 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
   editId?: string;
 }) {
   const createAlert = useCreateAlert();
+  const { data: dbLocations = [] } = useLocations();
+  const { data: staffProfiles = [] } = useStaffProfiles();
   const [title, setTitle] = useState(initialTitle || "");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -38,20 +42,12 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
   });
   const [showCustomRecurrence, setShowCustomRecurrence] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"morning" | "afternoon" | "evening" | "anytime">("anytime");
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [sections, setSections] = useState<SectionDef[]>(initialSections || [{
     id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: false, config: {} }],
   }]);
   const [showResponsePicker, setShowResponsePicker] = useState<{ sectionIdx: number; questionIdx: number } | null>(null);
-
-  const allLocs = locations.filter(l => l !== "All locations");
-  const toggleLoc = (loc: string) => {
-    setSelectedLocations(prev => prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc]);
-  };
-  const selectAllLocs = () => {
-    setSelectedLocations(prev => prev.length === allLocs.length ? [] : [...allLocs]);
-  };
 
   const SCHEDULE_OPTIONS: { key: ScheduleType; label: string }[] = [
     { key: "none", label: "Once" },
@@ -125,6 +121,7 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
         schedule: schedLabel,
         sections: sections,
         time_of_day: timeOfDay,
+        location_id: selectedLocationId,
       });
     } else {
       onAdd({
@@ -135,6 +132,7 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
         questionsCount: totalQuestions,
         schedule: schedLabel,
         folderId: null,
+        location_id: selectedLocationId,
         createdAt: new Date().toISOString().slice(0, 10),
         sections: sections,
         time_of_day: timeOfDay,
@@ -145,7 +143,7 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
+      <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
         <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[90vh] animate-fade-in">
           <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
             <h2 className="font-display text-lg text-foreground">{editId ? "Edit checklist" : "Build checklist"}</h2>
@@ -286,37 +284,42 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
 
             {/* Location */}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Locations</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Location</label>
               <button onClick={() => setShowLocationPicker(v => !v)}
                 className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted text-sm text-foreground hover:bg-muted/80 transition-colors">
+                <MapPin size={14} className="text-muted-foreground shrink-0" />
                 <span className="flex-1 text-left truncate">
-                  {selectedLocations.length === 0 ? "Select locations" :
-                   selectedLocations.length === allLocs.length ? "All locations" :
-                   selectedLocations.join(", ")}
+                  {selectedLocationId
+                    ? dbLocations.find(l => l.id === selectedLocationId)?.name ?? "Unknown location"
+                    : "All locations"}
                 </span>
                 <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showLocationPicker && "rotate-180")} />
               </button>
               {showLocationPicker && (
                 <div className="mt-1 border border-border rounded-xl bg-card overflow-hidden shadow-md">
-                  <button onClick={selectAllLocs}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border">
-                    <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
-                      selectedLocations.length === allLocs.length ? "bg-sage border-sage" : "border-border")}>
-                      {selectedLocations.length === allLocs.length && <Check size={10} className="text-primary-foreground" strokeWidth={3} />}
-                    </div>
-                    <span className="text-sm font-medium text-foreground">Select all</span>
+                  <button onClick={() => { setSelectedLocationId(null); setShowLocationPicker(false); }}
+                    className={cn("w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border",
+                      selectedLocationId === null && "text-sage font-medium")}>
+                    <MapPin size={14} className="text-muted-foreground shrink-0" />
+                    <span className="text-sm">All locations</span>
                   </button>
-                  {allLocs.map(loc => (
-                    <button key={loc} onClick={() => toggleLoc(loc)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left">
-                      <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
-                        selectedLocations.includes(loc) ? "bg-sage border-sage" : "border-border")}>
-                        {selectedLocations.includes(loc) && <Check size={10} className="text-primary-foreground" strokeWidth={3} />}
-                      </div>
-                      <span className="text-sm text-foreground">{loc}</span>
+                  {dbLocations.length === 0 && (
+                    <p className="px-4 py-3 text-sm text-muted-foreground">No locations set up yet.</p>
+                  )}
+                  {dbLocations.map(loc => (
+                    <button key={loc.id} onClick={() => { setSelectedLocationId(loc.id); setShowLocationPicker(false); }}
+                      className={cn("w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left",
+                        selectedLocationId === loc.id && "text-sage font-medium")}>
+                      <MapPin size={14} className="text-muted-foreground shrink-0" />
+                      <span className="text-sm">{loc.name}</span>
                     </button>
                   ))}
                 </div>
+              )}
+              {selectedLocationId && (
+                <p className="text-[10px] text-muted-foreground mt-1 pl-1">
+                  This checklist will only appear in the kiosk at the selected location.
+                </p>
               )}
             </div>
 
@@ -364,8 +367,8 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
                         <button onClick={() => updateQuestion(si, qi, { required: !q.required })}
                           className={cn("w-8 h-5 rounded-full transition-colors relative",
                             q.required ? "bg-sage" : "bg-border")}>
-                          <div className={cn("w-3.5 h-3.5 rounded-full bg-primary-foreground absolute top-0.5 transition-all",
-                            q.required ? "left-[18px]" : "left-1")} />
+                          <div className={cn("w-3.5 h-3.5 rounded-full bg-primary-foreground absolute top-[3px] transition-all",
+                            q.required ? "left-[18px]" : "left-[3px]")} />
                         </button>
                       </label>
                     </div>
@@ -618,10 +621,17 @@ export function ChecklistBuilderModal({ onClose, onAdd, onUpdate, initialTitle, 
                                           {trigger.type === "notify" && (
                                             <div className="flex items-center gap-1.5">
                                               <User size={11} className="text-muted-foreground shrink-0" />
-                                              <input type="text" placeholder="User or role to notify"
+                                              <select
                                                 value={trigger.config?.notifyUser || ""}
                                                 onChange={e => updateTriggerConfig(ri, ti, { notifyUser: e.target.value })}
-                                                className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                                                className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring">
+                                                <option value="">Select staff member…</option>
+                                                {staffProfiles.filter(s => s.status !== "archived").map(s => (
+                                                  <option key={s.id} value={`${s.first_name} ${s.last_name}`}>
+                                                    {s.first_name} {s.last_name}{s.role ? ` — ${s.role}` : ""}
+                                                  </option>
+                                                ))}
+                                              </select>
                                             </div>
                                           )}
                                           {trigger.type === "require_action" && (

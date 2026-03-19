@@ -54,6 +54,9 @@ export default function Signup() {
       email: email.trim(),
       password,
       options: {
+        // After email confirmation, Supabase redirects here. The callback
+        // page processes the auth tokens and sends the user to /admin.
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         // Store both fields in auth user metadata so AuthContext can call
         // setup_new_organization even if localStorage is cleared (e.g.
         // when email is confirmed on a different device or browser).

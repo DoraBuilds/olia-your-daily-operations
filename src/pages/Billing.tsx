@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Loader2, AlertCircle, ExternalLink, Zap, MapPin, Building2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { usePlan } from "@/hooks/usePlan";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   PLAN_FEATURES,
   PLAN_LABELS,
@@ -79,14 +81,37 @@ const PLAN_EXAMPLE_LOCATIONS: Partial<Record<Plan, number>> = {
 };
 
 // ─── Side-by-side comparison rows ────────────────────────────────────────────
-const COMPARISON_ROWS: { label: string; starter: string; growth: string; enterprise: string }[] = [
-  { label: "Locations",           starter: "1",         growth: "Up to 10",  enterprise: "Unlimited" },
-  { label: "Staff profiles",      starter: "Up to 15",  growth: "Up to 200", enterprise: "Unlimited" },
-  { label: "Checklists",          starter: "Up to 10",  growth: "Unlimited", enterprise: "Unlimited" },
-  { label: "AI checklist builder",starter: "—",         growth: "✓",         enterprise: "✓" },
-  { label: "Multi-location view", starter: "—",         growth: "✓",         enterprise: "✓" },
-  { label: "Advanced reporting",  starter: "—",         growth: "✓",         enterprise: "✓" },
-  { label: "Priority support",    starter: "—",         growth: "—",         enterprise: "✓" },
+// Section headers use a special `isHeader: true` flag to render as dividers.
+type ComparisonRow =
+  | { isHeader: true; label: string }
+  | { isHeader?: false; label: string; starter: string; growth: string; enterprise: string };
+
+const COMPARISON_ROWS: ComparisonRow[] = [
+  // ── Usage limits ──────────────────────────────────────────────────────────
+  { isHeader: true, label: "Usage limits" },
+  { label: "Locations",      starter: "1",         growth: "Up to 10",  enterprise: "Unlimited" },
+  { label: "Staff profiles", starter: "Up to 15",  growth: "Up to 200", enterprise: "Unlimited" },
+  { label: "Checklists",     starter: "Up to 10",  growth: "Unlimited", enterprise: "Unlimited" },
+  // ── Core features ─────────────────────────────────────────────────────────
+  { isHeader: true, label: "Core features" },
+  { label: "Kiosk mode",          starter: "✓", growth: "✓", enterprise: "✓" },
+  { label: "Staff PIN check-in",  starter: "✓", growth: "✓", enterprise: "✓" },
+  { label: "Checklist builder",   starter: "✓", growth: "✓", enterprise: "✓" },
+  { label: "SOP & training hub",  starter: "✓", growth: "✓", enterprise: "✓" },
+  { label: "PDF export",          starter: "✓", growth: "✓", enterprise: "✓" },
+  // ── Growth features ───────────────────────────────────────────────────────
+  { isHeader: true, label: "Growth features" },
+  { label: "Multi-location view",      starter: "—", growth: "✓", enterprise: "✓" },
+  { label: "AI checklist builder",     starter: "—", growth: "✓", enterprise: "✓" },
+  { label: "File-to-checklist import", starter: "—", growth: "✓", enterprise: "✓" },
+  { label: "Advanced reporting",       starter: "—", growth: "✓", enterprise: "✓" },
+  { label: "CSV export",               starter: "—", growth: "✓", enterprise: "✓" },
+  // ── Enterprise features ───────────────────────────────────────────────────
+  { isHeader: true, label: "Enterprise" },
+  { label: "Dedicated account manager", starter: "—", growth: "—", enterprise: "✓" },
+  { label: "Custom onboarding",         starter: "—", growth: "—", enterprise: "✓" },
+  { label: "SLA-backed support",        starter: "—", growth: "—", enterprise: "✓" },
+  { label: "Custom integrations",       starter: "—", growth: "—", enterprise: "✓" },
 ];
 
 // ─── Plan icons ───────────────────────────────────────────────────────────────
@@ -99,6 +124,8 @@ const PLAN_ICONS: Record<Plan, React.ReactNode> = {
 export default function Billing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { teamMember } = useAuth();
+  const qc = useQueryClient();
   const { plan, planStatus, hasStripeSubscription } = usePlan();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState<Plan | null>(null);
@@ -106,6 +133,19 @@ export default function Billing() {
 
   const upgraded = searchParams.get("upgraded") === "1";
   const canceled  = searchParams.get("canceled")  === "1";
+
+  // After Stripe redirects back with ?upgraded=1, the webhook may still be in
+  // flight. Poll the org record up to 3 times (at 0 s, 3 s, 9 s) so the UI
+  // reflects the real plan as soon as the webhook writes it.
+  useEffect(() => {
+    if (!upgraded || !teamMember?.organization_id) return;
+    const key = ["organization", teamMember.organization_id];
+    qc.invalidateQueries({ queryKey: key });
+    const t1 = setTimeout(() => qc.invalidateQueries({ queryKey: key }), 3000);
+    const t2 = setTimeout(() => qc.invalidateQueries({ queryKey: key }), 9000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [upgraded, teamMember?.organization_id]);
 
   // ── Stripe checkout (unchanged logic) ──────────────────────────────────────
   const handleUpgrade = async (targetPlan: "starter" | "growth") => {
@@ -117,25 +157,37 @@ export default function Billing() {
     setLoading(targetPlan);
     setError(null);
     try {
+      // The edge function always returns HTTP 200 (even for application-level
+      // errors), so supabase-js always routes the response to `data`, never to
+      // `fnError`. This avoids the unreliable FunctionsHttpError.context body-
+      // parsing that previously caused the generic "non-2xx" message to leak.
       const { data, error: fnError } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId, returnUrl: window.location.href.split("?")[0] },
+        body: { priceId, planName: targetPlan, returnUrl: window.location.href.split("?")[0] },
       });
-      if (fnError)     throw new Error(fnError.message);
+
+      // fnError only fires for genuine infrastructure failures (network down,
+      // function not deployed, CORS crash). Surface those directly.
+      if (fnError) throw new Error(fnError.message ?? "Could not reach the upgrade service.");
+
+      // Application-level errors are in data.error (Stripe not configured, etc.)
       if (data?.error) throw new Error(data.error);
       if (data?.url)   window.location.href = data.url;
     } catch (e: any) {
-      setError(e?.message ?? "Something went wrong. Please try again.");
+      const raw: string = e?.message ?? "Something went wrong. Please try again.";
+      // Stripe not configured → friendly contact-us message
+      if (raw.includes("Stripe is not configured") || raw.includes("STRIPE_SECRET_KEY")) {
+        setError("Online upgrades aren't available yet. To upgrade your plan, email us at hello@olia.app and we'll get you set up.");
+      } else {
+        setError(raw);
+      }
     } finally {
       setLoading(null);
     }
   };
 
   // ── CTA label logic ─────────────────────────────────────────────────────────
+  // Only used for non-current, non-enterprise plans (the "else" branch in the JSX).
   const ctaLabel = (p: Plan): string => {
-    if (p === "enterprise")                    return "Book a demo";
-    if (p === plan && hasStripeSubscription)   return "Current plan";
-    if (p === plan)                            return `Subscribe to ${PLAN_LABELS[p]}`;
-    // Upgrading from lower → higher tier
     const tierOrder: Plan[] = ["starter", "growth", "enterprise"];
     const currentIdx = tierOrder.indexOf(plan);
     const targetIdx  = tierOrder.indexOf(p);
@@ -163,10 +215,24 @@ export default function Billing() {
 
         {/* ── Post-checkout banners ────────────────────────────────────────── */}
         {upgraded && (
-          <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-ok/30 bg-status-ok/5">
-            <Check size={15} className="text-status-ok shrink-0" />
-            <p className="text-sm text-status-ok font-medium">Your plan has been upgraded. Welcome aboard!</p>
-          </div>
+          // Show one of two states:
+          // 1. Plan is confirmed in DB (webhook already processed) → green success
+          // 2. Plan not yet updated (webhook still in flight) → neutral "activating"
+          plan !== "starter" ? (
+            <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-ok/30 bg-status-ok/5">
+              <Check size={15} className="text-status-ok shrink-0" />
+              <p className="text-sm text-status-ok font-medium">
+                You're now on {PLAN_LABELS[plan]}. Welcome aboard!
+              </p>
+            </div>
+          ) : (
+            <div className="card-surface px-4 py-3 flex items-center gap-2 border border-border bg-muted/40">
+              <Loader2 size={15} className="text-muted-foreground shrink-0 animate-spin" />
+              <p className="text-sm text-muted-foreground">
+                Checkout complete — activating your plan. This page will update automatically.
+              </p>
+            </div>
+          )
         )}
         {canceled && (
           <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-warn/30 bg-status-warn/5">
@@ -254,7 +320,12 @@ export default function Billing() {
 
         {/* ── Error ───────────────────────────────────────────────────────── */}
         {error && (
-          <div className="flex items-start gap-2 text-status-error text-xs px-1">
+          <div className={cn(
+            "flex items-start gap-2 text-xs px-3 py-2.5 rounded-xl",
+            error.includes("@")
+              ? "bg-muted/60 text-foreground border border-border"
+              : "bg-status-error/10 text-status-error border border-status-error/20",
+          )}>
             <AlertCircle size={14} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
@@ -390,7 +461,9 @@ export default function Billing() {
                       Book a demo
                     </a>
                   )
-                ) : isCurrent && hasStripeSubscription ? (
+                ) : isCurrent ? (
+                  // Always show "Current plan" as a non-clickable label for the active plan,
+                  // regardless of whether there's a Stripe subscription (Starter is free).
                   <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
                     Current plan
                   </div>
@@ -398,12 +471,7 @@ export default function Billing() {
                   <button
                     disabled={isLoadingP}
                     onClick={() => handleUpgrade(p as "starter" | "growth")}
-                    className={cn(
-                      "w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2",
-                      isRecommended
-                        ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                        : "bg-sage text-primary-foreground hover:bg-sage-deep"
-                    )}
+                    className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
                   >
                     {isLoadingP && <Loader2 size={14} className="animate-spin" />}
                     {ctaLabel(p)}
@@ -440,33 +508,46 @@ export default function Billing() {
               ))}
             </div>
             {/* Rows */}
-            {COMPARISON_ROWS.map((row, i) => (
-              <div
-                key={row.label}
-                className={cn(
-                  "grid grid-cols-4 gap-1 py-2",
-                  i < COMPARISON_ROWS.length - 1 && "border-b border-border/50"
-                )}
-              >
-                <p className="text-[11px] text-muted-foreground leading-tight">{row.label}</p>
-                {([row.starter, row.growth, row.enterprise] as const).map((val, ci) => {
-                  const colPlan = (["starter", "growth", "enterprise"] as Plan[])[ci];
-                  const isCurrentCol = colPlan === plan;
-                  return (
-                    <p key={ci} className={cn(
-                      "text-[11px] text-center rounded py-0.5",
-                      isCurrentCol && "bg-sage/[0.06]",
-                      val === "—"        ? "text-muted-foreground/40"
-                      : val === "✓"      ? "text-status-ok font-medium"
-                      : isCurrentCol     ? "text-foreground font-medium"
-                      :                    "text-muted-foreground"
-                    )}>
-                      {val}
+            {COMPARISON_ROWS.map((row, i) => {
+              if (row.isHeader) {
+                return (
+                  <div key={`header-${row.label}`} className="grid grid-cols-4 gap-1 pt-3 pb-1">
+                    <p className="col-span-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                      {row.label}
                     </p>
-                  );
-                })}
-              </div>
-            ))}
+                  </div>
+                );
+              }
+              const dataRow = row as { label: string; starter: string; growth: string; enterprise: string };
+              const isLast = i === COMPARISON_ROWS.length - 1 || COMPARISON_ROWS[i + 1]?.isHeader;
+              return (
+                <div
+                  key={dataRow.label}
+                  className={cn(
+                    "grid grid-cols-4 gap-1 py-2",
+                    !isLast && "border-b border-border/50"
+                  )}
+                >
+                  <p className="text-[11px] text-muted-foreground leading-tight">{dataRow.label}</p>
+                  {([dataRow.starter, dataRow.growth, dataRow.enterprise] as const).map((val, ci) => {
+                    const colPlan = (["starter", "growth", "enterprise"] as Plan[])[ci];
+                    const isCurrentCol = colPlan === plan;
+                    return (
+                      <p key={ci} className={cn(
+                        "text-[11px] text-center rounded py-0.5",
+                        isCurrentCol && "bg-sage/[0.06]",
+                        val === "—"        ? "text-muted-foreground/40"
+                        : val === "✓"      ? "text-status-ok font-medium"
+                        : isCurrentCol     ? "text-foreground font-medium"
+                        :                    "text-muted-foreground"
+                      )}>
+                        {val}
+                      </p>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
 

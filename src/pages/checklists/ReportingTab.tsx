@@ -209,10 +209,10 @@ export function ReportingTab() {
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Completed</p>
           <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : logs.length}</p>
-          {logs.length > 0 && (
+          {!isLoading && logs.length === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
-              <TrendingUp size={10} className="text-status-ok" />
-              <span className="text-[10px] text-status-ok font-medium">+{Math.max(0, logs.length - 2)}</span>
+              <Minus size={10} className="text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground font-medium">none</span>
             </div>
           )}
         </div>
@@ -226,10 +226,14 @@ export function ReportingTab() {
           )}>
             {isLoading ? "—" : logs.length ? `${avgScore}%` : "—"}
           </p>
-          {logs.length > 0 && avgScore >= 85 && (
+          {!isLoading && logs.length > 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
-              <TrendingUp size={10} className="text-status-ok" />
-              <span className="text-[10px] text-status-ok font-medium">+3%</span>
+              {avgScore >= 85
+                ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-[10px] text-status-ok font-medium">Good</span></>
+                : avgScore >= 65
+                ? <><Minus size={10} className="text-status-warn" /><span className="text-[10px] text-status-warn font-medium">Review</span></>
+                : <><TrendingDown size={10} className="text-status-error" /><span className="text-[10px] text-status-error font-medium">Action needed</span></>
+              }
             </div>
           )}
         </div>

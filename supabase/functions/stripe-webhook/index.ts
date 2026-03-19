@@ -60,7 +60,27 @@ Deno.serve(async (req) => {
           (await getOrgIdFromCustomer(stripe, String(sub.customer)));
         if (!orgId) break;
 
-        const plan = planFromMetadata(sub.metadata ?? {});
+        // Primary source: olia_plan stamped onto subscription metadata by
+        // create-checkout-session (added 2026-03-19).
+        let plan = planFromMetadata(sub.metadata ?? {});
+
+        // Fallback: if olia_plan is missing (old subscriptions created before
+        // the metadata fix), look it up from the Stripe product attached to the
+        // first line item. Product metadata must have olia_plan = "growth" | "enterprise".
+        if (plan === "starter" && sub.items?.data?.[0]?.price?.id) {
+          try {
+            const price = await stripe.prices.retrieve(
+              sub.items.data[0].price.id,
+              { expand: ["product"] }
+            );
+            const product = price.product as Stripe.Product;
+            const productPlan = planFromMetadata(product?.metadata ?? {});
+            if (productPlan !== "starter") plan = productPlan;
+          } catch {
+            // Unable to fetch product — keep "starter" as safe default
+          }
+        }
+
         await supabase
           .from("organizations")
           .update({

@@ -57,7 +57,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Convert file to checklist</h2>

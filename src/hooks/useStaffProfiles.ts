@@ -31,28 +31,61 @@ export function useSaveStaffProfile() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (sp: Partial<StaffProfile> & { id?: string; rawPin?: string }) => {
-      // Hash the PIN if a new one was provided; otherwise leave it unchanged (upsert won't
-      // touch the column if we omit it, but Supabase upsert sends all fields, so we must
-      // only include pin when it's being explicitly set).
-      const payload: Record<string, any> = {
-        id: sp.id || undefined,
-        organization_id: teamMember!.organization_id,
-        location_id: sp.location_id ?? null,
-        first_name: sp.first_name,
-        last_name: sp.last_name,
-        role: sp.role,
-        status: sp.status ?? "active",
-      };
-
-      if (sp.rawPin) {
-        payload.pin = await hashPin(sp.rawPin);
-      } else if (!sp.id) {
-        // New staff member requires a PIN
-        throw new Error("PIN is required for new staff members.");
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
       }
 
-      const { error } = await supabase.from("staff_profiles").upsert(payload);
-      if (error) throw error;
+      if (sp.id) {
+        // ── Editing an existing profile: explicit UPDATE ────────────────────
+        // DO NOT use upsert: the INSERT half of ON CONFLICT DO UPDATE requires
+        // the NOT NULL `pin` column even when updating, causing a null violation.
+        //
+        // organization_id is intentionally OMITTED from updatePayload.
+        // staff_profiles_update_permitted has only USING (no WITH CHECK), so
+        // PostgreSQL promotes USING as the WITH CHECK expression and validates
+        // new_row.organization_id = current_org_id(). Including organization_id
+        // in the payload risks a WITH CHECK mismatch if teamMember.organization_id
+        // (React state) differs from current_org_id() at query-time, causing a
+        // silent 0-row update. Omitting it leaves the column unchanged so the
+        // promoted check always passes.
+        const updatePayload: Record<string, any> = {
+          location_id: sp.location_id ?? null,
+          first_name: sp.first_name,
+          last_name: sp.last_name,
+          role: sp.role,
+          status: sp.status ?? "active",
+        };
+        // Only update pin when a new one was explicitly provided; otherwise
+        // leave the existing hashed pin untouched.
+        if (sp.rawPin) {
+          updatePayload.pin = await hashPin(sp.rawPin);
+        }
+        const { data: updated, error } = await supabase
+          .from("staff_profiles")
+          .update(updatePayload)
+          .eq("id", sp.id)
+          .select("id");
+        if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error("Profile update failed — your session may have expired. Please refresh and try again.");
+        }
+      } else {
+        // ── Creating a new profile: explicit INSERT ─────────────────────────
+        if (!sp.rawPin) {
+          throw new Error("PIN is required for new staff members.");
+        }
+        const insertPayload: Record<string, any> = {
+          organization_id: teamMember.organization_id,
+          location_id: sp.location_id ?? null,
+          first_name: sp.first_name,
+          last_name: sp.last_name,
+          role: sp.role,
+          status: sp.status ?? "active",
+          pin: await hashPin(sp.rawPin),
+        };
+        const { error } = await supabase.from("staff_profiles").insert(insertPayload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });
@@ -62,11 +95,17 @@ export function useArchiveStaffProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      // Use .select("id") so we can detect the silent 0-row case (RLS blocked
+      // or the profile was already archived / doesn't exist).
+      const { data: updated, error } = await supabase
         .from("staff_profiles")
         .update({ status: "archived", archived_at: new Date().toISOString() })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Could not archive this profile. Please refresh and try again.");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });
@@ -76,11 +115,15 @@ export function useRestoreStaffProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("staff_profiles")
         .update({ status: "active", archived_at: null })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Could not restore this profile. Please refresh and try again.");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });

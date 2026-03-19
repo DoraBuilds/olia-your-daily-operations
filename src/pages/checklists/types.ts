@@ -22,6 +22,7 @@ export interface ChecklistItem {
   questionsCount: number;
   schedule?: string;
   folderId: string | null;
+  location_id?: string | null;
   createdAt: string;
   sections?: SectionDef[];
   time_of_day?: "morning" | "afternoon" | "evening" | "anytime";

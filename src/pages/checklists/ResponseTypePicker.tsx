@@ -8,7 +8,7 @@ export function ResponseTypePicker({ onSelect, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
       <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <h2 className="font-display text-lg text-foreground">Type of response</h2>

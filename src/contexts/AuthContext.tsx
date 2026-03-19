@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/query-client";
 
 interface TeamMemberProfile {
   id: string;
@@ -118,28 +119,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Use ONLY onAuthStateChange. Supabase JS v2 fires INITIAL_SESSION
+    // synchronously on mount with the current session (or null), making
+    // getSession() redundant. Keeping both caused fetchTeamMember to run
+    // twice simultaneously on every page load — and for a first-time user
+    // both concurrent calls would invoke setup_new_organization, causing
+    // a PK conflict on team_members and an error screen on first login.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchTeamMember(
-          session.user.id,
-          session.user.user_metadata as Record<string, string>,
-        );
-      } else {
-        setLoading(false);
-      }
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
       if (session?.user) {
-        fetchTeamMember(
-          session.user.id,
-          session.user.user_metadata as Record<string, string>,
-        );
+        if (event === "SIGNED_IN") {
+          // Fresh login — clear any org-scoped cache from a previously signed-in account.
+          queryClient.clear();
+        }
+
+        // TOKEN_REFRESHED is a silent hourly JWT rotation for the same user/org.
+        // Re-fetching team_members on every refresh is wasteful and, if the row
+        // was ever missing, would silently create a second organization.
+        if (event !== "TOKEN_REFRESHED") {
+          fetchTeamMember(
+            session.user.id,
+            session.user.user_metadata as Record<string, string>,
+          );
+        }
       } else {
+        // User signed out — clear all org-scoped React Query cache so a
+        // subsequent login never sees the previous account's data.
+        queryClient.clear();
         setTeamMember(null);
         setSetupError(null);
         setLoading(false);
@@ -147,8 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  // fetchTeamMember is intentionally defined outside deps — it uses only
-  // supabase (module-level) and state setters (stable refs). ESLint disable is safe.
+  // fetchTeamMember uses only supabase (module-level) and stable state setters.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -13,6 +13,7 @@ import Notifications from "./pages/Notifications";
 import Billing from "./pages/Billing";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/kiosk" element={<Kiosk />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/checklists/*" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
