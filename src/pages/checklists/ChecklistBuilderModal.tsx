@@ -203,8 +203,8 @@ export function ChecklistBuilderModal({
         )}
       </div>
 
-      {/* Scrollable form body */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+      {/* Form body — no inner scroll; outer overlay handles all scrolling */}
+      <div className="p-5 space-y-5">
         {/* Title */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Title <span className="text-status-error">*</span></label>
@@ -248,6 +248,9 @@ export function ChecklistBuilderModal({
               <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)}
                 className="flex-1 text-sm bg-transparent focus:outline-none text-foreground" />
             </div>
+            <p className="text-sm italic text-muted-foreground mt-1.5">
+              This checklist will appear in the kiosk 1 hour before it is due.
+            </p>
           </div>
 
           {/* Repeat */}
@@ -305,18 +308,6 @@ export function ChecklistBuilderModal({
             </p>
           )}
 
-          {/* Kiosk visibility helper */}
-          <p className="text-xs italic text-muted-foreground/70">
-            This checklist will appear in the kiosk 1 hour before it is due ({formatTime12h(scheduleTime)} → visible from {formatTime12h(
-              (() => {
-                const [h, m] = scheduleTime.split(":").map(Number);
-                const total = h * 60 + m - 60;
-                const hh = Math.max(0, Math.floor(total / 60));
-                const mm = total < 0 ? 0 : total % 60;
-                return `${hh.toString().padStart(2, "0")}:${mm.toString().padStart(2, "0")}`;
-              })()
-            )}).
-          </p>
         </div>
 
         {/* Location */}
@@ -454,10 +445,10 @@ export function ChecklistBuilderModal({
                     </div>
                   )}
 
-                  {/* Issue 6: Person type → real staff from selected location */}
+                  {/* Person type → real staff from selected location */}
                   {q.responseType === "person" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Person selector</p>
+                      <p className="text-xs font-medium text-muted-foreground">Person selector preview</p>
                       {availableStaff.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic">
                           {selectedLocationId
@@ -466,17 +457,23 @@ export function ChecklistBuilderModal({
                         </p>
                       ) : (
                         <div className="relative">
-                          <select disabled className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground appearance-none pr-8">
-                            <option>Select…</option>
+                          <select
+                            value={cfg.defaultPerson || ""}
+                            onChange={e => updateQuestion(si, qi, { config: { ...cfg, defaultPerson: e.target.value } })}
+                            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-foreground appearance-none pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="">No default — staff selects at kiosk</option>
                             {availableStaff.map(s => (
-                              <option key={s.id}>{s.first_name} {s.last_name}{s.role ? ` — ${s.role}` : ""}</option>
+                              <option key={s.id} value={`${s.first_name} ${s.last_name}`}>
+                                {s.first_name} {s.last_name}{s.role ? ` — ${s.role}` : ""}
+                              </option>
                             ))}
                           </select>
                           <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
                       )}
                       <p className="text-[10px] text-muted-foreground">
-                        Shown as a dropdown in the kiosk. Staff list is from the selected location.
+                        Optionally pre-select a default. Staff can change it at the kiosk.
                       </p>
                     </div>
                   )}
@@ -777,8 +774,8 @@ export function ChecklistBuilderModal({
         </button>
       </div>
 
-      {/* Footer — Issue 8: always visible */}
-      <div className="px-5 py-4 border-t border-border bg-card shrink-0">
+      {/* Footer */}
+      <div className="px-5 pb-6 pt-4 border-t border-border">
         {requiredError && (
           <p className="text-xs text-status-error mb-2 text-center">{requiredError}</p>
         )}
@@ -820,7 +817,7 @@ export function ChecklistBuilderModal({
   if (asPage) {
     return (
       <>
-        <div className="flex flex-col -mx-4 -mt-5" style={{ minHeight: "calc(100vh - 80px)" }}>
+        <div className="-mx-4 -mt-5">
           {formContent}
         </div>
         {subModals}
@@ -828,15 +825,13 @@ export function ChecklistBuilderModal({
     );
   }
 
-  // Modal mode: fixed overlay with single scroll container
+  // Modal mode — single scroll container is the outer overlay; card grows naturally
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm">
-        <div className="absolute inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-end sm:items-center justify-center sm:py-8 px-0 sm:px-4 pb-20">
-            <div className="bg-card w-full max-w-3xl rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden shadow-xl">
-              {formContent}
-            </div>
+      <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm overflow-y-auto">
+        <div className="flex min-h-full items-end sm:items-center justify-center sm:py-8 px-0 sm:px-4 pb-20">
+          <div className="bg-card w-full max-w-3xl rounded-t-2xl sm:rounded-2xl flex flex-col shadow-xl">
+            {formContent}
           </div>
         </div>
       </div>

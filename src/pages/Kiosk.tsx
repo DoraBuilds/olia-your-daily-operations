@@ -502,18 +502,29 @@ function PinEntryModal({
     setPin(p => p.slice(0, -1));
   };
 
+  const canStart = pin.length >= 4 && !validating && !lockedUntil;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 backdrop-blur-md">
-      <div className="bg-white w-full max-w-xs mx-4 rounded-3xl p-7 space-y-5 animate-fade-in shadow-xl">
+      <div className="bg-white w-full max-w-[320px] mx-4 rounded-3xl p-6 space-y-4 animate-fade-in shadow-xl relative">
+        {/* Close button */}
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
+          aria-label="Close"
+        >
+          <X size={16} />
+        </button>
+
         {/* Title */}
-        <div className="text-center space-y-1">
+        <div className="text-center pt-1 space-y-1">
           <h2 className="font-display text-3xl italic text-foreground">Insert PIN</h2>
-          <p className="section-label tracking-widest">Authorize personnel access</p>
+          <p className="text-xs text-muted-foreground">You're doing great — let's get started.</p>
         </div>
 
         <PinDots count={pin.length} />
 
-        {error && (
+        {error && !validating && (
           <p className="text-xs text-center text-status-error font-medium">{error}</p>
         )}
         {validating && (
@@ -532,9 +543,14 @@ function PinEntryModal({
 
         <button
           id="pin-start-btn"
-          onClick={onCancel}
-          disabled={validating}
-          className="w-full py-4 rounded-2xl bg-sage text-white font-bold tracking-widest text-sm transition-colors hover:bg-sage-deep active:scale-[0.98]"
+          onClick={() => canStart && validate(pin)}
+          disabled={!canStart}
+          className={cn(
+            "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
+            canStart
+              ? "bg-sage text-white hover:bg-sage-deep"
+              : "bg-muted text-muted-foreground cursor-not-allowed",
+          )}
         >
           START
         </button>
@@ -870,8 +886,9 @@ function CompletionScreen({
       <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center mb-6">
         <Check size={36} className="text-sage" />
       </div>
-      <h2 className="font-display text-3xl text-foreground mb-2">All done!</h2>
-      <p className="text-base text-muted-foreground mb-1">{checklist.title}</p>
+      <h2 className="font-display text-4xl italic text-foreground mb-1">Well done!</h2>
+      <p className="text-sm italic text-muted-foreground mb-5">Every completed checklist keeps the team running smoothly.</p>
+      <p className="text-base font-medium text-foreground mb-1">{checklist.title}</p>
       <p className="text-sm text-muted-foreground mb-1">{staffName}</p>
       <p className="text-xs text-muted-foreground/70 mb-8">{dateStr} · {timeStr}</p>
       <button
