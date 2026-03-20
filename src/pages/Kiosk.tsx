@@ -18,15 +18,18 @@ interface Question {
   id: string;
   text: string;
   type: QuestionType;
+  required?: boolean;        // if true, must be answered before "Complete" is allowed
   options?: string[];
   instructionText?: string;
+  imageUrl?: string;         // for instruction-type image
 }
 
 interface KioskChecklist {
   id: string;
   title: string;
-  location_id: string;
+  location_id: string | null;
   time_of_day: TimeOfDay;
+  due_time: string | null;   // HH:MM — kiosk visibility based on this
   questions: Question[];
 }
 
@@ -44,18 +47,25 @@ const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
  */
 function flattenSectionsToQuestions(sections: any[]): Question[] {
   return (sections ?? []).flatMap((section: any) =>
-    (section.questions ?? []).map((q: any): Question => ({
-      id: q.id,
-      text: q.text,
-      // Normalise responseType to kiosk QuestionType; unsupported types
-      // (media, signature, person…) fall back to "text" so the runner
-      // can still display them.
-      type: (SUPPORTED_QUESTION_TYPES.includes(q.responseType)
-        ? q.responseType
-        : "text") as QuestionType,
-      options: q.choices,
-      instructionText: q.config?.instructionText,
-    }))
+    (section.questions ?? []).map((q: any): Question => {
+      // "person" type: stored choices were baked in at builder time — render as multiple_choice
+      const isPerson = q.responseType === "person";
+      const resolvedType = isPerson
+        ? "multiple_choice"
+        : (SUPPORTED_QUESTION_TYPES.includes(q.responseType) ? q.responseType : "text") as QuestionType;
+      const resolvedOptions = isPerson
+        ? (q.config?.personChoices ?? q.choices ?? [])
+        : q.choices;
+      return {
+        id: q.id,
+        text: q.text,
+        type: resolvedType,
+        required: q.required ?? false,
+        options: resolvedOptions,
+        instructionText: q.config?.instructionText,
+        imageUrl: q.config?.instructionImageUrl,
+      };
+    })
   );
 }
 
@@ -68,13 +78,27 @@ function dbToKioskChecklist(raw: any): KioskChecklist {
   return {
     id: raw.id,
     title: raw.title,
-    location_id: raw.location_id,
+    location_id: raw.location_id ?? null,
     time_of_day: tod,
+    due_time: raw.due_time ?? null,
     questions: flattenSectionsToQuestions(raw.sections ?? []),
   };
 }
 
-/** Returns true if a checklist should be visible at the given time. */
+/**
+ * Returns true if a checklist is DUE (should show prominently in the kiosk).
+ * DUE = no due_time (always on) OR due_time is within the next 2 hours OR already past due today.
+ */
+export function isKioskDue(due_time: string | null | undefined, now: Date): boolean {
+  if (!due_time) return true;
+  const [h, m] = due_time.split(":").map(Number);
+  const dueMinutes = h * 60 + m;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  // Show from 1 hour before due (dueMinutes - 60) through end of day
+  return nowMinutes >= dueMinutes - 60;
+}
+
+/** @deprecated — kept for test compatibility; use isKioskDue instead */
 export function isVisibleAtTime(tod: TimeOfDay, now: Date): boolean {
   if (tod === "anytime") return true;
   const h = now.getHours();
@@ -623,10 +647,13 @@ function DateTimeInput({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
-function InstructionBlock({ text }: { text: string }) {
+function InstructionBlock({ text, imageUrl }: { text: string; imageUrl?: string }) {
   return (
-    <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4">
-      <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>
+    <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
+      {text && <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>}
+      {imageUrl && (
+        <img src={imageUrl} alt="Instruction" className="w-full max-h-48 object-cover rounded-lg" />
+      )}
     </div>
   );
 }
@@ -646,7 +673,7 @@ function QuestionInput({
     case "datetime":
       return <DateTimeInput value={value ?? ""} onChange={onChange} />;
     case "instruction":
-      return <InstructionBlock text={question.instructionText ?? ""} />;
+      return <InstructionBlock text={question.instructionText ?? ""} imageUrl={question.imageUrl} />;
     default:
       return null;
   }
@@ -665,6 +692,7 @@ function ChecklistRunner({
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
 
   const questions = checklist.questions;
@@ -672,6 +700,31 @@ function ChecklistRunner({
   const q = questions[currentIdx];
   const progress = Math.round((currentIdx / total) * 100);
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  /** Returns the first unanswered required question index, or -1 if all required are answered */
+  const findFirstUnansweredRequired = () => {
+    return questions.findIndex((question, idx) => {
+      if (!question.required || question.type === "instruction") return false;
+      const v = answers[question.id];
+      return v === undefined || v === "" || v === null || v === false;
+    });
+  };
+
+  const handleComplete = () => {
+    const firstMissing = findFirstUnansweredRequired();
+    if (firstMissing !== -1) {
+      const missingCount = questions.filter((question) =>
+        question.required && question.type !== "instruction" &&
+        (answers[question.id] === undefined || answers[question.id] === "" ||
+         answers[question.id] === null || answers[question.id] === false)
+      ).length;
+      setCompletionError(`${missingCount} required question${missingCount !== 1 ? "s" : ""} need an answer. Tap the question to complete it.`);
+      setCurrentIdx(firstMissing);
+      return;
+    }
+    setCompletionError(null);
+    onComplete(answers);
+  };
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col">
@@ -713,6 +766,15 @@ function ChecklistRunner({
         />
       </div>
 
+      {/* Completion error banner */}
+      {completionError && (
+        <div className="px-5 pb-2">
+          <div className="bg-status-error/10 border border-status-error/20 rounded-xl px-4 py-2.5 text-xs text-status-error font-medium text-center">
+            {completionError}
+          </div>
+        </div>
+      )}
+
       {/* Footer nav */}
       <div className="px-5 py-5 flex gap-3">
         <button
@@ -730,8 +792,9 @@ function ChecklistRunner({
         <button
           id="runner-next-btn"
           onClick={() => {
+            setCompletionError(null);
             if (currentIdx < total - 1) setCurrentIdx(i => i + 1);
-            else onComplete(answers);
+            else handleComplete();
           }}
           className="flex-1 py-3 rounded-xl text-sm font-semibold bg-sage text-primary-foreground hover:bg-sage-deep transition-colors flex items-center justify-center gap-1"
         >
@@ -819,6 +882,58 @@ function CompletionScreen({
       </button>
       <p className="text-xs text-muted-foreground/60 mt-4">Returning to home in {countdown}s</p>
     </div>
+  );
+}
+
+// ─── ChecklistCard ────────────────────────────────────────────────────────────
+function ChecklistCard({ cl, idx, onSelect, dim = false }: {
+  cl: KioskChecklist;
+  idx: number;
+  onSelect: (cl: KioskChecklist) => void;
+  dim?: boolean;
+}) {
+  const gradients = [
+    "linear-gradient(135deg, hsl(var(--sage-light)), hsl(var(--powder-blue-light)))",
+    "linear-gradient(135deg, hsl(var(--lavender-light)), hsl(var(--sage-light)))",
+    "linear-gradient(135deg, hsl(var(--powder-blue-light)), hsl(var(--lavender-light)))",
+    "linear-gradient(135deg, hsl(var(--muted)), hsl(var(--sage-light)))",
+  ];
+  const icons = ["☕", "🌿", "📋", "🔑", "✨", "📦"];
+
+  const formatDueTime = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h >= 12 ? "pm" : "am";
+    const h12 = h % 12 || 12;
+    return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
+  };
+
+  return (
+    <button
+      id={`checklist-card-${cl.id}`}
+      onClick={() => onSelect(cl)}
+      className={cn(
+        "bg-card border border-border rounded-2xl p-4 text-left transition-all active:scale-[0.98] hover:shadow-md space-y-3",
+        dim ? "opacity-60 hover:opacity-80 hover:border-border" : "hover:border-sage/40",
+      )}
+    >
+      <div
+        className="w-full h-20 rounded-xl flex items-center justify-center"
+        style={{ background: gradients[idx % 4] }}
+      >
+        <span className="text-2xl opacity-50">{icons[idx % 6]}</span>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {cl.questions.length} item{cl.questions.length !== 1 ? "s" : ""}
+        </p>
+        {cl.due_time && (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+            Due {formatDueTime(cl.due_time)}
+          </p>
+        )}
+      </div>
+    </button>
   );
 }
 
@@ -948,7 +1063,10 @@ export default function Kiosk() {
   // ── Setup screen ──────────────────────────────────────────────────────────
   if (!locationId) return <KioskSetupScreen onSetup={handleSetup} />;
 
-  const visibleChecklists = kioskChecklists.filter(c => isVisibleAtTime(c.time_of_day, now));
+  // All checklists are visible — split into DUE (within 1h) and UPCOMING (later today)
+  const dueChecklists = kioskChecklists.filter(c => isKioskDue(c.due_time, now));
+  const upcomingChecklists = kioskChecklists.filter(c => !isKioskDue(c.due_time, now));
+  const visibleChecklists = kioskChecklists; // all shown, just split differently
 
   // ── Runner screen ─────────────────────────────────────────────────────────
   if (screen === "runner" && selectedChecklist) {
@@ -988,7 +1106,10 @@ export default function Kiosk() {
           </div>
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-none mt-0.5">Kiosk</p>
+            {/* Issue 9: Show location name prominently */}
+            <p className="text-[10px] text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
+              {locationName || "Kiosk"}
+            </p>
           </div>
         </div>
         <div className="text-right">
@@ -1010,18 +1131,18 @@ export default function Kiosk() {
           What's on the agenda<br />for today?
         </h1>
 
-        {/* Stat strip */}
+        {/* Stat strip — DUE / UPCOMING / Total */}
         <div className="grid grid-cols-3 gap-2 mt-5">
           <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
+            <p className="section-label mb-1">Due now</p>
+            <p className="text-2xl font-bold text-status-error">{dueChecklists.length}</p>
+          </div>
+          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
+            <p className="section-label mb-1">Upcoming</p>
+            <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
+          </div>
+          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
             <p className="section-label mb-1">Total</p>
-            <p className="text-2xl font-bold text-foreground">{visibleChecklists.length}</p>
-          </div>
-          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
-            <p className="section-label mb-1">Completed</p>
-            <p className="text-2xl font-bold text-status-ok">0</p>
-          </div>
-          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
-            <p className="section-label mb-1">Remaining</p>
             <p className="text-2xl font-bold text-foreground">{visibleChecklists.length}</p>
           </div>
         </div>
@@ -1060,41 +1181,29 @@ export default function Kiosk() {
             <p className="text-xs text-muted-foreground/60 mt-1">An admin needs to create checklists and assign them here.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {visibleChecklists.map((cl, idx) => (
-              <button
-                key={cl.id}
-                id={`checklist-card-${cl.id}`}
-                onClick={() => setSelectedChecklist(cl)}
-                className="bg-card border border-border rounded-2xl p-4 text-left hover:border-sage/40 transition-all active:scale-[0.98] hover:shadow-md space-y-3"
-              >
-                {/* Color block representing the checklist (no real photo) */}
-                <div
-                  className="w-full h-20 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: [
-                      "linear-gradient(135deg, hsl(var(--sage-light)), hsl(var(--powder-blue-light)))",
-                      "linear-gradient(135deg, hsl(var(--lavender-light)), hsl(var(--sage-light)))",
-                      "linear-gradient(135deg, hsl(var(--powder-blue-light)), hsl(var(--lavender-light)))",
-                      "linear-gradient(135deg, hsl(var(--muted)), hsl(var(--sage-light)))",
-                    ][idx % 4]
-                  }}
-                >
-                  <span className="text-2xl opacity-50">
-                    {["☕", "🌿", "📋", "🔑", "✨", "📦"][idx % 6]}
-                  </span>
+          <div className="space-y-4">
+            {/* DUE NOW section */}
+            {dueChecklists.length > 0 && (
+              <div>
+                <p className="section-label mb-2 text-status-error">Due now</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {dueChecklists.map((cl, idx) => (
+                    <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {cl.questions.length} item{cl.questions.length !== 1 ? "s" : ""}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                    {cl.time_of_day === "morning" ? "Morning" : cl.time_of_day === "evening" ? "Evening" : cl.time_of_day === "afternoon" ? "Afternoon" : "Anytime"}
-                  </p>
+              </div>
+            )}
+            {/* UPCOMING section */}
+            {upcomingChecklists.length > 0 && (
+              <div>
+                <p className="section-label mb-2">Upcoming today</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {upcomingChecklists.map((cl, idx) => (
+                    <ChecklistCard key={cl.id} cl={cl} idx={idx + dueChecklists.length} onSelect={setSelectedChecklist} dim />
+                  ))}
                 </div>
-              </button>
-            ))}
+              </div>
+            )}
           </div>
         )}
       </div>

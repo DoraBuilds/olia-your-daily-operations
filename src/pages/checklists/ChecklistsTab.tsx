@@ -188,6 +188,43 @@ export function ChecklistsTab() {
     }
   };
 
+  // ── Page-mode builder: takes over the whole content area ──────────────────
+  if (showBuilder) {
+    return (
+      <ChecklistBuilderModal
+        asPage
+        onClose={() => { setShowBuilder(false); setPrefillTitle(""); setPrefillSections(undefined); setEditingChecklistId(null); }}
+        onAdd={item => {
+          saveChecklistMut.mutate({
+            id: "",
+            title: item.title,
+            folder_id: currentFolder,
+            location_id: item.location_id ?? null,
+            sections: item.sections ?? [],
+            schedule: item.schedule ?? null,
+            time_of_day: "anytime",
+            due_time: (item as any).due_time ?? null,
+          });
+        }}
+        onUpdate={(id, updates) => {
+          const orig = dbChecklists.find(c => c.id === id);
+          if (orig) saveChecklistMut.mutate({
+            ...orig,
+            title: updates.title ?? orig.title,
+            sections: updates.sections ?? orig.sections,
+            schedule: updates.schedule ?? orig.schedule,
+            location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
+            time_of_day: "anytime",
+            due_time: (updates as any).due_time !== undefined ? (updates as any).due_time : orig.due_time,
+          });
+        }}
+        initialTitle={prefillTitle}
+        initialSections={prefillSections}
+        editId={editingChecklistId || undefined}
+      />
+    );
+  }
+
   return (
     <>
       {/* Location dropdown */}
@@ -342,37 +379,6 @@ export function ChecklistsTab() {
         setPrefillSections(sections);
         setShowBuilder(true);
       }} />}
-
-      {showBuilder && (
-        <ChecklistBuilderModal
-          onClose={() => { setShowBuilder(false); setPrefillTitle(""); setPrefillSections(undefined); setEditingChecklistId(null); }}
-          onAdd={item => {
-            saveChecklistMut.mutate({
-              id: "",
-              title: item.title,
-              folder_id: currentFolder,
-              location_id: item.location_id ?? null,
-              sections: item.sections ?? [],
-              schedule: item.schedule ?? null,
-              time_of_day: item.time_of_day ?? "anytime",
-            });
-          }}
-          onUpdate={(id, updates) => {
-            const orig = dbChecklists.find(c => c.id === id);
-            if (orig) saveChecklistMut.mutate({
-              ...orig,
-              title: updates.title ?? orig.title,
-              sections: updates.sections ?? orig.sections,
-              schedule: updates.schedule ?? orig.schedule,
-              location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
-              time_of_day: updates.time_of_day ?? orig.time_of_day,
-            });
-          }}
-          initialTitle={prefillTitle}
-          initialSections={prefillSections}
-          editId={editingChecklistId || undefined}
-        />
-      )}
 
       {previewChecklist && (
         <ChecklistPreviewModal checklist={previewChecklist} onClose={() => setPreviewChecklist(null)}

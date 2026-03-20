@@ -17,6 +17,7 @@ export interface ChecklistItem {
   schedule: any;
   sections: any[];
   time_of_day: "morning" | "afternoon" | "evening" | "anytime";
+  due_time: string | null;   // HH:MM — when checklist is due (drives kiosk visibility)
   created_at: string;
   updated_at: string;
 }
@@ -73,7 +74,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, title, folder_id, location_id, schedule, sections, time_of_day, created_at, updated_at")
+        .select("id, title, folder_id, location_id, schedule, sections, time_of_day, due_time, created_at, updated_at")
         .order("title");
       if (error) throw error;
       return (data ?? []) as ChecklistItem[];
@@ -94,7 +95,8 @@ export function useSaveChecklist() {
         location_id: checklist.location_id ?? null,
         schedule: checklist.schedule ?? null,
         sections: checklist.sections ?? [],
-        time_of_day: checklist.time_of_day ?? "anytime",
+        time_of_day: "anytime",              // always anytime — kiosk uses due_time instead
+        due_time: checklist.due_time ?? null,
         updated_at: new Date().toISOString(),
       });
       if (error) throw error;
