@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
@@ -22,6 +22,8 @@ interface Question {
   options?: string[];
   instructionText?: string;
   imageUrl?: string;         // for instruction-type image
+  sectionName?: string;      // section this question belongs to (for dividers in runner)
+  defaultValue?: string;     // pre-fill value (used for person type defaultPerson)
 }
 
 interface KioskChecklist {
@@ -64,6 +66,9 @@ function flattenSectionsToQuestions(sections: any[]): Question[] {
         options: resolvedOptions,
         instructionText: q.config?.instructionText,
         imageUrl: q.config?.instructionImageUrl,
+        sectionName: section.name || "",
+        // For person type: carry the builder's default so the runner can pre-fill it
+        defaultValue: isPerson ? (q.config?.defaultPerson ?? "") : "",
       };
     })
   );
@@ -597,7 +602,7 @@ function NumberInput({ value, onChange }: { value: number | ""; onChange: (v: nu
   return (
     <div className="flex items-center">
       <button
-        onClick={() => onChange(Math.max(0, num - 1))}
+        onClick={() => onChange(num - 1)}
         className="w-14 min-h-[44px] bg-muted rounded-l-2xl border border-border text-xl font-semibold text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
       >
         −
@@ -655,28 +660,51 @@ function MultipleChoiceInput({
 function DateTimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <input
-      type="time"
+      type="datetime-local"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full min-h-[44px] border border-border rounded-xl px-4 py-3 text-2xl font-semibold text-center bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+      className="w-full min-h-[44px] border border-border rounded-xl px-4 py-3 text-base text-center bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
     />
   );
 }
 
-function InstructionBlock({ text, imageUrl }: { text: string; imageUrl?: string }) {
+function InstructionBlock({
+  text, imageUrl, onImageClick,
+}: { text: string; imageUrl?: string; onImageClick?: (url: string) => void }) {
   return (
     <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
       {text && <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>}
       {imageUrl && (
-        <img src={imageUrl} alt="Instruction" className="w-full max-h-48 object-cover rounded-lg" />
+        <button
+          type="button"
+          onClick={() => onImageClick?.(imageUrl)}
+          className="w-full relative group overflow-hidden rounded-lg focus:outline-none"
+          aria-label="Tap to enlarge image"
+        >
+          <img
+            src={imageUrl}
+            alt="Instruction"
+            className="w-full max-h-48 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
+          />
+          <div className="absolute inset-0 flex items-end justify-end p-2 pointer-events-none">
+            <span className="bg-foreground/60 text-background text-[10px] px-2 py-0.5 rounded-full font-medium">
+              Tap to enlarge
+            </span>
+          </div>
+        </button>
       )}
     </div>
   );
 }
 
 function QuestionInput({
-  question, value, onChange,
-}: { question: Question; value: any; onChange: (v: any) => void }) {
+  question, value, onChange, onImageClick,
+}: {
+  question: Question;
+  value: any;
+  onChange: (v: any) => void;
+  onImageClick?: (url: string) => void;
+}) {
   switch (question.type) {
     case "checkbox":
       return <CheckboxInput value={!!value} onChange={onChange} />;
@@ -689,13 +717,21 @@ function QuestionInput({
     case "datetime":
       return <DateTimeInput value={value ?? ""} onChange={onChange} />;
     case "instruction":
-      return <InstructionBlock text={question.instructionText ?? ""} imageUrl={question.imageUrl} />;
+      return (
+        <InstructionBlock
+          text={question.instructionText ?? ""}
+          imageUrl={question.imageUrl}
+          onImageClick={onImageClick}
+        />
+      );
     default:
       return null;
   }
 }
 
 // ─── ChecklistRunner (Screen 3) ───────────────────────────────────────────────
+// Shows ALL questions in a single scrollable view, grouped by sections.
+// Answers are persisted to localStorage so progress survives interruptions.
 function ChecklistRunner({
   checklist, staffName, onComplete, onCancel,
 }: {
@@ -704,128 +740,246 @@ function ChecklistRunner({
   onComplete: (answers: Record<string, any>) => void;
   onCancel: () => void;
 }) {
-  const now = useLiveClock();
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
+
+  // Initialise answers: start from defaultValues then overlay any saved draft
+  const [answers, setAnswers] = useState<Record<string, any>>(() => {
+    const defaults: Record<string, any> = {};
+    for (const q of checklist.questions) {
+      if (q.defaultValue) defaults[q.id] = q.defaultValue;
+    }
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) return { ...defaults, ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    return defaults;
+  });
+
+  const hasSavedDraft = (() => {
+    try { return !!localStorage.getItem(DRAFT_KEY); } catch { return false; }
+  })();
+
+  const [showDraftBanner, setShowDraftBanner] = useState(hasSavedDraft);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
-
-  const questions = checklist.questions;
-  const total = questions.length;
-  const q = questions[currentIdx];
-  const progress = Math.round((currentIdx / total) * 100);
+  const now = useLiveClock();
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-  /** Returns the first unanswered required question index, or -1 if all required are answered */
-  const findFirstUnansweredRequired = () => {
-    return questions.findIndex((question, idx) => {
-      if (!question.required || question.type === "instruction") return false;
-      const v = answers[question.id];
-      return v === undefined || v === "" || v === null || v === false;
+  const questions = checklist.questions;
+  const scorable = questions.filter(q => q.type !== "instruction");
+  const answeredCount = scorable.filter(q => {
+    const v = answers[q.id];
+    return v !== undefined && v !== "" && v !== null && v !== false;
+  }).length;
+  const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
+
+  // Persist answer immediately to localStorage
+  const setAnswer = (id: string, v: any) => {
+    setAnswers(prev => {
+      const next = { ...prev, [id]: v };
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
     });
   };
 
   const handleComplete = () => {
-    const firstMissing = findFirstUnansweredRequired();
-    if (firstMissing !== -1) {
-      const missingCount = questions.filter((question) =>
-        question.required && question.type !== "instruction" &&
-        (answers[question.id] === undefined || answers[question.id] === "" ||
-         answers[question.id] === null || answers[question.id] === false)
-      ).length;
-      setCompletionError(`${missingCount} required question${missingCount !== 1 ? "s" : ""} need an answer. Tap the question to complete it.`);
-      setCurrentIdx(firstMissing);
+    const missing = questions.filter(q =>
+      q.required && q.type !== "instruction" &&
+      (answers[q.id] === undefined || answers[q.id] === "" ||
+       answers[q.id] === null || answers[q.id] === false)
+    );
+    if (missing.length > 0) {
+      setCompletionError(
+        `${missing.length} required question${missing.length !== 1 ? "s" : ""} still need an answer.`
+      );
+      // Scroll to first missing question
+      document.getElementById(`question-${missing[0].id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    setCompletionError(null);
+    // All required questions answered — clear draft and submit
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     onComplete(answers);
   };
 
+  // Build section-grouped view from flat question list
+  const sections: { name: string; questions: Question[] }[] = [];
+  for (const q of questions) {
+    const sName = q.sectionName ?? "";
+    const last = sections[sections.length - 1];
+    if (!last || last.name !== sName) {
+      sections.push({ name: sName, questions: [q] });
+    } else {
+      last.questions.push(q);
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-3 flex items-start justify-between">
-        <div>
-          <h2 className="font-display text-xl text-foreground leading-tight">{checklist.title}</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">{staffName} · {timeStr}</p>
+    <div className="h-screen bg-background max-w-lg mx-auto flex flex-col overflow-hidden">
+
+      {/* ── Sticky header ── */}
+      <div className="shrink-0 bg-background border-b border-border px-5 pt-5 pb-3">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0 pr-4">
+            <h2 className="font-display text-xl text-foreground leading-tight">{checklist.title}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{staffName} · {timeStr}</p>
+          </div>
+          <button
+            onClick={() => setShowCancelConfirm(true)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
+          >
+            Cancel
+          </button>
         </div>
-        <button
-          onClick={() => setShowCancelConfirm(true)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 shrink-0"
-        >
-          Cancel
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-sage rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground shrink-0 w-20 text-right">
+            {answeredCount}/{scorable.length} answered
+          </p>
+        </div>
       </div>
 
-      {/* Progress */}
-      <div className="px-5 pb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <p className="text-xs text-muted-foreground">Q {currentIdx + 1} of {total}</p>
-          <p className="text-xs text-muted-foreground">{progress}%</p>
-        </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-sage rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Question */}
-      <div className="flex-1 px-5 overflow-y-auto">
-        <p className="text-base font-semibold text-foreground mb-4 leading-snug">{q.text}</p>
-        <QuestionInput
-          question={q}
-          value={answers[q.id]}
-          onChange={v => setAnswers(prev => ({ ...prev, [q.id]: v }))}
-        />
-      </div>
-
-      {/* Completion error banner */}
-      {completionError && (
-        <div className="px-5 pb-2">
-          <div className="bg-status-error/10 border border-status-error/20 rounded-xl px-4 py-2.5 text-xs text-status-error font-medium text-center">
-            {completionError}
+      {/* ── Draft-restored banner ── */}
+      {showDraftBanner && (
+        <div className="shrink-0 mx-5 mt-3">
+          <div className="bg-sage/10 border border-sage/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
+            <p className="text-xs text-sage font-medium">Continuing from where you left off</p>
+            <button
+              onClick={() => setShowDraftBanner(false)}
+              className="text-sage/60 hover:text-sage ml-2 p-0.5"
+            >
+              <X size={12} />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Footer nav */}
-      <div className="px-5 py-5 flex gap-3">
+      {/* ── Scrollable questions ── */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        {sections.map((section, si) => (
+          <div key={si}>
+            {/* Section header — only shown when section has a name */}
+            {section.name && (
+              <div className="flex items-center gap-3 mb-3 mt-4 first:mt-0">
+                <span className="section-label text-foreground/70 shrink-0">{section.name}</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            )}
+
+            {section.questions.map(q => {
+              const isInstruction = q.type === "instruction";
+              const isAnswered = isInstruction
+                ? true
+                : (answers[q.id] !== undefined && answers[q.id] !== "" &&
+                   answers[q.id] !== null && answers[q.id] !== false);
+              const isMissing = completionError && q.required && !isAnswered && !isInstruction;
+
+              return (
+                <div
+                  key={q.id}
+                  id={`question-${q.id}`}
+                  className={cn(
+                    "bg-card border rounded-2xl p-4 transition-colors",
+                    isMissing
+                      ? "border-status-error/50 bg-status-error/5"
+                      : isAnswered && !isInstruction
+                        ? "border-sage/30"
+                        : "border-border",
+                  )}
+                >
+                  {/* Question text row */}
+                  {!isInstruction && (
+                    <div className="flex items-start gap-2.5 mb-3">
+                      {isAnswered ? (
+                        <div className="w-5 h-5 rounded-full bg-sage flex items-center justify-center shrink-0 mt-0.5">
+                          <Check size={11} className="text-white" />
+                        </div>
+                      ) : (
+                        <div className={cn(
+                          "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5",
+                          q.required ? "border-muted-foreground/50" : "border-muted-foreground/25",
+                        )} />
+                      )}
+                      <p className="text-sm font-semibold text-foreground leading-snug flex-1">
+                        {q.text}
+                        {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Answer input */}
+                  <div className={cn(!isInstruction && "ml-7")}>
+                    <QuestionInput
+                      question={q}
+                      value={answers[q.id]}
+                      onChange={v => setAnswer(q.id, v)}
+                      onImageClick={url => setLightboxImage(url)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Bottom padding so the last card clears the sticky footer */}
+        <div className="h-2" />
+      </div>
+
+      {/* ── Sticky footer ── */}
+      <div className="shrink-0 bg-background border-t border-border px-5 py-4 space-y-2.5">
+        {completionError && (
+          <div className="bg-status-error/10 border border-status-error/20 rounded-xl px-4 py-2.5 text-xs text-status-error font-medium text-center">
+            {completionError}
+          </div>
+        )}
         <button
-          onClick={() => { if (currentIdx > 0) setCurrentIdx(i => i - 1); }}
-          disabled={currentIdx === 0}
-          className={cn(
-            "flex items-center gap-1 px-4 py-3 rounded-xl text-sm font-medium border transition-colors",
-            currentIdx > 0
-              ? "border-border text-foreground hover:bg-muted"
-              : "border-border text-muted-foreground cursor-not-allowed opacity-40",
-          )}
+          id="runner-complete-btn"
+          onClick={handleComplete}
+          className="w-full py-4 rounded-2xl text-sm font-bold tracking-wide bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
         >
-          <ChevronLeft size={16} /> Prev
-        </button>
-        <button
-          id="runner-next-btn"
-          onClick={() => {
-            setCompletionError(null);
-            if (currentIdx < total - 1) setCurrentIdx(i => i + 1);
-            else handleComplete();
-          }}
-          className="flex-1 py-3 rounded-xl text-sm font-semibold bg-sage text-primary-foreground hover:bg-sage-deep transition-colors flex items-center justify-center gap-1"
-        >
-          {currentIdx === total - 1
-            ? "Complete"
-            : <><span>Next</span> <ChevronRight size={16} /></>}
+          <Check size={16} />
+          Complete Checklist
         </button>
       </div>
 
-      {/* Cancel confirm overlay */}
+      {/* ── Image lightbox ── */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[90] bg-foreground/95 flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-background/20 hover:bg-background/30 flex items-center justify-center transition-colors"
+            aria-label="Close"
+          >
+            <X size={20} className="text-background" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full view"
+            className="max-w-full max-h-full object-contain rounded-xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* ── Cancel confirm ── */}
       {showCancelConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4">
             <h3 className="font-display text-lg text-foreground">Cancel checklist?</h3>
-            <p className="text-sm text-muted-foreground">Your progress will not be saved.</p>
+            <p className="text-sm text-muted-foreground">
+              Your answers are saved as a draft. You can pick up where you left off next time.
+            </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCancelConfirm(false)}
@@ -844,7 +998,7 @@ function ChecklistRunner({
         </div>
       )}
 
-      {/* Inactivity countdown banner */}
+      {/* ── Inactivity countdown ── */}
       {secondsLeft !== null && (
         <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[80]">
           <p className="text-sm">Returning to home in {secondsLeft}s…</p>
@@ -974,6 +1128,7 @@ export default function Kiosk() {
   const [selectedStaffName, setSelectedStaffName] = useState<string>("");
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const now = useLiveClock();
 
@@ -1032,6 +1187,11 @@ export default function Kiosk() {
     setCompletedAt(now);
     setScreen("completion");
 
+    // Mark checklist as done so it leaves the Due/Upcoming lists immediately
+    if (selectedChecklist) {
+      setCompletedIds(prev => new Set([...prev, selectedChecklist.id]));
+    }
+
     // Save checklist log to Supabase (kiosk uses anon key — no auth session required)
     if (selectedChecklist && selectedOrgId) {
       const questions = selectedChecklist.questions ?? [];
@@ -1080,10 +1240,11 @@ export default function Kiosk() {
   // ── Setup screen ──────────────────────────────────────────────────────────
   if (!locationId) return <KioskSetupScreen onSetup={handleSetup} />;
 
-  // All checklists are visible — split into DUE (within 1h) and UPCOMING (later today)
-  const dueChecklists = kioskChecklists.filter(c => isKioskDue(c.due_time, now));
-  const upcomingChecklists = kioskChecklists.filter(c => !isKioskDue(c.due_time, now));
-  const visibleChecklists = kioskChecklists; // all shown, just split differently
+  // Split checklists by state — completed items leave Due/Upcoming immediately
+  const dueChecklists = kioskChecklists.filter(c => isKioskDue(c.due_time, now) && !completedIds.has(c.id));
+  const upcomingChecklists = kioskChecklists.filter(c => !isKioskDue(c.due_time, now) && !completedIds.has(c.id));
+  const doneChecklists = kioskChecklists.filter(c => completedIds.has(c.id));
+  const visibleChecklists = kioskChecklists; // total — used for "no checklists" empty state
 
   // ── Runner screen ─────────────────────────────────────────────────────────
   if (screen === "runner" && selectedChecklist) {
@@ -1159,8 +1320,8 @@ export default function Kiosk() {
             <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
           </div>
           <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
-            <p className="section-label mb-1">Total</p>
-            <p className="text-2xl font-bold text-foreground">{visibleChecklists.length}</p>
+            <p className="section-label mb-1">Done</p>
+            <p className="text-2xl font-bold text-status-ok">{doneChecklists.length}</p>
           </div>
         </div>
       </div>
@@ -1217,6 +1378,28 @@ export default function Kiosk() {
                 <div className="grid grid-cols-2 gap-3">
                   {upcomingChecklists.map((cl, idx) => (
                     <ChecklistCard key={cl.id} cl={cl} idx={idx + dueChecklists.length} onSelect={setSelectedChecklist} dim />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* DONE TODAY section */}
+            {doneChecklists.length > 0 && (
+              <div>
+                <p className="section-label mb-2 text-status-ok">Done today</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {doneChecklists.map((cl, idx) => (
+                    <div
+                      key={cl.id}
+                      className="bg-card border border-status-ok/30 rounded-2xl p-4 opacity-60 relative"
+                    >
+                      <div
+                        className="w-full h-20 rounded-xl flex items-center justify-center bg-status-ok/10 mb-3"
+                      >
+                        <Check size={28} className="text-status-ok" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
+                      <p className="text-xs text-status-ok mt-1 font-medium">Completed</p>
+                    </div>
                   ))}
                 </div>
               </div>
