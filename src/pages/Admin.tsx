@@ -15,7 +15,7 @@ import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry, type AccountRole,
   DEFAULT_PERMISSIONS, DEFAULT_STAFF_ROLES,
-  getInitials, daysAgo, staffDisplayName, formatTimestamp, generatePin,
+  getInitials, daysAgo, daysAgoTooltip, staffDisplayName, formatTimestamp, generatePin,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlan } from "@/hooks/usePlan";
@@ -747,7 +747,8 @@ function MyLocationTab({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">{staffDisplayName(sp)}</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">{daysAgo(sp.last_used_at)}</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5"
+                     title={daysAgoTooltip(sp.last_used_at)}>{daysAgo(sp.last_used_at)}</p>
                 </div>
                 <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap", roleColor)}>
                   {sp.role}

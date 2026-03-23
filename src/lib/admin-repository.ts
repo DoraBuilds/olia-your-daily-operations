@@ -94,10 +94,20 @@ export function getInitials(name: string): string {
 
 export function daysAgo(isoDate: string | null): string {
   if (!isoDate) return "Never used";
-  const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000);
-  if (diff === 0) return "Used today";
-  if (diff === 1) return "Last used: 1 day ago";
-  return `Last used: ${diff} days ago`;
+  const d = new Date(isoDate);
+  const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); // "23 Mar"
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); // "14:39"
+  return `Last used: ${day}, ${time}`;
+}
+
+/** Full timestamp with seconds — used as tooltip title */
+export function daysAgoTooltip(isoDate: string | null): string {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  return d.toLocaleString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }); // "23 Mar 2026, 14:39:05"
 }
 
 export function staffDisplayName(p: StaffProfile): string {
