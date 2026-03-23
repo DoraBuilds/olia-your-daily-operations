@@ -184,11 +184,11 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByText(/System Online/i)).toBeInTheDocument();
   });
 
-  it("grid screen shows stat strip with 'Total', 'Completed', 'Remaining'", () => {
+  it("grid screen shows stat strip with 'Due now', 'Upcoming', 'Done'", () => {
     renderGridScreen();
-    expect(screen.getByText("Total")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
-    expect(screen.getByText("Remaining")).toBeInTheDocument();
+    expect(screen.getByText("Due now")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming")).toBeInTheDocument();
+    expect(screen.getByText("Done")).toBeInTheDocument();
   });
 
   it("grid screen shows 'Current Status' label in top bar", () => {
@@ -437,7 +437,7 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
 
   it("grid screen shows stat strip for Grand Ballroom", () => {
     renderWithProviders(<Kiosk />);
-    expect(screen.getByText("Total")).toBeInTheDocument();
+    expect(screen.getByText("Due now")).toBeInTheDocument();
   });
 });
 

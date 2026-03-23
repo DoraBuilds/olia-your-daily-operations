@@ -177,9 +177,19 @@ export default function Dashboard() {
   const yesterdayStr = new Date(today.getTime() - 86_400_000).toISOString().slice(0, 10);
 
   // ── Derive compliance items from logs ──
-  const tabLogs = complianceTab !== "overdue"
+  const rawTabLogs = complianceTab !== "overdue"
     ? logs.filter(l => l.created_at.slice(0, 10) === (complianceTab === "today" ? todayStr : yesterdayStr))
     : [];
+
+  // Deduplicate: keep only the most-recent submission per checklist per day.
+  // Same checklist submitted multiple times shows only once (highest created_at).
+  const tabLogs = Object.values(
+    rawTabLogs.reduce<Record<string, typeof rawTabLogs[0]>>((acc, log) => {
+      const key = log.checklist_id ?? log.checklist_title;
+      if (!acc[key] || log.created_at > acc[key].created_at) acc[key] = log;
+      return acc;
+    }, {})
+  );
 
   const complianceItems: ChecklistCompliance[] = tabLogs.map(log => {
     const ans     = Array.isArray(log.answers) ? log.answers : [];

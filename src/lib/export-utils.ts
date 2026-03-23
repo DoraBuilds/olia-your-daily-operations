@@ -140,6 +140,8 @@ export interface LogDetailData {
   completedBy: string;
   date: string;
   score: number;
+  startedAt?: string;   // HH:MM — optional (not stored in DB for older logs)
+  finishedAt?: string;  // HH:MM — optional (derived from created_at or passed directly)
   answers?: Array<{
     label: string;
     type: string;
@@ -174,7 +176,11 @@ export async function exportLogDetailPdf(log: LogDetailData) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...GRAY);
-  doc.text(`${log.completedBy}  ·  ${log.date}`, 14, y + 16);
+  const timingParts: string[] = [];
+  if (log.startedAt) timingParts.push(`Started ${log.startedAt}`);
+  if (log.finishedAt) timingParts.push(`Finished ${log.finishedAt}`);
+  const timingStr = timingParts.length ? `  ·  ${timingParts.join("  ·  ")}` : "";
+  doc.text(`${log.completedBy}  ·  ${log.date}${timingStr}`, 14, y + 16);
 
   // ── Score (top-right) ──
   doc.setFont("helvetica", "bold");
@@ -191,26 +197,26 @@ export async function exportLogDetailPdf(log: LogDetailData) {
   doc.line(14, y, pageW - 14, y);
   y += 6;
 
-  // ── Answers table ──
+  // ── Answers table — columns: Task | Answer (Required column removed per spec) ──
   const answers = log.answers ?? [];
   const tableBody = answers.map(ans => {
     let response = "—";
     if (ans.type === "checkbox") {
-      response = ans.answer === "yes" ? "✓  Completed" : "✗  Not completed";
+      response = ans.answer === "true" || ans.answer === "yes" ? "✓  Completed" : "✗  Not completed";
     } else if ((ans.type === "numeric" || ans.type === "number") && ans.answer) {
-      response = `${ans.answer} °C`;
+      response = ans.answer;
     } else if (ans.type === "photo") {
       response = ans.hasPhoto ? "Photo attached" : "No photo";
     } else if (ans.answer) {
       response = String(ans.answer);
     }
     const full = ans.comment ? `${response}\n↳ ${ans.comment}` : response;
-    return [ans.label, ans.required ? "Yes" : "—", full];
+    return [ans.label, full];
   });
 
   autoTable(doc, {
     startY: y,
-    head: [["Task", "Required", "Response"]],
+    head: [["Task", "Answer"]],
     body: tableBody,
     theme: "grid",
     headStyles: {
@@ -221,13 +227,16 @@ export async function exportLogDetailPdf(log: LogDetailData) {
     },
     bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40] },
     alternateRowStyles: { fillColor: LIGHT_BG },
-    columnStyles: { 1: { halign: "center", cellWidth: 22 } },
+    columnStyles: {
+      0: { cellWidth: 70 },
+      1: { cellWidth: "auto" },
+    },
     didParseCell: (data: any) => {
-      if (data.section === "body" && data.column.index === 2) {
+      if (data.section === "body" && data.column.index === 1) {
         const ans = answers[data.row.index];
         if (!ans) return;
         const answered =
-          ans.answer === "yes" ||
+          ans.answer === "true" || ans.answer === "yes" ||
           ((ans.type === "numeric" || ans.type === "number") && !!ans.answer) ||
           ans.hasPhoto;
         if (ans.required && !answered) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ interface Question {
   imageUrl?: string;         // for instruction-type image
   sectionName?: string;      // section this question belongs to (for dividers in runner)
   defaultValue?: string;     // pre-fill value (used for person type defaultPerson)
+  min?: number;              // number questions: acceptable range minimum
+  max?: number;              // number questions: acceptable range maximum
 }
 
 interface KioskChecklist {
@@ -69,6 +71,9 @@ function flattenSectionsToQuestions(sections: any[]): Question[] {
         sectionName: section.name || "",
         // For person type: carry the builder's default so the runner can pre-fill it
         defaultValue: isPerson ? (q.config?.defaultPerson ?? "") : "",
+        // Number range: set in builder as config.numberMin / config.numberMax
+        min: q.config?.numberMin != null ? Number(q.config.numberMin) : undefined,
+        max: q.config?.numberMax != null ? Number(q.config.numberMax) : undefined,
       };
     })
   );
@@ -597,28 +602,48 @@ function CheckboxInput({ value, onChange }: { value: boolean; onChange: (v: bool
   );
 }
 
-function NumberInput({ value, onChange }: { value: number | ""; onChange: (v: number | "") => void }) {
+function NumberInput({
+  value, onChange, min, max,
+}: { value: number | ""; onChange: (v: number | "") => void; min?: number; max?: number }) {
   const num = value === "" ? 0 : Number(value);
+  const hasRange = min != null || max != null;
+  const outOfRange = hasRange && value !== "" && (
+    (min != null && num < min) || (max != null && num > max)
+  );
   return (
-    <div className="flex items-center">
-      <button
-        onClick={() => onChange(num - 1)}
-        className="w-14 min-h-[44px] bg-muted rounded-l-2xl border border-border text-xl font-semibold text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
-      >
-        −
-      </button>
-      <input
-        type="number"
-        value={value}
-        onChange={e => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        className="flex-1 min-h-[44px] border-y border-border text-center text-xl font-semibold bg-card focus:outline-none"
-      />
-      <button
-        onClick={() => onChange(num + 1)}
-        className="w-14 min-h-[44px] bg-muted rounded-r-2xl border border-border text-xl font-semibold text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
-      >
-        +
-      </button>
+    <div className="space-y-1.5">
+      <div className="flex items-center">
+        <button
+          onClick={() => onChange(num - 1)}
+          className="w-14 min-h-[44px] bg-muted rounded-l-2xl border border-border text-xl font-semibold text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          value={value}
+          onChange={e => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+          className={cn(
+            "flex-1 min-h-[44px] border-y border-border text-center text-xl font-semibold bg-card focus:outline-none",
+            outOfRange && "text-status-error",
+          )}
+        />
+        <button
+          onClick={() => onChange(num + 1)}
+          className="w-14 min-h-[44px] bg-muted rounded-r-2xl border border-border text-xl font-semibold text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center"
+        >
+          +
+        </button>
+      </div>
+      {hasRange && (
+        <p className={cn(
+          "text-[11px] text-center",
+          outOfRange ? "text-status-error font-semibold" : "text-muted-foreground",
+        )}>
+          {outOfRange ? "⚠ Out of acceptable range · " : ""}
+          Acceptable: {min != null ? min : "—"} – {max != null ? max : "—"}
+        </p>
+      )}
     </div>
   );
 }
@@ -727,7 +752,7 @@ function QuestionInput({
     case "checkbox":
       return <CheckboxInput value={!!value} onChange={onChange} />;
     case "number":
-      return <NumberInput value={value ?? ""} onChange={onChange} />;
+      return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} />;
     case "text":
       return <TextInput value={value ?? ""} onChange={onChange} />;
     case "multiple_choice":
@@ -755,7 +780,7 @@ function ChecklistRunner({
 }: {
   checklist: KioskChecklist;
   staffName: string;
-  onComplete: (answers: Record<string, any>) => void;
+  onComplete: (answers: Record<string, any>, startedAt: Date) => void;
   onCancel: () => void;
 }) {
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
@@ -781,6 +806,32 @@ function ChecklistRunner({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Accordion: track which question is currently open/active
+  const [currentQIdx, setCurrentQIdx] = useState<number>(() => {
+    // Compute initial answers (same logic as the answers useState above)
+    const defaults: Record<string, any> = {};
+    for (const q of checklist.questions) {
+      if (q.defaultValue) defaults[q.id] = q.defaultValue;
+    }
+    let ans = defaults;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) ans = { ...defaults, ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    // Start at first unanswered non-instruction question
+    for (let i = 0; i < checklist.questions.length; i++) {
+      const q = checklist.questions[i];
+      if (q.type === "instruction") continue;
+      const v = ans[q.id];
+      if (v === undefined || v === "" || v === null || v === false) return i;
+    }
+    return Math.max(0, checklist.questions.length - 1);
+  });
+
+  // Track when the runner was opened (for PDF metadata)
+  const startedAtRef = useRef(new Date());
+
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
   const now = useLiveClock();
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -802,6 +853,27 @@ function ChecklistRunner({
     });
   };
 
+  // Move to the next question in the accordion
+  const advanceQuestion = () => {
+    setCurrentQIdx(prev => {
+      const next = Math.min(prev + 1, questions.length - 1);
+      // Scroll new current question into view after render
+      setTimeout(() => {
+        document.getElementById(`question-${questions[next]?.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 60);
+      return next;
+    });
+  };
+
+  // ESC key closes lightbox
+  useEffect(() => {
+    if (!lightboxImage) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxImage(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [lightboxImage]);
+
   const handleComplete = () => {
     const missing = questions.filter(q =>
       q.required && q.type !== "instruction" &&
@@ -819,23 +891,11 @@ function ChecklistRunner({
     }
     // All required questions answered — clear draft and submit
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-    onComplete(answers);
+    onComplete(answers, startedAtRef.current);
   };
 
-  // Build section-grouped view from flat question list
-  const sections: { name: string; questions: Question[] }[] = [];
-  for (const q of questions) {
-    const sName = q.sectionName ?? "";
-    const last = sections[sections.length - 1];
-    if (!last || last.name !== sName) {
-      sections.push({ name: sName, questions: [q] });
-    } else {
-      last.questions.push(q);
-    }
-  }
-
   return (
-    <div className="h-screen bg-background max-w-lg mx-auto flex flex-col overflow-hidden">
+    <div className="h-screen bg-background max-w-lg mx-auto flex flex-col overflow-x-hidden">
 
       {/* ── Sticky header ── */}
       <div className="shrink-0 bg-background border-b border-border px-5 pt-5 pb-3">
@@ -879,82 +939,142 @@ function ChecklistRunner({
         </div>
       )}
 
-      {/* ── Scrollable questions ── */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-        {sections.map((section, si) => (
-          <div key={si}>
-            {/* Section header — always shown for named sections; also shown as a divider
-                between multiple unnamed sections so grouping is visually clear. */}
-            {(section.name || (sections.length > 1 && si > 0)) && (
-              <div className={cn(
-                "flex items-center gap-3 mb-3",
-                si === 0 ? "mt-0" : "mt-6",
-              )}>
-                <span className="section-label text-foreground/70 shrink-0">
-                  {section.name || `Section ${si + 1}`}
-                </span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-            )}
+      {/* ── Accordion questions ── */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+        {questions.map((q, qi) => {
+          const isInstruction = q.type === "instruction";
+          const isCurrent = qi === currentQIdx;
+          const isPast = qi < currentQIdx;
 
-            {section.questions.map(q => {
-              const isInstruction = q.type === "instruction";
-              const isAnswered = isInstruction
-                ? true
-                : (answers[q.id] !== undefined && answers[q.id] !== "" &&
-                   answers[q.id] !== null && answers[q.id] !== false);
-              const isMissing = completionError && q.required && !isAnswered && !isInstruction;
+          const isAnswered = isInstruction
+            ? true
+            : (answers[q.id] !== undefined && answers[q.id] !== "" &&
+               answers[q.id] !== null && answers[q.id] !== false);
+          const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
 
-              return (
+          // Inject a centered section divider when section changes
+          const prevQ = qi > 0 ? questions[qi - 1] : null;
+          const sectionChanged = !prevQ || prevQ.sectionName !== q.sectionName;
+          const showSectionHeader = sectionChanged && !!(q.sectionName);
+
+          // For next/acknowledge button: show on current question for types that don't auto-advance
+          const needsNextBtn = isCurrent && (
+            isInstruction || q.type === "text" || q.type === "number" || q.type === "datetime"
+          );
+          const isLastQ = qi >= questions.length - 1;
+
+          return (
+            <Fragment key={q.id}>
+              {/* ── Centered section header ── */}
+              {showSectionHeader && (
+                <div className={cn("flex items-center gap-3", qi === 0 ? "mb-1" : "mt-5 mb-1")}>
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="section-label text-foreground/70 shrink-0">{q.sectionName}</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              )}
+
+              {isCurrent ? (
+                // ── Expanded (active) question ──
                 <div
-                  key={q.id}
                   id={`question-${q.id}`}
                   className={cn(
-                    "bg-card border rounded-2xl p-4 transition-colors",
+                    "bg-card border rounded-2xl p-4 transition-colors shadow-sm",
                     isMissing
-                      ? "border-status-error/50 bg-status-error/5"
-                      : isAnswered && !isInstruction
-                        ? "border-sage/30"
-                        : "border-border",
+                      ? "border-status-error/50 bg-status-error/5 ring-1 ring-status-error/20"
+                      : "border-sage/40 ring-1 ring-sage/15",
                   )}
                 >
-                  {/* Question text row */}
                   {!isInstruction && (
                     <div className="flex items-start gap-2.5 mb-3">
-                      {isAnswered ? (
-                        <div className="w-5 h-5 rounded-full bg-sage flex items-center justify-center shrink-0 mt-0.5">
-                          <Check size={11} className="text-white" />
-                        </div>
-                      ) : (
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5",
-                          q.required ? "border-muted-foreground/50" : "border-muted-foreground/25",
-                        )} />
-                      )}
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5",
+                        q.required ? "border-sage/50" : "border-muted-foreground/30",
+                      )} />
                       <p className="text-sm font-semibold text-foreground leading-snug flex-1">
                         {q.text}
                         {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
                       </p>
+                      <span className="text-[10px] text-sage/70 font-medium shrink-0 mt-0.5">
+                        {qi + 1}/{questions.length}
+                      </span>
                     </div>
                   )}
 
-                  {/* Answer input */}
                   <div className={cn(!isInstruction && "ml-7")}>
                     <QuestionInput
                       question={q}
                       value={answers[q.id]}
-                      onChange={v => setAnswer(q.id, v)}
+                      onChange={v => {
+                        setAnswer(q.id, v);
+                        // Auto-advance for single-tap inputs
+                        if (q.type === "checkbox" && v === true) advanceQuestion();
+                        if (q.type === "multiple_choice" && v) advanceQuestion();
+                      }}
                       onImageClick={url => setLightboxImage(url)}
                     />
                   </div>
+
+                  {needsNextBtn && !isLastQ && (
+                    <div className={cn("mt-3", !isInstruction && "ml-7")}>
+                      <button
+                        onClick={advanceQuestion}
+                        className="px-5 py-2 text-xs font-bold tracking-wide rounded-xl bg-sage text-white hover:bg-sage-deep transition-colors active:scale-[0.97]"
+                      >
+                        {isInstruction ? "Acknowledge" : "Next →"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
+              ) : (
+                // ── Collapsed question (past = clickable, future = dimmed) ──
+                <button
+                  id={`question-${q.id}`}
+                  type="button"
+                  onClick={() => { if (isPast) setCurrentQIdx(qi); }}
+                  disabled={!isPast}
+                  className={cn(
+                    "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors",
+                    isPast
+                      ? "border-border hover:border-sage/30 cursor-pointer"
+                      : "border-border opacity-40 cursor-default",
+                    isMissing && "border-status-error/40 bg-status-error/5",
+                  )}
+                >
+                  {isPast && isAnswered ? (
+                    <div className="w-5 h-5 rounded-full bg-sage flex items-center justify-center shrink-0">
+                      <Check size={11} className="text-white" />
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 shrink-0",
+                      isMissing ? "border-status-error/50" : "border-muted-foreground/25",
+                    )} />
+                  )}
+                  <p className={cn(
+                    "text-sm font-medium truncate flex-1",
+                    isPast ? "text-foreground" : "text-muted-foreground",
+                  )}>
+                    {isInstruction ? (q.instructionText ?? q.text ?? "Note") : q.text}
+                    {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
+                  </p>
+                  {isPast && isAnswered && (
+                    <span className="text-[10px] text-sage font-semibold shrink-0">✓ Done</span>
+                  )}
+                  {isPast && !isAnswered && !isInstruction && (
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0">Edit</span>
+                  )}
+                  {!isPast && (
+                    <span className="text-[10px] text-muted-foreground/50 shrink-0">Pending</span>
+                  )}
+                </button>
+              )}
+            </Fragment>
+          );
+        })}
 
         {/* Bottom padding so the last card clears the sticky footer */}
-        <div className="h-2" />
+        <div className="h-4" />
       </div>
 
       {/* ── Sticky footer ── */}
@@ -1153,6 +1273,9 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [insertError, setInsertError] = useState<string | null>(null);
+  // Issue 4: Default tab is "due"; switch to "done" to see completed
+  const [kioskTab, setKioskTab] = useState<"due" | "done">("due");
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -1171,11 +1294,16 @@ export default function Kiosk() {
   const [checklistsLoading, setChecklistsLoading] = useState(false);
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
-  // Drain any queued submissions from previous offline sessions
+  // Drain any queued submissions from previous offline sessions.
+  // Legacy queue entries may contain location_id values that reference mock/test
+  // location UUIDs which fail the FK constraint — strip it so those entries can
+  // be submitted without the potentially-invalid reference.
   useEffect(() => {
     if (!locationId) return;
     drainQueue(async (payload) => {
-      const { error } = await supabase.from("checklist_logs").insert(payload);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { location_id: _stripped, ...safePayload } = payload as any;
+      const { error } = await supabase.from("checklist_logs").insert(safePayload);
       if (error) throw new Error(error.message);
     }).then(n => {
       if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
@@ -1216,8 +1344,9 @@ export default function Kiosk() {
     setScreen("runner");
   };
 
-  const handleComplete = async (answers: Record<string, any>) => {
+  const handleComplete = async (answers: Record<string, any>, startedAt?: Date) => {
     const now = new Date();
+    setInsertError(null);
     setCompletedAt(now);
     setScreen("completion");
 
@@ -1256,15 +1385,43 @@ export default function Kiosk() {
         checklist_title: selectedChecklist.title,
         completed_by: selectedStaffName,
         staff_profile_id: selectedStaffId ?? null,
+        location_id: locationId ?? null,   // column added by migration 20260312000001
         score,
         answers: answerPayload,
       };
 
-      const { error: insertError } = await supabase.from("checklist_logs").insert(logPayload);
-      if (insertError) {
+      const { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
+      if (dbInsertError) {
         // Queue for retry — the submission will be retried on next kiosk load
-        console.error("Checklist log insert failed, queuing for retry:", insertError.message);
+        const msg = dbInsertError.message ?? "Unknown error";
+        console.error("Checklist log insert failed, queuing for retry:", msg);
+        setInsertError(`Submission queued (offline/error): ${msg}`);
         enqueueLog(logPayload);
+      }
+
+      // Issue 7: Fire alert for any number answers outside their acceptable range
+      const outOfRangeAnswers = selectedChecklist.questions.filter(q => {
+        if (q.type !== "number" || (q.min == null && q.max == null)) return false;
+        const v = Number(answers[q.id]);
+        if (isNaN(v)) return false;
+        return (q.min != null && v < q.min) || (q.max != null && v > q.max);
+      });
+      if (outOfRangeAnswers.length > 0) {
+        const timeLabel = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        for (const q of outOfRangeAnswers) {
+          const val = answers[q.id];
+          const rangeStr = [q.min != null ? `min ${q.min}` : null, q.max != null ? `max ${q.max}` : null]
+            .filter(Boolean).join(", ");
+          // Insert alert — requires anon_kiosk_insert_alerts policy (migration 20260323000002)
+          await supabase.from("alerts").insert({
+            organization_id: selectedOrgId,
+            type: "warn",
+            message: `Out-of-range value recorded: "${q.text}" = ${val} (${rangeStr})`,
+            area: selectedChecklist.title,
+            time: timeLabel,
+            source: "kiosk",
+          });
+        }
       }
     }
   };
@@ -1350,22 +1507,46 @@ export default function Kiosk() {
           What's on the agenda<br />for today?
         </h1>
 
-        {/* Stat strip — DUE / UPCOMING / Total */}
+        {/* Stat strip — DUE / UPCOMING / DONE (Done is a tab toggle) */}
         <div className="grid grid-cols-3 gap-2 mt-5">
-          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
+          <button
+            onClick={() => setKioskTab("due")}
+            className={cn(
+              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              kioskTab === "due" ? "border-status-error/50 ring-1 ring-status-error/20" : "border-border",
+            )}
+          >
             <p className="section-label mb-1">Due now</p>
             <p className="text-2xl font-bold text-status-error">{dueChecklists.length}</p>
-          </div>
+          </button>
           <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
             <p className="section-label mb-1">Upcoming</p>
             <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
           </div>
-          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
+          <button
+            onClick={() => setKioskTab(t => t === "done" ? "due" : "done")}
+            className={cn(
+              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              kioskTab === "done" ? "border-status-ok/50 ring-1 ring-status-ok/20" : "border-border",
+            )}
+          >
             <p className="section-label mb-1">Done</p>
             <p className="text-2xl font-bold text-status-ok">{doneChecklists.length}</p>
-          </div>
+          </button>
         </div>
       </div>
+
+      {/* Insert-error banner (surfaces DB write failures) */}
+      {insertError && (
+        <div className="mx-5 mt-2">
+          <div className="bg-status-error/10 border border-status-error/30 rounded-xl px-4 py-2.5 flex items-start justify-between gap-3">
+            <p className="text-xs text-status-error font-medium leading-snug">{insertError}</p>
+            <button onClick={() => setInsertError(null)} className="text-status-error/60 hover:text-status-error shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Checklist grid */}
       <div className="px-5 flex-1 pb-6 mt-2">
@@ -1401,49 +1582,64 @@ export default function Kiosk() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* DUE NOW section */}
-            {dueChecklists.length > 0 && (
-              <div>
-                <p className="section-label mb-2 text-status-error">Due now</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {dueChecklists.map((cl, idx) => (
-                    <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* UPCOMING section */}
-            {upcomingChecklists.length > 0 && (
-              <div>
-                <p className="section-label mb-2">Upcoming today</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {upcomingChecklists.map((cl, idx) => (
-                    <ChecklistCard key={cl.id} cl={cl} idx={idx + dueChecklists.length} onSelect={setSelectedChecklist} dim />
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* DONE TODAY section */}
-            {doneChecklists.length > 0 && (
-              <div>
-                <p className="section-label mb-2 text-status-ok">Done today</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {doneChecklists.map((cl, idx) => (
-                    <div
-                      key={cl.id}
-                      className="bg-card border border-status-ok/30 rounded-2xl p-4 opacity-60 relative"
-                    >
-                      <div
-                        className="w-full h-20 rounded-xl flex items-center justify-center bg-status-ok/10 mb-3"
-                      >
-                        <Check size={28} className="text-status-ok" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
-                      <p className="text-xs text-status-ok mt-1 font-medium">Completed</p>
+            {kioskTab === "due" ? (
+              <>
+                {/* DUE NOW section */}
+                {dueChecklists.length > 0 && (
+                  <div>
+                    <p className="section-label mb-2 text-status-error">Due now</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {dueChecklists.map((cl, idx) => (
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+                {/* UPCOMING section */}
+                {upcomingChecklists.length > 0 && (
+                  <div>
+                    <p className="section-label mb-2">Upcoming today</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {upcomingChecklists.map((cl, idx) => (
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx + dueChecklists.length} onSelect={setSelectedChecklist} dim />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {dueChecklists.length === 0 && upcomingChecklists.length === 0 && (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-status-ok font-semibold">All done for now ✓</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tap the Done counter above to review completed checklists.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* DONE TODAY section */
+              doneChecklists.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-sm text-muted-foreground">No completions yet today.</p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <p className="section-label mb-2 text-status-ok">Completed today</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {doneChecklists.map((cl, idx) => (
+                      <div
+                        key={cl.id}
+                        className="bg-card border border-status-ok/30 rounded-2xl p-4 opacity-70"
+                      >
+                        <div className="w-full h-20 rounded-xl flex items-center justify-center bg-status-ok/10 mb-3">
+                          <Check size={28} className="text-status-ok" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
+                        <p className="text-xs text-status-ok mt-1 font-medium">Completed</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
             )}
           </div>
         )}

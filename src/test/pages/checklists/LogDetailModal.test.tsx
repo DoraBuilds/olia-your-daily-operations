@@ -137,9 +137,10 @@ describe("LogDetailModal", () => {
     expect(screen.getByText("Not completed")).toBeInTheDocument();
   });
 
-  it("shows temperature value for numeric answers", () => {
+  it("shows numeric answer value", () => {
     render(<LogDetailModal log={mockLog} onClose={onClose} />);
-    expect(screen.getByText("4 °C")).toBeInTheDocument();
+    // The modal renders the raw numeric value (no unit suffix — units are question-specific)
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
   it("shows read-only footer note", () => {

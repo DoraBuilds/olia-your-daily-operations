@@ -148,7 +148,9 @@ export function ChecklistsTab() {
       if (selectedLocation === "All locations") return true;
       if (!selectedLocationObj) return true;
       // Show checklists assigned to this specific location OR to all locations (null)
-      return c.location_id === selectedLocationObj.id || c.location_id === null;
+      // Only show checklists explicitly assigned to this location.
+      // Null-location ("All locations") checklists appear only under "All locations".
+      return c.location_id === selectedLocationObj.id;
     });
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !search;
