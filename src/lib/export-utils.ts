@@ -205,8 +205,10 @@ export async function exportLogDetailPdf(log: LogDetailData) {
       response = ans.answer === "true" || ans.answer === "yes" ? "✓  Completed" : "✗  Not completed";
     } else if ((ans.type === "numeric" || ans.type === "number") && ans.answer) {
       response = ans.answer;
-    } else if (ans.type === "photo") {
-      response = ans.hasPhoto ? "Photo attached" : "No photo";
+    } else if (ans.type === "photo" || ans.type === "media") {
+      // Store base64 data URL in DB — never print it; just show a human-readable label
+      const hasPhoto = ans.hasPhoto || (typeof ans.answer === "string" && ans.answer.startsWith("data:image"));
+      response = hasPhoto ? "📷 Photo attached" : "No photo";
     } else if (ans.answer) {
       response = String(ans.answer);
     }

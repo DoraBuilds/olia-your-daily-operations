@@ -178,7 +178,15 @@ export function ChecklistsTab() {
 
   const handleContextAction = (action: string) => {
     if (!contextMenu) return;
-    if (action === "move") {
+    if (action === "edit" && contextMenu.type === "checklist") {
+      const cl = checklists.find(c => c.id === contextMenu.id);
+      if (cl) {
+        setEditingChecklistId(cl.id);
+        setPrefillTitle(cl.title);
+        setPrefillSections(cl.sections);
+        setShowBuilder(true);
+      }
+    } else if (action === "move") {
       setMoveTarget(contextMenu);
     } else if (action === "rename" && contextMenu.type === "folder") {
       const folder = folders.find(f => f.id === contextMenu.id);

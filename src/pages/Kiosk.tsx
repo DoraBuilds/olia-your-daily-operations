@@ -12,7 +12,7 @@ let _kioskLocationName: string | null = null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TimeOfDay = "morning" | "afternoon" | "evening" | "anytime";
-type QuestionType = "checkbox" | "text" | "number" | "multiple_choice" | "datetime" | "instruction";
+type QuestionType = "checkbox" | "text" | "number" | "multiple_choice" | "datetime" | "instruction" | "media";
 
 interface Question {
   id: string;
@@ -42,7 +42,7 @@ type KioskScreen = "grid" | "runner" | "completion";
 // ─── DB → Kiosk conversion ────────────────────────────────────────────────────
 
 const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
-  "checkbox", "text", "number", "multiple_choice", "datetime", "instruction",
+  "checkbox", "text", "number", "multiple_choice", "datetime", "instruction", "media",
 ];
 
 /**
@@ -740,6 +740,67 @@ function InstructionBlock({
   );
 }
 
+// ─── MediaInput ───────────────────────────────────────────────────────────────
+// Renders a "Take photo / Upload photo" button. On mobile devices the
+// `capture="environment"` attribute opens the camera directly. On desktop it
+// opens the file picker. The selected image is stored as a base64 data-URL in
+// the answer field — no Supabase Storage bucket required.
+function MediaInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = e => onChange((e.target?.result as string) ?? "");
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Hidden file input — accepts images, prefers camera on mobile */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+        }}
+      />
+      {value ? (
+        /* Preview the captured/selected image */
+        <div className="relative rounded-xl overflow-hidden border border-border">
+          <img src={value} alt="Captured" className="w-full max-h-52 object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/60 flex items-center justify-center"
+            aria-label="Remove photo"
+          >
+            <X size={14} className="text-background" />
+          </button>
+        </div>
+      ) : (
+        /* CTA button */
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="w-full min-h-[80px] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-sage hover:text-sage transition-colors"
+        >
+          {/* Camera icon inline — avoids import churn */}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+          <span className="text-sm font-medium">Take photo</span>
+          <span className="text-xs">or tap to upload from gallery</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function QuestionInput({
   question, value, onChange, onImageClick,
 }: {
@@ -751,6 +812,8 @@ function QuestionInput({
   switch (question.type) {
     case "checkbox":
       return <CheckboxInput value={!!value} onChange={onChange} />;
+    case "media":
+      return <MediaInput value={value ?? ""} onChange={onChange} />;
     case "number":
       return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} />;
     case "text":

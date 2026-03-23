@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
@@ -104,14 +105,24 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
 
   const totalQ = sections.reduce((sum, s) => sum + s.questions.length, 0);
 
+  // ESC key closes the preview
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[90vh] animate-fade-in">
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
+      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[90vh] animate-fade-in" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <div className="flex-1 min-w-0 pr-3">
-            <h2 className="font-display text-lg text-foreground truncate">{checklist.title}</h2>
+            <h2 className="font-display text-lg text-foreground leading-snug">{checklist.title}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-xs text-muted-foreground">{totalQ} question{totalQ !== 1 ? "s" : ""}</span>
               {checklist.schedule && (
