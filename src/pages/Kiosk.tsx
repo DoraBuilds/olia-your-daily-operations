@@ -1399,7 +1399,9 @@ export default function Kiosk() {
         enqueueLog(logPayload);
       }
 
-      // Issue 7: Fire alert for any number answers outside their acceptable range
+      // Issue 7: Fire alert for any number answers outside their acceptable range.
+      // Requires migration 20260323000002_kiosk_anon_insert_alerts.sql to be applied
+      // so the anon role has INSERT permission on the alerts table.
       const outOfRangeAnswers = selectedChecklist.questions.filter(q => {
         if (q.type !== "number" || (q.min == null && q.max == null)) return false;
         const v = Number(answers[q.id]);
@@ -1408,12 +1410,12 @@ export default function Kiosk() {
       });
       if (outOfRangeAnswers.length > 0) {
         const timeLabel = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+        const alertErrors: string[] = [];
         for (const q of outOfRangeAnswers) {
           const val = answers[q.id];
           const rangeStr = [q.min != null ? `min ${q.min}` : null, q.max != null ? `max ${q.max}` : null]
             .filter(Boolean).join(", ");
-          // Insert alert — requires anon_kiosk_insert_alerts policy (migration 20260323000002)
-          await supabase.from("alerts").insert({
+          const { error: alertErr } = await supabase.from("alerts").insert({
             organization_id: selectedOrgId,
             type: "warn",
             message: `Out-of-range value recorded: "${q.text}" = ${val} (${rangeStr})`,
@@ -1421,6 +1423,21 @@ export default function Kiosk() {
             time: timeLabel,
             source: "kiosk",
           });
+          if (alertErr) {
+            // Most likely cause: migration 20260323000002 not yet applied.
+            // Surface this prominently so the operator knows the alert was NOT saved.
+            const hint = alertErr.code === "42501"
+              ? " (RLS policy missing — apply migration 20260323000002)"
+              : ` (${alertErr.message})`;
+            alertErrors.push(`"${q.text}"${hint}`);
+            console.error("Alert insert failed for question:", q.text, alertErr);
+          }
+        }
+        if (alertErrors.length > 0) {
+          setInsertError(
+            `⚠ Out-of-range alert(s) NOT saved to DB: ${alertErrors.join("; ")}. ` +
+            `Apply migration 20260323000002_kiosk_anon_insert_alerts.sql in Supabase SQL Editor.`
+          );
         }
       }
     }
