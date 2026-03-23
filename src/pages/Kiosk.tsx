@@ -1379,18 +1379,33 @@ export default function Kiosk() {
         answer: String(answers[q.id] ?? ""),
       }));
 
-      const logPayload = {
+      // Base payload — columns that exist in the initial schema (20260304000001).
+      // location_id is added separately below only when the column is confirmed to
+      // exist (migration 20260312000001 / 20260323000001 applied + schema cache refreshed).
+      // Without this guard every insert fails with "column not found in schema cache".
+      const basePayload = {
         organization_id: selectedOrgId,
         checklist_id: selectedChecklist.id,
         checklist_title: selectedChecklist.title,
         completed_by: selectedStaffName,
         staff_profile_id: selectedStaffId ?? null,
-        location_id: locationId ?? null,   // column added by migration 20260312000001
         score,
         answers: answerPayload,
       };
 
-      const { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
+      // Attempt with location_id first (works once migration is applied + schema reloaded).
+      // If it fails with a schema-cache error, retry without it so the submission is never lost.
+      const logPayload = { ...basePayload, location_id: locationId ?? null };
+      let { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
+
+      if (dbInsertError && dbInsertError.message?.includes("location_id")) {
+        // Column not in schema cache yet — retry without it so the completion is saved.
+        console.warn(
+          "location_id column not found in schema cache — retrying without it. " +
+          "Apply migration 20260312000001 (or 20260323000001) and run: NOTIFY pgrst, 'reload schema';"
+        );
+        ({ error: dbInsertError } = await supabase.from("checklist_logs").insert(basePayload));
+      }
       if (dbInsertError) {
         // Queue for retry — the submission will be retried on next kiosk load
         const msg = dbInsertError.message ?? "Unknown error";
