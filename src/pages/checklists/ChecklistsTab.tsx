@@ -141,8 +141,15 @@ export function ChecklistsTab() {
     .filter(f => f.parentId === currentFolder)
     .filter(f => !search || f.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => folderOrder.indexOf(a.id) - folderOrder.indexOf(b.id));
+  const selectedLocationObj = dbLocations.find(l => l.name === selectedLocation);
   const visibleChecklists = checklists.filter(c => c.folderId === currentFolder)
-    .filter(c => !search || c.title.toLowerCase().includes(search.toLowerCase()));
+    .filter(c => !search || c.title.toLowerCase().includes(search.toLowerCase()))
+    .filter(c => {
+      if (selectedLocation === "All locations") return true;
+      if (!selectedLocationObj) return true;
+      // Show checklists assigned to this specific location OR to all locations (null)
+      return c.location_id === selectedLocationObj.id || c.location_id === null;
+    });
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !search;
 

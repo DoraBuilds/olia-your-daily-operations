@@ -658,13 +658,31 @@ function MultipleChoiceInput({
 }
 
 function DateTimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Store date and time separately for clear mobile UX; combine on change
+  const datePart = value ? value.slice(0, 10) : "";
+  const timePart = value ? value.slice(11, 16) : "";
+  const emit = (d: string, t: string) => onChange(d && t ? `${d}T${t}` : d ? `${d}T00:00` : "");
   return (
-    <input
-      type="datetime-local"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="w-full min-h-[44px] border border-border rounded-xl px-4 py-3 text-base text-center bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-    />
+    <div className="space-y-2">
+      <div>
+        <label className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 block">Date</label>
+        <input
+          type="date"
+          value={datePart}
+          onChange={e => emit(e.target.value, timePart)}
+          className="w-full min-h-[44px] border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+      <div>
+        <label className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 block">Time</label>
+        <input
+          type="time"
+          value={timePart}
+          onChange={e => emit(datePart, e.target.value)}
+          className="w-full min-h-[44px] border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -865,10 +883,16 @@ function ChecklistRunner({
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
         {sections.map((section, si) => (
           <div key={si}>
-            {/* Section header — only shown when section has a name */}
-            {section.name && (
-              <div className="flex items-center gap-3 mb-3 mt-4 first:mt-0">
-                <span className="section-label text-foreground/70 shrink-0">{section.name}</span>
+            {/* Section header — always shown for named sections; also shown as a divider
+                between multiple unnamed sections so grouping is visually clear. */}
+            {(section.name || (sections.length > 1 && si > 0)) && (
+              <div className={cn(
+                "flex items-center gap-3 mb-3",
+                si === 0 ? "mt-0" : "mt-6",
+              )}>
+                <span className="section-label text-foreground/70 shrink-0">
+                  {section.name || `Section ${si + 1}`}
+                </span>
                 <div className="flex-1 h-px bg-border" />
               </div>
             )}
@@ -1129,6 +1153,16 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+
+  // Load persisted completions for today whenever locationId is resolved
+  useEffect(() => {
+    if (!locationId) return;
+    const key = `kiosk_done_${new Date().toISOString().slice(0, 10)}_${locationId}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) setCompletedIds(new Set(JSON.parse(raw)));
+    } catch { /* ignore */ }
+  }, [locationId]);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const now = useLiveClock();
 
@@ -1189,7 +1223,15 @@ export default function Kiosk() {
 
     // Mark checklist as done so it leaves the Due/Upcoming lists immediately
     if (selectedChecklist) {
-      setCompletedIds(prev => new Set([...prev, selectedChecklist.id]));
+      const id = selectedChecklist.id;
+      setCompletedIds(prev => {
+        const next = new Set([...prev, id]);
+        if (locationId) {
+          const key = `kiosk_done_${now.toISOString().slice(0, 10)}_${locationId}`;
+          try { localStorage.setItem(key, JSON.stringify([...next])); } catch { /* ignore */ }
+        }
+        return next;
+      });
     }
 
     // Save checklist log to Supabase (kiosk uses anon key — no auth session required)
@@ -1214,7 +1256,6 @@ export default function Kiosk() {
         checklist_title: selectedChecklist.title,
         completed_by: selectedStaffName,
         staff_profile_id: selectedStaffId ?? null,
-        location_id: locationId ?? null,
         score,
         answers: answerPayload,
       };
