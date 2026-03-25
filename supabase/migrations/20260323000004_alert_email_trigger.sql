@@ -1,28 +1,28 @@
 -- ================================================================
--- Email notification pipeline for alerts
+-- Email notification pipeline for alerts (secure shared-secret)
 -- ================================================================
--- Creates a Postgres trigger that calls the send-alert-email
--- Edge Function via pg_net whenever a new alert row is inserted.
+-- Postgres trigger → pg_net HTTP POST → Edge Function → Resend API
 --
--- REQUIRED SETUP (run once in Supabase SQL Editor — not part of
--- automated migration):
+-- REQUIRED ONE-TIME SETUP (run separately in SQL Editor FIRST):
 --
 --   ALTER DATABASE postgres
---     SET app.supabase_url     = 'https://YOUR_REF.supabase.co';
+--     SET app.supabase_url = 'https://YOUR_REF.supabase.co';
 --   ALTER DATABASE postgres
---     SET app.service_role_key = 'eyJ...YOUR_SERVICE_ROLE_KEY';
+--     SET app.alert_secret = 'YOUR_RANDOM_SECRET';
 --
--- These values live in Supabase Dashboard → Settings → API.
+--   app.supabase_url  → Supabase Dashboard → Settings → API → Project URL
+--   app.alert_secret  → any random string you invent, e.g. "olia-alerts-2026-xK9m"
+--                       Store the same value as the ALERT_SECRET Edge Function secret.
+--
+-- No service_role key is stored anywhere in the database.
 -- ================================================================
 
--- Enable pg_net (no-op if already enabled — safe to run twice)
+-- Enable pg_net (built into Supabase, no-op if already enabled)
 CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
 
--- Trigger function: looks up locations.alert_email, then calls
--- the edge function asynchronously via pg_net.http_post.
--- SECURITY DEFINER: runs as the function owner (postgres),
--- bypassing RLS so it can read locations regardless of who
--- inserted the alert.
+-- Trigger function
+-- SECURITY DEFINER: runs as postgres user so it can read locations.alert_email
+-- regardless of who inserted the alert (the anon role in the kiosk case).
 CREATE OR REPLACE FUNCTION public.send_alert_email_on_insert()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -30,31 +30,45 @@ SECURITY DEFINER
 SET search_path = public, extensions
 AS $$
 DECLARE
-  _url          text;
-  _key          text;
-  _recipient    text;
-  _payload      jsonb;
+  _url       text;
+  _secret    text;
+  _recipient text;
+  _payload   jsonb;
 BEGIN
-  _url := current_setting('app.supabase_url',     true);
-  _key := current_setting('app.service_role_key', true);
+  -- Read the two non-sensitive config values from DB settings.
+  -- 'true' = return NULL instead of raising an error if the setting is missing.
+  _url    := current_setting('app.supabase_url', true);
+  _secret := current_setting('app.alert_secret', true);
 
-  IF _url IS NULL OR _url = '' OR _key IS NULL OR _key = '' THEN
-    RAISE WARNING 'send_alert_email: app.supabase_url or app.service_role_key not configured';
+  -- If either is missing, log a warning and bail out.
+  -- The alert row is already committed — only the email is skipped.
+  IF _url IS NULL OR _url = '' THEN
+    RAISE WARNING 'send_alert_email: app.supabase_url not set. Run: ALTER DATABASE postgres SET app.supabase_url = ''https://YOUR_REF.supabase.co'';';
     RETURN NEW;
   END IF;
 
+  IF _secret IS NULL OR _secret = '' THEN
+    RAISE WARNING 'send_alert_email: app.alert_secret not set. Run: ALTER DATABASE postgres SET app.alert_secret = ''your-secret'';';
+    RETURN NEW;
+  END IF;
+
+  -- Look up the alert recipient email from the location assigned to this org.
+  -- locations.alert_email exists in the initial schema (20260304000001 line 28).
   SELECT l.alert_email
     INTO _recipient
     FROM public.locations l
    WHERE l.organization_id = NEW.organization_id
      AND l.alert_email IS NOT NULL
      AND l.alert_email <> ''
+   ORDER BY l.created_at
    LIMIT 1;
 
+  -- No recipient configured for this org → skip quietly.
   IF _recipient IS NULL THEN
     RETURN NEW;
   END IF;
 
+  -- Build the JSON body for the Edge Function.
   _payload := jsonb_build_object(
     'id',              NEW.id,
     'type',            NEW.type,
@@ -67,11 +81,15 @@ BEGIN
     'recipient_email', _recipient
   );
 
+  -- Fire the HTTP request asynchronously.
+  -- pg_net does NOT block the INSERT — the email is sent in the background.
+  -- Security: authenticated only by the shared x-alert-secret header.
+  -- No Supabase credentials are transmitted.
   PERFORM extensions.net.http_post(
     url     := _url || '/functions/v1/send-alert-email',
     headers := jsonb_build_object(
-                 'Content-Type',  'application/json',
-                 'Authorization', 'Bearer ' || _key
+                 'Content-Type',   'application/json',
+                 'x-alert-secret', _secret
                ),
     body    := _payload::text,
     timeout_milliseconds := 5000
@@ -80,11 +98,13 @@ BEGIN
   RETURN NEW;
 
 EXCEPTION WHEN OTHERS THEN
+  -- Never let a trigger error roll back the alert INSERT.
   RAISE WARNING 'send_alert_email: pg_net call failed: %', SQLERRM;
   RETURN NEW;
 END;
 $$;
 
+-- Attach trigger (safe to run multiple times)
 DROP TRIGGER IF EXISTS trg_send_alert_email ON public.alerts;
 
 CREATE TRIGGER trg_send_alert_email

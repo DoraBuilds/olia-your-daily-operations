@@ -4,38 +4,58 @@
  * Called by the Postgres trigger `trg_send_alert_email` via pg_net
  * whenever a new row is inserted into public.alerts.
  *
- * Environment variable required (set in Supabase Dashboard →
- * Settings → Edge Functions → Secrets):
- *   RESEND_API_KEY   → your Resend API key (starts with "re_")
+ * Authentication: shared secret passed as `x-alert-secret` header.
+ * No Supabase credentials are used or required.
+ *
+ * Required secrets (Supabase Dashboard → Settings → Edge Functions → Secrets):
+ *   RESEND_API_KEY  → your Resend API key (starts with "re_")
+ *   ALERT_SECRET    → same random string you set in:
+ *                     ALTER DATABASE postgres SET app.alert_secret = '...';
  *
  * Optional:
- *   ALERT_FROM_EMAIL → sender address (default: alerts@notifications.olia.app)
- *                      Must be a domain you have verified in Resend.
+ *   ALERT_FROM_EMAIL → verified sender address in Resend
+ *                      Default: onboarding@resend.dev (works without domain setup)
  */
 
 const RESEND_API_KEY  = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL      = Deno.env.get("ALERT_FROM_EMAIL") ?? "alerts@notifications.olia.app";
+const ALERT_SECRET    = Deno.env.get("ALERT_SECRET");
+const FROM_EMAIL      = Deno.env.get("ALERT_FROM_EMAIL") ?? "onboarding@resend.dev";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 interface AlertPayload {
   id:              string;
-  type:            "error" | "warn" | string;
+  type:            string;   // "warn" | "error"
   message:         string;
-  area:            string | null;    // checklist title
-  time:            string | null;    // "HH:MM" local time from kiosk
-  source:          string | null;    // "kiosk" | "system" | "action"
+  area:            string | null;
+  time:            string | null;
+  source:          string | null;
   created_at:      string;
   organization_id: string;
-  recipient_email: string;           // resolved by trigger from locations.alert_email
+  recipient_email: string;  // resolved by trigger from locations.alert_email
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  // Only accept POST
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
 
-  // ── Parse payload ───────────────────────────────────────────────
+  // ── Validate shared secret ──────────────────────────────────────
+  // Reject anything that doesn't carry the correct x-alert-secret header.
+  // This prevents anyone on the internet from triggering emails even if
+  // they discover the function URL.
+  const incomingSecret = req.headers.get("x-alert-secret");
+
+  if (!ALERT_SECRET) {
+    console.error("send-alert-email: ALERT_SECRET secret is not configured in Edge Function secrets");
+    return json({ error: "Server misconfiguration: ALERT_SECRET not set" }, 500);
+  }
+
+  if (!incomingSecret || incomingSecret !== ALERT_SECRET) {
+    console.warn("send-alert-email: rejected request with invalid or missing x-alert-secret");
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  // ── Parse body ──────────────────────────────────────────────────
   let alert: AlertPayload;
   try {
     alert = await req.json();
@@ -43,51 +63,48 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  // ── Validate required fields ────────────────────────────────────
+  if (!alert.message) {
+    return json({ error: "Missing required field: message" }, 400);
+  }
+
   if (!alert.recipient_email) {
-    console.log("send-alert-email: no recipient_email in payload — skipping");
+    // Trigger already filters this, but guard here too.
+    console.log("send-alert-email: no recipient_email — skipping");
     return json({ skipped: true, reason: "no recipient_email" }, 200);
   }
 
-  if (!alert.message) {
-    console.warn("send-alert-email: payload missing message field");
-    return json({ error: "missing message field" }, 400);
-  }
-
-  // ── Check API key ───────────────────────────────────────────────
+  // ── Validate Resend key ─────────────────────────────────────────
   if (!RESEND_API_KEY) {
-    console.error("send-alert-email: RESEND_API_KEY secret is not set");
-    return json({ error: "RESEND_API_KEY not configured" }, 500);
+    console.error("send-alert-email: RESEND_API_KEY secret is not configured");
+    return json({ error: "Server misconfiguration: RESEND_API_KEY not set" }, 500);
   }
 
-  // ── Build email ─────────────────────────────────────────────────
+  // ── Build email content ─────────────────────────────────────────
   const severityLabel = alert.type === "error" ? "🔴 Error" : "⚠️ Warning";
   const subject       = `${severityLabel}: ${alert.message}`;
 
-  // Readable datetime from the ISO timestamp
   const when = alert.created_at
     ? new Date(alert.created_at).toLocaleString("en-GB", {
         day: "numeric", month: "short", year: "numeric",
         hour: "2-digit", minute: "2-digit",
       })
-    : alert.time ?? "unknown time";
+    : (alert.time ?? "unknown time");
 
   const textBody = [
-    `Olia Operational Alert`,
-    ``,
-    `Severity : ${alert.type?.toUpperCase() ?? "WARN"}`,
+    "Olia Operational Alert",
+    "",
+    `Severity : ${(alert.type ?? "warn").toUpperCase()}`,
     `Message  : ${alert.message}`,
     alert.area   ? `Checklist: ${alert.area}`   : null,
     `Recorded : ${when}`,
     alert.source ? `Source   : ${alert.source}` : null,
-    ``,
-    `---`,
-    `You are receiving this because your location has alert notifications enabled.`,
-    `Log in to Olia to view and dismiss this alert.`,
-  ].filter(line => line !== null).join("\n");
+    "",
+    "---",
+    "You are receiving this because your location has alert notifications enabled.",
+    "Log in to Olia to view and dismiss this alert.",
+  ].filter((l): l is string => l !== null).join("\n");
 
-  const htmlBody = `
-<!DOCTYPE html>
+  const htmlBody = `<!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif;max-width:520px;margin:40px auto;color:#1E1410">
   <div style="background:#1A2A47;padding:16px 24px;border-radius:8px 8px 0 0">
@@ -96,7 +113,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   </div>
   <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px">
     <p style="margin:0 0 16px;font-size:18px;font-weight:bold;color:#1A2A47">
-      ${severityLabel}&nbsp;&nbsp;${escapeHtml(alert.message)}
+      ${severityLabel}&nbsp; ${esc(alert.message)}
     </p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${alert.area ? row("Checklist", alert.area) : ""}
@@ -112,7 +129,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 </html>`;
 
   // ── Send via Resend ─────────────────────────────────────────────
-  const resendResponse = await fetch(RESEND_ENDPOINT, {
+  const resendRes = await fetch(RESEND_ENDPOINT, {
     method:  "POST",
     headers: {
       "Authorization": `Bearer ${RESEND_API_KEY}`,
@@ -127,28 +144,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }),
   });
 
-  const resendBody = await resendResponse.json().catch(() => ({}));
+  const resendBody = await resendRes.json().catch(() => ({}));
 
-  if (!resendResponse.ok) {
+  if (!resendRes.ok) {
     console.error(
-      `send-alert-email: Resend returned ${resendResponse.status}`,
+      `send-alert-email: Resend error ${resendRes.status}`,
       JSON.stringify(resendBody)
     );
     return json(
-      { error: "Resend API error", status: resendResponse.status, detail: resendBody },
+      { error: "Resend API error", status: resendRes.status, detail: resendBody },
       502
     );
   }
 
   console.log(
-    `send-alert-email: delivered alert ${alert.id} → ${alert.recipient_email}`,
+    `send-alert-email: sent alert ${alert.id} → ${alert.recipient_email}`,
     `resend_id=${resendBody?.id}`
   );
 
   return json({ sent: true, resend_id: resendBody?.id }, 200);
 });
 
-// ── Helpers ────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -157,18 +174,13 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function row(label: string, value: string): string {
-  return `
-    <tr>
-      <td style="padding:6px 0;color:#857B72;width:90px">${escapeHtml(label)}</td>
-      <td style="padding:6px 0;font-weight:500">${escapeHtml(value)}</td>
-    </tr>`;
+  return `<tr>
+    <td style="padding:6px 0;color:#857B72;width:90px">${esc(label)}</td>
+    <td style="padding:6px 0;font-weight:500">${esc(value)}</td>
+  </tr>`;
 }
