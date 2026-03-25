@@ -1,0 +1,9 @@
+# Disable Supabase JWT verification for this function.
+#
+# This function is called by a Postgres trigger via pg_net — the database
+# cannot attach a Supabase JWT. Security is handled instead by the
+# x-alert-secret header checked inside the function code.
+# Any request without the correct secret is rejected with 401 before
+# any email logic runs.
+[functions.send-alert-email]
+verify_jwt = false
