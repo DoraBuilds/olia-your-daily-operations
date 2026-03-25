@@ -1347,8 +1347,8 @@ export default function Kiosk() {
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [insertError, setInsertError] = useState<string | null>(null);
-  // Issue 4: Default tab is "due"; switch to "done" to see completed
-  const [kioskTab, setKioskTab] = useState<"due" | "done">("due");
+  // Three-tab kiosk view: due | upcoming | done
+  const [kioskTab, setKioskTab] = useState<"due" | "upcoming" | "done">("due");
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -1468,14 +1468,19 @@ export default function Kiosk() {
 
       // Attempt with location_id first (works once migration is applied + schema reloaded).
       // If it fails with a schema-cache error, retry without it so the submission is never lost.
-      const logPayload = { ...basePayload, location_id: locationId ?? null };
+      const logPayload = {
+        ...basePayload,
+        location_id: locationId ?? null,
+        started_at: startedAt ? startedAt.toISOString() : null,  // persisted for PDF export
+      };
       let { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
 
-      if (dbInsertError && dbInsertError.message?.includes("location_id")) {
-        // Column not in schema cache yet — retry without it so the completion is saved.
+      if (dbInsertError && (dbInsertError.message?.includes("location_id") || dbInsertError.message?.includes("started_at"))) {
+        // One or more added columns not yet in the PostgREST schema cache.
+        // Retry with only the original columns so the completion is never lost.
         console.warn(
-          "location_id column not found in schema cache — retrying without it. " +
-          "Apply migration 20260312000001 (or 20260323000001) and run: NOTIFY pgrst, 'reload schema';"
+          "Column(s) not found in schema cache — retrying with base payload. " +
+          "Apply migrations 20260312000001 + 20260326000001 and run: NOTIFY pgrst, 'reload schema';"
         );
         ({ error: dbInsertError } = await supabase.from("checklist_logs").insert(basePayload));
       }
@@ -1624,10 +1629,16 @@ export default function Kiosk() {
             <p className="section-label mb-1">Due now</p>
             <p className="text-2xl font-bold text-status-error">{dueChecklists.length}</p>
           </button>
-          <div className="bg-card border border-border rounded-2xl px-3 py-3 text-center">
+          <button
+            onClick={() => setKioskTab("upcoming")}
+            className={cn(
+              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              kioskTab === "upcoming" ? "border-status-warn/50 ring-1 ring-status-warn/20" : "border-border",
+            )}
+          >
             <p className="section-label mb-1">Upcoming</p>
             <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
-          </div>
+          </button>
           <button
             onClick={() => setKioskTab(t => t === "done" ? "due" : "done")}
             className={cn(
@@ -1689,8 +1700,7 @@ export default function Kiosk() {
           <div className="space-y-4">
             {kioskTab === "due" ? (
               <>
-                {/* DUE NOW section */}
-                {dueChecklists.length > 0 && (
+                {dueChecklists.length > 0 ? (
                   <div>
                     <p className="section-label mb-2 text-status-error">Due now</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -1699,24 +1709,31 @@ export default function Kiosk() {
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-status-ok font-semibold">Nothing due right now ✓</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {upcomingChecklists.length > 0
+                        ? `${upcomingChecklists.length} checklist${upcomingChecklists.length > 1 ? "s" : ""} coming up — tap Upcoming to see them.`
+                        : "Tap Done above to review completed checklists."}
+                    </p>
+                  </div>
                 )}
-                {/* UPCOMING section */}
-                {upcomingChecklists.length > 0 && (
+              </>
+            ) : kioskTab === "upcoming" ? (
+              <>
+                {upcomingChecklists.length > 0 ? (
                   <div>
                     <p className="section-label mb-2">Upcoming today</p>
                     <div className="grid grid-cols-2 gap-3">
                       {upcomingChecklists.map((cl, idx) => (
-                        <ChecklistCard key={cl.id} cl={cl} idx={idx + dueChecklists.length} onSelect={setSelectedChecklist} dim />
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} dim />
                       ))}
                     </div>
                   </div>
-                )}
-                {dueChecklists.length === 0 && upcomingChecklists.length === 0 && (
+                ) : (
                   <div className="text-center py-10">
-                    <p className="text-sm text-status-ok font-semibold">All done for now ✓</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Tap the Done counter above to review completed checklists.
-                    </p>
+                    <p className="text-sm text-muted-foreground">No upcoming checklists.</p>
                   </div>
                 )}
               </>

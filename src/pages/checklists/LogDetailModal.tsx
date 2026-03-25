@@ -29,16 +29,18 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
   const scoreColor = log.score >= 85 ? "text-status-ok" : log.score >= 65 ? "text-status-warn" : "text-status-error";
 
   const handleExportPdf = async () => {
+    // Format ISO timestamps to HH:MM for display in the PDF header.
+    const toTime = (iso: string | undefined) =>
+      iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : undefined;
+
     await exportLogDetailPdf({
-      checklist: log.checklist,
+      checklist:   log.checklist,
       completedBy: log.completedBy,
-      date: log.date,
-      score: log.score,
-      // log.date is the formatted created_at ("23 Mar, 14:39") — this is the completion
-      // (finished) time. startedAt is not stored in the DB for existing logs, so it is
-      // omitted. The PDF renderer handles both as optional and degrades gracefully.
-      finishedAt: log.date,
-      answers: log.answers,
+      date:        log.date,
+      score:       log.score,
+      startedAt:   toTime(log.startedAt),    // present for logs after migration 20260326000001
+      finishedAt:  toTime(log.finishedAt) ?? log.date, // always show at minimum
+      answers:     log.answers,
     });
   };
 

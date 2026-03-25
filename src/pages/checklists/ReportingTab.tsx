@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
@@ -11,6 +11,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useActions } from "@/hooks/useActions";
+import { useLocations } from "@/hooks/useLocations";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
@@ -41,36 +42,33 @@ export function ReportingTab() {
   const [calOpen, setCalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [showCsvUpgrade, setShowCsvUpgrade] = useState(false);
+  // Location filter — "all" means no filter; any UUID string = filter to that location
+  const [locationFilter, setLocationFilter] = useState<string>("all");
 
-  // Build date filters
+  const { data: locations = [] } = useLocations();
+
+  // Build date + location filters
   const filters = useMemo(() => {
     const today = new Date();
+    const loc = locationFilter !== "all" ? { location_id: locationFilter } : {};
     if (period === "today") {
-      return {
-        from: format(startOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"),
-        to: format(endOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"),
-      };
+      return { from: format(startOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
     }
     if (period === "week") {
-      return {
-        from: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"),
-        to: format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"),
-      };
+      return { from: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
     }
     if (period === "month") {
-      return {
-        from: format(startOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"),
-        to: format(endOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"),
-      };
+      return { from: format(startOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
     }
     if (dateRange?.from) {
       return {
         from: format(startOfDay(dateRange.from), "yyyy-MM-dd'T'HH:mm:ss"),
         to: dateRange.to ? format(endOfDay(dateRange.to), "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+        location_id: locationFilter !== "all" ? locationFilter : undefined,
       };
     }
-    return undefined;
-  }, [period, dateRange]);
+    return { location_id: locationFilter !== "all" ? locationFilter : undefined };
+  }, [period, dateRange, locationFilter]);
 
   const { data: logs = [], isLoading } = useChecklistLogs(filters);
   const { data: actions = [] } = useActions();
@@ -116,6 +114,8 @@ export function ReportingTab() {
       score: l.score ?? 0,
       type: (l.type as LogEntry["type"]) ?? "opening",
       answers: l.answers ?? [],
+      startedAt:  l.started_at  ?? undefined,   // null → undefined so PDF omits it
+      finishedAt: l.created_at,                 // always available
     })),
     [logs]
   );
@@ -152,6 +152,8 @@ export function ReportingTab() {
 
   return (
     <>
+      {/* ── Top toolbar: period tabs + location filter + export ── */}
+      <div className="space-y-2">
       {/* Period tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
         {([
@@ -203,6 +205,40 @@ export function ReportingTab() {
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Location filter + export — same row */}
+      <div className="flex items-center gap-2">
+        {/* Location dropdown */}
+        <div className="relative flex-1 min-w-0">
+          <select
+            value={locationFilter}
+            onChange={e => setLocationFilter(e.target.value)}
+            className="w-full text-xs bg-card border border-border rounded-full px-3 py-2 pr-7 text-foreground font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage/40"
+          >
+            <option value="all">All locations</option>
+            {locations.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+        {/* Export buttons */}
+        <button
+          onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
+          disabled={!logEntries.length}
+          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
+        >
+          <Download size={12} /> CSV
+        </button>
+        <button
+          onClick={handleExportPdf}
+          disabled={!logEntries.length}
+          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
+        >
+          <FileText size={12} /> PDF
+        </button>
+      </div>
+      </div>{/* end top toolbar */}
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2">
@@ -349,33 +385,6 @@ export function ReportingTab() {
             <p className="text-sm text-muted-foreground">No logs recorded for this period.</p>
           </div>
         )}
-      </div>
-
-      {/* Export */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="section-label">Export</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              <span className="text-foreground font-medium">{periodLabel}</span>
-              {" · "}{logEntries.length} records
-            </p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
-              disabled={!logEntries.length}
-              className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
-            >
-              <Download size={12} /> CSV
-            </button>
-            <button onClick={handleExportPdf} disabled={!logEntries.length}
-              className="flex items-center gap-1.5 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
-            >
-              <FileText size={12} /> PDF
-            </button>
-          </div>
-        </div>
       </div>
 
       {selectedLog && <LogDetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />}

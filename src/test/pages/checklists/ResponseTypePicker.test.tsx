@@ -55,19 +55,19 @@ describe("ResponseTypePicker", () => {
     expect(screen.getByText("Number")).toBeInTheDocument();
   });
 
-  it("shows Date & Time response type", () => {
+  it("does NOT show Date & Time (removed from builder)", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    expect(screen.getByText("Date & Time")).toBeInTheDocument();
+    expect(screen.queryByText("Date & Time")).not.toBeInTheDocument();
   });
 
-  it("shows Media response type", () => {
+  it("shows Photo / Media response type", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    expect(screen.getByText("Media")).toBeInTheDocument();
+    expect(screen.getByText("Photo / Media")).toBeInTheDocument();
   });
 
-  it("shows Signature response type", () => {
+  it("does NOT show Signature (removed from builder)", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    expect(screen.getByText("Signature")).toBeInTheDocument();
+    expect(screen.queryByText("Signature")).not.toBeInTheDocument();
   });
 
   it("shows multiple choice set options (Good/Fair/Poor etc)", () => {

@@ -111,6 +111,8 @@ export interface LogEntry {
   id: string; checklist: string; completedBy: string; date: string; score: number;
   type: "opening" | "closing" | "cleaning" | "delivery" | "inspection";
   answers?: LogAnswer[];
+  startedAt?: string;   // ISO timestamp — present for logs created after migration 20260326000001
+  finishedAt?: string;  // ISO timestamp — always present (= created_at)
 }
 
 export interface LogAnswer {

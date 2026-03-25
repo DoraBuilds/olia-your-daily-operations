@@ -237,9 +237,11 @@ describe("ReportingTab", () => {
     expect(screen.getByText(/Bob/)).toBeInTheDocument();
   });
 
-  it("shows Export section", () => {
+  it("shows CSV export button in the top toolbar", () => {
+    // Export section was moved from the bottom to the top toolbar (next to date filters).
+    // The dedicated "Export" heading was removed; buttons are directly in the toolbar.
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("Export")).toBeInTheDocument();
+    expect(screen.getByText("CSV")).toBeInTheDocument();
   });
 
   it("shows CSV export button", () => {

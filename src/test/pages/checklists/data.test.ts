@@ -156,8 +156,10 @@ describe("RESPONSE_TYPES", () => {
     expect(Array.isArray(RESPONSE_TYPES)).toBe(true);
   });
 
-  it("has 8 response types", () => {
-    expect(RESPONSE_TYPES).toHaveLength(8);
+  it("has 5 response types (datetime, signature, person removed from builder)", () => {
+    // datetime, signature, person are no longer exposed in the builder UI.
+    // checkbox, text, number, media, instruction remain.
+    expect(RESPONSE_TYPES).toHaveLength(5);
   });
 
   it("includes checkbox type", () => {

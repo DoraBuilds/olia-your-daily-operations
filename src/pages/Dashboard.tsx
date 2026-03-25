@@ -1,24 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import { AlertCircle, TrendingUp, Plus, X, ChevronRight, ChevronLeft, AlertTriangle, Bell } from "lucide-react";
+import { AlertCircle, TrendingUp, Plus, X, ChevronRight, ChevronLeft, AlertTriangle, Bell, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useActions, useSaveAction } from "@/hooks/useActions";
+import { useLocations } from "@/hooks/useLocations";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ChecklistCompliance {
   id: string;
   name: string;
-  location: string;
+  completedBy: string;
   completion: number;
   totalTasks: number;
   completedTasks: number;
   unanswered: string[];
   completedAt?: string;
+}
+
+interface LocationCompliance {
+  locationId: string | null;
+  name: string;
+  avgScore: number;
+  count: number;
+  checklists: ChecklistCompliance[];
 }
 
 type ComplianceTab = "today" | "yesterday" | "overdue";
@@ -45,7 +54,29 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   );
 }
 
-const ITEMS_PER_PAGE = 4;
+// ─── Pagination Dots ─────────────────────────────────────────────────────────
+
+function PaginationDots({ page, totalPages, setPage }: { page: number; totalPages: number; setPage: (p: number | ((p: number) => number)) => void }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mt-3">
+      <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+        className="p-1 rounded-full hover:bg-muted disabled:opacity-30 transition-colors">
+        <ChevronLeft size={14} className="text-muted-foreground" />
+      </button>
+      {Array.from({ length: totalPages }).map((_, i) => (
+        <button key={i} onClick={() => setPage(i)}
+          className={cn("h-1.5 rounded-full transition-all",
+            i === page ? "bg-sage w-4" : "bg-border w-1.5 hover:bg-muted-foreground"
+          )}
+        />
+      ))}
+      <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
+        className="p-1 rounded-full hover:bg-muted disabled:opacity-30 transition-colors">
+        <ChevronRight size={14} className="text-muted-foreground" />
+      </button>
+    </div>
+  );
+}
 
 // ─── Quick Task Modal ─────────────────────────────────────────────────────────
 
@@ -108,7 +139,7 @@ function ChecklistDetailModal({ item, onClose }: { item: ChecklistCompliance; on
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-xl text-foreground">{item.name}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{item.location}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{item.completedBy}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <X size={18} className="text-muted-foreground" />
@@ -158,6 +189,8 @@ export default function Dashboard() {
   const [complianceTab, setComplianceTab]          = useState<ComplianceTab>("today");
   const [page, setPage]                            = useState(0);
   const [selectedChecklist, setSelectedChecklist]  = useState<ChecklistCompliance | null>(null);
+  // Location drill-down: null = show location-level cards; string = show checklists for that location
+  const [drillLocationId, setDrillLocationId]      = useState<string | null | "unassigned">(null);
 
   const today    = new Date();
   const dateLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -168,21 +201,31 @@ export default function Dashboard() {
   const currentUser = teamMember?.name ?? "";
 
   // ── Data hooks ──
-  const { data: allAlerts = [] } = useAlerts();
-  const { data: logs      = [] } = useChecklistLogs();
-  const { data: actions   = [] } = useActions();
+  const { data: allAlerts = [] }    = useAlerts();
+  const { data: logs      = [] }    = useChecklistLogs();
+  const { data: actions   = [] }    = useActions();
+  const { data: locations = [] }    = useLocations();
 
-  // ── Date strings for filtering ──
-  const todayStr     = today.toISOString().slice(0, 10);
-  const yesterdayStr = new Date(today.getTime() - 86_400_000).toISOString().slice(0, 10);
+  // ── Date strings — use LOCAL date arithmetic to avoid UTC midnight shifting ──
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const localDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayStr     = localDateStr(today);
+  const yesterdayObj = new Date(today); yesterdayObj.setDate(today.getDate() - 1);
+  const yesterdayStr = localDateStr(yesterdayObj);
 
   // ── Derive compliance items from logs ──
+  // created_at is UTC ISO — compare only the date portion against local date strings.
+  // For logs in UTC+N timezones the first/last hour of the day may shift by one day;
+  // this is a known limitation without storing a local_date column.
   const rawTabLogs = complianceTab !== "overdue"
-    ? logs.filter(l => l.created_at.slice(0, 10) === (complianceTab === "today" ? todayStr : yesterdayStr))
+    ? logs.filter(l => {
+        // created_at is like "2026-03-26T14:39:00+00:00" — convert to local date
+        const localDate = localDateStr(new Date(l.created_at));
+        return localDate === (complianceTab === "today" ? todayStr : yesterdayStr);
+      })
     : [];
 
   // Deduplicate: keep only the most-recent submission per checklist per day.
-  // Same checklist submitted multiple times shows only once (highest created_at).
   const tabLogs = Object.values(
     rawTabLogs.reduce<Record<string, typeof rawTabLogs[0]>>((acc, log) => {
       const key = log.checklist_id ?? log.checklist_title;
@@ -191,20 +234,59 @@ export default function Dashboard() {
     }, {})
   );
 
-  const complianceItems: ChecklistCompliance[] = tabLogs.map(log => {
-    const ans     = Array.isArray(log.answers) ? log.answers : [];
+  // Helper: map a log to a ChecklistCompliance object
+  const logToChecklist = (log: typeof tabLogs[0]): ChecklistCompliance => {
+    const ans      = Array.isArray(log.answers) ? log.answers : [];
     const answered = ans.filter(a => a.value !== null && a.value !== "" && a.value !== undefined && a.value !== false);
     return {
-      id:           log.id,
-      name:         log.checklist_title,
-      location:     log.completed_by,
-      completion:   log.score ?? 0,
-      totalTasks:   ans.length,
+      id:             log.id,
+      name:           log.checklist_title,
+      completedBy:    log.completed_by,
+      completion:     log.score ?? 0,
+      totalTasks:     ans.length,
       completedTasks: answered.length,
-      unanswered:   ans.filter(a => !a.value).map(a => String(a.question ?? a.questionId ?? "")),
-      completedAt:  new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      unanswered:     ans.filter(a => !a.value).map(a => String(a.question ?? a.questionId ?? "")),
+      completedAt:    new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
     };
-  }).sort((a, b) => a.completion - b.completion);
+  };
+
+  // ── Group logs by location → location-level compliance cards ──
+  const locationComplianceItems: LocationCompliance[] = useMemo(() => {
+    const groups: Record<string, { locationId: string | null; name: string; logs: typeof tabLogs }> = {};
+
+    for (const log of tabLogs) {
+      const key  = log.location_id ?? "unassigned";
+      const name = log.location_id
+        ? (locations.find(l => l.id === log.location_id)?.name ?? "Unknown location")
+        : "All locations";
+      if (!groups[key]) groups[key] = { locationId: log.location_id, name, logs: [] };
+      groups[key].logs.push(log);
+    }
+
+    return Object.values(groups)
+      .map(g => ({
+        locationId: g.locationId,
+        name:       g.name,
+        avgScore:   Math.round(g.logs.reduce((s, l) => s + (l.score ?? 0), 0) / g.logs.length),
+        count:      g.logs.length,
+        checklists: g.logs.map(logToChecklist).sort((a, b) => a.completion - b.completion),
+      }))
+      .sort((a, b) => a.avgScore - b.avgScore);
+  }, [tabLogs, locations]);
+
+  // ── When drilled into a location, show its checklist cards ──
+  const drilledLocation = drillLocationId !== null
+    ? locationComplianceItems.find(l =>
+        drillLocationId === "unassigned" ? l.locationId === null : l.locationId === drillLocationId
+      )
+    : null;
+
+  const complianceItems: ChecklistCompliance[] = drilledLocation
+    ? drilledLocation.checklists
+    : [];
+
+  // ── Pagination applies to both location cards and drilled checklist cards ──
+  const ITEMS_PER_PAGE = 4;
 
   // ── Overdue open actions ──
   const todayStart = new Date(today); todayStart.setHours(0, 0, 0, 0);
@@ -217,9 +299,15 @@ export default function Dashboard() {
   const visibleAlerts = allAlerts.slice(0, 3);
   const hasMore = allAlerts.length > 3;
 
-  // ── Pagination for compliance cards ──
-  const totalPages = Math.ceil(complianceItems.length / ITEMS_PER_PAGE);
-  const pagedItems = complianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+  // ── Pagination: applies to location cards (top level) or checklist cards (drilled) ──
+  const paginationSource = drillLocationId !== null ? complianceItems : locationComplianceItems;
+  const totalPages = Math.ceil(paginationSource.length / ITEMS_PER_PAGE);
+  const pagedLocationItems = drillLocationId === null
+    ? (locationComplianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE) as LocationCompliance[])
+    : [];
+  const pagedChecklistItems = drillLocationId !== null
+    ? (complianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE) as ChecklistCompliance[])
+    : [];
 
   return (
     <>
@@ -314,11 +402,26 @@ export default function Dashboard() {
         {/* ── B. Daily Compliance ── */}
         <section>
           <div className="flex items-center justify-between mb-3 gap-2">
-            <p className="section-label">Daily compliance</p>
+            <div className="flex items-center gap-2">
+              {drillLocationId !== null && (
+                <button
+                  onClick={() => { setDrillLocationId(null); setPage(0); }}
+                  className="p-1 rounded-full hover:bg-muted transition-colors"
+                  aria-label="Back to locations"
+                >
+                  <ArrowLeft size={14} className="text-muted-foreground" />
+                </button>
+              )}
+              <p className="section-label">
+                {drillLocationId !== null && drilledLocation
+                  ? drilledLocation.name
+                  : "Daily compliance"}
+              </p>
+            </div>
             <div className="flex items-center bg-muted rounded-full p-0.5 text-xs shrink-0">
               {(["yesterday", "today", "overdue"] as ComplianceTab[]).map(tab => (
                 <button key={tab}
-                  onClick={() => { setComplianceTab(tab); setPage(0); }}
+                  onClick={() => { setComplianceTab(tab); setPage(0); setDrillLocationId(null); }}
                   className={cn(
                     "relative px-2.5 py-1 rounded-full transition-colors capitalize whitespace-nowrap",
                     complianceTab === tab ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground"
@@ -336,7 +439,7 @@ export default function Dashboard() {
           </div>
 
           {complianceTab !== "overdue" ? (
-            complianceItems.length === 0 ? (
+            locationComplianceItems.length === 0 ? (
               <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
                 <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
                   <TrendingUp size={20} className="text-sage" />
@@ -348,10 +451,42 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : drillLocationId === null ? (
+              /* ── LOCATION CARDS (top level) ── */
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  {pagedItems.map(item => (
+                  {pagedLocationItems.map(loc => (
+                    <button
+                      key={loc.locationId ?? "unassigned"}
+                      onClick={() => { setDrillLocationId(loc.locationId ?? "unassigned"); setPage(0); }}
+                      className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
+                    >
+                      <div className="relative" style={{ width: 72, height: 72 }}>
+                        <ScoreRing score={loc.avgScore} size={72} />
+                        <span className={cn(
+                          "absolute inset-0 flex items-center justify-center text-sm font-bold",
+                          loc.avgScore >= 85 ? "text-status-ok" : loc.avgScore >= 65 ? "text-status-warn" : "text-status-error"
+                        )}>
+                          {loc.avgScore}%
+                        </span>
+                      </div>
+                      <div className="w-full">
+                        <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{loc.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {loc.count} checklist{loc.count !== 1 ? "s" : ""} completed
+                        </p>
+                        <p className="text-[10px] text-sage mt-0.5 font-medium">Tap to drill in →</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {totalPages > 1 && <PaginationDots page={page} totalPages={totalPages} setPage={setPage} />}
+              </>
+            ) : (
+              /* ── CHECKLIST CARDS (drilled into a location) ── */
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {pagedChecklistItems.map(item => (
                     <button key={item.id} onClick={() => setSelectedChecklist(item)}
                       className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
                     >
@@ -366,7 +501,7 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full">
                         <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">{item.location}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{item.completedBy}</p>
                         <p className="text-[10px] text-muted-foreground">{item.completedTasks}/{item.totalTasks} tasks</p>
                         {item.completedAt && (
                           <p className="text-[10px] text-status-ok mt-0.5 font-medium">Done {item.completedAt}</p>
@@ -375,26 +510,7 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-3">
-                    <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                      className="p-1 rounded-full hover:bg-muted disabled:opacity-30 transition-colors">
-                      <ChevronLeft size={14} className="text-muted-foreground" />
-                    </button>
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <button key={i} onClick={() => setPage(i)}
-                        className={cn("h-1.5 rounded-full transition-all",
-                          i === page ? "bg-sage w-4" : "bg-border w-1.5 hover:bg-muted-foreground"
-                        )}
-                      />
-                    ))}
-                    <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
-                      className="p-1 rounded-full hover:bg-muted disabled:opacity-30 transition-colors">
-                      <ChevronRight size={14} className="text-muted-foreground" />
-                    </button>
-                  </div>
-                )}
+                {totalPages > 1 && <PaginationDots page={page} totalPages={totalPages} setPage={setPage} />}
               </>
             )
           ) : (

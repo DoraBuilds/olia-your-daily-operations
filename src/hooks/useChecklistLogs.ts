@@ -12,6 +12,8 @@ export interface ChecklistLog {
   type: string | null;
   answers: any[];
   created_at: string;
+  location_id: string | null;  // added by migration 20260312000001
+  started_at: string | null;   // added by migration 20260326000001_checklist_logs_started_at
 }
 
 export interface CreateLogPayload {
@@ -31,10 +33,11 @@ export function useChecklistLogs(filters?: { from?: string; to?: string; locatio
     queryFn: async () => {
       let q = supabase
         .from("checklist_logs")
-        .select("id, checklist_id, checklist_title, completed_by, staff_profile_id, score, type, answers, created_at")
+        .select("id, checklist_id, checklist_title, completed_by, staff_profile_id, score, type, answers, created_at, location_id, started_at")
         .order("created_at", { ascending: false });
       if (filters?.from) q = q.gte("created_at", filters.from);
       if (filters?.to) q = q.lte("created_at", filters.to);
+      if (filters?.location_id) q = q.eq("location_id", filters.location_id);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as ChecklistLog[];
