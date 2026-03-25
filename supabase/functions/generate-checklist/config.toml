@@ -1,0 +1,8 @@
+# Disable Supabase JWT verification for this function.
+# It is called directly from the browser (authenticated user session), but
+# Supabase's default JWT enforcement rejects calls that don't include a valid
+# anon/service-role Authorization header in the exact expected format.
+# The function itself requires no auth — it is protected by the ANTHROPIC_API_KEY
+# being server-side only. Any caller without the key gets a 500.
+[functions.generate-checklist]
+verify_jwt = false

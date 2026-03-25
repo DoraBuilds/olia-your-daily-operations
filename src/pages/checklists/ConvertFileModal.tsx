@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
@@ -26,6 +26,12 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
   const [file, setFile] = useState<File | null>(null);
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const handleFile = (f: File) => {
     setFile(f);
@@ -57,12 +63,18 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in">
+    // No pb-16 on outer wrapper — that created a dead zone covered by the bottom nav.
+    // The card itself has pb-safe to clear nav on mobile.
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="bg-card w-full rounded-t-2xl p-5 pb-safe space-y-5 animate-fade-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Convert file to checklist</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-            <X size={18} className="text-muted-foreground" />
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
+          >
+            <X size={14} />
+            Close
           </button>
         </div>
         <p className="text-sm text-muted-foreground">Upload an Excel, PDF, or image file and we'll convert it into a checklist.</p>

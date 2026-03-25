@@ -37,10 +37,11 @@ export interface FolderItem {
 }
 
 export type ResponseType =
-  | "text" | "number" | "checkbox" | "datetime" | "media"
+  | "text" | "number" | "checkbox" | "media"
   | "instruction" | "multiple_choice"
-  // legacy values — may still exist in saved checklists; handled gracefully in the runner
-  | "signature" | "person";
+  // legacy values removed from builder — still valid in saved checklists;
+  // kiosk runner falls back to plain text input for all three
+  | "datetime" | "signature" | "person";
 
 export type LogicComparator = "is" | "is_not" | "lt" | "lte" | "eq" | "neq" | "gte" | "gt" | "between" | "not_between";
 export type LogicTriggerType = "ask_question" | "notify" | "require_note" | "require_media" | "require_action";

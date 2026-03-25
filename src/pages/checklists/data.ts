@@ -100,10 +100,11 @@ export const RESPONSE_TYPES: { key: ResponseType; label: string; icon: ElementTy
   { key: "checkbox", label: "Checkbox", icon: CheckSquare, group: "response" },
   { key: "text", label: "Text answer", icon: Type, group: "response" },
   { key: "number", label: "Number", icon: Hash, group: "response" },
-  { key: "datetime", label: "Date & Time", icon: CalendarIcon, group: "response" },
   { key: "media", label: "Photo / Media", icon: Image, group: "response" },
   { key: "instruction", label: "Instruction", icon: Info, group: "response" },
-  // "signature" and "person" removed — not supported in the kiosk runner
+  // removed from builder: "datetime" (Date & Time), "signature", "person"
+  // Existing saved checklists that contain these types still run — the kiosk
+  // runner falls back to a plain text input for any unrecognised/removed type.
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

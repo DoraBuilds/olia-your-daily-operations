@@ -34,13 +34,17 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
       completedBy: log.completedBy,
       date: log.date,
       score: log.score,
+      // log.date is the formatted created_at ("23 Mar, 14:39") — this is the completion
+      // (finished) time. startedAt is not stored in the DB for existing logs, so it is
+      // omitted. The PDF renderer handles both as optional and degrades gracefully.
+      finishedAt: log.date,
       answers: log.answers,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[90vh] animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="bg-card w-full rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-border shrink-0">
           <div>
             <h2 className="font-display text-lg text-foreground">{log.checklist}</h2>

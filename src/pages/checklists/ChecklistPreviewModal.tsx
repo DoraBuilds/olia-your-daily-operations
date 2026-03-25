@@ -41,14 +41,7 @@ function MockResponse({ responseType }: { responseType: ResponseType }) {
       </div>
     );
   }
-  if (responseType === "datetime") {
-    return (
-      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50 w-40">
-        <Calendar size={11} className="text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground">Select date & time</span>
-      </div>
-    );
-  }
+  // "datetime" removed from builder — legacy questions show text preview (falls through below)
   if (responseType === "media") {
     return (
       <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border bg-muted/30 w-32">

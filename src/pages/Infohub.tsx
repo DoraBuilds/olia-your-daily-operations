@@ -430,16 +430,20 @@ function PlusMenu({ onClose, onAction }: {
   onAction: (action: "document" | "upload" | "folder") => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
+        className="relative w-full bg-card rounded-t-2xl border-t border-border p-5 pb-20 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-base text-foreground">Create new</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-            <X size={18} className="text-muted-foreground" />
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
+          >
+            <X size={14} />
+            Close
           </button>
         </div>
         <button onClick={() => onAction("document")} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-muted/50 transition-colors text-left">

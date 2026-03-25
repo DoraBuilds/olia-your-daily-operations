@@ -12,6 +12,10 @@ let _kioskLocationName: string | null = null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TimeOfDay = "morning" | "afternoon" | "evening" | "anytime";
+// "datetime" removed from builder — kept here only as a type so the switch-case
+// below doesn't silently drop answers from legacy saved checklists.
+// The SUPPORTED_QUESTION_TYPES list no longer includes "datetime", so any
+// question stored with responseType "datetime" resolves to "text" in the runner.
 type QuestionType = "checkbox" | "text" | "number" | "multiple_choice" | "datetime" | "instruction" | "media";
 
 interface Question {
@@ -41,8 +45,11 @@ type KioskScreen = "grid" | "runner" | "completion";
 
 // ─── DB → Kiosk conversion ────────────────────────────────────────────────────
 
+// "datetime" is intentionally excluded — removed from builder in P0 triage pass.
+// Existing saved questions with responseType "datetime" fall back to "text".
+// "signature" and "person" are also excluded (removed earlier) for the same reason.
 const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
-  "checkbox", "text", "number", "multiple_choice", "datetime", "instruction", "media",
+  "checkbox", "text", "number", "multiple_choice", "instruction", "media",
 ];
 
 /**
@@ -1023,6 +1030,7 @@ function ChecklistRunner({
           const showSectionHeader = sectionChanged && !!(q.sectionName);
 
           // For next/acknowledge button: show on current question for types that don't auto-advance
+          // "datetime" is legacy — if it resolves to "text" it's included via q.type === "text"
           const needsNextBtn = isCurrent && (
             isInstruction || q.type === "text" || q.type === "number" || q.type === "datetime"
           );
