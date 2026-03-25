@@ -44,18 +44,23 @@ describe("daysAgo", () => {
     expect(daysAgo(null)).toBe("Never used");
   });
 
-  it("returns 'Used today' for today's date", () => {
-    expect(daysAgo(new Date().toISOString())).toBe("Used today");
+  // daysAgo now returns an exact datetime string like "Last used: 23 Mar, 14:39"
+  // (updated from relative format — tests verify structure, not exact time)
+  it("returns 'Last used: ...' with date and time for today", () => {
+    const result = daysAgo(new Date().toISOString());
+    expect(result).toMatch(/^Last used: \d+ \w+, \d{2}:\d{2}$/);
   });
 
-  it("returns singular '1 day ago' for yesterday", () => {
+  it("returns 'Last used: ...' with date and time for yesterday", () => {
     const yesterday = new Date(Date.now() - 86400000).toISOString();
-    expect(daysAgo(yesterday)).toBe("Last used: 1 day ago");
+    const result = daysAgo(yesterday);
+    expect(result).toMatch(/^Last used: \d+ \w+, \d{2}:\d{2}$/);
   });
 
-  it("returns plural days for multiple days", () => {
+  it("returns 'Last used: ...' with date and time for older dates", () => {
     const fiveDaysAgo = new Date(Date.now() - 86400000 * 5).toISOString();
-    expect(daysAgo(fiveDaysAgo)).toBe("Last used: 5 days ago");
+    const result = daysAgo(fiveDaysAgo);
+    expect(result).toMatch(/^Last used: \d+ \w+, \d{2}:\d{2}$/);
   });
 });
 

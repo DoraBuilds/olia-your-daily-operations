@@ -140,18 +140,9 @@ export function ChecklistBuilderModal({
       });
     });
 
-    // For person-type questions, bake current staff choices into the config
-    // so the kiosk can render them as a multiple-choice list
-    const sectionsWithPersonChoices: SectionDef[] = sections.map(sec => ({
-      ...sec,
-      questions: sec.questions.map(q => {
-        if (q.responseType === "person") {
-          const choices = availableStaff.map(s => `${s.first_name} ${s.last_name}`);
-          return { ...q, choices, config: { ...(q.config || {}), personChoices: choices } };
-        }
-        return q;
-      }),
-    }));
+    // No legacy "person" type baking needed — type removed from builder.
+    // Existing saved checklists with person type render as multiple_choice in the runner.
+    const sectionsWithPersonChoices: SectionDef[] = sections;
 
     const payload: Partial<ChecklistItem> = {
       title: title.trim(),
@@ -445,38 +436,7 @@ export function ChecklistBuilderModal({
                     </div>
                   )}
 
-                  {/* Person type → real staff from selected location */}
-                  {q.responseType === "person" && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Person selector preview</p>
-                      {availableStaff.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">
-                          {selectedLocationId
-                            ? "No active staff assigned to this location."
-                            : "No active staff profiles found."}
-                        </p>
-                      ) : (
-                        <div className="relative">
-                          <select
-                            value={cfg.defaultPerson || ""}
-                            onChange={e => updateQuestion(si, qi, { config: { ...cfg, defaultPerson: e.target.value } })}
-                            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-foreground appearance-none pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
-                          >
-                            <option value="">No default — staff selects at kiosk</option>
-                            {availableStaff.map(s => (
-                              <option key={s.id} value={`${s.first_name} ${s.last_name}`}>
-                                {s.first_name} {s.last_name}{s.role ? ` — ${s.role}` : ""}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                        </div>
-                      )}
-                      <p className="text-[10px] text-muted-foreground">
-                        Optionally pre-select a default. Staff can change it at the kiosk.
-                      </p>
-                    </div>
-                  )}
+                  {/* "person" type removed from builder — block intentionally omitted */}
 
                   {/* Issue 7: Instruction buttons — working image upload, remove dead "Link document" */}
                   {q.responseType === "instruction" && (

@@ -52,7 +52,9 @@ const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
 function flattenSectionsToQuestions(sections: any[]): Question[] {
   return (sections ?? []).flatMap((section: any) =>
     (section.questions ?? []).map((q: any): Question => {
-      // "person" type: stored choices were baked in at builder time — render as multiple_choice
+      // Legacy "person" type: render as multiple_choice using the baked-in choices.
+      // Legacy "signature" type: falls through to "text" (the runner renders a plain text input).
+      // Neither type is available in the builder any more.
       const isPerson = q.responseType === "person";
       const resolvedType = isPerson
         ? "multiple_choice"
@@ -1496,7 +1498,7 @@ export default function Kiosk() {
           const { error: alertErr } = await supabase.from("alerts").insert({
             organization_id: selectedOrgId,
             type: "warn",
-            message: `Out-of-range value recorded: "${q.text}" = ${val} (${rangeStr})`,
+            message: `${q.text}: recorded ${val} — outside the allowed range (${rangeStr})`,
             area: selectedChecklist.title,
             time: timeLabel,
             source: "kiosk",

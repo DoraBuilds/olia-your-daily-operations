@@ -57,23 +57,8 @@ function MockResponse({ responseType }: { responseType: ResponseType }) {
       </div>
     );
   }
-  if (responseType === "signature") {
-    return (
-      <div className="mt-2 h-10 rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center gap-1.5">
-        <PenLine size={11} className="text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Sign here</span>
-      </div>
-    );
-  }
-  if (responseType === "person") {
-    return (
-      <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50">
-        <User size={11} className="text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground flex-1">Select staff member</span>
-        <ChevronRight size={11} className="text-muted-foreground" />
-      </div>
-    );
-  }
+  // "signature" and "person" removed from builder — legacy saved checklists
+  // that still contain these types fall through to the default text preview below.
   if (responseType === "instruction") {
     return (
       <div className="mt-2 px-3 py-2 rounded-lg bg-muted/40 border-l-2 border-l-sage/40">
@@ -114,10 +99,10 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
-      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[90vh] animate-fade-in" onClick={e => e.stopPropagation()}>
+      <div className="bg-card w-full rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-start justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
@@ -144,8 +129,12 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
               className="flex items-center gap-1.5 text-xs font-medium text-sage px-3 py-1.5 rounded-full border border-sage/40 hover:bg-sage-light transition-colors">
               <Pencil size={12} /> Edit
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-              <X size={18} className="text-muted-foreground" />
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
+            >
+              <X size={14} />
+              Close
             </button>
           </div>
         </div>

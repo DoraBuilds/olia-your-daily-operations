@@ -97,14 +97,13 @@ export const multipleChoiceSets = [
 // ─── Response type definitions ───────────────────────────────────────────────
 
 export const RESPONSE_TYPES: { key: ResponseType; label: string; icon: ElementType; group: "response" }[] = [
+  { key: "checkbox", label: "Checkbox", icon: CheckSquare, group: "response" },
   { key: "text", label: "Text answer", icon: Type, group: "response" },
   { key: "number", label: "Number", icon: Hash, group: "response" },
-  { key: "checkbox", label: "Checkbox", icon: CheckSquare, group: "response" },
   { key: "datetime", label: "Date & Time", icon: CalendarIcon, group: "response" },
-  { key: "media", label: "Media", icon: Image, group: "response" },
-  { key: "signature", label: "Signature", icon: Pencil, group: "response" },
-  { key: "person", label: "Person", icon: User, group: "response" },
+  { key: "media", label: "Photo / Media", icon: Image, group: "response" },
   { key: "instruction", label: "Instruction", icon: Info, group: "response" },
+  // "signature" and "person" removed — not supported in the kiosk runner
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

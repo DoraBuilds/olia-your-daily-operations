@@ -1,5 +1,11 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChecklistBuilderModal } from "@/pages/checklists/ChecklistBuilderModal";
+
+function renderWithClient(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -32,74 +38,74 @@ describe("ChecklistBuilderModal - new checklist", () => {
   });
 
   it("renders without crashing", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Build checklist")).toBeInTheDocument();
   });
 
   it("shows 'Build checklist' title for new checklist", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Build checklist")).toBeInTheDocument();
   });
 
   it("has a Title input field", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toBeInTheDocument();
   });
 
   it("has a Description textarea", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByPlaceholderText("Optional description")).toBeInTheDocument();
   });
 
   it("title input can be filled", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const titleInput = screen.getByPlaceholderText(/Morning Opening Checklist/);
     fireEvent.change(titleInput, { target: { value: "Daily Checklist" } });
     expect((titleInput as HTMLInputElement).value).toBe("Daily Checklist");
   });
 
   it("has Schedule section", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Schedule")).toBeInTheDocument();
   });
 
   it("shows schedule options: Once, Every day, etc.", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Once")).toBeInTheDocument();
     expect(screen.getByText("Every day")).toBeInTheDocument();
     expect(screen.getByText("Every week")).toBeInTheDocument();
   });
 
   it("shows Custom schedule option", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
   it("clicking a schedule option selects it", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     fireEvent.click(screen.getByText("Every day"));
     const btn = screen.getByText("Every day").closest("button");
     expect(btn?.className).toContain("bg-sage");
   });
 
   it("has at least one question field by default", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
   });
 
   it("has 'Add another question' button", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Add another question")).toBeInTheDocument();
   });
 
   it("has 'Add a section' button", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Add a section")).toBeInTheDocument();
   });
 
   it("clicking 'Add a section' adds a new section (section name inputs appear)", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     // Initially 1 section — the section name input is hidden (only shown when 2+ sections exist)
     expect(screen.queryByPlaceholderText("Section name")).not.toBeInTheDocument();
     fireEvent.click(screen.getByText("Add a section"));
@@ -108,7 +114,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
   });
 
   it("clicking 'Add another question' adds a new question row", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const beforeInputs = screen.getAllByPlaceholderText("Write your question here").length;
     fireEvent.click(screen.getByText("Add another question"));
     const afterInputs = screen.getAllByPlaceholderText("Write your question here").length;
@@ -116,18 +122,18 @@ describe("ChecklistBuilderModal - new checklist", () => {
   });
 
   it("has a Create checklist button", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Create checklist")).toBeInTheDocument();
   });
 
   it("does not call onAdd if title is empty", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     fireEvent.click(screen.getByText("Create checklist"));
     expect(onAdd).not.toHaveBeenCalled();
   });
 
   it("calls onAdd when title is filled and Create is clicked", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const titleInput = screen.getByPlaceholderText(/Morning Opening Checklist/);
     fireEvent.change(titleInput, { target: { value: "New Checklist" } });
     fireEvent.click(screen.getByText("Create checklist"));
@@ -136,48 +142,48 @@ describe("ChecklistBuilderModal - new checklist", () => {
   });
 
   it("close button calls onClose", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[0]);
     expect(onClose).toHaveBeenCalled();
   });
 
   it("question text input can be filled", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const questionInput = screen.getByPlaceholderText("Write your question here");
     fireEvent.change(questionInput, { target: { value: "Is the fridge temperature correct?" } });
     expect((questionInput as HTMLInputElement).value).toBe("Is the fridge temperature correct?");
   });
 
   it("shows response type selector for questions (Checkbox option)", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Checkbox")).toBeInTheDocument();
   });
 
   it("shows Start date picker", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Select start date")).toBeInTheDocument();
   });
 
   it("shows Locations selector", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Locations")).toBeInTheDocument();
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    expect(screen.getByText("All locations")).toBeInTheDocument();
   });
 
   it("shows section name input after adding a second section", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     fireEvent.click(screen.getByText("Add a section"));
     expect(screen.getAllByPlaceholderText("Section name").length).toBeGreaterThan(0);
   });
 
   it("clicking Custom schedule shows custom recurrence button", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     fireEvent.click(screen.getByText("Custom"));
     expect(screen.getByText(/Edit custom recurrence/)).toBeInTheDocument();
   });
 
   it("opening custom recurrence shows the picker", async () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     fireEvent.click(screen.getByText("Custom"));
     fireEvent.click(screen.getByText(/Edit custom recurrence/));
     await waitFor(() => {
@@ -186,7 +192,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
   });
 
   it("shows Required checkbox for questions", () => {
-    render(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const requiredLabels = screen.getAllByText("Required");
     expect(requiredLabels.length).toBeGreaterThan(0);
   });
@@ -202,7 +208,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
   });
 
   it("shows 'Edit checklist' title when editId is provided", () => {
-    render(
+    renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
         onAdd={onAdd}
@@ -222,7 +228,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
   });
 
   it("pre-fills title in edit mode", () => {
-    render(
+    renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
         onAdd={onAdd}
@@ -236,7 +242,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
   });
 
   it("pre-fills sections in edit mode (with 2 sections so name inputs are visible)", () => {
-    render(
+    renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
         onAdd={onAdd}
@@ -262,7 +268,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
   });
 
   it("shows 'Save checklist' button in edit mode", () => {
-    render(
+    renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
         onAdd={onAdd}
@@ -275,7 +281,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
   });
 
   it("calls onUpdate (not onAdd) when saving in edit mode", () => {
-    render(
+    renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
         onAdd={onAdd}
