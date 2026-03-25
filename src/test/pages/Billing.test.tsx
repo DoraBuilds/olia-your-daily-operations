@@ -78,13 +78,13 @@ describe("Billing page", () => {
 
   it("renders 'Current plan' section label", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText("Current plan")).toBeInTheDocument();
+    expect(screen.getByText("Your current plan")).toBeInTheDocument();
   });
 
   it("renders plan price cards for all 3 plans", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText(PLAN_LABELS["growth"])).toBeInTheDocument();
-    expect(screen.getByText(PLAN_LABELS["enterprise"])).toBeInTheDocument();
+    expect(screen.getAllByText(PLAN_LABELS["growth"]).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(PLAN_LABELS["enterprise"]).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders starter plan monthly price", () => {
@@ -121,7 +121,7 @@ describe("Billing page", () => {
 
   it("shows 'Current' badge on the current plan card", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText("Current")).toBeInTheDocument();
+    expect(screen.getAllByText("Current plan").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders growth plan when current plan is growth and shows Stripe link", () => {

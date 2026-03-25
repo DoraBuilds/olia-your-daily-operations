@@ -1,5 +1,12 @@
 # Welcome to your Lovable project
 
+## Git workflow
+
+- Do not merge or push directly to `main`.
+- Create a feature branch for every change.
+- Open a pull request for all work, even for small fixes.
+- Treat `main` as protected and PR-only.
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID

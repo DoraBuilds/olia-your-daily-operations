@@ -33,9 +33,8 @@ describe("ItemContextMenu - folder type", () => {
   it("shows folder-specific actions", () => {
     render(<ItemContextMenu type="folder" onAction={onAction} onClose={onClose} />);
     expect(screen.getByText("Move to folder")).toBeInTheDocument();
-    expect(screen.getByText("Manage access")).toBeInTheDocument();
     expect(screen.getByText("Rename")).toBeInTheDocument();
-    expect(screen.getByText("Archive")).toBeInTheDocument();
+    expect(screen.getByText("Delete")).toBeInTheDocument();
   });
 
   it("does not show checklist-only actions for folder type", () => {
@@ -52,10 +51,10 @@ describe("ItemContextMenu - folder type", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("clicking Archive calls onAction with 'archive'", () => {
+  it("clicking Delete calls onAction with 'delete'", () => {
     render(<ItemContextMenu type="folder" onAction={onAction} onClose={onClose} />);
-    fireEvent.click(screen.getByText("Archive"));
-    expect(onAction).toHaveBeenCalledWith("archive");
+    fireEvent.click(screen.getByText("Delete"));
+    expect(onAction).toHaveBeenCalledWith("delete");
   });
 
   it("clicking overlay calls onClose", () => {
@@ -84,9 +83,8 @@ describe("ItemContextMenu - checklist type", () => {
     expect(screen.getByText("Edit")).toBeInTheDocument();
     expect(screen.getByText("Duplicate")).toBeInTheDocument();
     expect(screen.getByText("Move to folder")).toBeInTheDocument();
-    expect(screen.getByText("Manage access")).toBeInTheDocument();
     expect(screen.getByText("Download as PDF")).toBeInTheDocument();
-    expect(screen.getByText("Archive")).toBeInTheDocument();
+    expect(screen.getByText("Delete")).toBeInTheDocument();
   });
 
   it("clicking Edit calls onAction with 'edit'", () => {

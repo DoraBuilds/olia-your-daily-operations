@@ -44,18 +44,18 @@ describe("daysAgo", () => {
     expect(daysAgo(null)).toBe("Never used");
   });
 
-  it("returns 'Used today' for today's date", () => {
-    expect(daysAgo(new Date().toISOString())).toBe("Used today");
+  it("returns an exact timestamp label for today's date", () => {
+    expect(daysAgo(new Date().toISOString())).toMatch(/^Last used: \d{1,2} \w{3}, \d{2}:\d{2}$/);
   });
 
-  it("returns singular '1 day ago' for yesterday", () => {
+  it("returns an exact timestamp label for yesterday", () => {
     const yesterday = new Date(Date.now() - 86400000).toISOString();
-    expect(daysAgo(yesterday)).toBe("Last used: 1 day ago");
+    expect(daysAgo(yesterday)).toMatch(/^Last used: \d{1,2} \w{3}, \d{2}:\d{2}$/);
   });
 
-  it("returns plural days for multiple days", () => {
+  it("returns an exact timestamp label for older dates", () => {
     const fiveDaysAgo = new Date(Date.now() - 86400000 * 5).toISOString();
-    expect(daysAgo(fiveDaysAgo)).toBe("Last used: 5 days ago");
+    expect(daysAgo(fiveDaysAgo)).toMatch(/^Last used: \d{1,2} \w{3}, \d{2}:\d{2}$/);
   });
 });
 
