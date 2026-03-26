@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Olia</title>
+    <script>
+      (function () {
+        var pathname = window.location.pathname;
+        var firstRouteSlash = pathname.indexOf("/", 1);
+        var route = firstRouteSlash === -1 ? "/" : pathname.slice(firstRouteSlash);
+
+        if (route === "/") {
+          window.location.replace("./");
+          return;
+        }
+
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+        window.location.replace("./?p=" + encodeURIComponent(route + search + hash));
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
