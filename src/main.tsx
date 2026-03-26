@@ -9,6 +9,21 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 
+function restoreGitHubPagesRoute() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const fallbackRoute = searchParams.get("p");
+  if (!fallbackRoute) return;
+
+  const basePath = import.meta.env.BASE_URL.endsWith("/")
+    ? import.meta.env.BASE_URL.slice(0, -1)
+    : import.meta.env.BASE_URL;
+  const normalizedRoute = fallbackRoute.startsWith("/") ? fallbackRoute : `/${fallbackRoute}`;
+
+  window.history.replaceState(null, "", `${basePath}${normalizedRoute}`);
+}
+
+restoreGitHubPagesRoute();
+
 if (Capacitor.isNativePlatform()) {
   // Status bar: light background (alabaster) with dark icons
   StatusBar.setStyle({ style: Style.Light });
