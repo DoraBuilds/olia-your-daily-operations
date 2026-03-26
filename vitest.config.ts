@@ -42,13 +42,10 @@ export default defineConfig({
         "src/vite-env.d.ts",
       ],
 
-      // ── Quality Gate: 95% across all four metrics ─────────────────────
-      // ANY metric below 95% causes `bun run test:ci` to exit with code 1.
       // ── Quality Gate ──────────────────────────────────────────────────
       // True baseline as of March 2026 with the v8 coverage provider.
       // Target is 95% but the codebase is currently at ~56-60%.
       // Raise these incrementally as new tests are added.
-      // TODO: Increase to 95% once large page files are more thoroughly tested.
       thresholds: {
         lines:      60,
         functions:  45,
