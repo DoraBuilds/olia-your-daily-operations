@@ -575,12 +575,21 @@ function LibraryDocDetail({ doc, folders, onBack }: { doc: DocItem; folders: Fol
 
 // ─── Training Doc Detail ──────────────────────────────────────────────────────
 
-function TrainingDocDetail({ doc, onBack }: { doc: TrainingDoc; onBack: () => void }) {
+function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
+  doc: TrainingDoc;
+  onBack: () => void;
+  onToggleComplete: (completed: boolean) => void;
+}) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     doc.completed ? new Set(doc.steps.map((_, i) => i)) : new Set()
   );
   const [aiSheet, setAiSheet] = useState(false);
   const allDone = completedSteps.size === doc.steps.length;
+
+  useEffect(() => {
+    onToggleComplete(allDone);
+  }, [allDone, onToggleComplete]);
+
   const toggle = (i: number) => {
     setCompletedSteps(prev => {
       const next = new Set(prev);
@@ -785,7 +794,7 @@ export default function Infohub() {
   const [libFolders, setLibFolders] = useState<FolderItem[]>(initialLibraryFolders);
   const [libDocs, setLibDocs] = useState<DocItem[]>(initialLibraryDocs);
   const [trainFolders, setTrainFolders] = useState<TrainingFolder[]>(initialTrainingFolders);
-  const [trainDocs] = useState<TrainingDoc[]>(initialTrainingDocs);
+  const [trainDocs, setTrainDocs] = useState<TrainingDoc[]>(initialTrainingDocs);
 
   // Navigation state
   const [currentLibFolder, setCurrentLibFolder] = useState<string | null>(null);
@@ -881,7 +890,22 @@ export default function Infohub() {
 
   // Detail views
   if (selectedDoc) return <LibraryDocDetail doc={selectedDoc} folders={libFolders} onBack={() => setSelectedDoc(null)} />;
-  if (selectedTrainingDoc) return <TrainingDocDetail doc={selectedTrainingDoc} onBack={() => setSelectedTrainingDoc(null)} />;
+  if (selectedTrainingDoc) return (
+    <TrainingDocDetail
+      doc={selectedTrainingDoc}
+      onBack={() => setSelectedTrainingDoc(null)}
+      onToggleComplete={(completed) => {
+        setTrainDocs(prev => {
+          const currentDoc = prev.find(d => d.id === selectedTrainingDoc.id);
+          if (!currentDoc || currentDoc.completed === completed) {
+            return prev;
+          }
+
+          return prev.map(d => d.id === selectedTrainingDoc.id ? { ...d, completed } : d);
+        });
+      }}
+    />
+  );
   if (showSearch) return (
     <SearchOverlay libraryDocs={libDocs} trainingDocs={trainDocs} onClose={() => setShowSearch(false)}
       onSelectLibDoc={d => { setShowSearch(false); setSelectedDoc(d); }}

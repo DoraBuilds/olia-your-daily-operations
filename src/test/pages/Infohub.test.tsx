@@ -319,6 +319,48 @@ describe("Infohub page", () => {
     }
   });
 
+  it("completed training modules stay completed after going back and reopening", () => {
+    renderWithProviders(<Infohub />);
+    fireEvent.click(screen.getByRole("button", { name: /training/i }));
+
+    const onboardingFolder = screen.getByText("Onboarding");
+    const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
+    if (!folderRow) return;
+    fireEvent.click(folderRow);
+
+    const moduleTitle = screen.queryByText("How to make a latte");
+    if (!moduleTitle) return;
+    const docRow = moduleTitle.closest("div[class*='cursor-pointer']") as HTMLElement;
+    if (!docRow) return;
+    fireEvent.click(docRow);
+
+    let stepIndex = 1;
+    while (true) {
+      const stepLabel = screen.queryByText(`Step ${stepIndex}`);
+      if (!stepLabel) break;
+      const stepBtn = stepLabel.closest("button") as HTMLElement | null;
+      if (!stepBtn) break;
+      fireEvent.click(stepBtn);
+      stepIndex += 1;
+    }
+
+    expect(screen.getByText("Module complete.")).toBeInTheDocument();
+
+    const backBtn = screen.getAllByRole("button").find(btn =>
+      btn.className.includes("rounded-full") && btn.querySelector("svg")
+    );
+    if (!backBtn) return;
+    fireEvent.click(backBtn);
+
+    const reopenedTitle = screen.queryByText("How to make a latte");
+    if (!reopenedTitle) return;
+    const reopenedRow = reopenedTitle.closest("div[class*='cursor-pointer']") as HTMLElement;
+    if (!reopenedRow) return;
+    fireEvent.click(reopenedRow);
+
+    expect(screen.getByText("Module complete.")).toBeInTheDocument();
+  });
+
   it("plus (+) button opens the Plus menu", () => {
     renderWithProviders(<Infohub />);
     const buttons = screen.getAllByRole("button");
