@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useActions, useSaveAction } from "@/hooks/useActions";
+import { useChecklists } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
+import { computeMissedChecklists, computeOverdueActions } from "@/lib/overdue-utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -204,6 +206,7 @@ export default function Dashboard() {
   const { data: allAlerts = [] }    = useAlerts();
   const { data: logs      = [] }    = useChecklistLogs();
   const { data: actions   = [] }    = useActions();
+  const { data: checklists = [] }   = useChecklists();
   const { data: locations = [] }    = useLocations();
 
   // ── Date strings — use LOCAL date arithmetic to avoid UTC midnight shifting ──
@@ -290,10 +293,13 @@ export default function Dashboard() {
 
   // ── Overdue open actions ──
   const todayStart = new Date(today); todayStart.setHours(0, 0, 0, 0);
-  const overdueActions = actions.filter(a =>
-    a.status !== "resolved" && a.due && new Date(a.due).getTime() < todayStart.getTime()
+  const overdueActions = computeOverdueActions(actions, todayStart.getTime());
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+  const todayCompletedIds = new Set(
+    logs.filter((log) => log.created_at.startsWith(todayStr)).map((log) => log.checklist_id).filter(Boolean)
   );
-  const overdueCount = overdueActions.length;
+  const missedChecklists = computeMissedChecklists(checklists, todayCompletedIds, nowMinutes);
+  const overdueCount = overdueActions.length + missedChecklists.length;
 
   // ── Alerts ──
   const visibleAlerts = allAlerts.slice(0, 3);
@@ -421,6 +427,7 @@ export default function Dashboard() {
             <div className="flex items-center bg-muted rounded-full p-0.5 text-xs shrink-0">
               {(["yesterday", "today", "overdue"] as ComplianceTab[]).map(tab => (
                 <button key={tab}
+                  data-testid={`compliance-tab-${tab}`}
                   onClick={() => { setComplianceTab(tab); setPage(0); setDrillLocationId(null); }}
                   className={cn(
                     "relative px-2.5 py-1 rounded-full transition-colors capitalize whitespace-nowrap",
@@ -458,6 +465,7 @@ export default function Dashboard() {
                   {pagedLocationItems.map(loc => (
                     <button
                       key={loc.locationId ?? "unassigned"}
+                      data-testid="location-card"
                       onClick={() => { setDrillLocationId(loc.locationId ?? "unassigned"); setPage(0); }}
                       className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
                     >
@@ -514,7 +522,7 @@ export default function Dashboard() {
               </>
             )
           ) : (
-            overdueActions.length === 0 ? (
+            overdueActions.length === 0 && missedChecklists.length === 0 ? (
               <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
                 <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
                   <TrendingUp size={20} className="text-sage" />
@@ -525,25 +533,53 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
-                {overdueActions.map(task => (
-                  <button key={task.id} onClick={() => navigate("/checklists")}
-                    className="w-full flex items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-status-error/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <AlertTriangle size={16} className="text-status-error" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {task.checklist_title ?? "—"}{task.assigned_to ? ` · ${task.assigned_to}` : ""}
-                      </p>
-                      {task.due && (
-                        <p className="text-xs text-status-error mt-1 font-medium">Due {task.due}</p>
-                      )}
-                    </div>
-                    <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-2" />
-                  </button>
-                ))}
+              <div className="space-y-3">
+                {missedChecklists.length > 0 && (
+                  <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+                    {missedChecklists.map((checklist) => (
+                      <button
+                        key={checklist.id}
+                        data-testid="overdue-checklist-item"
+                        onClick={() => navigate("/checklists")}
+                        className="w-full flex items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-status-warn/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle size={16} className="text-status-warn" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{checklist.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Scheduled checklist</p>
+                          <p className="text-xs text-status-warn mt-1 font-medium">
+                            Due by {checklist.due_time} - not completed
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-2" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {overdueActions.length > 0 && (
+                  <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+                    {overdueActions.map(task => (
+                      <button key={task.id} onClick={() => navigate("/checklists")}
+                        className="w-full flex items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors">
+                        <div className="w-9 h-9 rounded-xl bg-status-error/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle size={16} className="text-status-error" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{task.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {task.checklist_title ?? "—"}{task.assigned_to ? ` · ${task.assigned_to}` : ""}
+                          </p>
+                          {task.due && (
+                            <p className="text-xs text-status-error mt-1 font-medium">Due {task.due}</p>
+                          )}
+                        </div>
+                        <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-2" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           )}
