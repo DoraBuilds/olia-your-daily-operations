@@ -489,11 +489,11 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByText("Invite")).toBeInTheDocument();
+      expect(screen.getByText("Add")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("Invite"));
+    fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
-      expect(screen.getByText("Invite team member")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Add team member" })).toBeInTheDocument();
     });
   });
 
@@ -501,8 +501,8 @@ describe("Admin page", () => {
   it("team member form has Full name field", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
-    await waitFor(() => expect(screen.getByText("Invite")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Invite"));
+    await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
       expect(screen.getByText("Full name")).toBeInTheDocument();
     });
@@ -512,8 +512,8 @@ describe("Admin page", () => {
   it("team member form has Email field", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
-    await waitFor(() => expect(screen.getByText("Invite")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Invite"));
+    await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
       expect(screen.getByText("Email")).toBeInTheDocument();
     });
@@ -617,16 +617,21 @@ describe("Admin page", () => {
   it("My Location tab shows 'Auto-archive threshold' section", async () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^archived$/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^archived$/i }));
+    await waitFor(() => {
       expect(screen.getByText("Auto-archive threshold")).toBeInTheDocument();
     });
   });
 
-  // 46. Notifications & Alerts section is visible
-  it("My Location tab shows Notifications & alerts section", async () => {
+  // 46. Notifications section has been removed from the current My Location view
+  it("My Location tab does not show a Notifications & alerts section", async () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      expect(screen.getByText("Notifications & alerts")).toBeInTheDocument();
+      expect(screen.getByText("Location details")).toBeInTheDocument();
     });
+    expect(screen.queryByText("Notifications & alerts")).not.toBeInTheDocument();
   });
 
   // 47. Assigned checklists section is visible
