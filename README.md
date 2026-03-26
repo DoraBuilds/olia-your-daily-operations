@@ -26,6 +26,36 @@ If `bun` is not on your `PATH`, use `~/.bun/bin/bun`.
 
 The dev server runs at [http://localhost:8080](http://localhost:8080).
 
+### Supabase Modes
+
+This repo supports two safe Supabase setups:
+
+- Hosted Supabase for staging and production, using your remote project values in `.env.local`
+- Local Docker Supabase for development and testing, using `supabase start`
+
+Local prerequisites:
+
+- Docker Desktop or another Docker runtime
+- Supabase CLI installed and available on your `PATH`
+
+Local Supabase workflow:
+
+```bash
+supabase start
+supabase status -o env
+supabase db reset --local --no-seed
+```
+
+The local CLI config lives in [supabase/config.toml](supabase/config.toml). It keeps auth redirects on `http://localhost:8080` and disables the default seed path so local resets do not depend on a missing top-level `seed.sql`.
+
+To stop the local Docker stack:
+
+```bash
+supabase stop
+```
+
+If you prefer repo scripts, the same workflow is exposed through `bun run supabase:start`, `bun run supabase:status`, `bun run supabase:reset`, and `bun run supabase:stop`.
+
 ## Common Commands
 
 ```bash
@@ -40,6 +70,10 @@ bun run milestone
 bun run e2e
 bun run cap:ios
 bun run cap:android
+supabase start
+supabase stop
+supabase status -o env
+supabase db reset --local --no-seed
 ```
 
 ## Workflow

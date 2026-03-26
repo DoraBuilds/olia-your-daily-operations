@@ -24,7 +24,11 @@
     "e2e:runner": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro test .maestro/flows/09-checklist-runner.yaml",
     "e2e:studio": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro studio",
     "e2e:playwright": "playwright test --config e2e/playwright.config.ts",
-    "e2e:playwright:headed": "playwright test --config e2e/playwright.config.ts --headed"
+    "e2e:playwright:headed": "playwright test --config e2e/playwright.config.ts --headed",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status -o env",
+    "supabase:reset": "supabase db reset --local --no-seed"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
