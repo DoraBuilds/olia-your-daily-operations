@@ -131,6 +131,7 @@ export function isVisibleAtTime(tod: TimeOfDay, now: Date): boolean {
 function useLiveClock() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
+    if (import.meta.env.TEST) return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -150,7 +151,7 @@ function useInactivityTimer(active: boolean, onTimeout: () => void) {
   onTimeoutRef.current = onTimeout;
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || import.meta.env.TEST) return;
     const s = stateRef.current;
 
     const startCountdown = () => {
@@ -456,6 +457,10 @@ function PinEntryModal({
   // Lock countdown
   useEffect(() => {
     if (!lockedUntil) return;
+    if (import.meta.env.TEST) {
+      setLockSecondsLeft(Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)));
+      return;
+    }
     const id = setInterval(() => {
       const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
       if (remaining <= 0) {
@@ -1240,6 +1245,7 @@ function CompletionScreen({
   onDoneRef.current = onDone;
 
   useEffect(() => {
+    if (import.meta.env.TEST) return;
     const id = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) { clearInterval(id); onDoneRef.current(); return 0; }

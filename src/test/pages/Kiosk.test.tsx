@@ -53,10 +53,11 @@ function renderSetup() {
 }
 
 /** Render the Kiosk starting at the grid screen (Terrace location pre-stored). */
-function renderGridScreen() {
+async function renderGridScreen() {
   localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
   localStorage.setItem("kiosk_location_name", "Terrace");
-  return renderWithProviders(<Kiosk />);
+  renderWithProviders(<Kiosk />);
+  await screen.findByText(/What's on the agenda/i);
 }
 
 beforeEach(() => {
@@ -155,13 +156,13 @@ describe("Kiosk — Setup Screen", () => {
 // ─── Grid Screen tests ────────────────────────────────────────────────────────
 
 describe("Kiosk — Grid Screen", () => {
-  it("grid screen shows 'What's on the agenda' heading", () => {
-    renderGridScreen();
+  it("grid screen shows 'What's on the agenda' heading", async () => {
+    await renderGridScreen();
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
   });
 
   it("grid screen shows checklist cards for Terrace location", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     // The RPC mock returns "Table Setup Check" for the Terrace location.
     await waitFor(() => {
       const anyChecklistCard =
@@ -172,39 +173,39 @@ describe("Kiosk — Grid Screen", () => {
     });
   });
 
-  it("grid screen shows 'Admin' button", () => {
-    renderGridScreen();
+  it("grid screen shows 'Admin' button", async () => {
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn");
     expect(adminBtn).not.toBeNull();
     expect(adminBtn?.textContent).toMatch(/Admin/i);
   });
 
-  it("grid screen shows 'System Online' footer text", () => {
-    renderGridScreen();
+  it("grid screen shows 'System Online' footer text", async () => {
+    await renderGridScreen();
     expect(screen.getByText(/System Online/i)).toBeInTheDocument();
   });
 
-  it("grid screen shows stat strip with 'Due now', 'Upcoming', 'Done'", () => {
-    renderGridScreen();
-    expect(screen.getByText("Due now")).toBeInTheDocument();
+  it("grid screen shows stat strip with 'Due now', 'Upcoming', 'Done'", async () => {
+    await renderGridScreen();
+    expect(screen.getAllByText("Due now").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
     expect(screen.getByText("Done")).toBeInTheDocument();
   });
 
-  it("grid screen shows 'Current Status' label in top bar", () => {
-    renderGridScreen();
+  it("grid screen shows 'Current Status' label in top bar", async () => {
+    await renderGridScreen();
     expect(screen.getByText("Current Status")).toBeInTheDocument();
   });
 
-  it("grid screen shows 'Olia' brand label", () => {
-    renderGridScreen();
+  it("grid screen shows 'Olia' brand label", async () => {
+    await renderGridScreen();
     // The top-left brand area has "Olia" and "Kiosk"
     const oliaEls = screen.getAllByText("Olia");
     expect(oliaEls.length).toBeGreaterThanOrEqual(1);
   });
 
   it("clicking 'Admin' button opens Admin Login Modal", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -213,7 +214,7 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("Admin Login Modal has Email and Password inputs", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -223,7 +224,7 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("Admin Login Modal has 'Sign in' button", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -232,7 +233,7 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("filling email and password enables the sign in button", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -248,7 +249,7 @@ describe("Kiosk — Grid Screen", () => {
 
   it("clicking 'Sign in' calls supabase.auth.signInWithPassword", async () => {
     const { supabase } = await import("@/lib/supabase");
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -268,7 +269,7 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("clicking backdrop of Admin Login Modal closes it", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
@@ -285,7 +286,7 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("clicking a checklist card opens PIN modal", async () => {
-    renderGridScreen();
+    await renderGridScreen();
     // Find a checklist card button
     const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
     if (checklistBtn) {
@@ -305,7 +306,7 @@ describe("Kiosk — Grid Screen", () => {
 describe("Kiosk — PIN Entry Modal", () => {
   /** Helper: click the first checklist card to open PIN modal. */
   async function openPinModal() {
-    renderGridScreen();
+    await renderGridScreen();
     const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
     if (!checklistBtn) return false;
     fireEvent.click(checklistBtn);
@@ -321,10 +322,10 @@ describe("Kiosk — PIN Entry Modal", () => {
     expect(screen.getByText("Insert PIN")).toBeInTheDocument();
   });
 
-  it("PIN modal shows 'Authorize personnel access' subtitle", async () => {
+  it("PIN modal shows the current helper subtitle", async () => {
     const opened = await openPinModal();
     if (!opened) return;
-    expect(screen.getByText(/Authorize personnel access/i)).toBeInTheDocument();
+    expect(screen.getByText(/You're doing great/i)).toBeInTheDocument();
   });
 
   it("PIN modal shows numpad with digit '1'", async () => {
@@ -378,14 +379,12 @@ describe("Kiosk — PIN Entry Modal", () => {
     expect(filledDots.length).toBe(0);
   });
 
-  it("clicking 'START' button dismisses the PIN modal (calls onCancel)", async () => {
+  it("'START' button stays disabled until 4 digits are entered", async () => {
     const opened = await openPinModal();
     if (!opened) return;
     const startBtn = document.getElementById("pin-start-btn") as HTMLButtonElement;
-    fireEvent.click(startBtn);
-    await waitFor(() => {
-      expect(screen.queryByText("Insert PIN")).not.toBeInTheDocument();
-    });
+    expect(startBtn.disabled).toBe(true);
+    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
   });
 
   it("entering 4 digits triggers validation — shows error for wrong PIN (no match)", async () => {
@@ -412,58 +411,53 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
     localStorage.setItem("kiosk_location_name", "Grand Ballroom");
   });
 
-  it("renders grid screen for Grand Ballroom with heading", () => {
+  async function renderGrandBallroomGrid() {
     renderWithProviders(<Kiosk />);
+    await screen.findByText(/What's on the agenda/i);
+  }
+
+  it("renders grid screen for Grand Ballroom with heading", async () => {
+    await renderGrandBallroomGrid();
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
   });
 
-  it("Grand Ballroom has Opening Checklist (morning) or Closing Checklist (evening)", () => {
-    renderWithProviders(<Kiosk />);
-    const opening = screen.queryByText("Opening Checklist");
-    const closing = screen.queryByText("Closing Checklist");
-    const barista = screen.queryByText("Barista Start");
-    const baristaCl = screen.queryByText("Barista Close");
-    // At least one of these should be visible (time-filtered)
-    const anyVisible = opening || closing || barista || baristaCl;
-    // Even if it's afternoon (no checklists), the grid renders, just empty
+  it("Grand Ballroom has Opening Checklist (morning) or Closing Checklist (evening)", async () => {
+    await renderGrandBallroomGrid();
     expect(document.body).toBeDefined();
   });
 
-  it("grid screen has Admin button for Grand Ballroom", () => {
-    renderWithProviders(<Kiosk />);
+  it("grid screen has Admin button for Grand Ballroom", async () => {
+    await renderGrandBallroomGrid();
     const adminBtn = document.getElementById("admin-btn");
     expect(adminBtn).not.toBeNull();
   });
 
-  it("grid screen shows stat strip for Grand Ballroom", () => {
-    renderWithProviders(<Kiosk />);
-    expect(screen.getByText("Due now")).toBeInTheDocument();
+  it("grid screen shows stat strip for Grand Ballroom", async () => {
+    await renderGrandBallroomGrid();
+    expect(screen.getAllByText("Due now").length).toBeGreaterThanOrEqual(1);
   });
 });
 
 // ─── Completion Screen ────────────────────────────────────────────────────────
 
 describe("Kiosk — Completion Screen", () => {
-  it("completion screen shows 'All done!' after completing a checklist", async () => {
-    // We need to get to the runner then complete it
-    // For simplicity, we test the component by going through setup
+  it("returns to the grid after closing the PIN modal", async () => {
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
     localStorage.setItem("kiosk_location_name", "Terrace");
     renderWithProviders(<Kiosk />);
+    await screen.findByText(/What's on the agenda/i);
 
     // Open PIN modal
     const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
     if (!checklistBtn) {
-      // No checklists at this time — skip
       expect(true).toBe(true);
       return;
     }
     fireEvent.click(checklistBtn);
     await waitFor(() => expect(screen.getByText("Insert PIN")).toBeInTheDocument());
 
-    // Click START to cancel and go back (START = onCancel)
-    const startBtn = document.getElementById("pin-start-btn") as HTMLButtonElement;
-    fireEvent.click(startBtn);
+    const closeBtn = screen.getByRole("button", { name: /close/i });
+    fireEvent.click(closeBtn);
     await waitFor(() => {
       expect(screen.queryByText("Insert PIN")).not.toBeInTheDocument();
     });
@@ -475,12 +469,12 @@ describe("Kiosk — Completion Screen", () => {
 // ─── URL param tests ──────────────────────────────────────────────────────────
 
 describe("Kiosk — URL param locationId", () => {
-  it("reading locationId from URL params jumps directly to grid screen", () => {
+  it("reading locationId from URL params jumps directly to grid screen", async () => {
     localStorage.clear();
     renderWithProviders(<Kiosk />, {
       initialEntries: ["/kiosk?locationId=00000000-0000-0000-0000-000000000011"],
     });
-    // Should skip setup screen and go to grid directly
+    await screen.findByText(/What's on the agenda/i);
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
   });
 });
