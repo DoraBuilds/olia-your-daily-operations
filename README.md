@@ -65,10 +65,23 @@ supabase stop
 
 If you prefer repo scripts, the same workflow is exposed through `bun run supabase:start`, `bun run supabase:status`, `bun run supabase:reset`, and `bun run supabase:stop`.
 
-For the common “boot local Supabase and start the app” flow, use:
+For one-command profile switching, keep these local-only files on your machine:
+
+- `.env.docker` for local Docker Supabase development
+- `.env.prod` for local app development against hosted production-like services
+
+The app still reads `.env.local`, and the helper commands below copy the chosen profile into that active file before startup.
+
+To boot local Supabase and start the app, use:
 
 ```bash
 bun run dev:local
+```
+
+To run the app locally against hosted services, use:
+
+```bash
+bun run dev:prod
 ```
 
 ### GitHub Pages Auth
