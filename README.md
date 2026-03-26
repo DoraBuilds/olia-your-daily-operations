@@ -26,6 +26,14 @@ If `bun` is not on your `PATH`, use `~/.bun/bin/bun`.
 
 The dev server runs at [http://localhost:8080](http://localhost:8080).
 
+### GitHub Pages
+
+The production build is compatible with GitHub Pages static hosting.
+
+- In GitHub Actions, Vite automatically uses the repository name as the base path when `GITHUB_REPOSITORY` is present.
+- `public/404.html` rewrites direct deep links back to the app so refreshes and bookmark URLs keep working.
+- If you want to test a Pages-style build locally, set `VITE_BASE_PATH=/olia-your-daily-operations/` before `bun run build`.
+
 ### Supabase Modes
 
 This repo supports two safe Supabase setups:
@@ -55,6 +63,23 @@ supabase stop
 ```
 
 If you prefer repo scripts, the same workflow is exposed through `bun run supabase:start`, `bun run supabase:status`, `bun run supabase:reset`, and `bun run supabase:stop`.
+
+### GitHub Pages Auth
+
+If you deploy the web app to GitHub Pages or another static host, set these public build-time values in your deployment environment:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_PUBLIC_SITE_URL` for hosted auth redirects, such as `https://<owner>.github.io/<repo>`
+
+The app uses `VITE_PUBLIC_SITE_URL` when building the Supabase email confirmation redirect for `/auth/callback`. If that variable is not set, local development falls back to the current browser origin.
+
+In the hosted Supabase project settings, allow the Pages origin and callback URL you actually deploy:
+
+- `https://<owner>.github.io/<repo>/`
+- `https://<owner>.github.io/<repo>/auth/callback`
+
+Keep server-side secrets such as `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, and `ANTHROPIC_API_KEY` out of the frontend. Those belong in Supabase Edge Function secrets, not GitHub Pages build-time env vars.
 
 ## Common Commands
 

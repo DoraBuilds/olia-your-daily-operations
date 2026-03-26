@@ -10,6 +10,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
+  const publicSiteUrl = (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
 
   const [businessName, setBusinessName] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -56,7 +57,9 @@ export default function Signup() {
       options: {
         // After email confirmation, Supabase redirects here. The callback
         // page processes the auth tokens and sends the user to /admin.
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Hosted deployments can override the callback origin via
+        // VITE_PUBLIC_SITE_URL (for example, a GitHub Pages URL).
+        emailRedirectTo: `${publicSiteUrl}/auth/callback`,
         // Store both fields in auth user metadata so AuthContext can call
         // setup_new_organization even if localStorage is cleared (e.g.
         // when email is confirmed on a different device or browser).

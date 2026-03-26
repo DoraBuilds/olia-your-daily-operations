@@ -48,6 +48,7 @@ describe("Signup page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    delete import.meta.env.VITE_PUBLIC_SITE_URL;
     mockSignUp.mockResolvedValue({
       data: {
         user: { id: "new-user-1" },
@@ -175,6 +176,20 @@ describe("Signup page", () => {
             full_name: "Sarah Johnson",
             business_name: "Acme Café",
           }),
+        }),
+      })
+    ));
+  });
+
+  it("uses VITE_PUBLIC_SITE_URL for the email confirmation redirect when provided", async () => {
+    import.meta.env.VITE_PUBLIC_SITE_URL = "https://dora.github.io/olia";
+    render(<Signup />, { wrapper });
+    fillValidForm();
+    fireEvent.click(screen.getByText("Create account"));
+    await waitFor(() => expect(mockSignUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          emailRedirectTo: "https://dora.github.io/olia/auth/callback",
         }),
       })
     ));
