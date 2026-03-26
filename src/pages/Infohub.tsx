@@ -4,7 +4,7 @@ import {
   BookOpen, ChevronRight, ChevronLeft, Search, FileText, Tag, X,
   Plus, FolderOpen, Upload, File, Sparkles, GraduationCap,
   Play, CheckCircle, Circle, Brain, ListChecks, HelpCircle,
-  Folder, GripVertical, MoreVertical, FolderInput, Shield, Pencil,
+  Folder, GripVertical, MoreVertical, FolderInput, Pencil,
   Archive, Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -380,10 +380,11 @@ function CreateDocModal({ folderId, folders, onClose, onSave }: {
   folderId: string | null;
   folders: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (title: string, folderId: string) => void;
+  onSave: (title: string, folderId: string, tags: string[]) => void;
 }) {
   const [title, setTitle] = useState("");
   const [selectedFolder, setSelectedFolder] = useState(folderId || folders[0]?.id || "");
+  const [tagsInput, setTagsInput] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
@@ -396,7 +397,7 @@ function CreateDocModal({ folderId, folders, onClose, onSave }: {
         </div>
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Title</label>
-          <Input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Fire safety procedure" />
+          <Input data-testid="doc-title-input" autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Fire safety procedure" />
         </div>
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Folder</label>
@@ -408,9 +409,18 @@ function CreateDocModal({ folderId, folders, onClose, onSave }: {
             {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
         </div>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Tags <span className="text-muted-foreground/60">(comma-separated, optional)</span></label>
+          <Input data-testid="doc-tags-input" value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="e.g. Safety, Weekly, Kitchen" />
+        </div>
         <button
+          data-testid="create-doc-submit"
           disabled={!title.trim() || !selectedFolder}
-          onClick={() => { onSave(title.trim(), selectedFolder); onClose(); }}
+          onClick={() => {
+            const tags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
+            onSave(title.trim(), selectedFolder, tags);
+            onClose();
+          }}
           className={cn(
             "w-full py-3 rounded-xl text-sm font-medium transition-colors",
             title.trim() && selectedFolder ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground"
@@ -433,7 +443,7 @@ function PlusMenu({ onClose, onAction }: {
     <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
       <div
-        className="relative w-full bg-card rounded-t-2xl border-t border-border p-5 pb-20 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
+        className="relative w-full bg-card rounded-t-2xl border-t border-border p-5 pb-6 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">
@@ -498,32 +508,38 @@ function AIActionsSheet({ docTitle, onClose }: { docTitle: string; onClose: () =
           </button>
         </div>
         <p className="text-xs text-muted-foreground mb-2">Generate study materials for "{docTitle}"</p>
-        <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-muted/50 transition-colors text-left">
+        <div className="px-4 py-2.5 bg-muted/50 rounded-xl mb-2">
+          <p className="text-xs text-muted-foreground">AI tools are coming soon to Olia.</p>
+        </div>
+        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
           <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center">
             <Brain size={16} className="text-lavender-deep" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Generate summary</p>
             <p className="text-xs text-muted-foreground">AI-powered key points from this document</p>
           </div>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-muted/50 transition-colors text-left">
+        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
           <div className="w-9 h-9 rounded-xl bg-sage-light flex items-center justify-center">
             <ListChecks size={16} className="text-sage-deep" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Create flashcards</p>
             <p className="text-xs text-muted-foreground">Turn content into review flashcards</p>
           </div>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-muted/50 transition-colors text-left">
+        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
           <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
             <HelpCircle size={16} className="text-muted-foreground" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-medium text-foreground">Generate quiz</p>
             <p className="text-xs text-muted-foreground">Test understanding with auto-generated questions</p>
           </div>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
         </button>
       </div>
     </div>
@@ -532,41 +548,130 @@ function AIActionsSheet({ docTitle, onClose }: { docTitle: string; onClose: () =
 
 // ─── Library Doc Detail ───────────────────────────────────────────────────────
 
-function LibraryDocDetail({ doc, folders, onBack }: { doc: DocItem; folders: FolderItem[]; onBack: () => void }) {
+function LibraryDocDetail({ doc, folders, onBack, onSave }: {
+  doc: DocItem;
+  folders: FolderItem[];
+  onBack: () => void;
+  onSave: (updated: DocItem) => void;
+}) {
   const folder = folders.find(f => f.id === doc.folderId);
   const [aiSheet, setAiSheet] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(doc.title);
+  const [editSummary, setEditSummary] = useState(doc.summary);
+  const [editContent, setEditContent] = useState(doc.content);
+  const [editTags, setEditTags] = useState(doc.tags.join(", "));
+
+  function handleSave() {
+    onSave({
+      ...doc,
+      title: editTitle.trim() || doc.title,
+      summary: editSummary.trim(),
+      content: editContent,
+      tags: editTags.split(",").map(t => t.trim()).filter(Boolean),
+      lastUpdated: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+    });
+    setIsEditing(false);
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={isEditing ? () => setIsEditing(false) : onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <ChevronLeft size={20} className="text-muted-foreground" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-lg text-foreground leading-tight truncate">{doc.title}</h1>
+            <h1 className="font-display text-lg text-foreground leading-tight truncate">
+              {isEditing ? "Editing document" : doc.title}
+            </h1>
             <p className="text-xs text-muted-foreground mt-0.5">{folder?.name} · Updated {doc.lastUpdated}</p>
           </div>
+          {!isEditing && (
+            <button
+              onClick={() => setAiSheet(true)}
+              className="p-2 rounded-full hover:bg-lavender-light transition-colors"
+            >
+              <Sparkles size={18} className="text-lavender-deep" />
+            </button>
+          )}
           <button
-            onClick={() => setAiSheet(true)}
-            className="p-2 rounded-full hover:bg-lavender-light transition-colors"
+            data-testid={isEditing ? "doc-save-btn" : "doc-edit-btn"}
+            onClick={() => { if (isEditing) handleSave(); else setIsEditing(true); }}
+            className={cn("p-2 rounded-full transition-colors", isEditing ? "bg-sage-light hover:bg-sage-light/80" : "hover:bg-muted")}
           >
-            <Sparkles size={18} className="text-lavender-deep" />
+            {isEditing
+              ? <CheckCircle size={18} className="text-sage-deep" />
+              : <Pencil size={18} className="text-muted-foreground" />
+            }
           </button>
         </div>
       </header>
       <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-5">
-        <p className="text-sm text-muted-foreground leading-relaxed">{doc.summary}</p>
-        <div className="flex flex-wrap gap-2">
-          {doc.tags.map(tag => (
-            <span key={tag} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-sage-light text-sage-deep">
-              <Tag size={10} /> {tag}
-            </span>
-          ))}
-        </div>
-        <div className="card-surface p-5">
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{doc.content}</p>
-        </div>
+        {isEditing ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Title</label>
+              <input
+                autoFocus
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-sage/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Summary</label>
+              <textarea
+                value={editSummary}
+                onChange={e => setEditSummary(e.target.value)}
+                rows={2}
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Content</label>
+              <textarea
+                data-testid="doc-content-editor"
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                rows={10}
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Tags (comma-separated)</label>
+              <input
+                value={editTags}
+                onChange={e => setEditTags(e.target.value)}
+                placeholder="e.g. Service, Safety, Weekly"
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-sage/30"
+              />
+            </div>
+            <button onClick={handleSave} className="w-full py-3 rounded-xl bg-sage text-white text-sm font-medium hover:bg-sage-deep transition-colors">
+              Save changes
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground leading-relaxed">{doc.summary}</p>
+            <div className="flex flex-wrap gap-2">
+              {doc.tags.map(tag => (
+                <span key={tag} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-sage-light text-sage-deep">
+                  <Tag size={10} /> {tag}
+                </span>
+              ))}
+            </div>
+            <div className="card-surface p-5">
+              {doc.content ? (
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{doc.content}</p>
+              ) : (
+                <button onClick={() => setIsEditing(true)} className="w-full text-sm text-muted-foreground text-center py-4 hover:text-foreground transition-colors">
+                  Tap to add content
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </main>
       {aiSheet && <AIActionsSheet docTitle={doc.title} onClose={() => setAiSheet(false)} />}
     </div>
@@ -645,6 +750,12 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
             <CheckCircle size={24} className="text-sage-deep mx-auto mb-2" />
             <p className="text-sm font-medium text-sage-deep">Module complete.</p>
             <p className="text-xs text-sage-deep/70 mt-1">Well done. This module has been marked as completed.</p>
+            <button
+              onClick={() => { setCompletedSteps(new Set()); }}
+              className="mt-3 text-xs text-sage-deep/70 underline hover:text-sage-deep transition-colors"
+            >
+              Mark as incomplete
+            </button>
           </div>
         )}
       </main>
@@ -795,6 +906,8 @@ export default function Infohub() {
   const [libDocs, setLibDocs] = useState<DocItem[]>(initialLibraryDocs);
   const [trainFolders, setTrainFolders] = useState<TrainingFolder[]>(initialTrainingFolders);
   const [trainDocs, setTrainDocs] = useState<TrainingDoc[]>(initialTrainingDocs);
+  const [archivedLibDocs, setArchivedLibDocs] = useState<DocItem[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Navigation state
   const [currentLibFolder, setCurrentLibFolder] = useState<string | null>(null);
@@ -843,12 +956,12 @@ export default function Infohub() {
   const handleCreateTrainFolder = (name: string, parentId: string | null) => {
     setTrainFolders(prev => [...prev, { id: genId(), name, parentId, sortOrder: null }]);
   };
-  const handleCreateLibDoc = (title: string, folderId: string) => {
+  const handleCreateLibDoc = (title: string, folderId: string, tags: string[] = []) => {
     setLibDocs(prev => [...prev, {
       id: genId(), title, folderId,
       summary: "New document — tap to edit.",
       content: "",
-      tags: [],
+      tags,
       lastUpdated: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
     }]);
   };
@@ -881,7 +994,18 @@ export default function Infohub() {
   };
   const handleArchiveDoc = (id: string, section: "library" | "training") => {
     if (section === "library") {
-      setLibDocs(prev => prev.filter(d => d.id !== id));
+      const doc = libDocs.find(d => d.id === id);
+      if (doc) {
+        setArchivedLibDocs(prev => [...prev, doc]);
+        setLibDocs(prev => prev.filter(d => d.id !== id));
+      }
+    }
+  };
+  const handleRestoreDoc = (id: string) => {
+    const doc = archivedLibDocs.find(d => d.id === id);
+    if (doc) {
+      setLibDocs(prev => [...prev, doc]);
+      setArchivedLibDocs(prev => prev.filter(d => d.id !== id));
     }
   };
 
@@ -889,7 +1013,17 @@ export default function Infohub() {
   const allTrainFolderOptions = useMemo(() => trainFolders.map(f => ({ id: f.id, name: f.name })), [trainFolders]);
 
   // Detail views
-  if (selectedDoc) return <LibraryDocDetail doc={selectedDoc} folders={libFolders} onBack={() => setSelectedDoc(null)} />;
+  if (selectedDoc) return (
+    <LibraryDocDetail
+      doc={selectedDoc}
+      folders={libFolders}
+      onBack={() => setSelectedDoc(null)}
+      onSave={(updated) => {
+        setLibDocs(prev => prev.map(d => d.id === updated.id ? updated : d));
+        setSelectedDoc(updated);
+      }}
+    />
+  );
   if (selectedTrainingDoc) return (
     <TrainingDocDetail
       doc={selectedTrainingDoc}
@@ -918,15 +1052,33 @@ export default function Infohub() {
   // Folder menu actions
   const folderActions = (folder: { id: string; name: string }, section: "library" | "training") => [
     { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "folder", id: folder.id, section }) },
-    { label: "Manage access", icon: <Shield size={16} className="text-muted-foreground" />, onClick: () => {} },
     { label: "Rename folder", icon: <Pencil size={16} className="text-muted-foreground" />, onClick: () => setRenameTarget({ id: folder.id, name: folder.name, section }) },
     { label: "Archive folder", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveFolder(folder.id, section) },
   ];
 
-  const docActions = (doc: { id: string; title: string }, section: "library" | "training") => [
+  const docActions = (doc: DocItem | TrainingDoc, section: "library" | "training") => [
     { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
-    { label: "Manage access", icon: <Shield size={16} className="text-muted-foreground" />, onClick: () => {} },
-    { label: "Download file", icon: <Download size={16} className="text-muted-foreground" />, onClick: () => {} },
+    {
+      label: "Download file",
+      icon: <Download size={16} className="text-muted-foreground" />,
+      onClick: () => {
+        let text: string;
+        if (section === "library") {
+          const libraryDoc = doc as DocItem;
+          text = `${libraryDoc.title}\n${"=".repeat(libraryDoc.title.length)}\n\n${libraryDoc.summary}\n\n${libraryDoc.content}`;
+        } else {
+          const trainingDoc = doc as TrainingDoc;
+          text = `${trainingDoc.title}\n${"=".repeat(trainingDoc.title.length)}\n\n${trainingDoc.steps.map((step, i) => `Step ${i + 1}: ${step}`).join("\n\n")}`;
+        }
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${doc.title.replace(/[^a-z0-9]/gi, "_")}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+    },
     { label: "Archive file", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) },
   ];
 
@@ -1070,6 +1222,36 @@ export default function Infohub() {
               <p className="text-xs text-muted-foreground mt-1">Tap to create a folder or document.</p>
             </button>
           )}
+          {archivedLibDocs.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                className="flex items-center gap-1.5 section-label hover:text-foreground transition-colors w-full"
+              >
+                <Archive size={12} />
+                Archived ({archivedLibDocs.length})
+                <ChevronRight size={12} className={cn("ml-0.5 transition-transform", showArchived && "rotate-90")} />
+              </button>
+              {showArchived && (
+                <div className="card-surface divide-y divide-border">
+                  {archivedLibDocs.map(doc => (
+                    <div key={doc.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground line-through truncate">{doc.title}</p>
+                        <p className="text-xs text-muted-foreground/60 mt-0.5">{doc.lastUpdated}</p>
+                      </div>
+                      <button
+                        onClick={() => handleRestoreDoc(doc.id)}
+                        className="text-xs text-sage font-medium px-2.5 py-1 rounded-lg hover:bg-sage-light transition-colors shrink-0"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -1205,7 +1387,7 @@ export default function Infohub() {
           folderId={subTab === "library" ? currentLibFolder : currentTrainFolder}
           folders={subTab === "library" ? allLibFolderOptions : allTrainFolderOptions}
           onClose={() => setShowCreateDoc(false)}
-          onSave={(title, folderId) => handleCreateLibDoc(title, folderId)}
+          onSave={(title, folderId, tags) => handleCreateLibDoc(title, folderId, tags)}
         />
       )}
       {aiSheetDocTitle && (
