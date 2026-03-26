@@ -22,7 +22,9 @@
     "e2e:admin": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro test .maestro/flows/04-admin-login-modal.yaml .maestro/flows/10-admin-page.yaml",
     "e2e:nav": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro test .maestro/flows/05-dashboard.yaml .maestro/flows/06-bottom-navigation.yaml .maestro/flows/07-checklists-tab.yaml .maestro/flows/08-infohub-tab.yaml",
     "e2e:runner": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro test .maestro/flows/09-checklist-runner.yaml",
-    "e2e:studio": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro studio"
+    "e2e:studio": "export JAVA_HOME=\"$HOME/Library/Java/jdk21/Contents/Home\" PATH=\"$JAVA_HOME/bin:$PATH:$HOME/.maestro/bin\" && maestro studio",
+    "e2e:playwright": "playwright test --config e2e/playwright.config.ts",
+    "e2e:playwright:headed": "playwright test --config e2e/playwright.config.ts --headed"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -90,6 +92,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.2.0",
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",

@@ -272,7 +272,9 @@ export function ChecklistsTab() {
           <input type="text" placeholder="Search checklists…" value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
-        <button onClick={() => setShowCreateMenu(true)}
+        <button
+          data-testid="checklists-create-btn"
+          onClick={() => setShowCreateMenu(true)}
           className="w-10 h-10 rounded-xl bg-sage text-primary-foreground flex items-center justify-center hover:bg-sage-deep transition-colors shrink-0">
           <Plus size={18} />
         </button>
