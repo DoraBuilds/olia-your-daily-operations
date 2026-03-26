@@ -115,6 +115,7 @@ supabase db reset --local --no-seed
 - Open a pull request for all work, including small fixes.
 - Treat `main` as protected even if local tooling would allow direct changes.
 - Register every new task in GitHub before implementation starts.
+- When creating a new GitHub task, add appropriate existing labels and assign the best-fit milestone when possible.
 - Reuse an existing GitHub issue when the work is already tracked; create a new issue only for genuinely new work.
 
 ## Quality Gates
