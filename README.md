@@ -64,6 +64,12 @@ supabase stop
 
 If you prefer repo scripts, the same workflow is exposed through `bun run supabase:start`, `bun run supabase:status`, `bun run supabase:reset`, and `bun run supabase:stop`.
 
+For the common “boot local Supabase and start the app” flow, use:
+
+```bash
+bun run dev:local
+```
+
 ### GitHub Pages Auth
 
 If you deploy the web app to GitHub Pages or another static host, set these public build-time values in your deployment environment:
