@@ -48,6 +48,8 @@ bun run cap:android
 - Create a branch for every change.
 - Open a pull request for all work, including small fixes.
 - Treat `main` as protected even if local tooling would allow direct changes.
+- Register every new task in GitHub before implementation starts.
+- Reuse an existing GitHub issue when the work is already tracked; create a new issue only for genuinely new work.
 
 ## Quality Gates
 
@@ -58,7 +60,7 @@ The intended milestone gate is:
 3. `bun run build`
 4. `bun run e2e` on a simulator or emulator
 
-The current enforced unit-test thresholds live in [vitest.config.ts](/Users/doraangelov/Desktop/OLIA%20%E2%9C%A8/olia-docs/vitest.config.ts). Treat that file as the source of truth for the exact live gate while coverage is being ratcheted upward.
+The current enforced unit-test thresholds live in `vitest.config.ts`. Treat that file as the source of truth for the exact live gate while coverage is being ratcheted upward.
 
 ## App Areas
 
