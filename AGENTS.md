@@ -29,6 +29,7 @@ If `bun` is not on `PATH`, use `~/.bun/bin/bun`.
 - Prefer small, reviewable PRs over broad mixed branches.
 - Do not revert unrelated user changes in a dirty worktree.
 - Every new task, bug, feature, or cleanup item must be tracked in GitHub before implementation starts.
+- When creating a new GitHub task, apply the appropriate existing labels and assign the best-fit milestone when possible.
 - Prefer linking work to an existing GitHub issue when one already exists; create a new issue only when the work is not already tracked.
 
 ## Quality Expectations
