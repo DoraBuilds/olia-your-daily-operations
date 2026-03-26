@@ -131,6 +131,26 @@ describe("ConvertFileModal", () => {
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
-    await waitFor(() => expect(screen.getByText("Conversion failed")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Something went wrong. Please try again.")).toBeInTheDocument());
+  });
+
+  it("shows AI quota error for rate-limit failures", async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: "rate limit exceeded 429" } });
+    render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
+    const dropZone = screen.getByText("Tap to select a file").closest("div")!;
+    const file = new File(["content"], "test.pdf", { type: "application/pdf" });
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+    fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
+    await waitFor(() => expect(screen.getByText(/quota reached/)).toBeInTheDocument());
+  });
+
+  it("shows service unavailable error for edge function failures", async () => {
+    mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: "Edge Function returned a non-2xx status code" } });
+    render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
+    const dropZone = screen.getByText("Tap to select a file").closest("div")!;
+    const file = new File(["content"], "test.pdf", { type: "application/pdf" });
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+    fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
+    await waitFor(() => expect(screen.getByText(/temporarily unavailable/)).toBeInTheDocument());
   });
 });

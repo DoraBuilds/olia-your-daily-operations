@@ -211,6 +211,7 @@ export function ReportingTab() {
         {/* Location dropdown */}
         <div className="relative flex-1 min-w-0">
           <select
+            data-testid="location-filter"
             value={locationFilter}
             onChange={e => setLocationFilter(e.target.value)}
             className="w-full text-xs bg-card border border-border rounded-full px-3 py-2 pr-7 text-foreground font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage/40"
@@ -224,6 +225,7 @@ export function ReportingTab() {
         </div>
         {/* Export buttons */}
         <button
+          data-testid="export-csv"
           onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
           disabled={!logEntries.length}
           className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
@@ -231,6 +233,7 @@ export function ReportingTab() {
           <Download size={12} /> CSV
         </button>
         <button
+          data-testid="export-pdf"
           onClick={handleExportPdf}
           disabled={!logEntries.length}
           className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"

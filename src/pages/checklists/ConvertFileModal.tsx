@@ -21,6 +21,27 @@ async function extractFileContent(file: File): Promise<string> {
   return `Document: "${file.name}" (${file.type || "unknown type"}) — generate a practical hospitality operations checklist based on this document's name and type.`;
 }
 
+function humanizeConvertError(msg: string): string {
+  if (!msg) return "Something went wrong. Please try again.";
+  const l = msg.toLowerCase();
+  if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
+    return "AI service quota reached. Please try again later or contact support.";
+  }
+  if (l.includes("non-2xx") || l.includes("edge function") || l.includes("500") || l.includes("502") || l.includes("503") || l.includes("unavailable")) {
+    return "The AI service is temporarily unavailable. Please try again in a moment.";
+  }
+  if (l.includes("parse") || l.includes("corrupt") || l.includes("invalid file") || l.includes("unsupported")) {
+    return "Could not read this file. Try saving as .xlsx or .csv and uploading again.";
+  }
+  if (l.includes("unexpected response") || l.includes("invalid json") || l.includes("not an array")) {
+    return "The AI returned an unexpected response. Please try again.";
+  }
+  if (l.includes("network") || l.includes("fetch")) {
+    return "Network error. Check your connection and try again.";
+  }
+  return "Something went wrong. Please try again.";
+}
+
 export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -56,7 +77,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
       onConvert(sections);
       onClose();
     } catch (e: any) {
-      setError(e?.message ?? "Something went wrong. Please try again.");
+      setError(humanizeConvertError(e?.message ?? ""));
     } finally {
       setConverting(false);
     }
@@ -79,6 +100,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
         </div>
         <p className="text-sm text-muted-foreground">Upload an Excel, PDF, or image file and we'll convert it into a checklist.</p>
         <div
+          data-testid="convert-drop-zone"
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}

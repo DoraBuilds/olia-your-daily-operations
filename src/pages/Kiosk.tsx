@@ -1626,6 +1626,7 @@ export default function Kiosk() {
         {/* Stat strip — DUE / UPCOMING / DONE (Done is a tab toggle) */}
         <div className="grid grid-cols-3 gap-2 mt-5">
           <button
+            data-testid="kiosk-tab-due"
             onClick={() => setKioskTab("due")}
             className={cn(
               "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
@@ -1636,6 +1637,7 @@ export default function Kiosk() {
             <p className="text-2xl font-bold text-status-error">{dueChecklists.length}</p>
           </button>
           <button
+            data-testid="kiosk-tab-upcoming"
             onClick={() => setKioskTab("upcoming")}
             className={cn(
               "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
@@ -1646,6 +1648,7 @@ export default function Kiosk() {
             <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
           </button>
           <button
+            data-testid="kiosk-tab-done"
             onClick={() => setKioskTab(t => t === "done" ? "due" : "done")}
             className={cn(
               "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
