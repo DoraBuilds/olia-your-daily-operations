@@ -169,7 +169,14 @@ describe("Signup page", () => {
     fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
     await waitFor(() => expect(mockSignUp).toHaveBeenCalledWith(
-      expect.objectContaining({ options: { data: { full_name: "Sarah Johnson" } } })
+      expect.objectContaining({
+        options: expect.objectContaining({
+          data: expect.objectContaining({
+            full_name: "Sarah Johnson",
+            business_name: "Acme Café",
+          }),
+        }),
+      })
     ));
   });
 

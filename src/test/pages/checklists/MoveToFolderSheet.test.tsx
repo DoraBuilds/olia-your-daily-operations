@@ -53,7 +53,7 @@ describe("MoveToFolderSheet", () => {
         onClose={onClose}
       />
     );
-    expect(screen.getByText("Root (no folder)")).toBeInTheDocument();
+    expect(screen.getByText("No folder (unfiled)")).toBeInTheDocument();
   });
 
   it("shows all folders", () => {
@@ -147,7 +147,7 @@ describe("MoveToFolderSheet", () => {
         onClose={onClose}
       />
     );
-    fireEvent.click(screen.getByText("Root (no folder)"));
+    fireEvent.click(screen.getByText("No folder (unfiled)"));
     expect(onMove).toHaveBeenCalledWith(null);
   });
 
@@ -160,6 +160,6 @@ describe("MoveToFolderSheet", () => {
         onClose={onClose}
       />
     );
-    expect(screen.getByText("Root (no folder)")).toBeInTheDocument();
+    expect(screen.getByText("No folder (unfiled)")).toBeInTheDocument();
   });
 });
