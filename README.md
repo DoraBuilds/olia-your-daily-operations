@@ -33,6 +33,7 @@ The production build is compatible with GitHub Pages static hosting.
 - In GitHub Actions, Vite automatically uses the repository name as the base path when `GITHUB_REPOSITORY` is present.
 - `public/404.html` rewrites direct deep links back to the app so refreshes and bookmark URLs keep working.
 - If you want to test a Pages-style build locally, set `VITE_BASE_PATH=/olia-your-daily-operations/` before `bun run build`.
+- The repository now includes a GitHub Pages deploy workflow in [`.github/workflows/github-pages.yml`](.github/workflows/github-pages.yml). Enable GitHub Pages with the "GitHub Actions" source in repo settings so the workflow can publish `main`.
 
 ### Supabase Modes
 
