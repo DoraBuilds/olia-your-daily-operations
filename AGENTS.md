@@ -28,6 +28,8 @@ If `bun` is not on `PATH`, use `~/.bun/bin/bun`.
 - Treat `main` as protected, even if local tooling would technically allow direct edits.
 - Prefer small, reviewable PRs over broad mixed branches.
 - Do not revert unrelated user changes in a dirty worktree.
+- Every new task, bug, feature, or cleanup item must be tracked in GitHub before implementation starts.
+- Prefer linking work to an existing GitHub issue when one already exists; create a new issue only when the work is not already tracked.
 
 ## Quality Expectations
 
@@ -36,7 +38,7 @@ If `bun` is not on `PATH`, use `~/.bun/bin/bun`.
 - `bun run test:ci` is the unit/integration gate.
 - `bun run e2e` is the manual mobile release gate.
 
-The aspirational coverage target is 95%, but the exact live enforced thresholds can change while the repo is being stabilized. Always treat [vitest.config.ts](/Users/doraangelov/Desktop/OLIA%20%E2%9C%A8/olia-docs/vitest.config.ts) as the source of truth for the current enforced thresholds.
+The aspirational coverage target is 95%, but the exact live enforced thresholds can change while the repo is being stabilized. Always treat `vitest.config.ts` as the source of truth for the current enforced thresholds.
 
 ## Architecture Snapshot
 
