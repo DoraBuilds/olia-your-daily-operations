@@ -84,6 +84,16 @@ To run the app locally against hosted services, use:
 bun run dev:prod
 ```
 
+## Integration Tests
+
+Run the first local-Docker-Supabase integration slice with:
+
+```bash
+bun run test:integration
+```
+
+That command starts local Supabase, resets the database to a deterministic state, seeds a kiosk PIN fixture, and runs the Supabase-backed integration tests in `src/test/integration/`.
+
 ### GitHub Pages Auth
 
 If you deploy the web app to GitHub Pages or another static host, set these public build-time values in your deployment environment:
