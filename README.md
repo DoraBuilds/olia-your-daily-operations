@@ -1,73 +1,93 @@
-# Welcome to your Lovable project
+# Olia
 
-## Project info
+Olia is a mobile-first operations app for hospitality teams. The product combines kiosk checklists, dashboard monitoring, Infohub training and documents, admin controls, and mobile-friendly workflows on top of Supabase.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- React 18 + TypeScript + Vite
+- Bun for package management and scripts
+- Supabase for auth, Postgres, and edge-function-backed features
+- React Query for server state
+- Tailwind CSS + shadcn/ui for UI
+- Capacitor for iOS and Android shells
+- Vitest + Testing Library for unit and integration tests
+- Maestro for mobile end-to-end flows
 
-There are several ways of editing your application.
+## Local Development
 
-**Use Lovable**
+Use Bun for all package and script commands.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+bun install
+bun run dev
 ```
 
-**Edit a file directly in GitHub**
+If `bun` is not on your `PATH`, use `~/.bun/bin/bun`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The dev server runs at [http://localhost:8080](http://localhost:8080).
 
-**Use GitHub Codespaces**
+## Common Commands
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+bun run dev
+bun run build
+bun run lint
+bun run test
+bun run test:watch
+bun run test:coverage
+bun run test:ci
+bun run milestone
+bun run e2e
+bun run cap:ios
+bun run cap:android
+```
 
-## What technologies are used for this project?
+## Workflow
 
-This project is built with:
+- Do not push or merge directly to `main`.
+- Create a branch for every change.
+- Open a pull request for all work, including small fixes.
+- Treat `main` as protected even if local tooling would allow direct changes.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Quality Gates
 
-## How can I deploy this project?
+The intended milestone gate is:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. `bun run lint`
+2. `bun run test:ci`
+3. `bun run build`
+4. `bun run e2e` on a simulator or emulator
 
-## Can I connect a custom domain to my Lovable project?
+The current enforced unit-test thresholds live in [vitest.config.ts](/Users/doraangelov/Desktop/OLIA%20%E2%9C%A8/olia-docs/vitest.config.ts). Treat that file as the source of truth for the exact live gate while coverage is being ratcheted upward.
 
-Yes, you can!
+## App Areas
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `/kiosk`: kiosk setup, agenda grid, PIN flows
+- `/dashboard`: alerts, compliance, overdue work
+- `/checklists/*`: checklist library, builder, reporting
+- `/infohub/*`: training and document hub
+- `/admin`: locations, team members, access and archive flows
+- `/billing`: plan and billing UI
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Data Model Notes
+
+- Core operational data is Supabase-backed through hooks in `src/hooks/`
+- Auth state is managed in `src/contexts/AuthContext.tsx`
+- Some Infohub and dashboard surfaces still use local UI state and are being incrementally migrated
+
+## Mobile E2E
+
+Maestro flows live in `.maestro/flows/`.
+
+Typical run sequence:
+
+```bash
+bun run cap:ios
+bun run e2e
+```
+
+E2E requires:
+
+- Java 21
+- Maestro installed at `~/.maestro/bin`
+- a booted iOS Simulator or Android Emulator with the app installed
