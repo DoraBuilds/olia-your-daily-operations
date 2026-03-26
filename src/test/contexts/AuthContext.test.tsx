@@ -3,14 +3,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
+const { mockSignOut, mockOnAuthStateChange } = vi.hoisted(() => ({
+  mockSignOut: vi.fn().mockResolvedValue({}),
+  mockOnAuthStateChange: vi.fn().mockImplementation((callback) => {
+    callback("INITIAL_SESSION", null);
+    return { data: { subscription: { unsubscribe: vi.fn() } } };
+  }),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-      signOut: vi.fn().mockResolvedValue({}),
+      onAuthStateChange: mockOnAuthStateChange,
+      signOut: mockSignOut,
     },
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -21,7 +26,12 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { retry: false, gcTime: Infinity },
+    },
+  });
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>{children}</AuthProvider>
@@ -30,6 +40,10 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("AuthContext", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("useAuth returns null user and null session when no session", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -49,8 +63,7 @@ describe("AuthContext", () => {
     await act(async () => {
       await result.current.signOut();
     });
-    // Just checks it doesn't throw
-    expect(true).toBe(true);
+    expect(mockSignOut).toHaveBeenCalledTimes(1);
   });
 
   it("loading is initially true or transitions to false", async () => {
