@@ -46,5 +46,5 @@ fi
 
 VITE_SUPABASE_URL="$api_url" \
 VITE_SUPABASE_ANON_KEY="$anon_key" \
-VITE_PUBLIC_SITE_URL="http://127.0.0.1:4173" \
-"$BUN_BIN" run dev --host 127.0.0.1 --port 4173
+VITE_PUBLIC_SITE_URL="http://127.0.0.1:4273" \
+"$BUN_BIN" run dev --host 127.0.0.1 --port 4273

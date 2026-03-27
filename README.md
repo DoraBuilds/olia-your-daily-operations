@@ -81,6 +81,12 @@ bun run e2e:playwright:live
 
 That lane keeps the existing mocked Playwright suite intact and adds a separate live kiosk smoke test against the actual local Docker Supabase environment.
 
+After each live Playwright run, open the visual HTML report at:
+
+```bash
+playwright-report/live/index.html
+```
+
 For one-command profile switching, keep these local-only files on your machine:
 
 - `.env.docker` for local Docker Supabase development
