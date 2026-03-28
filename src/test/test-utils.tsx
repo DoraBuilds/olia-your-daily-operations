@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
+import { routerFutureFlags } from "@/lib/router-future-flags";
 
 export function renderWithProviders(ui: ReactNode, { initialEntries = ["/"] } = {}) {
   const qc = new QueryClient({
@@ -12,7 +13,7 @@ export function renderWithProviders(ui: ReactNode, { initialEntries = ["/"] } = 
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={initialEntries}>
+      <MemoryRouter initialEntries={initialEntries} future={routerFutureFlags}>
         {ui}
       </MemoryRouter>
     </QueryClientProvider>

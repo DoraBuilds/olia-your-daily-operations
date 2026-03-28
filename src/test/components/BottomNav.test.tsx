@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
+import { routerFutureFlags } from "@/lib/router-future-flags";
 
 // Mock useLocation to return /dashboard as the current path
 vi.mock("react-router-dom", async () => {
@@ -13,7 +14,7 @@ vi.mock("react-router-dom", async () => {
 
 function renderBottomNav() {
   return render(
-    <MemoryRouter initialEntries={["/dashboard"]}>
+    <MemoryRouter initialEntries={["/dashboard"]} future={routerFutureFlags}>
       <BottomNav />
     </MemoryRouter>
   );

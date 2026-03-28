@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { beforeEach, afterEach } from "vitest";
 import NotFound from "@/pages/NotFound";
 import { renderWithProviders } from "../test-utils";
 
@@ -25,6 +26,19 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("NotFound page", () => {
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<NotFound />);
     expect(document.body).toBeDefined();
@@ -59,13 +73,12 @@ describe("NotFound page", () => {
   });
 
   it("logs a 404 error to console on render", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleErrorSpy.mockClear();
     renderWithProviders(<NotFound />);
-    expect(consoleSpy).toHaveBeenCalledWith(
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("404 Error"),
       expect.any(String)
     );
-    consoleSpy.mockRestore();
   });
 
   it("renders centered layout with min-h-screen", () => {
