@@ -2,6 +2,16 @@ import { fireEvent, screen } from "@testing-library/react";
 import Dashboard from "@/pages/Dashboard";
 import { renderWithProviders } from "../test-utils";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 const {
   mockUseChecklistLogs,
   mockUseChecklists,
@@ -64,12 +74,16 @@ vi.mock("@/lib/supabase", () => ({
 
 const TODAY_STR = "2026-03-26";
 
+const LOCATION_A = { id: "loc-a", name: "Alpha" };
+const LOCATION_B = { id: "loc-b", name: "Bravo" };
+
 const OVERDUE_CHECKLIST = {
   id: "ck-overdue",
   title: "Morning Kitchen Check",
   due_time: "09:00",
   folder_id: null,
-  location_id: null,
+  location_id: "loc-a",
+  location_ids: ["loc-a"],
   schedule: null,
   sections: [],
   time_of_day: "morning" as const,
@@ -82,10 +96,25 @@ const FUTURE_CHECKLIST = {
   title: "Evening Closing Check",
   due_time: "22:00",
   folder_id: null,
-  location_id: null,
+  location_id: "loc-b",
+  location_ids: ["loc-b"],
   schedule: null,
   sections: [],
   time_of_day: "evening" as const,
+  created_at: "",
+  updated_at: "",
+};
+
+const SECOND_ALPHA_CHECKLIST = {
+  id: "ck-alpha-2",
+  title: "Fridge Check",
+  due_time: "11:00",
+  folder_id: null,
+  location_id: "loc-a",
+  location_ids: ["loc-a"],
+  schedule: null,
+  sections: [],
+  time_of_day: "morning" as const,
   created_at: "",
   updated_at: "",
 };
@@ -98,14 +127,15 @@ const LOG_TODAY = {
   score: 100,
   answers: [],
   created_at: `${TODAY_STR}T10:00:00+00:00`,
-  location_id: null,
+  location_id: "loc-a",
   started_at: null,
 };
 
-describe("Dashboard - overdue tab", () => {
+describe("Dashboard - compliance tabs", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(`${TODAY_STR}T14:00:00`));
+    mockNavigate.mockReset();
 
     mockUseChecklistLogs.mockReturnValue({ data: [] });
     mockUseChecklists.mockReturnValue({ data: [] });
@@ -117,76 +147,52 @@ describe("Dashboard - overdue tab", () => {
     vi.useRealTimers();
   });
 
-  function clickOverdueTab() {
-    const button = screen.getByTestId("compliance-tab-overdue");
-    fireEvent.click(button);
+  function clickComplianceTab(tab: "today" | "week" | "month") {
+    fireEvent.click(screen.getByTestId(`compliance-tab-${tab}`));
   }
 
-  it("shows 'All caught up' when no missed checklists and no overdue actions", () => {
+  it("shows today, week, and month tabs", () => {
     renderWithProviders(<Dashboard />);
-    clickOverdueTab();
-    expect(screen.getByText("All caught up")).toBeInTheDocument();
+    expect(screen.getByTestId("compliance-tab-today")).toBeInTheDocument();
+    expect(screen.getByTestId("compliance-tab-week")).toBeInTheDocument();
+    expect(screen.getByTestId("compliance-tab-month")).toBeInTheDocument();
   });
 
-  it("shows a missed checklist when due_time passed and no log exists today", () => {
-    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST] });
-
+  it("shows the empty state when there are no locations", () => {
     renderWithProviders(<Dashboard />);
-    clickOverdueTab();
-
-    expect(screen.getByText("Morning Kitchen Check")).toBeInTheDocument();
-    expect(screen.getByText(/Due by 09:00/)).toBeInTheDocument();
-    expect(screen.getByText(/not completed/)).toBeInTheDocument();
+    expect(screen.getByText("No locations yet")).toBeInTheDocument();
   });
 
-  it("does not show a missed checklist when a log exists for today", () => {
-    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST] });
+  it("sorts worse-performing locations first in the today view", () => {
+    mockUseLocations.mockReturnValue({ data: [LOCATION_A, LOCATION_B] });
+    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST, SECOND_ALPHA_CHECKLIST, FUTURE_CHECKLIST] });
     mockUseChecklistLogs.mockReturnValue({ data: [LOG_TODAY] });
 
     renderWithProviders(<Dashboard />);
-    clickOverdueTab();
 
-    expect(screen.queryByText("Morning Kitchen Check")).not.toBeInTheDocument();
-    expect(screen.getByText("All caught up")).toBeInTheDocument();
+    const cards = screen.getAllByTestId("location-card");
+    expect(cards[0]).toHaveTextContent("Bravo");
+    expect(cards[1]).toHaveTextContent("Alpha");
   });
 
-  it("does not show a checklist whose due_time has not passed yet", () => {
-    mockUseChecklists.mockReturnValue({ data: [FUTURE_CHECKLIST] });
+  it("lets the user switch between today, week, and month tabs", () => {
+    mockUseLocations.mockReturnValue({ data: [LOCATION_A] });
+    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST] });
 
     renderWithProviders(<Dashboard />);
-    clickOverdueTab();
-
-    expect(screen.queryByText("Evening Closing Check")).not.toBeInTheDocument();
-    expect(screen.getByText("All caught up")).toBeInTheDocument();
+    clickComplianceTab("week");
+    expect(screen.getByTestId("compliance-tab-week")).toHaveClass("bg-card");
+    clickComplianceTab("month");
+    expect(screen.getByTestId("compliance-tab-month")).toHaveClass("bg-card");
   });
 
-  it("shows a combined badge count for missed checklists and overdue actions", () => {
-    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST, FUTURE_CHECKLIST] });
-    mockUseActions.mockReturnValue({
-      data: [
-        {
-          id: "a1",
-          title: "Fix fridge",
-          status: "open",
-          due: "2026-03-25",
-          checklist_title: null,
-          assigned_to: null,
-        },
-        {
-          id: "a2",
-          title: "Done task",
-          status: "resolved",
-          due: "2026-03-25",
-          checklist_title: null,
-          assigned_to: null,
-        },
-      ],
-    });
+  it("shows location completion counts in the today view", () => {
+    mockUseLocations.mockReturnValue({ data: [LOCATION_A] });
+    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST, SECOND_ALPHA_CHECKLIST] });
+    mockUseChecklistLogs.mockReturnValue({ data: [LOG_TODAY] });
 
     renderWithProviders(<Dashboard />);
-
-    const badge = document.querySelector(".bg-status-error.text-white");
-    expect(badge?.textContent?.trim()).toBe("2");
+    expect(screen.getByText("1/2 checklists completed")).toBeInTheDocument();
   });
 });
 
@@ -194,6 +200,7 @@ describe("Dashboard - location compliance cards", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(`${TODAY_STR}T14:00:00`));
+    mockNavigate.mockReset();
 
     mockUseChecklistLogs.mockReturnValue({ data: [] });
     mockUseChecklists.mockReturnValue({ data: [] });
@@ -227,15 +234,15 @@ describe("Dashboard - location compliance cards", () => {
 
     renderWithProviders(<Dashboard />);
     expect(screen.getByText("Main Kitchen")).toBeInTheDocument();
-    expect(screen.getByText("Tap to drill in →")).toBeInTheDocument();
+    expect(screen.getByText("Tap to review reporting →")).toBeInTheDocument();
   });
 
-  it("shows 'No submissions yet' when no logs exist for today", () => {
+  it("shows 'No locations yet' when there are no locations configured", () => {
     renderWithProviders(<Dashboard />);
-    expect(screen.getByText("No submissions yet")).toBeInTheDocument();
+    expect(screen.getByText("No locations yet")).toBeInTheDocument();
   });
 
-  it("drills into a location to show its checklists", () => {
+  it("navigates to reporting filtered to the location when a card is tapped", () => {
     mockUseLocations.mockReturnValue({
       data: [{ id: "loc-1", name: "Main Kitchen" }],
     });
@@ -257,35 +264,15 @@ describe("Dashboard - location compliance cards", () => {
 
     renderWithProviders(<Dashboard />);
     fireEvent.click(screen.getByTestId("location-card"));
-    expect(screen.getByText("Opening Check")).toBeInTheDocument();
-    expect(screen.getByText("Main Kitchen")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith("/checklists?tab=reporting&location=loc-1");
   });
 
-  it("returns from drill-down to location cards", () => {
+  it("shows no checklists assigned when a location has no checklist coverage", () => {
     mockUseLocations.mockReturnValue({
       data: [{ id: "loc-1", name: "Main Kitchen" }],
     });
-    mockUseChecklistLogs.mockReturnValue({
-      data: [
-        {
-          id: "log-1",
-          checklist_id: "ck-1",
-          checklist_title: "Opening Check",
-          completed_by: "Ana",
-          score: 88,
-          answers: [],
-          created_at: `${TODAY_STR}T08:00:00+00:00`,
-          location_id: "loc-1",
-          started_at: null,
-        },
-      ],
-    });
 
     renderWithProviders(<Dashboard />);
-    fireEvent.click(screen.getByTestId("location-card"));
-    fireEvent.click(screen.getByRole("button", { name: /back to locations/i }));
-
-    expect(screen.getByText("Daily compliance")).toBeInTheDocument();
-    expect(screen.getByText("Tap to drill in →")).toBeInTheDocument();
+    expect(screen.getByText("No checklists assigned")).toBeInTheDocument();
   });
 });

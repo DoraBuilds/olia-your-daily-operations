@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 type Step = "form" | "check-email";
 
@@ -10,8 +11,6 @@ export default function Signup() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
-  const publicSiteUrl = (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
-
   const [businessName, setBusinessName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -59,7 +58,7 @@ export default function Signup() {
         // page processes the auth tokens and sends the user to /admin.
         // Hosted deployments can override the callback origin via
         // VITE_PUBLIC_SITE_URL (for example, a GitHub Pages URL).
-        emailRedirectTo: `${publicSiteUrl}/auth/callback`,
+        emailRedirectTo: `${getRuntimeConfig().publicSiteUrl}/auth/callback`,
         // Store both fields in auth user metadata so AuthContext can call
         // setup_new_organization even if localStorage is cleared (e.g.
         // when email is confirmed on a different device or browser).
@@ -106,7 +105,7 @@ export default function Signup() {
           </div>
           <p className="text-xs text-muted-foreground">
             Already confirmed?{" "}
-            <Link to="/kiosk" className="text-sage font-medium hover:underline">
+            <Link to="/login" className="text-sage font-medium hover:underline">
               Sign in
             </Link>
           </p>
@@ -128,9 +127,9 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Business name */}
+          {/* Brand name */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Business name</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Brand name</label>
             <input
               autoFocus
               id="signup-business-name"
@@ -142,7 +141,7 @@ export default function Signup() {
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              The name of your restaurant brand or business.
+              The name of your brand or restaurant.
             </p>
           </div>
 
@@ -222,7 +221,7 @@ export default function Signup() {
 
         <p className="text-center text-xs text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/kiosk" className="text-sage font-medium hover:underline">
+          <Link to="/login" className="text-sage font-medium hover:underline">
             Sign in
           </Link>
         </p>

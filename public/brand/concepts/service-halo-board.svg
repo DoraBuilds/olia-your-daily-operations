@@ -1,0 +1,34 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="shGlow1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1320 160) rotate(143) scale(300 300)">
+      <stop stop-color="#4AA8FF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#4AA8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shStroke" x1="960" y1="712" x2="1430" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#F7F4F0"/>
+  <rect width="1600" height="900" fill="url(#shGlow1)"/>
+  <text x="100" y="128" fill="#7D7A87" font-size="28" font-family="Manrope, Arial, sans-serif" font-weight="700" letter-spacing="4">OPTION 2</text>
+  <text x="100" y="208" fill="#14161C" font-size="88" font-family="Georgia, Times New Roman, serif" font-weight="700" letter-spacing="-2">Service Halo</text>
+  <text x="100" y="306" fill="#595F70" font-size="34" font-family="Manrope, Arial, sans-serif">Human, calm, editorial, premium.</text>
+  <text x="100" y="392" fill="#595F70" font-size="28" font-family="Manrope, Arial, sans-serif">Best for hospitality storytelling, partnerships, and founder-led brand moments.</text>
+  <text x="100" y="514" fill="#14161C" font-size="58" font-family="Georgia, Times New Roman, serif" font-weight="700">Calm operations</text>
+  <text x="100" y="584" fill="#14161C" font-size="58" font-family="Georgia, Times New Roman, serif" font-weight="700">for busy teams.</text>
+  <g>
+    <rect x="100" y="714" width="112" height="48" rx="24" fill="#F7F4F0" stroke="#D9D1C7"/>
+    <rect x="228" y="714" width="112" height="48" rx="24" fill="#14161C"/>
+    <rect x="356" y="714" width="112" height="48" rx="24" fill="#B05DFF"/>
+    <rect x="484" y="714" width="112" height="48" rx="24" fill="#4AA8FF"/>
+  </g>
+  <g stroke-linecap="round" opacity="0.86">
+    <circle cx="1180" cy="450" r="248" stroke="url(#shStroke)" stroke-width="7"/>
+    <circle cx="1180" cy="450" r="202" stroke="url(#shStroke)" stroke-width="7" opacity="0.82"/>
+    <circle cx="1180" cy="450" r="156" stroke="url(#shStroke)" stroke-width="7" opacity="0.72"/>
+    <circle cx="1180" cy="450" r="110" stroke="#14161C" stroke-width="7" opacity="0.66"/>
+  </g>
+</svg>
+

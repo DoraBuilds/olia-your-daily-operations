@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
 
 /** Extracts readable text from CSV/Excel files using SheetJS. For PDF/images, returns the filename as context. */
 async function extractFileContent(file: File): Promise<string> {
   if (/\.(csv|xlsx|xls)$/i.test(file.name)) {
+    const XLSX = await import("xlsx");
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
     let content = "";

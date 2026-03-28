@@ -1,0 +1,34 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gridStroke" x1="180" y1="720" x2="1450" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF" stop-opacity="0.8"/>
+      <stop offset="0.5" stop-color="#7A68FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#4AA8FF" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#050608"/>
+  <g opacity="0.18" stroke="#FFFFFF">
+    <path d="M0 150H1600"/>
+    <path d="M0 300H1600"/>
+    <path d="M0 450H1600"/>
+    <path d="M0 600H1600"/>
+    <path d="M0 750H1600"/>
+    <path d="M200 0V900"/>
+    <path d="M500 0V900"/>
+    <path d="M800 0V900"/>
+    <path d="M1100 0V900"/>
+    <path d="M1400 0V900"/>
+  </g>
+  <g stroke="url(#gridStroke)">
+    <circle cx="1280" cy="180" r="320" stroke-width="2"/>
+    <circle cx="1280" cy="180" r="270" stroke-width="2" opacity="0.9"/>
+    <circle cx="1280" cy="180" r="220" stroke-width="2" opacity="0.82"/>
+    <circle cx="1280" cy="180" r="170" stroke-width="2" opacity="0.74"/>
+  </g>
+  <g stroke="url(#gridStroke)">
+    <circle cx="220" cy="780" r="260" stroke-width="2"/>
+    <circle cx="220" cy="780" r="210" stroke-width="2" opacity="0.85"/>
+    <circle cx="220" cy="780" r="160" stroke-width="2" opacity="0.72"/>
+  </g>
+</svg>
+

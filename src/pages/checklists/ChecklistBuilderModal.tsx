@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
 import {
-  Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
+  Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
-  GitBranch, Upload, MapPin, Mail, ArrowLeft,
+  GitBranch, Upload, Mail, ArrowLeft, BookOpen, GraduationCap, Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -12,6 +12,7 @@ import { useCreateAlert } from "@/hooks/useAlerts";
 import { useLocations } from "@/hooks/useLocations";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
   QuestionDef, LogicComparator, LogicTrigger, LogicTriggerType, LogicRule, ResponseType
@@ -19,8 +20,18 @@ import type {
 import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
+import { linkableInfohubResources } from "@/lib/infohub-catalog";
 
 const responseTypeLabel = (type: ResponseType) => RESPONSE_TYPES.find(r => r.key === type)?.label || "Multiple choice";
+const getQuestionChoices = (q: QuestionDef) => q.choices?.length
+  ? q.choices
+  : (q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId)?.choices ?? [] : []);
+const MC_COLOR_OPTIONS = [
+  { label: "Green", value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
+  { label: "Yellow", value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
+  { label: "Red", value: "bg-status-error/10 border-status-error/40 text-status-error" },
+  { label: "Neutral", value: "bg-muted text-muted-foreground border-border" },
+];
 
 interface ChecklistBuilderModalProps {
   onClose: () => void;
@@ -28,6 +39,9 @@ interface ChecklistBuilderModalProps {
   onUpdate?: (id: string, item: Partial<ChecklistItem>) => void;
   initialTitle?: string;
   initialSections?: SectionDef[];
+  initialLocationIds?: string[] | null;
+  initialVisibilityFrom?: string | null;
+  initialVisibilityUntil?: string | null;
   editId?: string;
   /** When true, renders as a full-page editor (no overlay).
    *  The parent is responsible for showing/hiding it. */
@@ -35,7 +49,8 @@ interface ChecklistBuilderModalProps {
 }
 
 export function ChecklistBuilderModal({
-  onClose, onAdd, onUpdate, initialTitle, initialSections, editId, asPage = false,
+  onClose, onAdd, onUpdate, initialTitle, initialSections, initialLocationIds,
+  initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
   const { data: dbLocations = [] } = useLocations();
@@ -46,19 +61,33 @@ export function ChecklistBuilderModal({
   const [title, setTitle] = useState(initialTitle || "");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [scheduleTime, setScheduleTime] = useState("09:00");
+  const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
+  const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
+  const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
   const [schedule, setSchedule] = useState<ScheduleType>("none");
   const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>({
     interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13,
   });
   const [showCustomRecurrence, setShowCustomRecurrence] = useState(false);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationMode, setLocationMode] = useState<"all" | "specific">(
+    initialLocationIds && initialLocationIds.length > 0 ? "specific" : "all",
+  );
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(
+    initialLocationIds?.length ? initialLocationIds : [],
+  );
+  const [locationSearch, setLocationSearch] = useState("");
   const [sections, setSections] = useState<SectionDef[]>(initialSections || [{
     id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
   }]);
-  const [showResponsePicker, setShowResponsePicker] = useState<{ sectionIdx: number; questionIdx: number } | null>(null);
+  const [showResponsePicker, setShowResponsePicker] = useState<
+    | { scope: "main"; sectionIdx: number; questionIdx: number }
+    | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
+    | null
+  >(null);
   const [requiredError, setRequiredError] = useState("");
+  const [instructionResourceSearch, setInstructionResourceSearch] = useState("");
+  const [instructionResourceSection, setInstructionResourceSection] = useState<"all" | "library" | "training">("all");
+  const [instructionPickerQuestionId, setInstructionPickerQuestionId] = useState<string | null>(null);
 
   const SCHEDULE_OPTIONS: { key: ScheduleType; label: string }[] = [
     { key: "none", label: "Once" },
@@ -99,10 +128,26 @@ export function ChecklistBuilderModal({
 
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
 
-  // Staff available for person-type questions and notify triggers, scoped to selected location
+  const selectedLocations = dbLocations.filter(loc => selectedLocationIds.includes(loc.id));
+  const filteredLocations = dbLocations.filter(loc => {
+    const q = locationSearch.trim().toLowerCase();
+    if (!q) return true;
+    return loc.name.toLowerCase().includes(q) || (loc.address || "").toLowerCase().includes(q);
+  });
+
+  const filteredInstructionResources = linkableInfohubResources.filter((resource) => {
+    const matchesSection = instructionResourceSection === "all" || resource.section === instructionResourceSection;
+    const query = instructionResourceSearch.trim().toLowerCase();
+    const matchesQuery = !query
+      || resource.title.toLowerCase().includes(query)
+      || resource.subtitle.toLowerCase().includes(query);
+    return matchesSection && matchesQuery;
+  });
+
+  // Staff available for person-type questions and notify triggers, scoped to selected locations
   const availableStaff = staffProfiles.filter(s =>
     s.status !== "archived" &&
-    (selectedLocationId === null || s.location_id === selectedLocationId)
+    (locationMode === "all" || selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id))
   );
 
   // Team members with emails — real notification recipients
@@ -144,15 +189,22 @@ export function ChecklistBuilderModal({
     // Existing saved checklists with person type render as multiple_choice in the runner.
     const sectionsWithPersonChoices: SectionDef[] = sections;
 
+    const allLocationIds = dbLocations.map(loc => loc.id);
+    const selectedIds = locationMode === "all" ? [] : selectedLocationIds.filter(id => allLocationIds.includes(id));
+    if (locationMode === "specific" && selectedIds.length === 0) return;
+    const isAllLocations = locationMode === "all" || selectedIds.length === 0 || selectedIds.length === allLocationIds.length;
     const payload: Partial<ChecklistItem> = {
       title: title.trim(),
       description: description.trim() || undefined,
       questionsCount: totalQuestions,
       schedule: schedLabel,
       sections: sectionsWithPersonChoices,
-      time_of_day: "anytime",         // always anytime — kiosk uses due_time for visibility
-      due_time: scheduleTime,          // HH:MM — kiosk shows 1 hour before this time
-      location_id: selectedLocationId,
+      time_of_day: "anytime",         // visibility is handled with the explicit window below
+      due_time: null,
+      visibility_from: visibilityWindowEnabled ? visibilityFrom : null,
+      visibility_until: visibilityWindowEnabled ? visibilityUntil : null,
+      location_id: isAllLocations ? null : (selectedIds.length === 1 ? selectedIds[0] : null),
+      location_ids: isAllLocations ? null : selectedIds,
     };
 
     if (editId && onUpdate) {
@@ -196,10 +248,120 @@ export function ChecklistBuilderModal({
 
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
       <div className="p-5 space-y-5">
+        {/* Locations */}
+        <div className="space-y-3">
+          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Locations</label>
+          <div className="rounded-2xl border border-border bg-muted/40 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLocationMode("all")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                  locationMode === "all"
+                    ? "bg-sage text-primary-foreground border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40",
+                )}
+              >
+                All locations
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocationMode("specific")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                  locationMode === "specific"
+                    ? "bg-sage text-primary-foreground border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40",
+                )}
+              >
+                Select specific locations
+              </button>
+              {locationMode === "specific" && dbLocations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocationIds(dbLocations.map(loc => loc.id))}
+                  className="ml-auto text-xs text-sage hover:text-sage-deep transition-colors"
+                >
+                  Select all
+                </button>
+              )}
+            </div>
+
+            {locationMode === "specific" && (
+              <>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={locationSearch}
+                    onChange={e => setLocationSearch(e.target.value)}
+                    placeholder="Search locations or address"
+                    className="w-full border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {filteredLocations.length === 0 ? (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">
+                      No locations match your search.
+                    </p>
+                  ) : filteredLocations.map(loc => {
+                    const selected = selectedLocationIds.includes(loc.id);
+                    return (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setSelectedLocationIds(prev => (
+                          prev.includes(loc.id)
+                            ? prev.filter(id => id !== loc.id)
+                            : [...prev, loc.id]
+                        ))}
+                        className={cn(
+                          "w-full flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
+                          selected
+                            ? "bg-sage-light border-sage/40 text-sage-deep"
+                            : "bg-background border-border hover:border-sage/40",
+                        )}
+                      >
+                        <div className="mt-0.5 shrink-0">
+                          {selected ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{loc.name}</p>
+                          {loc.address && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{loc.address}</p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                {locationMode === "all"
+                  ? "This checklist will appear at every location."
+                  : selectedLocations.length === 0
+                    ? "Choose one or more locations."
+                    : selectedLocations.length === 1
+                      ? `Selected: ${selectedLocations[0].name}`
+                      : `${selectedLocations.length} locations selected`}
+              </p>
+              {locationMode === "specific" && selectedLocations.length === dbLocations.length && dbLocations.length > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
+                  All locations selected
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Title */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Title <span className="text-status-error">*</span></label>
-          <input autoFocus type="text" placeholder="e.g. Morning Opening Checklist" value={title}
+          <input type="text" placeholder="e.g. Morning Opening Checklist" value={title}
             onChange={e => setTitle(e.target.value)}
             className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
@@ -231,16 +393,65 @@ export function ChecklistBuilderModal({
             </Popover>
           </div>
 
-          {/* Schedule time (= due time for kiosk) */}
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Due time</label>
-            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted">
-              <Clock size={14} className="text-muted-foreground shrink-0" />
-              <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)}
-                className="flex-1 text-sm bg-transparent focus:outline-none text-foreground" />
-            </div>
-            <p className="text-sm italic text-muted-foreground mt-1.5">
-              This checklist will appear in the kiosk 1 hour before it is due.
+          {/* Visibility window */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setVisibilityWindowEnabled(v => !v)}
+              className={cn(
+                "w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-left transition-colors",
+                visibilityWindowEnabled
+                  ? "border-sage bg-sage-light/40"
+                  : "border-border bg-muted hover:bg-muted/80",
+              )}
+            >
+              <div>
+                <p className="text-sm font-medium text-foreground">Visibility window</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Optional. Leave it off and the checklist stays visible all day.
+                </p>
+              </div>
+              <span className={cn(
+                "text-xs font-semibold px-2.5 py-1 rounded-full",
+                visibilityWindowEnabled ? "bg-sage text-primary-foreground" : "bg-muted text-muted-foreground",
+              )}>
+                {visibilityWindowEnabled ? "On" : "Off"}
+              </span>
+            </button>
+
+            {visibilityWindowEnabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">From</label>
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted">
+                    <Clock size={14} className="text-muted-foreground shrink-0" />
+                    <input
+                      type="time"
+                      value={visibilityFrom}
+                      onChange={e => setVisibilityFrom(e.target.value)}
+                      className="flex-1 text-sm bg-transparent focus:outline-none text-foreground"
+                    />
+              </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Until</label>
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted">
+                    <Clock size={14} className="text-muted-foreground shrink-0" />
+                    <input
+                      type="time"
+                      value={visibilityUntil}
+                      onChange={e => setVisibilityUntil(e.target.value)}
+                      className="flex-1 text-sm bg-transparent focus:outline-none text-foreground"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <p className="text-sm italic text-muted-foreground">
+              {visibilityWindowEnabled
+                ? `This checklist will only be visible on the kiosk from ${formatTime12h(visibilityFrom)} to ${formatTime12h(visibilityUntil)}.`
+                : "No visibility window set. The checklist will be visible for the full scheduled day until completed."}
             </p>
           </div>
 
@@ -273,8 +484,7 @@ export function ChecklistBuilderModal({
             <p className="text-sm italic text-muted-foreground">
               {(() => {
                 const dateStr = format(startDate, "dd/MM/yyyy");
-                const timeStr = formatTime12h(scheduleTime);
-                if (schedule === "none") return `Scheduled once on ${dateStr} at ${timeStr}.`;
+                if (schedule === "none") return `Scheduled once on ${dateStr}.`;
                 const repeatLabel = (() => {
                   switch (schedule) {
                     case "daily": return "repeat every day";
@@ -294,52 +504,11 @@ export function ChecklistBuilderModal({
                     default: return "";
                   }
                 })();
-                return `First schedule starts on ${dateStr} at ${timeStr}, and will ${repeatLabel}.`;
+                return `First schedule starts on ${dateStr}, and will ${repeatLabel}.`;
               })()}
             </p>
           )}
 
-        </div>
-
-        {/* Location */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Location</label>
-          <button onClick={() => setShowLocationPicker(v => !v)}
-            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted text-sm text-foreground hover:bg-muted/80 transition-colors">
-            <MapPin size={14} className="text-muted-foreground shrink-0" />
-            <span className="flex-1 text-left truncate">
-              {selectedLocationId
-                ? dbLocations.find(l => l.id === selectedLocationId)?.name ?? "Unknown location"
-                : "All locations"}
-            </span>
-            <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showLocationPicker && "rotate-180")} />
-          </button>
-          {showLocationPicker && (
-            <div className="mt-1 border border-border rounded-xl bg-card overflow-hidden shadow-md">
-              <button onClick={() => { setSelectedLocationId(null); setShowLocationPicker(false); }}
-                className={cn("w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border",
-                  selectedLocationId === null && "text-sage font-medium")}>
-                <MapPin size={14} className="text-muted-foreground shrink-0" />
-                <span className="text-sm">All locations</span>
-              </button>
-              {dbLocations.length === 0 && (
-                <p className="px-4 py-3 text-sm text-muted-foreground">No locations set up yet.</p>
-              )}
-              {dbLocations.map(loc => (
-                <button key={loc.id} onClick={() => { setSelectedLocationId(loc.id); setShowLocationPicker(false); }}
-                  className={cn("w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left",
-                    selectedLocationId === loc.id && "text-sage font-medium")}>
-                  <MapPin size={14} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm">{loc.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {selectedLocationId && (
-            <p className="text-[10px] text-muted-foreground mt-1 pl-1">
-              Only appears in the kiosk at the selected location.
-            </p>
-          )}
         </div>
 
         {/* Sections & Questions */}
@@ -361,6 +530,8 @@ export function ChecklistBuilderModal({
             {section.questions.map((q, qi) => {
               const cfg = q.config || {};
               const mcSet = q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId) : null;
+              const questionChoices = getQuestionChoices(q);
+              const questionChoiceColors = q.choiceColors ?? [];
               return (
                 <div key={q.id} className="card-surface p-4 space-y-3">
                   <div className="flex items-start gap-2">
@@ -376,7 +547,7 @@ export function ChecklistBuilderModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <button onClick={() => setShowResponsePicker({ sectionIdx: si, questionIdx: qi })}
+                    <button onClick={() => setShowResponsePicker({ scope: "main", sectionIdx: si, questionIdx: qi })}
                       className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-sage/40 transition-colors flex items-center gap-1">
                       {responseTypeLabel(q.responseType)}
                       <ChevronDown size={10} />
@@ -401,16 +572,77 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "number" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Acceptable range</p>
-                      <div className="flex items-center gap-2">
-                        <input type="number" placeholder="Min" value={cfg.numberMin ?? ""}
-                          onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMin: e.target.value ? Number(e.target.value) : undefined } })}
-                          className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-                        <span className="text-xs text-muted-foreground">to</span>
-                        <input type="number" placeholder="Max" value={cfg.numberMax ?? ""}
-                          onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMax: e.target.value ? Number(e.target.value) : undefined } })}
-                          className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Number response</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.
+                          </p>
+                        </div>
+                        <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
+                          {(["single", "temperature"] as const).map(mode => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateQuestion(si, qi, {
+                                config: {
+                                  ...cfg,
+                                  numberMode: mode,
+                                  numberMin: mode === "temperature" ? cfg.numberMin : undefined,
+                                  numberMax: mode === "temperature" ? cfg.numberMax : undefined,
+                                  temperatureUnit: mode === "temperature" ? (cfg.temperatureUnit ?? "C") : undefined,
+                                },
+                              })}
+                              className={cn(
+                                "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                (cfg.numberMode ?? "single") === mode
+                                  ? "bg-sage text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {mode === "single" ? "Number" : "Temperature"}
+                            </button>
+                          ))}
+                        </div>
                       </div>
+
+                      {(cfg.numberMode ?? "single") === "single" ? (
+                        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                          Staff will enter one number and see the numeric keypad on supported devices.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input type="number" placeholder="Min" value={cfg.numberMin ?? ""}
+                              onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", numberMin: e.target.value ? Number(e.target.value) : undefined } })}
+                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                            <span className="text-xs text-muted-foreground">to</span>
+                            <input type="number" placeholder="Max" value={cfg.numberMax ?? ""}
+                              onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", numberMax: e.target.value ? Number(e.target.value) : undefined } })}
+                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Unit</span>
+                            <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
+                              {(["C", "F"] as const).map(unit => (
+                                <button
+                                  key={unit}
+                                  type="button"
+                                  onClick={() => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", temperatureUnit: unit } })}
+                                  className={cn(
+                                    "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                    (cfg.temperatureUnit ?? "C") === unit
+                                      ? "bg-sage text-primary-foreground"
+                                      : "text-muted-foreground hover:text-foreground",
+                                  )}
+                                >
+                                  {unit === "C" ? "Celsius" : "Fahrenheit"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -433,6 +665,97 @@ export function ChecklistBuilderModal({
                         Take photo
                       </button>
                       <p className="text-[10px] text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
+                    </div>
+                  )}
+
+                  {q.responseType === "multiple_choice" && (
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-muted-foreground">Multiple choice options</p>
+                        {mcSet && (
+                          <span className="text-[10px] text-muted-foreground">{mcSet.name}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-muted-foreground">Selection mode</span>
+                        <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
+                          {(["single", "multiple"] as const).map(mode => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateQuestion(si, qi, { selectionMode: mode })}
+                              className={cn(
+                                "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                (q.selectionMode ?? "single") === mode
+                                  ? "bg-sage text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {mode === "single" ? "Single" : "Multiple"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {questionChoices.length > 0 ? (
+                        <div className="space-y-2">
+                          {questionChoices.map((choice, choiceIdx) => (
+                            <div key={`${q.id}-${choiceIdx}`} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={choice}
+                                onChange={e => {
+                                  const nextChoices = [...questionChoices];
+                                  nextChoices[choiceIdx] = e.target.value;
+                                  updateQuestion(si, qi, { choices: nextChoices });
+                                }}
+                                className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                              <select
+                                value={questionChoiceColors[choiceIdx] ?? MC_COLOR_OPTIONS[3].value}
+                                onChange={e => {
+                                  const nextColors = [...questionChoiceColors];
+                                  nextColors[choiceIdx] = e.target.value;
+                                  updateQuestion(si, qi, { choiceColors: nextColors });
+                                }}
+                                className="w-28 text-xs border border-border rounded-lg px-2 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                              >
+                                {MC_COLOR_OPTIONS.map(option => (
+                                  <option key={option.label} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nextChoices = questionChoices.filter((_, idx) => idx !== choiceIdx);
+                                  const nextColors = questionChoiceColors.filter((_, idx) => idx !== choiceIdx);
+                                  updateQuestion(si, qi, {
+                                    choices: nextChoices,
+                                    choiceColors: nextColors,
+                                  });
+                                }}
+                                className="p-2 text-muted-foreground hover:text-status-error transition-colors"
+                                aria-label={`Delete option ${choice}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground">
+                          Choose a preset to add answer options.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => updateQuestion(si, qi, {
+                          choices: [...questionChoices, `Option ${questionChoices.length + 1}`],
+                          choiceColors: [...questionChoiceColors, MC_COLOR_OPTIONS[3].value],
+                        })}
+                        className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
+                      >
+                        <Plus size={11} /> Add option
+                      </button>
                     </div>
                   )}
 
@@ -484,10 +807,114 @@ export function ChecklistBuilderModal({
                           <Upload size={13} />
                           {cfg.instructionImageUrl ? "Replace image" : "Upload image"}
                         </button>
-                        <p className="text-[10px] text-muted-foreground self-center italic">
-                          Link to Infohub document — coming soon
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInstructionPickerQuestionId(prev => prev === q.id ? null : q.id);
+                            setInstructionResourceSearch("");
+                            setInstructionResourceSection("all");
+                          }}
+                          className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-sage/40 hover:text-foreground transition-colors"
+                        >
+                          <Link2 size={13} />
+                          {cfg.instructionLinkId ? "Change Infohub link" : "Link Infohub content"}
+                        </button>
                       </div>
+
+                      {cfg.instructionLinkId && (
+                        <div className="rounded-xl border border-sage/25 bg-sage/5 px-3 py-2 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-foreground">{cfg.instructionLinkTitle}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{cfg.instructionLinkSection}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => updateQuestion(si, qi, {
+                              config: {
+                                ...cfg,
+                                instructionLinkId: undefined,
+                                instructionLinkTitle: undefined,
+                                instructionLinkSection: undefined,
+                              },
+                            })}
+                            className="p-1.5 rounded-full text-muted-foreground hover:text-status-error transition-colors"
+                            aria-label="Remove linked Infohub content"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      )}
+
+                      {instructionPickerQuestionId === q.id && (
+                        <div className="rounded-xl border border-border bg-background p-3 space-y-3">
+                          <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2">
+                            <Search size={14} className="text-muted-foreground shrink-0" />
+                            <input
+                              type="text"
+                              value={instructionResourceSearch}
+                              onChange={e => setInstructionResourceSearch(e.target.value)}
+                              placeholder="Search library or training"
+                              className="flex-1 bg-transparent text-sm outline-none"
+                            />
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {[
+                              { key: "all", label: "All" },
+                              { key: "library", label: "Library" },
+                              { key: "training", label: "Training" },
+                            ].map(option => (
+                              <button
+                                key={option.key}
+                                type="button"
+                                onClick={() => setInstructionResourceSection(option.key as "all" | "library" | "training")}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                                  instructionResourceSection === option.key
+                                    ? "bg-sage text-primary-foreground border-sage"
+                                    : "border-border text-muted-foreground hover:border-sage/40",
+                                )}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="max-h-56 overflow-y-auto space-y-2">
+                            {filteredInstructionResources.length === 0 ? (
+                              <p className="text-xs text-muted-foreground py-4 text-center">No Infohub content matches that search.</p>
+                            ) : filteredInstructionResources.map(resource => (
+                              <button
+                                key={resource.id}
+                                type="button"
+                                onClick={() => {
+                                  updateQuestion(si, qi, {
+                                    config: {
+                                      ...cfg,
+                                      instructionLinkId: resource.id,
+                                      instructionLinkTitle: resource.title,
+                                      instructionLinkSection: resource.section,
+                                    },
+                                  });
+                                  setInstructionPickerQuestionId(null);
+                                }}
+                                className="w-full rounded-xl border border-border px-3 py-3 text-left hover:border-sage/40 hover:bg-muted/30 transition-colors"
+                              >
+                                <div className="flex items-start gap-2">
+                                  {resource.section === "library" ? (
+                                    <BookOpen size={14} className="text-sage mt-0.5 shrink-0" />
+                                  ) : (
+                                    <GraduationCap size={14} className="text-sage mt-0.5 shrink-0" />
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-foreground">{resource.title}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{resource.section}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resource.subtitle}</p>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -524,7 +951,7 @@ export function ChecklistBuilderModal({
                       { key: "require_action", label: "Create action", icon: AlertTriangle },
                     ];
 
-                    const mcChoices = mcSet ? mcSet.choices : ["Yes", "No", "N/A"];
+                    const mcChoices = questionChoices.length > 0 ? questionChoices : ["Yes", "No", "N/A"];
 
                     const addRule = () => {
                       const newRule: LogicRule = {
@@ -546,6 +973,11 @@ export function ChecklistBuilderModal({
                       const rule = rules[ri];
                       if (rule.triggers.some(t => t.type === triggerType)) return;
                       const triggerConfig: LogicTrigger["config"] = {};
+                      if (triggerType === "ask_question") {
+                        const followUpText = `Follow-up: ${q.text || `Question ${qi + 1}`}`;
+                        triggerConfig.questionText = followUpText;
+                        triggerConfig.followUpQuestion = createDefaultFollowUpQuestion(followUpText);
+                      }
                       if (triggerType === "require_action") {
                         const qLabel = q.text || `Question ${qi + 1}`;
                         const cLabel = `${comparators.find(c => c.key === rule.comparator)?.label || rule.comparator} ${rule.value}${rule.valueTo ? ` – ${rule.valueTo}` : ""}`;
@@ -629,10 +1061,46 @@ export function ChecklistBuilderModal({
                                           </span>
                                         </div>
                                         {trigger.type === "ask_question" && (
-                                          <input type="text" placeholder="Follow-up question text"
-                                            value={trigger.config?.questionText || ""}
-                                            onChange={e => updateTriggerConfig(ri, ti, { questionText: e.target.value })}
-                                            className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
+                                          <div className="space-y-2">
+                                            <input
+                                              type="text"
+                                              placeholder="Follow-up question text"
+                                              value={trigger.config?.questionText || ""}
+                                              onChange={e => {
+                                                const nextFollowUp = trigger.config?.followUpQuestion
+                                                  ? { ...trigger.config.followUpQuestion, text: e.target.value }
+                                                  : createDefaultFollowUpQuestion(e.target.value);
+                                                updateTriggerConfig(ri, ti, {
+                                                  questionText: e.target.value,
+                                                  followUpQuestion: nextFollowUp,
+                                                });
+                                              }}
+                                              className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                                            />
+                                            {trigger.config?.followUpQuestion ? (
+                                              <FollowUpQuestionEditor
+                                                question={trigger.config.followUpQuestion}
+                                                onChange={next => updateTriggerConfig(ri, ti, {
+                                                  questionText: next.text,
+                                                  followUpQuestion: next,
+                                                })}
+                                                notifyRecipients={notifyRecipients}
+                                                label="Follow-up question"
+                                                depth={1}
+                                              />
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                onClick={() => updateTriggerConfig(ri, ti, {
+                                                  questionText: `Follow-up: ${q.text || `Question ${qi + 1}`}`,
+                                                  followUpQuestion: createDefaultFollowUpQuestion(`Follow-up: ${q.text || `Question ${qi + 1}`}`),
+                                                })}
+                                                className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
+                                              >
+                                                <Plus size={11} /> Build follow-up question
+                                              </button>
+                                            )}
+                                          </div>
                                         )}
                                         {/* Issue 3: Notify → real team members with email */}
                                         {trigger.type === "notify" && (
@@ -739,11 +1207,17 @@ export function ChecklistBuilderModal({
         {requiredError && (
           <p className="text-xs text-status-error mb-2 text-center">{requiredError}</p>
         )}
+        {locationMode === "specific" && selectedLocationIds.length === 0 && (
+          <p className="text-xs text-status-error mb-2 text-center">Select at least one location or switch back to all locations.</p>
+        )}
+        {locationMode === "specific" && selectedLocationIds.length > 0 && dbLocations.length > 0 && selectedLocationIds.length === dbLocations.length && (
+          <p className="text-xs text-muted-foreground mb-2 text-center">All locations are selected.</p>
+        )}
         <button
-          disabled={!title.trim()}
+          disabled={!title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
           onClick={handleCreate}
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
-            title.trim() ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
+            title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
           {editId ? "Save checklist" : "Create checklist"}
         </button>
@@ -763,9 +1237,51 @@ export function ChecklistBuilderModal({
       {showResponsePicker && (
         <ResponseTypePicker
           onSelect={(type, mcSetId) => {
-            updateQuestion(showResponsePicker.sectionIdx, showResponsePicker.questionIdx, {
-              responseType: type, mcSetId: mcSetId ?? undefined,
-            });
+            const mcSet = mcSetId ? multipleChoiceSets.find(m => m.id === mcSetId) : null;
+            if (showResponsePicker.scope === "main") {
+              updateQuestion(showResponsePicker.sectionIdx, showResponsePicker.questionIdx, {
+                responseType: type,
+                mcSetId: mcSetId ?? undefined,
+                choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
+                choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
+                selectionMode: type === "multiple_choice" ? "single" : undefined,
+              });
+            } else {
+              const { sectionIdx, questionIdx, ruleIdx, triggerIdx } = showResponsePicker;
+              const section = sections[sectionIdx];
+              const question = section.questions[questionIdx];
+              const rules = question.config?.logicRules || [];
+              const nextRules = rules.map((rule, ri) => {
+                if (ri !== ruleIdx) return rule;
+                return {
+                  ...rule,
+                  triggers: rule.triggers.map((trigger, ti) => {
+                    if (ti !== triggerIdx) return trigger;
+                    const nextFollowUp = trigger.config?.followUpQuestion ?? createDefaultFollowUpQuestion();
+                    return {
+                      ...trigger,
+                      config: {
+                        ...trigger.config,
+                        followUpQuestion: {
+                          ...nextFollowUp,
+                          responseType: type,
+                          mcSetId: mcSetId ?? undefined,
+                          choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
+                          choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
+                          selectionMode: type === "multiple_choice" ? "single" : undefined,
+                        },
+                      },
+                    };
+                  }),
+                };
+              });
+              updateQuestion(sectionIdx, questionIdx, {
+                config: {
+                  ...(question.config || {}),
+                  logicRules: nextRules,
+                },
+              });
+            }
             setShowResponsePicker(null);
           }}
           onClose={() => setShowResponsePicker(null)}

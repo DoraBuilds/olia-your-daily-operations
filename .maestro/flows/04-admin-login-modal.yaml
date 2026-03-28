@@ -1,9 +1,9 @@
 ---
-# Flow 04 — Admin Login Modal
-# Verifies the Admin login modal: opens from kiosk grid, shows form fields,
-# validates empty submit, accepts text input, and can be closed.
+# Flow 04 — Admin PIN Modal
+# Verifies the Admin PIN modal: opens from kiosk grid, shows the PIN form,
+# accepts numeric input, and can be closed.
 appId: com.olia.operations
-name: "Kiosk — Admin Login Modal"
+name: "Kiosk — Admin PIN Modal"
 
 ---
 - launchApp:
@@ -28,34 +28,27 @@ name: "Kiosk — Admin Login Modal"
 
 # ── Modal assertions ──────────────────────────────────────────────────────────
 - assertVisible:
-    text: "Admin login"
+    text: "Admin PIN"
 - assertVisible:
-    text: "Email"
+    text: "PIN"
 - assertVisible:
-    text: "Password"
-- assertVisible:
-    text: "Sign in"
+    text: "Continue"
 
 - takeScreenshot: "04-admin-login-modal-open"
 
-# ── Enter email via placeholder tap ──────────────────────────────────────────
+# ── Enter a PIN ───────────────────────────────────────────────────────────────
 - tapOn:
-    text: "your@email.com"
-- inputText: "test@example.com"
-
-# ── Enter password ────────────────────────────────────────────────────────────
-- tapOn:
-    text: "Password"
-- inputText: "wrongpassword"
+    text: "4-digit PIN"
+- inputText: "1234"
 
 - tapOn:
-    text: "Sign in"
+    text: "Continue"
 
 - waitForAnimationToEnd
 
-# ── Error message (Supabase rejects invalid creds) ────────────────────────────
+# ── Error message (PIN may be invalid in test env) ────────────────────────────
 - assertVisible:
-    text: "Invalid email or password."
+    text: "Invalid PIN."
     optional: true
 
 - takeScreenshot: "04-admin-login-invalid-creds"

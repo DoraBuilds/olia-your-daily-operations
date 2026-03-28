@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TeamMember, ManagerPermissions } from "@/lib/admin-repository";
 import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
+import { hashPin } from "@/hooks/useStaffProfiles";
 
 export function useTeamMembers() {
   return useQuery({
@@ -27,7 +28,7 @@ export function useSaveTeamMember() {
   const qc = useQueryClient();
   const { teamMember } = useAuth();
   return useMutation({
-    mutationFn: async (tm: Partial<TeamMember> & { id?: string }) => {
+    mutationFn: async (tm: Partial<TeamMember> & { id?: string; rawPin?: string }) => {
       const { error } = await supabase.from("team_members").upsert({
         id: tm.id || undefined,
         organization_id: teamMember!.organization_id,
@@ -36,6 +37,7 @@ export function useSaveTeamMember() {
         role: tm.role ?? "Manager",
         location_ids: tm.location_ids ?? [],
         permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
+        ...(tm.rawPin ? { pin: await hashPin(tm.rawPin) } : {}),
       });
       if (error) throw error;
     },

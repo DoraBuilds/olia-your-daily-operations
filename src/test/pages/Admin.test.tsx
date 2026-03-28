@@ -2,6 +2,26 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Admin from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 
+vi.mock("@/lib/runtime-config", () => ({
+  runtimeConfig: {
+    googleMapsApiKey: "test-maps-key",
+  },
+  getRuntimeConfig: () => ({
+    googleMapsApiKey: "test-maps-key",
+    publicSiteUrl: "http://localhost:8080",
+    supabaseUrl: "http://localhost:54321",
+    supabaseAnonKey: "test",
+    stripe: { priceIds: { starter: { monthly: "", annual: "" }, growth: { monthly: "", annual: "" } }, customerPortalUrl: null },
+  }),
+  buildRuntimeConfig: () => ({
+    googleMapsApiKey: "test-maps-key",
+    publicSiteUrl: "http://localhost:8080",
+    supabaseUrl: "http://localhost:54321",
+    supabaseAnonKey: "test",
+    stripe: { priceIds: { starter: { monthly: "", annual: "" }, growth: { monthly: "", annual: "" } }, customerPortalUrl: null },
+  }),
+}));
+
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -10,6 +30,7 @@ vi.mock("@/lib/supabase", () => ({
       signOut: vi.fn().mockResolvedValue({}),
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      updateUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } }, error: null }),
     },
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -56,13 +77,13 @@ vi.mock("@/hooks/usePlan", () => ({
 
 // ─── Data mocks ───────────────────────────────────────────────────────────────
 const mockLocations = [
-  { id: "l1", name: "Main Branch", address: "123 Street", contact_email: "main@test.com", contact_phone: "555-0001", trading_hours: "9-17", archive_threshold_days: 90 },
+  { id: "l1", name: "Main Branch", address: "123 Street", contact_email: "main@test.com", contact_phone: "555-0001", trading_hours: "9-17", archive_threshold_days: 90, lat: 45.7608, lng: 4.8597, place_id: "place-1" },
   { id: "l2", name: "City Centre", address: "456 Ave", contact_email: "city@test.com", contact_phone: "555-0002", trading_hours: "8-22", archive_threshold_days: 90 },
 ];
 
 const mockStaff = [
-  { id: "sp1", location_id: "l1", first_name: "Alice", last_name: "Smith", role: "Waiter", status: "active", pin: "1234", last_used_at: null, archived_at: null, created_at: "2024-01-01T00:00:00Z" },
-  { id: "sp2", location_id: "l1", first_name: "Bob", last_name: "Jones", role: "Kitchen", status: "archived", pin: "5678", last_used_at: "2024-02-01T00:00:00Z", archived_at: "2024-02-15T00:00:00Z", created_at: "2024-01-01T00:00:00Z" },
+  { id: "sp1", location_id: "l1", first_name: "Alice", last_name: "Smith", role: "Front of House / Server", status: "active", pin: "1234", last_used_at: null, archived_at: null, created_at: "2024-01-01T00:00:00Z" },
+  { id: "sp2", location_id: "l1", first_name: "Bob", last_name: "Jones", role: "Back of House / Chef", status: "archived", pin: "5678", last_used_at: "2024-02-01T00:00:00Z", archived_at: "2024-02-15T00:00:00Z", created_at: "2024-01-01T00:00:00Z" },
 ];
 
 const mockTeam = [
@@ -72,6 +93,12 @@ const mockTeam = [
 
 const { mockUseLocations } = vi.hoisted(() => ({
   mockUseLocations: vi.fn(),
+}));
+const { mockSaveTeamMember } = vi.hoisted(() => ({
+  mockSaveTeamMember: {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn().mockResolvedValue({}),
+  },
 }));
 mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
 
@@ -91,7 +118,7 @@ vi.mock("@/hooks/useStaffProfiles", () => ({
 
 vi.mock("@/hooks/useTeamMembers", () => ({
   useTeamMembers: () => ({ data: mockTeam, isLoading: false }),
-  useSaveTeamMember: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
+  useSaveTeamMember: () => mockSaveTeamMember,
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
 }));
 
@@ -135,7 +162,7 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />);
     const accountTab = screen.getByText("Account");
     fireEvent.click(accountTab);
-    expect(screen.getByText("All locations")).toBeInTheDocument();
+    expect(screen.getByText("My account")).toBeInTheDocument();
   });
 
   // 5. Location section shows location names
@@ -164,12 +191,12 @@ describe("Admin page", () => {
     });
   });
 
-  // 8. Staff role badge shows "Waiter"
-  it("shows Alice Smith's role as Waiter", async () => {
+  // 8. Staff role badge shows department-based label
+  it("shows Alice Smith's role as Front of House / Server", async () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      const waiterBadges = screen.getAllByText("Waiter");
-      expect(waiterBadges.length).toBeGreaterThanOrEqual(1);
+      const roleBadges = screen.getAllByText("Front of House / Server");
+      expect(roleBadges.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -336,6 +363,47 @@ describe("Admin page", () => {
     });
   });
 
+  // 23b. Account tab shows self-service account settings
+  it("Account tab shows my account settings", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+
+    await waitFor(() => {
+      expect(screen.getByText("My account")).toBeInTheDocument();
+      expect(screen.getByText("Security")).toBeInTheDocument();
+      expect(screen.getByText("Assigned locations")).toBeInTheDocument();
+      expect(screen.getByText("Role and permissions")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Sarah")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("manager@example.com")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("At least 8 characters")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Repeat password")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("4-digit PIN")).toBeInTheDocument();
+    });
+  });
+
+  // 23c. Saving account profile updates auth + team member record
+  it("saving profile calls supabase auth update and account save", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    const updateUser = vi.mocked(supabase.auth.updateUser);
+    mockSaveTeamMember.mutateAsync.mockClear();
+    updateUser.mockClear();
+
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+
+    await waitFor(() => expect(screen.getByText("Save profile")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalled();
+      expect(mockSaveTeamMember.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+        id: "u1",
+        name: "Sarah",
+        email: "manager@example.com",
+      }));
+    });
+  });
+
   // 24. "Add location" button visible in Account tab
   it("'Add location' button is visible in Account tab", async () => {
     renderWithProviders(<Admin />);
@@ -380,25 +448,42 @@ describe("Admin page", () => {
     });
   });
 
-  // 28. Location form has Contact email field
-  it("location form has Contact email field", async () => {
+  // 27b. Existing location shows map confirmation when structured place data exists
+  it("edit location form shows map preview and confirmation for stored place data", async () => {
     renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
-    await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Add location"));
+    await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
+    const locationDetailsCard = screen.getByText("Location details").closest(".card-surface");
+    const editButtons = locationDetailsCard
+      ? Array.from(locationDetailsCard.querySelectorAll("button")).filter(btn => btn.textContent?.trim() === "Edit")
+      : [];
+    expect(editButtons.length).toBeGreaterThan(0);
+    fireEvent.click(editButtons[0] as HTMLElement);
+
     await waitFor(() => {
-      expect(screen.getByText("Contact email")).toBeInTheDocument();
+      expect(screen.getByAltText("Location map preview")).toBeInTheDocument();
+      expect(screen.getByText("Official place selected from maps")).toBeInTheDocument();
     });
   });
 
-  // 29. Location form has Contact phone field
-  it("location form has Contact phone field", async () => {
+  // 28. Location form does not show email for new locations
+  it("location form hides email field for new locations", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
-      expect(screen.getByText("Contact phone")).toBeInTheDocument();
+      expect(screen.queryByText("Location email")).not.toBeInTheDocument();
+    });
+  });
+
+  // 29. Location form has Location phone field
+  it("location form has Location phone field", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add location"));
+    await waitFor(() => {
+      expect(screen.getByText("Location phone (optional)")).toBeInTheDocument();
     });
   });
 
@@ -441,8 +526,8 @@ describe("Admin page", () => {
     const allLocationButtons = screen.getAllByRole("button");
     // The first icon-only button after "Add location" text buttons
     // We look for buttons immediately following the "All locations" section header
-    const allLocationsHeading = screen.getByText("All locations");
-    const section = allLocationsHeading.closest("section");
+    const allLocationsHeading = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"));
+    const section = allLocationsHeading?.closest("section");
     if (section) {
       const sectionButtons = Array.from(section.querySelectorAll("button"));
       // Buttons with no text content are icon-only (Pencil or Trash)
@@ -467,8 +552,8 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
-    const allLocationsHeading = screen.getByText("All locations");
-    const section = allLocationsHeading.closest("section");
+    const allLocationsHeading = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"));
+    const section = allLocationsHeading?.closest("section");
     if (section) {
       const sectionButtons = Array.from(section.querySelectorAll("button"));
       const iconOnlyButtons = sectionButtons.filter(btn => !btn.textContent?.trim());
@@ -504,7 +589,7 @@ describe("Admin page", () => {
     await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
-      expect(screen.getByText("Full name")).toBeInTheDocument();
+      expect(screen.getAllByText("Full name").length).toBeGreaterThan(0);
     });
   });
 
@@ -515,8 +600,29 @@ describe("Admin page", () => {
     await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
-      expect(screen.getByText("Email")).toBeInTheDocument();
+      expect(screen.getAllByText("Email").length).toBeGreaterThan(0);
     });
+  });
+
+  // 35b. Team member form has PIN field for kiosk/admin access
+  it("team member form has Kiosk PIN field", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add"));
+    await waitFor(() => {
+      expect(screen.getByText("Kiosk PIN")).toBeInTheDocument();
+    });
+  });
+
+  // 35c. Owner edit form shows Admin PIN field
+  it("owner team member edit form has Admin PIN field", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => expect(screen.getByText("Sarah Owner")).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText("Edit Sarah Owner"));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Edit team member" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Generate")).toBeInTheDocument());
   });
 
   // 36. Billing card is visible in Account tab
@@ -567,32 +673,33 @@ describe("Admin page", () => {
     }
   });
 
-  // 40. Role management section shows default roles
-  it("Account tab shows Role management section with default roles", async () => {
+  // 40. Department management section shows default departments
+  it("Account tab shows Department management section with default departments", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByText("Role management")).toBeInTheDocument();
+      expect(screen.getByText("Department management")).toBeInTheDocument();
     });
   });
 
-  // 41. Default roles listed (e.g. Waiter)
-  it("Role management section shows 'Waiter' default role", async () => {
+  // 41. Default departments listed
+  it("Department management section shows default department names", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      // Multiple Waiter labels (role in staff card + role management)
-      const waiterEls = screen.getAllByText("Waiter");
-      expect(waiterEls.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Front of House")).toBeInTheDocument();
+      expect(screen.getByText("Back of House")).toBeInTheDocument();
+      expect(screen.getByText("Management")).toBeInTheDocument();
+      expect(screen.getByText("Cleaning Crew")).toBeInTheDocument();
     });
   });
 
-  // 42. Add custom role input exists
-  it("Account tab has 'Add custom role' input", async () => {
+  // 42. Add department input exists
+  it("Account tab has 'Add department' input", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Add custom role…")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Add department…")).toBeInTheDocument();
     });
   });
 
@@ -659,12 +766,12 @@ describe("Admin page", () => {
     });
   });
 
-  // 50. Checklist assignment placeholder in Account tab
-  it("Account tab shows Checklist assignment placeholder", async () => {
+  // 50. Checklist coverage summary in Account tab
+  it("Account tab shows Checklist coverage summary", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByText("Checklist assignment")).toBeInTheDocument();
+      expect(screen.getByText("Checklist coverage")).toBeInTheDocument();
     });
   });
 
@@ -672,13 +779,13 @@ describe("Admin page", () => {
 
   it("location detail shows formatted opening hours when trading_hours is structured JSON", async () => {
     const jsonHours = JSON.stringify({
-      mon: { open: true, start: "09:00", end: "18:00" },
-      tue: { open: true, start: "09:00", end: "18:00" },
-      wed: { open: true, start: "09:00", end: "18:00" },
-      thu: { open: true, start: "09:00", end: "18:00" },
-      fri: { open: true, start: "09:00", end: "18:00" },
-      sat: { open: true, start: "10:00", end: "16:00" },
-      sun: { open: false, start: "10:00", end: "18:00" },
+      mon: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
+      tue: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
+      wed: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
+      thu: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
+      fri: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
+      sat: { open: true, windows: [{ start: "10:00", end: "16:00" }] },
+      sun: { open: false, windows: [] },
     });
     // use mockReturnValue (not Once) so all re-renders get the JSON data
     mockUseLocations.mockReturnValue({
@@ -687,12 +794,9 @@ describe("Admin page", () => {
     });
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      // When trading_hours is JSON, the detail view shows formatted text with day abbreviations
-      const allParas = document.querySelectorAll("p");
-      const formattedEl = Array.from(allParas).find(el =>
-        el.textContent?.includes("Mon:") && el.textContent?.includes("09:00")
-      );
-      expect(formattedEl).toBeTruthy();
+      const locationDetails = screen.getByText("Location details").closest(".card-surface");
+      expect(locationDetails?.textContent).toContain("Mon:");
+      expect(locationDetails?.textContent).toContain("09:00");
     });
     // Restore default mock for subsequent tests
     mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
@@ -703,7 +807,7 @@ describe("Admin page", () => {
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
     // click the pencil/edit button on the first location
-    const allLocationsSection = screen.getByText("All locations").closest("section");
+    const allLocationsSection = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"))?.closest("section");
     if (allLocationsSection) {
       const pencilBtns = Array.from(allLocationsSection.querySelectorAll("button")).filter(btn => !btn.textContent?.trim());
       if (pencilBtns.length > 0) {
@@ -715,6 +819,34 @@ describe("Admin page", () => {
         });
       }
     }
+  });
+
+  it("location form supports split-day hours and copying them to later days", async () => {
+    renderWithProviders(<Admin />);
+    fireEvent.click(screen.getByText("Account"));
+    await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add location"));
+
+    await waitFor(() => expect(screen.getByText("Opening hours")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Mon start time window 1"), { target: { value: "09:00" } });
+    fireEvent.change(screen.getByLabelText("Mon end time window 1"), { target: { value: "14:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add split hours for Mon" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Mon start time window 2")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Mon start time window 2"), { target: { value: "17:00" } });
+    fireEvent.change(screen.getByLabelText("Mon end time window 2"), { target: { value: "22:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Copy Mon to later days" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Tue start time window 1")).toHaveValue("09:00");
+      expect(screen.getByLabelText("Tue end time window 1")).toHaveValue("14:00");
+      expect(screen.getByLabelText("Tue start time window 2")).toHaveValue("17:00");
+      expect(screen.getByLabelText("Tue end time window 2")).toHaveValue("22:00");
+    });
   });
 
   it("My Location tab shows assigned checklist names for current location", async () => {
@@ -756,11 +888,11 @@ describe("Admin page", () => {
     }
   });
 
-  it("Account tab shows checklist assignment with checklist titles", async () => {
+  it("Account tab shows checklist coverage with checklist titles", async () => {
     renderWithProviders(<Admin />);
     fireEvent.click(screen.getByText("Account"));
     await waitFor(() => {
-      expect(screen.getByText("Checklist assignment")).toBeInTheDocument();
+      expect(screen.getByText("Checklist coverage")).toBeInTheDocument();
       expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);
     });
   });

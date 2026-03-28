@@ -1,0 +1,27 @@
+{
+  "color": {
+    "ink": "#050608",
+    "graphite": "#10131a",
+    "slate": "#687086",
+    "mist": "#dce4f3",
+    "cloud": "#f5f7ff",
+    "white": "#ffffff",
+    "violet": "#b05dff",
+    "iris": "#7a68ff",
+    "electric": "#4aa8ff"
+  },
+  "gradient": {
+    "orbit": "linear-gradient(135deg, #b05dff 0%, #7a68ff 48%, #4aa8ff 100%)",
+    "surface": "radial-gradient(circle at 20% 20%, rgba(176, 93, 255, 0.28), transparent 38%), radial-gradient(circle at 80% 10%, rgba(74, 168, 255, 0.22), transparent 34%), linear-gradient(180deg, #0b0d12 0%, #050608 100%)"
+  },
+  "font": {
+    "display": "\"Space Grotesk\", \"Avenir Next\", \"Segoe UI\", sans-serif",
+    "body": "\"Manrope\", \"Avenir Next\", \"Segoe UI\", sans-serif"
+  },
+  "radius": {
+    "sm": "12px",
+    "md": "18px",
+    "lg": "28px"
+  }
+}
+

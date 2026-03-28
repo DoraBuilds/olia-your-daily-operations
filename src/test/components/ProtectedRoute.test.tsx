@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, render } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { renderWithProviders } from "../test-utils";
 
@@ -47,15 +48,17 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Protected content")).toBeInTheDocument();
   });
 
-  it("navigates to /kiosk when no user and not loading", () => {
+  it("navigates to /login when no user and not loading", () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false });
-    renderWithProviders(
-      <ProtectedRoute>
-        <p>Protected content</p>
-      </ProtectedRoute>,
-      { initialEntries: ["/dashboard"] }
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/dashboard" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+          <Route path="/login" element={<p>Login screen</p>} />
+        </Routes>
+      </MemoryRouter>
     );
-    // Should not show protected content — Navigate replaces it
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Login screen")).toBeInTheDocument();
   });
 });

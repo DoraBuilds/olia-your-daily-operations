@@ -66,14 +66,14 @@ describe("Signup page", () => {
     expect(screen.getByText("Create your account")).toBeInTheDocument();
   });
 
-  it("shows business name input", () => {
+  it("shows brand name input", () => {
     render(<Signup />, { wrapper });
     expect(screen.getByPlaceholderText(/Crown Restaurant/i)).toBeInTheDocument();
   });
 
-  it("shows helper text for business name field", () => {
+  it("shows helper text for brand name field", () => {
     render(<Signup />, { wrapper });
-    expect(screen.getByText(/name of your restaurant brand or business/i)).toBeInTheDocument();
+    expect(screen.getByText(/name of your brand or restaurant/i)).toBeInTheDocument();
   });
 
   it("shows first name input", () => {
@@ -264,9 +264,9 @@ describe("Signup page", () => {
 
   // ── Navigation links ────────────────────────────────────────────────────────
 
-  it("has a 'Sign in' link pointing to /kiosk", () => {
+  it("has a 'Sign in' link pointing to /login", () => {
     render(<Signup />, { wrapper });
     const link = screen.getByRole("link", { name: /Sign in/i });
-    expect(link).toHaveAttribute("href", "/kiosk");
+    expect(link).toHaveAttribute("href", "/login");
   });
 });

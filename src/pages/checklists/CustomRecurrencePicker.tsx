@@ -12,8 +12,8 @@ export function CustomRecurrencePicker({ value, onChange, onClose }: {
   const UNITS: CustomRecurrence["unit"][] = ["day", "week", "month", "year"];
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in max-h-[85vh] overflow-y-auto sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]">
         <h2 className="font-display text-xl text-foreground">Custom recurrence</h2>
 
         {/* Repeat every */}

@@ -1,0 +1,32 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="socialGlowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(220 120) rotate(41) scale(260 260)">
+      <stop stop-color="#B05DFF" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#B05DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="socialGlowRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1020 100) rotate(137) scale(240 240)">
+      <stop stop-color="#4AA8FF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#4AA8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="socialStroke" x1="688" y1="478" x2="1116" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="40" fill="#050608"/>
+  <rect width="1200" height="630" rx="40" fill="url(#socialGlowLeft)"/>
+  <rect width="1200" height="630" rx="40" fill="url(#socialGlowRight)"/>
+  <text x="82" y="146" fill="#A9B5CA" font-size="26" font-family="Manrope, Avenir Next, Arial, sans-serif" font-weight="600" letter-spacing="3.4">OLIA</text>
+  <text x="82" y="290" fill="#FFFFFF" font-size="76" font-family="Space Grotesk, Avenir Next, Arial, sans-serif" font-weight="600" letter-spacing="-2">The signal behind</text>
+  <text x="82" y="374" fill="#FFFFFF" font-size="76" font-family="Space Grotesk, Avenir Next, Arial, sans-serif" font-weight="600" letter-spacing="-2">every shift.</text>
+  <text x="82" y="454" fill="#A9B5CA" font-size="30" font-family="Manrope, Avenir Next, Arial, sans-serif">Operational clarity for hospitality teams.</text>
+  <g stroke-linecap="round">
+    <circle cx="906" cy="308" r="188" stroke="url(#socialStroke)" stroke-width="6"/>
+    <circle cx="906" cy="308" r="154" stroke="url(#socialStroke)" stroke-width="6" opacity="0.96"/>
+    <circle cx="906" cy="308" r="120" stroke="url(#socialStroke)" stroke-width="6" opacity="0.92"/>
+    <circle cx="906" cy="308" r="86" stroke="url(#socialStroke)" stroke-width="6" opacity="0.88"/>
+    <circle cx="906" cy="308" r="52" stroke="#FFFFFF" stroke-width="6"/>
+  </g>
+</svg>
+

@@ -37,6 +37,12 @@ export function LandingNav() {
 
         {/* CTAs */}
         <div className="flex items-center gap-2">
+          <Link
+            to="/login"
+            className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg"
+          >
+            Sign in
+          </Link>
           <a
             href="mailto:hello@useolia.com?subject=Demo request"
             className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg"

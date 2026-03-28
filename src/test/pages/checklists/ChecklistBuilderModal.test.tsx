@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ChecklistBuilderModal } from "@/pages/checklists/ChecklistBuilderModal";
 
@@ -27,6 +27,17 @@ vi.mock("@/lib/supabase", () => ({
 vi.mock("@/hooks/useAlerts", () => ({
   useAlerts: () => ({ data: [] }),
   useCreateAlert: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/hooks/useLocations", () => ({
+  useLocations: () => ({
+    data: [
+      { id: "loc-1", name: "Main Branch", address: "14 Rue de la Paix, Lyon, France" },
+      { id: "loc-2", name: "Terrace", address: "14 Rue de la Paix (outdoor), Lyon, France" },
+      { id: "loc-3", name: "Riverside", address: "1 Riverside Road, Lyon, France" },
+    ],
+    isLoading: false,
+  }),
 }));
 
 describe("ChecklistBuilderModal - new checklist", () => {
@@ -160,14 +171,115 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.getByText("Checkbox")).toBeInTheDocument();
   });
 
+  it("lets ask-question triggers build a follow-up question with its own trigger", async () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
+    fireEvent.click(screen.getByRole("button", { name: /trigger/i }));
+    fireEvent.click(screen.getByText("Ask question"));
+
+    const followUpEditor = await screen.findByTestId("followup-question-editor");
+    fireEvent.change(within(followUpEditor).getByPlaceholderText("Follow-up question text"), {
+      target: { value: "Did you recheck the fridge?" },
+    });
+
+    fireEvent.click(within(followUpEditor).getByRole("button", { name: /Add logic/i }));
+    fireEvent.click(within(followUpEditor).getByRole("button", { name: /trigger/i }));
+    fireEvent.click(within(followUpEditor).getByText("Notify (email)"));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Nested Follow-up Checklist" },
+    });
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Nested Follow-up Checklist",
+      sections: expect.arrayContaining([
+        expect.objectContaining({
+          questions: expect.arrayContaining([
+            expect.objectContaining({
+              responseType: "checkbox",
+              config: expect.objectContaining({
+                logicRules: expect.any(Array),
+              }),
+            }),
+          ]),
+        }),
+      ]),
+    }));
+
+    const saved = onAdd.mock.calls[0][0] as any;
+    const trigger = saved.sections[0].questions[0].config.logicRules[0].triggers[0];
+    expect(trigger.type).toBe("ask_question");
+    expect(trigger.config.followUpQuestion.text).toBe("Did you recheck the fridge?");
+    expect(trigger.config.followUpQuestion.config.logicRules[0].triggers[0].type).toBe("notify");
+  });
+
   it("shows Start date picker", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Select start date")).toBeInTheDocument();
   });
 
-  it("shows Locations selector", () => {
+  it("shows a visibility window toggle after the start date", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("All locations")).toBeInTheDocument();
+    expect(screen.getByText("Visibility window")).toBeInTheDocument();
+    expect(screen.getByText(/Leave it off and the checklist stays visible all day/i)).toBeInTheDocument();
+  });
+
+  it("reveals visibility window inputs when enabled", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    fireEvent.click(screen.getByRole("button", { name: /Visibility window/i }));
+    expect(screen.getByDisplayValue("09:00")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("10:00")).toBeInTheDocument();
+  });
+
+  it("shows the locations picker before the title section", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    const locationsLabel = screen.getByText("Locations");
+    const titleLabel = screen.getByText(/Title/i);
+    expect(locationsLabel.compareDocumentPosition(titleLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(locationsLabel).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All locations" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toBeInTheDocument();
+  });
+
+  it("searches locations and saves a specific multi-location selection", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
+    fireEvent.change(screen.getByPlaceholderText("Search locations or address"), {
+      target: { value: "terrace" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Terrace/i }));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Location Checklist" },
+    });
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Location Checklist",
+      location_id: "loc-2",
+      location_ids: ["loc-2"],
+    }));
+  });
+
+  it("supports selecting all locations from the specific selector", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
+    fireEvent.click(screen.getByText("Select all"));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "All Locations Checklist" },
+    });
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "All Locations Checklist",
+      location_id: null,
+      location_ids: null,
+    }));
   });
 
   it("shows section name input after adding a second section", () => {
@@ -195,6 +307,129 @@ describe("ChecklistBuilderModal - new checklist", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const requiredLabels = screen.getAllByText("Required");
     expect(requiredLabels.length).toBeGreaterThan(0);
+  });
+
+  it("stores preset multiple-choice options on the question payload", async () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Good"));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "MC Checklist" },
+    });
+
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "MC Checklist",
+      sections: expect.arrayContaining([
+        expect.objectContaining({
+          questions: expect.arrayContaining([
+            expect.objectContaining({
+              responseType: "multiple_choice",
+              mcSetId: "mc1",
+              choices: ["Good", "Fair", "Poor", "N/A"],
+            }),
+          ]),
+        }),
+      ]),
+    }));
+  });
+
+  it("lets you edit multiple-choice options and switch to multi-select", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Good"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Multiple" }));
+
+    const optionInputs = screen.getAllByDisplayValue(/Good|Fair|Poor|N\/A/);
+    fireEvent.change(optionInputs[0], { target: { value: "Perhaps" } });
+
+    fireEvent.click(screen.getByText("Add option"));
+    expect(screen.getByDisplayValue("Perhaps")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Option 5")).toBeInTheDocument();
+  });
+
+  it("keeps number questions in single-value mode by default", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Number"));
+
+    expect(screen.getByText(/single numeric answer/i)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Min")).not.toBeInTheDocument();
+    expect(screen.queryByText("Celsius")).not.toBeInTheDocument();
+  });
+
+  it("shows range and unit controls when number question is switched to temperature mode", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Number"));
+    fireEvent.click(screen.getByRole("button", { name: "Temperature" }));
+
+    expect(screen.getByPlaceholderText("Min")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Max")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Celsius" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fahrenheit" })).toBeInTheDocument();
+  });
+
+  it("lets instruction questions link to Infohub content", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Instruction"));
+    fireEvent.click(screen.getByRole("button", { name: /Link Infohub content/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Search library or training/i), {
+      target: { value: "latte" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /How to make a latte/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Instruction Checklist" },
+    });
+
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Instruction Checklist",
+      sections: expect.arrayContaining([
+        expect.objectContaining({
+          questions: expect.arrayContaining([
+            expect.objectContaining({
+              responseType: "instruction",
+              config: expect.objectContaining({
+                instructionLinkId: "tr1",
+                instructionLinkTitle: "How to make a latte",
+                instructionLinkSection: "training",
+              }),
+            }),
+          ]),
+        }),
+      ]),
+    }));
+  });
+
+  it("stores the visibility window on save when enabled", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Visibility window/i }));
+    fireEvent.change(screen.getByDisplayValue("09:00"), { target: { value: "08:30" } });
+    fireEvent.change(screen.getByDisplayValue("10:00"), { target: { value: "10:15" } });
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Window Checklist" },
+    });
+
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Window Checklist",
+      visibility_from: "08:30",
+      visibility_until: "10:15",
+      due_time: null,
+    }));
   });
 });
 

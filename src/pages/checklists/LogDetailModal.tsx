@@ -26,7 +26,11 @@ function isAnswered(type: string, ans: any): boolean {
 }
 
 export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () => void }) {
-  const scoreColor = log.score >= 85 ? "text-status-ok" : log.score >= 65 ? "text-status-warn" : "text-status-error";
+  const scoreColor =
+    log.score == null ? "text-muted-foreground" :
+    log.score >= 85 ? "text-status-ok" :
+    log.score >= 65 ? "text-status-warn" :
+    "text-status-error";
 
   const handleExportPdf = async () => {
     // Format ISO timestamps to HH:MM for display in the PDF header.
@@ -45,15 +49,15 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-card w-full rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-border shrink-0">
-          <div>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8" onClick={onClose}>
+      <div className="bg-card w-full rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-3 px-5 pt-5 pb-4 border-b border-border shrink-0 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h2 className="font-display text-lg text-foreground">{log.checklist}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">{log.completedBy} · {log.date}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={cn("text-lg font-semibold", scoreColor)}>{log.score}%</span>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <span className={cn("text-lg font-semibold", scoreColor)}>{log.score == null ? "—" : `${log.score}%`}</span>
             <button onClick={handleExportPdf}
               className="flex items-center gap-1.5 text-xs font-medium text-sage px-3 py-1.5 rounded-full border border-sage/40 hover:bg-sage-light transition-colors">
               <FileText size={12} /> Export PDF

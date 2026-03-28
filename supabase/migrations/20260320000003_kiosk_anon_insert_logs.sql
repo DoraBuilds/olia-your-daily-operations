@@ -22,6 +22,8 @@
 -- obtained from the SECURITY DEFINER validate_staff_pin() RPC, so
 -- requiring it here is an adequate guard against spoofed inserts.
 
+DROP POLICY IF EXISTS "anon_kiosk_insert_logs" ON checklist_logs;
+
 CREATE POLICY "anon_kiosk_insert_logs"
   ON checklist_logs
   FOR INSERT

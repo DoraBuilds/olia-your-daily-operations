@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Setup data is sourced in priority order:
   //   1. localStorage "olia_pending_onboarding" — written by Signup.tsx on this device
   //   2. auth user metadata "business_name" — written during signUp(), cross-device safe
-  //   3. email prefix — last-resort fallback so setup always has a name to use
   const fetchTeamMember = async (userId: string, userMeta?: Record<string, string>) => {
     setSetupError(null);
 
@@ -83,16 +82,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ownerName = userMeta.full_name;
     }
 
-    // Priority 3: email prefix as absolute last resort
-    if (!businessName) {
-      businessName = userMeta?.email?.split("@")[0] ?? "My Business";
+    // If we still do not have a business name, fail closed instead of
+    // inventing a new org from fallback data. That is safer than silently
+    // attaching this account to an implicit organization.
+    if (!businessName?.trim()) {
+      setSetupError(
+        "Account setup could not be completed safely. Please sign up again " +
+        "or contact support so we can verify your organization details.",
+      );
+      setTeamMember(null);
+      setLoading(false);
+      return;
+    }
+
+    const safeOwnerName = ownerName?.trim();
+    if (!safeOwnerName) {
+      setSetupError(
+        "Account setup could not be completed safely. Please sign up again " +
+        "or contact support so we can verify your profile details.",
+      );
+      setTeamMember(null);
+      setLoading(false);
+      return;
     }
 
     // Step 3: Create org + team_member
     try {
       await supabase.rpc("setup_new_organization", {
-        p_business_name: businessName,
-        p_owner_name: ownerName ?? null,
+        p_business_name: businessName.trim(),
+        p_owner_name: safeOwnerName,
       });
 
       localStorage.removeItem("olia_pending_onboarding");

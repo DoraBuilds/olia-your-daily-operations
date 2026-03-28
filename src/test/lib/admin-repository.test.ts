@@ -10,6 +10,7 @@ import {
   initialTeamMembers,
   initialAuditLog,
   DEFAULT_PERMISSIONS,
+  DEFAULT_STAFF_DEPARTMENTS,
   DEFAULT_STAFF_ROLES,
 } from "@/lib/admin-repository";
 
@@ -177,9 +178,16 @@ describe("DEFAULT_PERMISSIONS", () => {
 });
 
 describe("DEFAULT_STAFF_ROLES", () => {
-  it("contains expected hospitality roles", () => {
-    expect(DEFAULT_STAFF_ROLES).toContain("Waiter");
-    expect(DEFAULT_STAFF_ROLES).toContain("Manager");
-    expect(DEFAULT_STAFF_ROLES).toContain("Kitchen");
+  it("contains the default department hierarchy and sub-roles", () => {
+    expect(DEFAULT_STAFF_DEPARTMENTS.map(d => d.name)).toEqual([
+      "Front of House",
+      "Back of House",
+      "Management",
+      "Cleaning Crew",
+    ]);
+    expect(DEFAULT_STAFF_ROLES).toContain("Front of House");
+    expect(DEFAULT_STAFF_ROLES).toContain("Front of House / Bartender");
+    expect(DEFAULT_STAFF_ROLES).toContain("Back of House / Chef");
+    expect(DEFAULT_STAFF_ROLES).toContain("Cleaning Crew / Cleaner");
   });
 });

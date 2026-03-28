@@ -1,20 +1,5 @@
 import { Check } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// KioskMock — Hero visual placeholder representing the Olia kiosk screen.
-//
-// TODO: Replace this component with a real product screenshot.
-// To capture the real screen:
-//   1. Run `bun run dev`
-//   2. Navigate to /kiosk in a browser window set to ~390px wide (iPhone size)
-//   3. Set up a location and open a checklist
-//   4. Screenshot the checklist view
-//   5. Place the image at: src/assets/kiosk-hero.png
-//   6. Replace this component with:
-//      <img src="/src/assets/kiosk-hero.png" alt="Olia kiosk checklist" className="..." />
-//      inside a device frame div
-// ─────────────────────────────────────────────────────────────────────────────
-
 const TASKS = [
   { label: "Coffee machine cleaned & ready",       done: true  },
   { label: "Fridge temp logged (target: 2–4 °C)", done: true  },

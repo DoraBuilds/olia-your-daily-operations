@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronUp, X, Check, Search, ArrowLeft, Tablet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -14,7 +15,8 @@ import {
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry, type AccountRole,
-  DEFAULT_PERMISSIONS, DEFAULT_STAFF_ROLES,
+  type StaffDepartment,
+  DEFAULT_PERMISSIONS, DEFAULT_STAFF_DEPARTMENTS, flattenStaffDepartments, getRoleDepartment,
   getInitials, daysAgo, daysAgoTooltip, staffDisplayName, formatTimestamp, generatePin,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,10 +44,14 @@ const PERM_LABELS: Record<keyof ManagerPermissions, string> = {
 };
 
 const ROLE_COLOR_MAP: Record<string, string> = {
+  "Front of House": "bg-sage-light text-sage-deep",
+  "Back of House": "bg-lavender-light text-lavender-deep",
+  Management: "status-warn",
+  "Cleaning Crew": "bg-muted text-muted-foreground",
   Waiter: "bg-sage-light text-sage-deep",
   Kitchen: "bg-lavender-light text-lavender-deep",
   Bartender: "status-warn",
-  Manager: "bg-lavender-light text-lavender-deep",
+  Manager: "status-warn",
   Host: "status-ok",
   Cleaner: "bg-muted text-muted-foreground",
 };
@@ -53,7 +59,8 @@ const ROLE_COLOR_MAP: Record<string, string> = {
 // ─── Opening hours helpers ────────────────────────────────────────────────────
 
 type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
-interface DayHours { open: boolean; start: string; end: string; }
+interface TimeWindow { start: string; end: string; }
+interface DayHours { open: boolean; windows: TimeWindow[]; }
 type WeeklyHours = Record<DayKey, DayHours>;
 
 const DAY_KEYS: DayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -61,28 +68,79 @@ const DAY_LABELS: Record<DayKey, string> = {
   mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
 };
 const DEFAULT_HOURS: WeeklyHours = {
-  mon: { open: true, start: "08:00", end: "22:00" },
-  tue: { open: true, start: "08:00", end: "22:00" },
-  wed: { open: true, start: "08:00", end: "22:00" },
-  thu: { open: true, start: "08:00", end: "22:00" },
-  fri: { open: true, start: "08:00", end: "22:00" },
-  sat: { open: true, start: "08:00", end: "22:00" },
-  sun: { open: false, start: "10:00", end: "18:00" },
+  mon: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  tue: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  wed: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  thu: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  fri: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  sat: { open: true, windows: [{ start: "08:00", end: "22:00" }] },
+  sun: { open: false, windows: [] },
 };
 
+function cloneDayHours(hours: DayHours): DayHours {
+  return {
+    open: hours.open,
+    windows: hours.windows.map(window => ({ ...window })),
+  };
+}
+
+function cloneWeeklyHours(hours: WeeklyHours): WeeklyHours {
+  return DAY_KEYS.reduce((acc, day) => {
+    acc[day] = cloneDayHours(hours[day]);
+    return acc;
+  }, {} as WeeklyHours);
+}
+
+function normalizeDayHours(rawDay: unknown, fallback: DayHours): DayHours {
+  if (!rawDay || typeof rawDay !== "object") return cloneDayHours(fallback);
+  const day = rawDay as Partial<DayHours> & { start?: string; end?: string };
+  if (Array.isArray(day.windows)) {
+    const windows = day.windows
+      .map(window => ({
+        start: typeof window?.start === "string" ? window.start : fallback.windows[0]?.start ?? "08:00",
+        end: typeof window?.end === "string" ? window.end : fallback.windows[0]?.end ?? "22:00",
+      }))
+      .filter(window => window.start && window.end)
+      .slice(0, 2);
+    return {
+      open: Boolean(day.open),
+      windows: day.open ? (windows.length > 0 ? windows : cloneDayHours(fallback).windows) : [],
+    };
+  }
+  if (typeof day.start === "string" || typeof day.end === "string") {
+    return {
+      open: Boolean(day.open ?? true),
+      windows: (day.open ?? true)
+        ? [{
+            start: day.start ?? fallback.windows[0]?.start ?? "08:00",
+            end: day.end ?? fallback.windows[0]?.end ?? "22:00",
+          }]
+        : [],
+    };
+  }
+  return cloneDayHours(fallback);
+}
+
 function parseHours(raw: string | null | undefined): WeeklyHours {
-  if (!raw) return { ...DEFAULT_HOURS };
+  if (!raw) return cloneWeeklyHours(DEFAULT_HOURS);
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && "mon" in parsed) return parsed as WeeklyHours;
+    if (parsed && typeof parsed === "object" && "mon" in parsed) {
+      return DAY_KEYS.reduce((acc, day) => {
+        acc[day] = normalizeDayHours((parsed as Record<string, unknown>)[day], DEFAULT_HOURS[day]);
+        return acc;
+      }, {} as WeeklyHours);
+    }
   } catch { /* not JSON — old plain-text value */ }
-  return { ...DEFAULT_HOURS };
+  return cloneWeeklyHours(DEFAULT_HOURS);
 }
 
 function formatHoursText(hours: WeeklyHours): string {
   const openDays = DAY_KEYS.filter(d => hours[d].open);
   if (!openDays.length) return "Closed all week";
-  return openDays.map(d => `${DAY_LABELS[d]}: ${hours[d].start}–${hours[d].end}`).join(" · ");
+  return openDays
+    .map(d => `${DAY_LABELS[d]}: ${hours[d].windows.map(window => `${window.start}–${window.end}`).join(" / ")}`)
+    .join(" · ");
 }
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -90,10 +148,10 @@ function formatHoursText(hours: WeeklyHours): string {
 function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh] sm:shadow-2xl">
         {children}
       </div>
     </div>
@@ -139,6 +197,80 @@ function SaveButton({ disabled, label }: { disabled: boolean; label: string }) {
   );
 }
 
+function cloneDepartments(departments: StaffDepartment[]): StaffDepartment[] {
+  return departments.map(department => ({
+    name: department.name,
+    subRoles: [...department.subRoles],
+  }));
+}
+
+function roleUsesDepartment(role: string, departmentName: string): boolean {
+  return getRoleDepartment(role) === departmentName;
+}
+
+function roleLabel(departmentName: string, subRole?: string | null): string {
+  return subRole ? `${departmentName} / ${subRole}` : departmentName;
+}
+
+function DepartmentRolePicker({
+  departments,
+  value,
+  onChange,
+}: {
+  departments: StaffDepartment[];
+  value: string;
+  onChange: (role: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      {departments.map(department => {
+        const departmentSelected = value === department.name;
+        return (
+          <div key={department.name} className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => onChange(department.name)}
+              className={cn(
+                "w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors border",
+                departmentSelected
+                  ? "bg-sage text-primary-foreground border-sage"
+                  : "bg-card border-border text-foreground hover:border-sage/40",
+              )}
+            >
+              <span>{department.name}</span>
+              <span className="text-[10px] uppercase tracking-[0.18em] opacity-70">Department</span>
+            </button>
+            {department.subRoles.length > 0 && (
+              <div className="grid gap-2 pl-3 border-l border-border">
+                {department.subRoles.map(subRole => {
+                  const roleValue = roleLabel(department.name, subRole);
+                  const selected = value === roleValue;
+                  return (
+                    <button
+                      key={roleValue}
+                      type="button"
+                      onClick={() => onChange(roleValue)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors border",
+                        selected
+                          ? "bg-sage-light text-sage-deep border-sage"
+                          : "bg-card border-border text-muted-foreground hover:border-sage/40",
+                      )}
+                    >
+                      <span>{subRole}</span>
+                      <span className="text-[10px] uppercase tracking-[0.18em] opacity-70">Sub-role</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
 function ConfirmModal({
@@ -172,16 +304,16 @@ function ConfirmModal({
 // ─── StaffProfileModal ────────────────────────────────────────────────────────
 
 function StaffProfileModal({
-  profile, locations, roles, onClose, onSave,
+  profile, locations, departments, onClose, onSave,
 }: {
-  profile: StaffProfile | null; locations: Location[]; roles: string[];
+  profile: StaffProfile | null; locations: Location[]; departments: StaffDepartment[];
   onClose: () => void; onSave: (p: StaffProfile & { rawPin?: string }) => void;
 }) {
   const isEdit = !!profile;
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
   const [locationId, setLocationId] = useState(profile?.location_id ?? locations[0]?.id ?? "");
-  const [role, setRole] = useState(profile?.role ?? roles[0] ?? "");
+  const [role, setRole] = useState(profile?.role ?? departments[0]?.name ?? "");
   // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
   const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
 
@@ -244,21 +376,7 @@ function StaffProfileModal({
           />
         </FormField>
         <FormField label="Role">
-          <div className="flex gap-2 flex-wrap">
-            {roles.map(r => (
-              <button
-                type="button" key={r} onClick={() => setRole(r)}
-                className={cn(
-                  "py-2 px-3 text-xs rounded-lg border transition-colors",
-                  role === r
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          <DepartmentRolePicker departments={departments} value={role} onChange={setRole} />
         </FormField>
         <FormField label={isEdit ? "New PIN (optional)" : "Staff PIN"}>
           {isEdit ? (
@@ -295,13 +413,14 @@ function TeamMemberModal({
   member, locations, onClose, onSave,
 }: {
   member: TeamMember | null; locations: Location[];
-  onClose: () => void; onSave: (m: TeamMember) => void;
+  onClose: () => void; onSave: (m: TeamMember & { rawPin?: string }) => void;
 }) {
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
+  const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
 
   const toggleLocation = (id: string) => {
     setLocationIds(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
@@ -310,6 +429,7 @@ function TeamMemberModal({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (!member && !pin.trim()) return;
     onSave({
       id: member?.id ?? "",
       name: name.trim(),
@@ -318,6 +438,7 @@ function TeamMemberModal({
       location_ids: locationIds,
       initials: getInitials(name),
       permissions: role === "Owner" ? { ...DEFAULT_PERMISSIONS } : perms,
+      ...(pin ? { rawPin: pin } : {}),
     });
     onClose();
   };
@@ -357,6 +478,34 @@ function TeamMemberModal({
             ))}
           </div>
         </FormField>
+        <FormField label={role === "Owner" ? "Admin PIN" : "Kiosk PIN"}>
+          {member?.id ? (
+            <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+              Leave blank to keep the existing PIN. Enter a new 4-digit PIN to change it.
+            </p>
+          ) : (
+            <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
+              This PIN is used for kiosk/admin access. Generate one now so the account owner can log in from the kiosk.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder={member?.id ? "Enter new PIN to change" : "4-digit PIN"}
+              className={cn(inputCls, "flex-1 text-center font-mono text-lg tracking-widest")}
+              maxLength={4}
+            />
+            <button
+              type="button"
+              onClick={() => setPin(generatePin())}
+              className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors"
+            >
+              Generate
+            </button>
+          </div>
+        </FormField>
         <FormField label="Location(s)">
           <div className="flex gap-2 flex-wrap">
             {locations.map(loc => (
@@ -390,10 +539,10 @@ function TeamMemberModal({
         )}
         {!member && (
           <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
-            This creates a placeholder record. No invitation email is sent — full email invite is coming soon. The team member will not be able to log in until that feature is live.
+            This adds the staff profile and kiosk PIN now. Login invitations are not part of the live flow yet, so new team members cannot sign in to the admin app until email invites are built.
           </p>
         )}
-        <SaveButton disabled={!name.trim()} label={member ? "Save changes" : "Add team member"} />
+        <SaveButton disabled={!name.trim() || (!member && !pin.trim())} label={member ? "Save changes" : "Add team member"} />
       </form>
     </BottomSheet>
   );
@@ -424,6 +573,71 @@ function LocationModal({
     setLat(place.lat);
     setLng(place.lng);
     setPlaceId(place.placeId);
+  };
+
+  const setDayOpen = (day: DayKey, open: boolean) => {
+    setHours(prev => {
+      const nextDay = cloneDayHours(prev[day]);
+      nextDay.open = open;
+      if (open && nextDay.windows.length === 0) {
+        nextDay.windows = [{ start: "08:00", end: "22:00" }];
+      }
+      return { ...prev, [day]: nextDay };
+    });
+  };
+
+  const updateWindow = (day: DayKey, index: number, patch: Partial<TimeWindow>) => {
+    setHours(prev => {
+      const nextDay = cloneDayHours(prev[day]);
+      nextDay.windows = nextDay.windows.map((window, windowIdx) =>
+        windowIdx === index ? { ...window, ...patch } : window
+      );
+      return { ...prev, [day]: nextDay };
+    });
+  };
+
+  const addSplitWindow = (day: DayKey) => {
+    setHours(prev => {
+      const current = prev[day];
+      if (!current.open || current.windows.length >= 2) return prev;
+      const lastWindow = current.windows[current.windows.length - 1];
+      return {
+        ...prev,
+        [day]: {
+          ...current,
+          windows: [
+            ...current.windows,
+            { start: lastWindow?.end ?? "14:00", end: "22:00" },
+          ],
+        },
+      };
+    });
+  };
+
+  const removeSplitWindow = (day: DayKey, index: number) => {
+    setHours(prev => {
+      const current = prev[day];
+      if (current.windows.length <= 1) return prev;
+      return {
+        ...prev,
+        [day]: {
+          ...current,
+          windows: current.windows.filter((_, windowIdx) => windowIdx !== index),
+        },
+      };
+    });
+  };
+
+  const copyHoursToLaterDays = (day: DayKey) => {
+    setHours(prev => {
+      const sourceIndex = DAY_KEYS.indexOf(day);
+      const source = cloneDayHours(prev[day]);
+      const next = { ...prev };
+      for (const laterDay of DAY_KEYS.slice(sourceIndex + 1)) {
+        next[laterDay] = cloneDayHours(source);
+      }
+      return next;
+    });
   };
 
   const handleAddressChange = (val: string) => {
@@ -473,51 +687,99 @@ function LocationModal({
             placeholder="e.g. 14 Rue de la Paix, Lyon"
           />
           {lat !== null && lng !== null && (
-            <StaticMapPreview lat={lat} lng={lng} className="mt-2" />
+            <div className="mt-2 space-y-2">
+              <StaticMapPreview lat={lat} lng={lng} />
+              <div className="flex items-center gap-2 rounded-xl border border-sage/30 bg-sage-light px-3 py-2 text-xs text-sage-deep">
+                <MapPin size={13} className="shrink-0" />
+                <span>Official place selected from maps</span>
+              </div>
+            </div>
           )}
         </FormField>
         <FormField label="Opening hours">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {DAY_KEYS.map(day => (
-              <div key={day} className="flex items-center gap-2.5 py-0.5">
-                <Switch
-                  checked={hours[day].open}
-                  onCheckedChange={val => updateDay(day, { open: val })}
-                />
-                <span className="w-8 text-xs font-medium text-muted-foreground shrink-0">
-                  {DAY_LABELS[day]}
-                </span>
-                {hours[day].open ? (
-                  <>
-                    <input
-                      type="time"
-                      value={hours[day].start}
-                      onChange={e => updateDay(day, { start: e.target.value })}
-                      className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                    <span className="text-xs text-muted-foreground">–</span>
-                    <input
-                      type="time"
-                      value={hours[day].end}
-                      onChange={e => updateDay(day, { end: e.target.value })}
-                      className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Closed</span>
+              <div key={day} className="rounded-xl border border-border bg-muted/20 px-3 py-2 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <Switch
+                    checked={hours[day].open}
+                    onCheckedChange={val => setDayOpen(day, val)}
+                  />
+                  <span className="w-8 text-xs font-medium text-muted-foreground shrink-0">
+                    {DAY_LABELS[day]}
+                  </span>
+                  {hours[day].open ? (
+                    <button
+                      type="button"
+                      onClick={() => copyHoursToLaterDays(day)}
+                      aria-label={`Copy ${DAY_LABELS[day]} to later days`}
+                      className="ml-auto text-[10px] font-medium text-sage hover:text-sage-deep transition-colors"
+                    >
+                      Copy to later days
+                    </button>
+                  ) : (
+                    <span className="ml-auto text-xs text-muted-foreground">Closed</span>
+                  )}
+                </div>
+                {hours[day].open && (
+                  <div className="space-y-2 pl-10">
+                    {hours[day].windows.map((window, idx) => (
+                      <div key={`${day}-${idx}`} className="flex items-center gap-2">
+                        <span className="w-14 text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">
+                          Window {idx + 1}
+                        </span>
+                        <input
+                          type="time"
+                          value={window.start}
+                          onChange={e => updateWindow(day, idx, { start: e.target.value })}
+                          aria-label={`${DAY_LABELS[day]} start time window ${idx + 1}`}
+                          className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <span className="text-xs text-muted-foreground">–</span>
+                        <input
+                          type="time"
+                          value={window.end}
+                          onChange={e => updateWindow(day, idx, { end: e.target.value })}
+                          aria-label={`${DAY_LABELS[day]} end time window ${idx + 1}`}
+                          className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => removeSplitWindow(day, idx)}
+                            className="text-[10px] font-medium text-status-error hover:opacity-80 transition-opacity"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {hours[day].windows.length < 2 && (
+                      <button
+                        type="button"
+                        onClick={() => addSplitWindow(day)}
+                        aria-label={`Add split hours for ${DAY_LABELS[day]}`}
+                        className="text-[10px] font-medium text-sage hover:text-sage-deep transition-colors"
+                      >
+                        Add split hours
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
           </div>
         </FormField>
-        <FormField label="Contact email">
-          <input
-            type="email" value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="e.g. main@olia.app" className={inputCls}
-          />
-        </FormField>
-        <FormField label="Contact phone">
+        {location && (
+          <FormField label="Location email">
+            <input
+              type="email" value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="e.g. main@olia.app" className={inputCls}
+            />
+          </FormField>
+        )}
+        <FormField label="Location phone (optional)">
           <input
             type="tel" value={phone}
             onChange={e => setPhone(e.target.value)}
@@ -655,10 +917,7 @@ function MyLocationTab({
           {currentLocation.trading_hours && (() => {
             let display = currentLocation.trading_hours;
             try {
-              const parsed = JSON.parse(currentLocation.trading_hours) as WeeklyHours;
-              if (parsed && typeof parsed === "object" && "mon" in parsed) {
-                display = formatHoursText(parsed);
-              }
+              display = formatHoursText(parseHours(currentLocation.trading_hours));
             } catch { /* plain-text fallback */ }
             return (
               <div className="flex items-start gap-2">
@@ -887,10 +1146,13 @@ interface AccountTabProps {
   teamMembers: TeamMember[];
   checklists: ChecklistItem[];
   onSavePerms: (memberId: string, perms: ManagerPermissions) => void;
-  roles: string[];
-  setRoles: React.Dispatch<React.SetStateAction<string[]>>;
+  onSaveAccount: (member: Partial<TeamMember> & { id: string; rawPin?: string }) => Promise<unknown>;
+  departments: StaffDepartment[];
+  setDepartments: React.Dispatch<React.SetStateAction<StaffDepartment[]>>;
   auditLog: AuditLogEntry[];
   authMemberId: string | undefined;
+  authUserEmail: string | undefined;
+  authUserName: string | undefined;
   onAddLocation: () => void;
   onLocationLimitReached: () => void;
   onEditLocation: (loc: Location) => void;
@@ -902,7 +1164,7 @@ interface AccountTabProps {
 
 function AccountTab({
   locations, staffProfiles, teamMembers, checklists, onSavePerms,
-  roles, setRoles, auditLog, authMemberId,
+  onSaveAccount, departments, setDepartments, auditLog, authMemberId, authUserEmail, authUserName,
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation,
   onInviteMember, onEditMember, onDeleteMember,
 }: AccountTabProps) {
@@ -911,6 +1173,29 @@ function AccountTab({
   // Team member expand/collapse
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [pendingPerms, setPendingPerms] = useState<Record<string, ManagerPermissions>>({});
+  const currentTeamMember = teamMembers.find(member => member.id === authMemberId);
+  const currentAccount = currentTeamMember ?? (authMemberId ? {
+    id: authMemberId,
+    name: authUserName ?? "",
+    email: authUserEmail ?? "",
+    role: "Owner",
+    location_ids: [],
+    permissions: DEFAULT_PERMISSIONS,
+  } : null);
+  const assignedLocationIds = currentAccount?.location_ids ?? [];
+  const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
+  const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [pinSaving, setPinSaving] = useState(false);
+
+  useEffect(() => {
+    setProfileName(authUserName ?? currentAccount?.name ?? "");
+    setProfileEmail(authUserEmail ?? currentAccount?.email ?? "");
+  }, [authUserEmail, authUserName, currentAccount?.email, currentAccount?.name]);
 
   const toggleExpand = (id: string, member: TeamMember) => {
     if (expandedMemberId === id) {
@@ -929,27 +1214,139 @@ function AccountTab({
     }
   };
 
-  // Role management
-  const [renamingRole, setRenamingRole] = useState<{ index: number; value: string } | null>(null);
-  const [newRoleName, setNewRoleName] = useState("");
+  const saveProfile = async () => {
+    if (!currentAccount) return;
+    const trimmedName = profileName.trim();
+    const trimmedEmail = profileEmail.trim();
+    if (!trimmedName || !trimmedEmail) return;
 
-  const addRole = () => {
-    const trimmed = newRoleName.trim();
-    if (!trimmed || roles.includes(trimmed)) return;
-    setRoles(prev => [...prev, trimmed]);
-    setNewRoleName("");
+    setProfileSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: trimmedEmail === (authUserEmail ?? "").trim() ? undefined : trimmedEmail,
+        data: { full_name: trimmedName },
+      });
+      if (error) throw error;
+
+      await onSaveAccount({
+        id: currentAccount.id,
+        name: trimmedName,
+        email: trimmedEmail,
+        role: currentAccount.role,
+        location_ids: currentAccount.location_ids,
+        permissions: currentAccount.permissions,
+      });
+      toast.success("Account profile saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save account profile");
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
-  const renameRole = (index: number, newName: string) => {
+  const savePassword = async () => {
+    if (password.length < 8 || password !== confirmPassword) return;
+    setPasswordSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update password");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const savePin = async () => {
+    if (!currentAccount || pin.length !== 4) return;
+    setPinSaving(true);
+    try {
+      await onSaveAccount({
+        id: currentAccount.id,
+        name: currentAccount.name,
+        email: currentAccount.email,
+        role: currentAccount.role,
+        location_ids: currentAccount.location_ids,
+        permissions: currentAccount.permissions,
+        rawPin: pin,
+      });
+      setPin("");
+      toast.success("PIN updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update PIN");
+    } finally {
+      setPinSaving(false);
+    }
+  };
+
+  // Department management
+  const [renamingDepartment, setRenamingDepartment] = useState<{ index: number; value: string } | null>(null);
+  const [renamingSubRole, setRenamingSubRole] = useState<{ departmentIndex: number; subRoleIndex: number; value: string } | null>(null);
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [newSubRoleNames, setNewSubRoleNames] = useState<Record<number, string>>({});
+
+  const addDepartment = () => {
+    const trimmed = newDepartmentName.trim();
+    if (!trimmed || departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) return;
+    setDepartments(prev => [...prev, { name: trimmed, subRoles: [] }]);
+    setNewDepartmentName("");
+  };
+
+  const renameDepartment = (index: number, newName: string) => {
     const trimmed = newName.trim();
-    if (!trimmed || (roles.includes(trimmed) && roles[index] !== trimmed)) return;
-    setRoles(prev => prev.map((r, i) => (i === index ? trimmed : r)));
-    setRenamingRole(null);
+    if (!trimmed || departments.some((d, i) => i !== index && d.name.toLowerCase() === trimmed.toLowerCase())) return;
+    setDepartments(prev => prev.map((department, i) => (i === index ? { ...department, name: trimmed } : department)));
+    setRenamingDepartment(null);
   };
 
-  const deleteRole = (role: string) => {
-    if (staffProfiles.some(sp => sp.role === role)) return;
-    setRoles(prev => prev.filter(r => r !== role));
+  const deleteDepartment = (index: number) => {
+    const department = departments[index];
+    if (!department) return;
+    if (staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name))) return;
+    setDepartments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addSubRole = (departmentIndex: number) => {
+    const trimmed = (newSubRoleNames[departmentIndex] ?? "").trim();
+    if (!trimmed) return;
+    const department = departments[departmentIndex];
+    if (!department || department.subRoles.some(subRole => subRole.toLowerCase() === trimmed.toLowerCase())) return;
+    setDepartments(prev => prev.map((dept, i) => (
+      i === departmentIndex
+        ? { ...dept, subRoles: [...dept.subRoles, trimmed] }
+        : dept
+    )));
+    setNewSubRoleNames(prev => ({ ...prev, [departmentIndex]: "" }));
+  };
+
+  const renameSubRole = (departmentIndex: number, subRoleIndex: number, newName: string) => {
+    const trimmed = newName.trim();
+    const department = departments[departmentIndex];
+    if (!department) return;
+    if (!trimmed || department.subRoles.some((subRole, i) => i !== subRoleIndex && subRole.toLowerCase() === trimmed.toLowerCase())) return;
+    const previousSubRole = department.subRoles[subRoleIndex];
+    if (staffProfiles.some(sp => sp.role === roleLabel(department.name, previousSubRole))) return;
+    setDepartments(prev => prev.map((dept, i) => (
+      i === departmentIndex
+        ? { ...dept, subRoles: dept.subRoles.map((subRole, i2) => (i2 === subRoleIndex ? trimmed : subRole)) }
+        : dept
+    )));
+    setRenamingSubRole(null);
+  };
+
+  const deleteSubRole = (departmentIndex: number, subRoleIndex: number) => {
+    const department = departments[departmentIndex];
+    const subRole = department?.subRoles[subRoleIndex];
+    if (!department || !subRole) return;
+    if (staffProfiles.some(sp => sp.role === roleLabel(department.name, subRole))) return;
+    setDepartments(prev => prev.map((dept, i) => (
+      i === departmentIndex
+        ? { ...dept, subRoles: dept.subRoles.filter((_, i2) => i2 !== subRoleIndex) }
+        : dept
+    )));
   };
 
   // Plan limit check — checked here so the "Add" button can be disabled-adjacent.
@@ -968,6 +1365,151 @@ function AccountTab({
 
   return (
     <div className="space-y-4">
+      {/* My account */}
+      <section className="card-surface p-4 space-y-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="section-label">My account</p>
+            <p className="text-xs text-muted-foreground mt-1">Manage the admin profile, email, password, and kiosk PIN.</p>
+          </div>
+          <span className="text-[10px] px-2 py-1 rounded-full bg-sage-light text-sage-deep font-semibold uppercase tracking-wide">
+            Admin
+          </span>
+        </div>
+
+        <div className="grid gap-3">
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">Full name</span>
+            <input
+              type="text"
+              value={profileName}
+              onChange={e => setProfileName(e.target.value)}
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">Email</span>
+            <input
+              type="email"
+              value={profileEmail}
+              onChange={e => setProfileEmail(e.target.value)}
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={saveProfile}
+            disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
+            className={cn(
+              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+              profileSaving || !profileName.trim() || !profileEmail.trim()
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-sage text-primary-foreground hover:bg-sage-deep",
+            )}
+          >
+            {profileSaving ? "Saving profile…" : "Save profile"}
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned locations</p>
+            {assignedLocationIds.length ? (
+              <div className="flex flex-wrap gap-2">
+                {locations.filter(loc => assignedLocationIds.includes(loc.id)).map(loc => (
+                  <span key={loc.id} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
+                    {loc.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">All locations</p>
+            )}
+          </div>
+          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role and permissions</p>
+            <p className="text-sm font-medium text-foreground">{currentAccount?.role ?? "Owner"}</p>
+            {currentAccount?.role === "Owner" ? (
+              <p className="text-xs text-muted-foreground">Full access to all admin settings.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Permissions inherited from the current manager profile.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="card-surface p-4 space-y-4">
+        <div>
+          <p className="section-label">Security</p>
+          <p className="text-xs text-muted-foreground mt-1">Password for app sign-in. PIN for kiosk-side operational access.</p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">New password</span>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              minLength={8}
+              placeholder="At least 8 characters"
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">Confirm password</span>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              minLength={8}
+              placeholder="Repeat password"
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={savePassword}
+          disabled={passwordSaving || password.length < 8 || password !== confirmPassword}
+          className={cn(
+            "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+            passwordSaving || password.length < 8 || password !== confirmPassword
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-sage text-primary-foreground hover:bg-sage-deep",
+          )}
+        >
+          {passwordSaving ? "Updating password…" : "Change password"}
+        </button>
+
+        <div className="space-y-3">
+          <label className="space-y-1 block">
+            <span className="text-xs text-muted-foreground font-medium">Admin PIN</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="4-digit PIN"
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.4em]"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={savePin}
+            disabled={pinSaving || pin.length !== 4}
+            className={cn(
+              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+              pinSaving || pin.length !== 4
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-sage text-primary-foreground hover:bg-sage-deep",
+            )}
+          >
+            {pinSaving ? "Updating PIN…" : "Save PIN"}
+          </button>
+        </div>
+      </section>
 
       {/* All Locations */}
       <section>
@@ -1054,6 +1596,7 @@ function AccountTab({
                   </span>
                   <button
                     onClick={() => onEditMember(member)}
+                    aria-label={`Edit ${member.name}`}
                     className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                   >
                     <Pencil size={14} className="text-muted-foreground" />
@@ -1069,6 +1612,7 @@ function AccountTab({
                   {member.id !== authMemberId && (
                     <button
                       onClick={() => onDeleteMember(member)}
+                      aria-label={`Delete ${member.name}`}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                     >
                       <Trash2 size={14} className="text-status-error" />
@@ -1112,9 +1656,13 @@ function AccountTab({
         </div>
       </section>
 
-      {/* Checklist Assignment placeholder */}
       <div className="card-surface p-4">
-        <p className="section-label mb-3">Checklist assignment</p>
+        <div className="mb-3 space-y-1">
+          <p className="section-label">Checklist coverage</p>
+          <p className="text-xs text-muted-foreground">
+            Checklists currently inherit their location coverage from the builder. This view gives a quick read on what is already assigned to the current location.
+          </p>
+        </div>
         {checklists.length === 0 ? (
           <p className="text-sm text-muted-foreground">No checklists created yet.</p>
         ) : (
@@ -1124,7 +1672,7 @@ function AccountTab({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-foreground truncate">{c.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {locations.find(l => l.id === c.location_id)?.name ?? "All locations"}
+                    Assigned to {locations.find(l => l.id === c.location_id)?.name ?? "all locations"}
                   </p>
                 </div>
               </div>
@@ -1157,81 +1705,189 @@ function AccountTab({
         </div>
       </section>
 
-      {/* Role Management */}
+      {/* Department Management */}
       <section>
-        <p className="section-label mb-3">Role management</p>
-        <div className="card-surface divide-y divide-border">
-          {roles.map((role, index) => {
-            const isInUse = staffProfiles.some(sp => sp.role === role);
-            const isRenaming = renamingRole?.index === index;
+        <p className="section-label mb-3">Department management</p>
+        <div className="space-y-3">
+          {departments.map((department, departmentIndex) => {
+            const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
+            const isRenaming = renamingDepartment?.index === departmentIndex;
             return (
-              <div key={`${role}-${index}`} className="flex items-center gap-2 px-4 py-3">
-                {isRenaming ? (
-                  <>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={renamingRole.value}
-                      onChange={e => setRenamingRole({ index, value: e.target.value })}
-                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); renameRole(index, renamingRole.value); } }}
-                      className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                    <button
-                      onClick={() => renameRole(index, renamingRole.value)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Check size={14} className="text-sage" />
-                    </button>
-                    <button
-                      onClick={() => setRenamingRole(null)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <X size={14} className="text-muted-foreground" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex-1 text-sm text-foreground">{role}</p>
-                    <button
-                      onClick={() => setRenamingRole({ index, value: role })}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Pencil size={14} className="text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => deleteRole(role)}
-                      disabled={isInUse}
-                      title={isInUse ? "Role is in use" : "Delete role"}
-                      className={cn("p-1.5 rounded-lg transition-colors", isInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted")}
-                    >
-                      <Trash2 size={14} className="text-status-error" />
-                    </button>
-                  </>
-                )}
+              <div key={department.name} className="card-surface p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  {isRenaming ? (
+                    <>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={renamingDepartment.value}
+                        onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            renameDepartment(departmentIndex, renamingDepartment.value);
+                          }
+                        }}
+                        className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <button
+                        onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Check size={14} className="text-sage" />
+                      </button>
+                      <button
+                        onClick={() => setRenamingDepartment(null)}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <X size={14} className="text-muted-foreground" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{department.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {department.subRoles.length} sub-role{department.subRoles.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Pencil size={14} className="text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => deleteDepartment(departmentIndex)}
+                        disabled={departmentInUse}
+                        title={departmentInUse ? "Department is in use" : "Delete department"}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-colors",
+                          departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                        )}
+                      >
+                        <Trash2 size={14} className="text-status-error" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-2 pl-1">
+                  {department.subRoles.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No sub-roles yet.</p>
+                  ) : department.subRoles.map((subRole, subRoleIndex) => {
+                    const role = roleLabel(department.name, subRole);
+                    const isSubRoleInUse = staffProfiles.some(sp => sp.role === role);
+                    const isRenamingSubRole = renamingSubRole?.departmentIndex === departmentIndex && renamingSubRole.subRoleIndex === subRoleIndex;
+                    return (
+                      <div key={role} className="flex items-center gap-2 pl-3 border-l border-border">
+                        {isRenamingSubRole ? (
+                          <>
+                            <input
+                              autoFocus
+                              type="text"
+                              value={renamingSubRole.value}
+                              onChange={e => setRenamingSubRole({
+                                departmentIndex,
+                                subRoleIndex,
+                                value: e.target.value,
+                              })}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  renameSubRole(departmentIndex, subRoleIndex, renamingSubRole.value);
+                                }
+                              }}
+                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            <button
+                              onClick={() => renameSubRole(departmentIndex, subRoleIndex, renamingSubRole.value)}
+                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <Check size={14} className="text-sage" />
+                            </button>
+                            <button
+                              onClick={() => setRenamingSubRole(null)}
+                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <X size={14} className="text-muted-foreground" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="flex-1 text-sm text-foreground">{subRole}</p>
+                            <button
+                              onClick={() => setRenamingSubRole({ departmentIndex, subRoleIndex, value: subRole })}
+                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <Pencil size={14} className="text-muted-foreground" />
+                            </button>
+                            <button
+                              onClick={() => deleteSubRole(departmentIndex, subRoleIndex)}
+                              disabled={isSubRoleInUse}
+                              title={isSubRoleInUse ? "Sub-role is in use" : "Delete sub-role"}
+                              className={cn(
+                                "p-1.5 rounded-lg transition-colors",
+                                isSubRoleInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                              )}
+                            >
+                              <Trash2 size={14} className="text-status-error" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newSubRoleNames[departmentIndex] ?? ""}
+                    onChange={e => setNewSubRoleNames(prev => ({ ...prev, [departmentIndex]: e.target.value }))}
+                    placeholder="Add sub-role…"
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSubRole(departmentIndex); } }}
+                    className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <button
+                    onClick={() => addSubRole(departmentIndex)}
+                    disabled={!(newSubRoleNames[departmentIndex] ?? "").trim()}
+                    className={cn(
+                      "p-1.5 rounded-lg transition-colors",
+                      (newSubRoleNames[departmentIndex] ?? "").trim()
+                        ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                        : "bg-muted text-muted-foreground cursor-not-allowed",
+                    )}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
               </div>
             );
           })}
-          {/* Add custom role */}
-          <div className="flex items-center gap-2 px-4 py-3">
-            <input
-              type="text" value={newRoleName}
-              onChange={e => setNewRoleName(e.target.value)}
-              placeholder="Add custom role…"
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRole(); } }}
-              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-            <button
-              onClick={addRole}
-              disabled={!newRoleName.trim()}
-              className={cn(
-                "p-1.5 rounded-lg transition-colors",
-                newRoleName.trim()
-                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                  : "bg-muted text-muted-foreground cursor-not-allowed",
-              )}
-            >
-              <Plus size={14} />
-            </button>
+          <div className="card-surface p-4">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newDepartmentName}
+                onChange={e => setNewDepartmentName(e.target.value)}
+                placeholder="Add department…"
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDepartment(); } }}
+                className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                onClick={addDepartment}
+                disabled={!newDepartmentName.trim()}
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  newDepartmentName.trim()
+                    ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                    : "bg-muted text-muted-foreground cursor-not-allowed",
+                )}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -1280,7 +1936,7 @@ export default function Admin() {
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
   const userId = searchParams.get("userId");
-  const { teamMember: authMember, setupError, retrySetup } = useAuth();
+  const { user, teamMember: authMember, setupError, retrySetup } = useAuth();
   const { plan } = usePlan();
 
   // Data — from Supabase
@@ -1298,7 +1954,8 @@ export default function Admin() {
   const deleteMemberMut = useDeleteTeamMember();
 
   // Local state (not persisted to DB yet)
-  const [roles, setRoles] = useState<string[]>([...DEFAULT_STAFF_ROLES]);
+  const [departments, setDepartments] = useState<StaffDepartment[]>(cloneDepartments(DEFAULT_STAFF_DEPARTMENTS));
+  const staffRoleOptions = flattenStaffDepartments(departments);
   const auditLog: AuditLogEntry[] = [];
 
   // UI state
@@ -1449,7 +2106,7 @@ export default function Admin() {
     });
   };
 
-  const saveMember = (m: TeamMember) => {
+  const saveMember = (m: TeamMember & { rawPin?: string }) => {
     saveMemberMut.mutate(m);
   };
 
@@ -1556,7 +2213,7 @@ export default function Admin() {
             locations={locations}
             staffProfiles={staffProfiles}
             checklists={checklists}
-            roles={roles}
+            roles={staffRoleOptions}
             currentLocationId={currentLocationId}
             setCurrentLocationId={setCurrentLocationId}
             isOwner={isOwner}
@@ -1580,10 +2237,13 @@ export default function Admin() {
             teamMembers={teamMembers}
             checklists={checklists}
             onSavePerms={savePerms}
-            roles={roles}
-            setRoles={setRoles}
+            onSaveAccount={payload => saveMemberMut.mutateAsync(payload)}
+            departments={departments}
+            setDepartments={setDepartments}
             auditLog={auditLog}
             authMemberId={authMember?.id}
+            authUserEmail={user?.email}
+            authUserName={authMember?.name}
             onAddLocation={() => setLocationModal("new")}
             onLocationLimitReached={() => setShowLocationLimitModal(true)}
             onEditLocation={loc => setLocationModal(loc)}
@@ -1605,11 +2265,11 @@ export default function Admin() {
           or require scrolling to see. */}
       {showLocationLimitModal && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-foreground/20 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end bg-foreground/20 backdrop-blur-sm sm:items-center sm:justify-center sm:px-4 sm:py-8"
           onClick={() => setShowLocationLimitModal(false)}
         >
           <div
-            className="w-full bg-card rounded-t-2xl p-6 space-y-4 max-w-[480px] mx-auto"
+            className="w-full bg-card rounded-t-2xl p-6 space-y-4 max-w-[480px] mx-auto sm:max-w-xl sm:rounded-2xl sm:max-h-[90vh] sm:overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             {/* Icon */}
@@ -1703,7 +2363,7 @@ export default function Admin() {
         <StaffProfileModal
           profile={staffModal === "new" ? null : staffModal}
           locations={locations}
-          roles={roles}
+          departments={departments}
           onClose={() => setStaffModal(null)}
           onSave={sp => { saveStaff(sp); setStaffModal(null); }}
         />

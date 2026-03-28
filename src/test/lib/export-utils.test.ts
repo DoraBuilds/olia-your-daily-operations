@@ -23,13 +23,14 @@ function makeMockDoc() {
 // Module-level reference to the current mock doc — the vi.mock closure always reads this
 // eslint-disable-next-line prefer-const
 let _doc = makeMockDoc();
+const mockAutoTable = vi.fn();
 
 vi.mock("jspdf", () => ({
   jsPDF: vi.fn().mockImplementation(() => _doc),
 }));
 
 vi.mock("jspdf-autotable", () => ({
-  default: vi.fn(),
+  default: (...args: any[]) => mockAutoTable(...args),
 }));
 
 // URL mock refs
@@ -70,12 +71,34 @@ beforeEach(() => {
   mockCreateObjectURL.mockClear().mockReturnValue("blob:test-url");
   mockRevokeObjectURL.mockClear();
   mockClick.mockClear();
+  mockAutoTable.mockClear();
 });
 
 const sampleRows: ReportingRow[] = [
-  { checklist: "Opening Checklist", completedBy: "Sarah", date: "09 Mar 2026", score: 92 },
-  { checklist: "Closing Checklist", completedBy: "James", date: "09 Mar 2026", score: 72 },
-  { checklist: "Food Safety Log", completedBy: "Maria", date: "09 Mar 2026", score: 50 },
+  {
+    checklist: "Opening Checklist",
+    location: "Main Branch",
+    completedBy: "Sarah",
+    startedAt: "09 Mar 2026, 08:00",
+    finishedAt: "09 Mar 2026, 08:25",
+    score: 92,
+  },
+  {
+    checklist: "Closing Checklist",
+    location: "City Centre",
+    completedBy: "James",
+    startedAt: "09 Mar 2026, 22:00",
+    finishedAt: "09 Mar 2026, 22:18",
+    score: 72,
+  },
+  {
+    checklist: "Food Safety Log",
+    location: "Harbour",
+    completedBy: "Maria",
+    startedAt: "09 Mar 2026, 12:10",
+    finishedAt: "09 Mar 2026, 12:14",
+    score: 50,
+  },
 ];
 
 const sampleStats = { completed: 3, avg: 71, open: 2 };
@@ -120,6 +143,28 @@ describe("exportReportingPdf", () => {
     expect(_doc.save).toHaveBeenCalledTimes(1);
     const savedName = _doc.save.mock.calls[0][0] as string;
     expect(savedName).toContain("completion-logs");
+  });
+
+  it("includes checklist, location, person, start, end, and pass percentage columns", async () => {
+    await exportReportingPdf(sampleRows, "Today", sampleStats);
+    expect(mockAutoTable).toHaveBeenCalledTimes(1);
+    const options = mockAutoTable.mock.calls[0][1];
+    expect(options.head[0]).toEqual([
+      "Checklist",
+      "Location",
+      "Completed by",
+      "Start date/time",
+      "End date/time",
+      "Pass %",
+    ]);
+    expect(options.body[0]).toEqual([
+      "Opening Checklist",
+      "Main Branch",
+      "Sarah",
+      "09 Mar 2026, 08:00",
+      "09 Mar 2026, 08:25",
+      "92%",
+    ]);
   });
 
   it("calls doc.save with period label in filename", async () => {

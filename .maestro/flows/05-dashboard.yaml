@@ -1,46 +1,12 @@
 ---
 # Flow 05 — Dashboard
-# Requires authentication. Run this flow AFTER logging in manually,
-# or set OLIA_TEST_EMAIL / OLIA_TEST_PASSWORD environment variables.
-#
-# To run with credentials:
-#   OLIA_TEST_EMAIL=you@email.com OLIA_TEST_PASSWORD=yourpass bun run e2e:nav
-#
-# Without credentials the app redirects to /kiosk — all assertions are optional.
+# Requires authentication. Run this after logging in manually with a one-time code.
+# This flow does not try to automate inbox access.
 appId: com.olia.operations
 name: "Dashboard — Main Page"
 
 ---
 - launchApp
-
-- waitForAnimationToEnd
-
-# ── If on kiosk: try to log in as admin ───────────────────────────────────────
-- tapOn:
-    text: "Launch Kiosk"
-    optional: true
-- waitForAnimationToEnd
-
-- tapOn:
-    text: "Admin"
-    optional: true
-- waitForAnimationToEnd
-
-- tapOn:
-    text: "your@email.com"
-    optional: true
-- inputText: "${OLIA_TEST_EMAIL}"
-    optional: true
-
-- tapOn:
-    text: "Password"
-    optional: true
-- inputText: "${OLIA_TEST_PASSWORD}"
-    optional: true
-
-- tapOn:
-    text: "Sign in"
-    optional: true
 
 - waitForAnimationToEnd
 

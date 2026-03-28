@@ -8,18 +8,13 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
+import { restoreGitHubPagesRoute as restoreGitHubPagesRoutePath } from "@/lib/github-pages-routing";
 
 function restoreGitHubPagesRoute() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const fallbackRoute = searchParams.get("p");
-  if (!fallbackRoute) return;
-
-  const basePath = import.meta.env.BASE_URL.endsWith("/")
-    ? import.meta.env.BASE_URL.slice(0, -1)
-    : import.meta.env.BASE_URL;
-  const normalizedRoute = fallbackRoute.startsWith("/") ? fallbackRoute : `/${fallbackRoute}`;
-
-  window.history.replaceState(null, "", `${basePath}${normalizedRoute}`);
+  const targetRoute = restoreGitHubPagesRoutePath(window.location.search, import.meta.env.BASE_URL);
+  if (targetRoute) {
+    window.history.replaceState(null, "", targetRoute);
+  }
 }
 
 restoreGitHubPagesRoute();

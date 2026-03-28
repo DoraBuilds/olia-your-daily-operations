@@ -1,167 +1,47 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Layout } from "@/components/Layout";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
+import { useInfohubContent } from "@/hooks/useInfohubContent";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useLocations } from "@/hooks/useLocations";
+import { useTrainingProgress } from "@/hooks/useTrainingProgress";
 import {
   BookOpen, ChevronRight, ChevronLeft, Search, FileText, Tag, X,
   Plus, FolderOpen, Upload, File, Sparkles, GraduationCap,
-  Play, CheckCircle, Circle, Brain, ListChecks, HelpCircle,
+  Play, CheckCircle, Circle, Brain, ListChecks, HelpCircle, Loader2,
   Folder, GripVertical, MoreVertical, FolderInput, Pencil,
-  Archive, Download
+  Archive, Download, Shield, Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import {
+  DEFAULT_INFOHUB_ACCESS,
+  canAccessInfohubContent,
+  canManageInfohubAccess,
+  type InfohubAccessControl,
+  type InfohubPrincipal,
+} from "@/lib/infohub-access";
+import {
+  type InfohubLibraryDoc as DocItem,
+  type InfohubLibraryFolder as FolderItem,
+  type InfohubTrainingDoc as TrainingDoc,
+  type InfohubTrainingFolder as TrainingFolder,
+} from "@/lib/infohub-catalog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type SubTab = "library" | "training";
-
-interface DocItem {
+type AccessTarget = {
   id: string;
-  title: string;
-  summary: string;
-  content: string;
-  tags: string[];
-  lastUpdated: string;
-  folderId: string;
-}
-
-interface FolderItem {
-  id: string;
+  type: "folder" | "doc";
+  section: "library" | "training";
   name: string;
-  parentId: string | null;
-  sortOrder: number | null;
-}
-
-interface TrainingDoc {
-  id: string;
-  title: string;
-  duration: string;
-  completed: boolean;
-  folderId: string;
-  steps: string[];
-}
-
-interface TrainingFolder {
-  id: string;
-  name: string;
-  parentId: string | null;
-  sortOrder: number | null;
-}
-
-// ─── Mock Data (mutable state) ───────────────────────────────────────────────
-
-const initialLibraryFolders: FolderItem[] = [
-  { id: "f1", name: "Cleaning & Maintenance", parentId: null, sortOrder: null },
-  { id: "f2", name: "Food Safety", parentId: null, sortOrder: null },
-  { id: "f3", name: "Opening & Closing", parentId: null, sortOrder: null },
-  { id: "f4", name: "Service Standards", parentId: null, sortOrder: null },
-  { id: "f5", name: "Allergen Protocols", parentId: "f2", sortOrder: null },
-];
-
-const initialLibraryDocs: DocItem[] = [
-  {
-    id: "s1", title: "How to serve a customer", folderId: "f4",
-    summary: "Step-by-step guidance for delivering a consistent, professional customer experience.",
-    content: `Welcome every customer within 30 seconds of arrival with eye contact and a calm greeting.\n\nOffer to take their coat or direct them to their table promptly. Present the menu and allow time before taking the order.\n\nWhen taking the order, repeat it back clearly. Note any allergies and mark the ticket accordingly. Communicate allergy information directly to the kitchen.\n\nDuring service, check in once — not repeatedly. Refill water without being asked.\n\nAt the end, present the bill promptly when requested. Thank the customer by name if possible.`,
-    tags: ["Service", "Front of house", "Standards"], lastUpdated: "14 Feb 2026",
-  },
-  {
-    id: "s2", title: "Allergen handling procedure", folderId: "f2",
-    summary: "Mandatory procedure for handling and communicating allergen information.",
-    content: `All allergen queries must be treated as serious and escalated to a supervisor if uncertain.\n\nThe 14 major allergens must be known by all front-of-house staff. A laminated allergen menu must be available at all times.\n\nWhen a customer declares an allergy, mark their ticket clearly and notify the kitchen verbally. Use a clean preparation area and separate utensils.\n\nDo not guess. If in doubt, do not serve the dish.`,
-    tags: ["Allergens", "Food Safety", "Legal"], lastUpdated: "10 Jan 2026",
-  },
-  {
-    id: "s3", title: "Opening & closing procedure", folderId: "f3",
-    summary: "Daily routine for opening and securing the premises safely.",
-    content: `Opening: Arrive 30 minutes before service. Deactivate alarm. Check all areas are clean and set. Verify fridge temperatures and log them. Brief the team on the day's specials, bookings, and any known issues.\n\nClosing: Complete all closing checklists before staff leave. Ensure all food is stored correctly. Check all equipment is off. Lock all doors and activate the alarm. Confirm closure is logged.`,
-    tags: ["Opening", "Closing", "Operations"], lastUpdated: "02 Feb 2026",
-  },
-  {
-    id: "s4", title: "Cleaning schedule — weekly", folderId: "f1",
-    summary: "Weekly deep-cleaning tasks for kitchen and front-of-house areas.",
-    content: `Monday: Deep clean the fryer. Remove and soak all components. Scrub the interior with food-safe degreaser.\n\nWednesday: Clean extractor hoods and filters. Log completion.\n\nFriday: Sanitize all refrigeration unit interiors. Check seals. Log temperatures.\n\nSaturday: Mop all floors including storage. Clean behind equipment.\n\nAll cleaning must be logged in the Cleaning Schedule checklist.`,
-    tags: ["Cleaning", "Kitchen", "Weekly"], lastUpdated: "07 Feb 2026",
-  },
-];
-
-const initialTrainingFolders: TrainingFolder[] = [
-  { id: "tf1", name: "Onboarding", parentId: null, sortOrder: null },
-  { id: "tf2", name: "Troubleshooting", parentId: null, sortOrder: null },
-];
-
-const initialTrainingDocs: TrainingDoc[] = [
-  {
-    id: "tr1", title: "How to make a latte", folderId: "tf1", duration: "8 min", completed: false,
-    steps: [
-      "Grind 18–20g of espresso. Ensure a fine, consistent grind.",
-      "Tamp firmly and evenly. Apply approximately 30lbs of pressure.",
-      "Pull a 25–30 second shot into a pre-warmed cup.",
-      "Steam 180ml of full-fat milk to 65°C. The pitcher should be warm to the touch.",
-      "Swirl the milk to create a glossy, uniform texture.",
-      "Pour the milk in a slow, steady motion. Tilt the cup slightly and aim for the centre of the shot.",
-      "Finish with a simple latte art pattern. Present to the customer promptly.",
-    ],
-  },
-  {
-    id: "tr2", title: "Taking a table order", folderId: "tf1", duration: "5 min", completed: true,
-    steps: [
-      "Approach the table within 2 minutes of the guests being seated.",
-      "Greet the table calmly. Introduce today's specials if applicable.",
-      "Note any dietary requirements or allergies before taking the order.",
-      "Repeat the order back to the table clearly.",
-      "Input the order accurately into the POS system.",
-      "Communicate any allergen or special requirements to the kitchen verbally.",
-    ],
-  },
-  {
-    id: "tr3", title: "Cash handling procedure", folderId: "tf1", duration: "6 min", completed: false,
-    steps: [
-      "Count the float at the start of each shift. Record the amount.",
-      "Always announce the denomination of notes received.",
-      "Count change back to the customer.",
-      "Do not leave the till drawer open.",
-      "Report any discrepancy immediately to your manager.",
-    ],
-  },
-  {
-    id: "tr4", title: "Coffee machine not heating", folderId: "tf2", duration: "3 min", completed: false,
-    steps: [
-      "Check that the machine is powered on and the power cable is secure.",
-      "Verify the boiler switch is in the ON position.",
-      "Allow 15 minutes for the boiler to reach temperature.",
-      "If the issue persists, check for error codes on the display panel.",
-      "Do not attempt to open the boiler. Contact your maintenance supplier.",
-      "Log the fault in the Maintenance section of Olia.",
-    ],
-  },
-  {
-    id: "tr5", title: "Card terminal not connecting", folderId: "tf2", duration: "4 min", completed: false,
-    steps: [
-      "Check Wi-Fi or cellular signal on the terminal.",
-      "Restart the terminal using the power button.",
-      "If on Wi-Fi, verify the router is functioning normally.",
-      "Switch to a mobile data connection if available.",
-      "Contact your payment provider if the issue persists.",
-      "In the interim, inform customers that card payments are temporarily unavailable.",
-    ],
-  },
-  {
-    id: "tr6", title: "Handling a customer complaint", folderId: "tf2", duration: "5 min", completed: false,
-    steps: [
-      "Listen to the complaint fully without interrupting.",
-      "Acknowledge the issue calmly. Do not be defensive.",
-      "Apologise sincerely for the experience.",
-      "Offer a resolution — replacement, refund, or discount — within your authority.",
-      "If escalation is needed, involve a manager immediately.",
-      "Log the complaint in the incident register after resolution.",
-    ],
-  },
-];
+  access: InfohubAccessControl;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-let nextId = 100;
-const genId = () => `gen_${nextId++}`;
 
 function sortFolders<T extends { name: string; sortOrder: number | null }>(folders: T[]): T[] {
   return [...folders].sort((a, b) => {
@@ -488,17 +368,214 @@ function PlusMenu({ onClose, onAction }: {
   );
 }
 
+function ManageAccessModal({
+  target,
+  teamMembers,
+  locations,
+  roleOptions,
+  onClose,
+  onSave,
+}: {
+  target: AccessTarget;
+  teamMembers: { id: string; name: string; role: string }[];
+  locations: { id: string; name: string }[];
+  roleOptions: string[];
+  onClose: () => void;
+  onSave: (access: InfohubAccessControl) => void;
+}) {
+  const [accessScope, setAccessScope] = useState<InfohubAccessControl["accessScope"]>(target.access.accessScope);
+  const [allowedTeamMemberIds, setAllowedTeamMemberIds] = useState<string[]>(target.access.allowedTeamMemberIds);
+  const [allowedRoles, setAllowedRoles] = useState<string[]>(target.access.allowedRoles);
+  const [allowedLocationIds, setAllowedLocationIds] = useState<string[]>(target.access.allowedLocationIds);
+
+  const toggleValue = (value: string, selected: string[], setSelected: (next: string[]) => void) => {
+    setSelected(selected.includes(value)
+      ? selected.filter((item) => item !== value)
+      : [...selected, value]);
+  };
+
+  const save = () => {
+    onSave({
+      accessScope,
+      allowedTeamMemberIds,
+      allowedRoles,
+      allowedLocationIds,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-2xl bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-display text-base text-foreground">Manage access</h3>
+            <p className="text-xs text-muted-foreground mt-1">{target.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setAccessScope("org")}
+            className={cn(
+              "rounded-xl border px-4 py-3 text-left transition-colors",
+              accessScope === "org" ? "border-sage bg-sage-light" : "border-border hover:border-sage/40",
+            )}
+          >
+            <p className="text-sm font-medium text-foreground">Org-wide access</p>
+            <p className="text-xs text-muted-foreground mt-1">Everyone in the organization can see this item.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccessScope("restricted")}
+            className={cn(
+              "rounded-xl border px-4 py-3 text-left transition-colors",
+              accessScope === "restricted" ? "border-sage bg-sage-light" : "border-border hover:border-sage/40",
+            )}
+          >
+            <p className="text-sm font-medium text-foreground">Restricted access</p>
+            <p className="text-xs text-muted-foreground mt-1">Limit visibility by person, role, or location.</p>
+          </button>
+        </div>
+
+        {accessScope === "restricted" && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Team members</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {teamMembers.map((member) => (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => toggleValue(member.id, allowedTeamMemberIds, setAllowedTeamMemberIds)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-left transition-colors",
+                      allowedTeamMemberIds.includes(member.id) ? "border-sage bg-sage-light" : "border-border hover:border-sage/40",
+                    )}
+                  >
+                    <p className="text-sm font-medium text-foreground">{member.name}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{member.role}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Roles</p>
+              <div className="flex flex-wrap gap-2">
+                {roleOptions.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => toggleValue(role, allowedRoles, setAllowedRoles)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                      allowedRoles.includes(role) ? "border-sage bg-sage-light text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
+                    )}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Locations</p>
+              <div className="flex flex-wrap gap-2">
+                {locations.map((location) => (
+                  <button
+                    key={location.id}
+                    type="button"
+                    onClick={() => toggleValue(location.id, allowedLocationIds, setAllowedLocationIds)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                      allowedLocationIds.includes(location.id) ? "border-sage bg-sage-light text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
+                    )}
+                  >
+                    {location.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={save}
+          className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          Save access
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── AI Actions Sheet ─────────────────────────────────────────────────────────
 
-function AIActionsSheet({ docTitle, onClose }: { docTitle: string; onClose: () => void }) {
+function AIActionsSheet({
+  docTitle,
+  sourceLabel,
+  sourceText,
+  onClose,
+}: {
+  docTitle: string;
+  sourceLabel: string;
+  sourceText: string;
+  onClose: () => void;
+}) {
+  const [loadingAction, setLoadingAction] = useState<InfohubAiAction | null>(null);
+  const [result, setResult] = useState<InfohubAiResult | null>(null);
+  const [error, setError] = useState("");
+
+  const runAction = async (action: InfohubAiAction) => {
+    if (!sourceText.trim()) {
+      setError("This document does not have enough content for AI generation.");
+      return;
+    }
+
+    setLoadingAction(action);
+    setError("");
+    setResult(null);
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("infohub-ai-tools", {
+        body: {
+          action,
+          title: docTitle,
+          content: sourceText,
+        },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+      if (!isInfohubAiResult(data)) throw new Error("Unexpected AI response. Please try again.");
+
+      setResult(data);
+    } catch (err: any) {
+      setError(err?.message ?? "Something went wrong. Please try again.");
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-lavender-deep" />
             <h3 className="font-display text-base text-foreground">AI Tools</h3>
@@ -507,40 +584,131 @@ function AIActionsSheet({ docTitle, onClose }: { docTitle: string; onClose: () =
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">Generate study materials for "{docTitle}"</p>
-        <div className="px-4 py-2.5 bg-muted/50 rounded-xl mb-2">
-          <p className="text-xs text-muted-foreground">AI tools are coming soon to Olia.</p>
+        <div className="px-4 py-3 bg-muted/50 rounded-xl">
+          <p className="text-xs text-muted-foreground">Generate study materials for "{docTitle}" from {sourceLabel} content.</p>
         </div>
-        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
-          <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center">
-            <Brain size={16} className="text-lavender-deep" />
+
+        <div className="space-y-2">
+          <button
+            onClick={() => runAction("summary")}
+            disabled={!!loadingAction}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left border border-border hover:border-lavender/40 hover:bg-muted/30 transition-colors disabled:opacity-60 disabled:cursor-wait"
+          >
+            <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center">
+              {loadingAction === "summary" ? <Loader2 size={16} className="text-lavender-deep animate-spin" /> : <Brain size={16} className="text-lavender-deep" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Generate summary</p>
+              <p className="text-xs text-muted-foreground">AI-powered key points from this content</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => runAction("flashcards")}
+            disabled={!!loadingAction}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left border border-border hover:border-sage/40 hover:bg-muted/30 transition-colors disabled:opacity-60 disabled:cursor-wait"
+          >
+            <div className="w-9 h-9 rounded-xl bg-sage-light flex items-center justify-center">
+              {loadingAction === "flashcards" ? <Loader2 size={16} className="text-sage-deep animate-spin" /> : <ListChecks size={16} className="text-sage-deep" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Create flashcards</p>
+              <p className="text-xs text-muted-foreground">Turn content into review flashcards</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => runAction("quiz")}
+            disabled={!!loadingAction}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left border border-border hover:border-sage/40 hover:bg-muted/30 transition-colors disabled:opacity-60 disabled:cursor-wait"
+          >
+            <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+              {loadingAction === "quiz" ? <Loader2 size={16} className="text-muted-foreground animate-spin" /> : <HelpCircle size={16} className="text-muted-foreground" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Generate quiz</p>
+              <p className="text-xs text-muted-foreground">Test understanding with auto-generated questions</p>
+            </div>
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-status-error/20 bg-status-error/10 px-4 py-3">
+            <p className="text-xs text-status-error">{error}</p>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Generate summary</p>
-            <p className="text-xs text-muted-foreground">AI-powered key points from this document</p>
+        )}
+
+        {result && result.type === "summary" && (
+          <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Summary</p>
+              <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
+            </div>
+            <ul className="space-y-2">
+              {result.bullets.map((bullet, idx) => (
+                <li key={idx} className="text-sm text-foreground flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-lavender-deep shrink-0" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="rounded-xl bg-lavender-light px-4 py-3">
+              <p className="text-[10px] uppercase tracking-wide text-lavender-deep/70">Takeaway</p>
+              <p className="text-sm text-lavender-deep mt-1">{result.takeaway}</p>
+            </div>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
-        </button>
-        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
-          <div className="w-9 h-9 rounded-xl bg-sage-light flex items-center justify-center">
-            <ListChecks size={16} className="text-sage-deep" />
+        )}
+
+        {result && result.type === "flashcards" && (
+          <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Flashcards</p>
+              <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
+            </div>
+            <div className="space-y-2">
+              {result.cards.map((card, idx) => (
+                <div key={idx} className="rounded-xl border border-border p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Front</p>
+                  <p className="text-sm text-foreground mt-1">{card.front}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-3">Back</p>
+                  <p className="text-sm text-foreground mt-1">{card.back}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Create flashcards</p>
-            <p className="text-xs text-muted-foreground">Turn content into review flashcards</p>
+        )}
+
+        {result && result.type === "quiz" && (
+          <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Quiz</p>
+              <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
+            </div>
+            <div className="space-y-3">
+              {result.questions.map((question, idx) => (
+                <div key={idx} className="rounded-xl border border-border p-3">
+                  <p className="text-sm font-medium text-foreground">{question.question}</p>
+                  <div className="mt-2 space-y-1">
+                    {question.options.map((option, optionIdx) => (
+                      <div
+                        key={optionIdx}
+                        className={cn(
+                          "text-xs rounded-lg border px-3 py-2",
+                          optionIdx === question.answerIndex
+                            ? "border-sage bg-sage-light text-sage-deep"
+                            : "border-border bg-muted/30 text-muted-foreground",
+                        )}
+                      >
+                        {option}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{question.explanation}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
-        </button>
-        <button disabled className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-50 cursor-not-allowed text-left">
-          <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
-            <HelpCircle size={16} className="text-muted-foreground" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Generate quiz</p>
-            <p className="text-xs text-muted-foreground">Test understanding with auto-generated questions</p>
-          </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium shrink-0">Soon</span>
-        </button>
+        )}
       </div>
     </div>
   );
@@ -575,7 +743,7 @@ function LibraryDocDetail({ doc, folders, onBack, onSave }: {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
           <button onClick={isEditing ? () => setIsEditing(false) : onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -590,6 +758,7 @@ function LibraryDocDetail({ doc, folders, onBack, onSave }: {
           {!isEditing && (
             <button
               onClick={() => setAiSheet(true)}
+              aria-label="Open AI tools"
               className="p-2 rounded-full hover:bg-lavender-light transition-colors"
             >
               <Sparkles size={18} className="text-lavender-deep" />
@@ -607,7 +776,7 @@ function LibraryDocDetail({ doc, folders, onBack, onSave }: {
           </button>
         </div>
       </header>
-      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-5">
+      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-5 sm:px-6 lg:px-8">
         {isEditing ? (
           <>
             <div className="space-y-2">
@@ -673,7 +842,14 @@ function LibraryDocDetail({ doc, folders, onBack, onSave }: {
           </>
         )}
       </main>
-      {aiSheet && <AIActionsSheet docTitle={doc.title} onClose={() => setAiSheet(false)} />}
+      {aiSheet && (
+        <AIActionsSheet
+          docTitle={doc.title}
+          sourceLabel="library document"
+          sourceText={`${doc.title}\n\n${doc.summary}\n\n${doc.content}`}
+          onClose={() => setAiSheet(false)}
+        />
+      )}
     </div>
   );
 }
@@ -685,6 +861,8 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
   onBack: () => void;
   onToggleComplete: (completed: boolean) => void;
 }) {
+  const onToggleCompleteRef = useRef(onToggleComplete);
+  const lastReportedCompletion = useRef<boolean | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     doc.completed ? new Set(doc.steps.map((_, i) => i)) : new Set()
   );
@@ -692,8 +870,19 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
   const allDone = completedSteps.size === doc.steps.length;
 
   useEffect(() => {
-    onToggleComplete(allDone);
-  }, [allDone, onToggleComplete]);
+    onToggleCompleteRef.current = onToggleComplete;
+  }, [onToggleComplete]);
+
+  useEffect(() => {
+    setCompletedSteps(doc.completed ? new Set(doc.steps.map((_, i) => i)) : new Set());
+    lastReportedCompletion.current = doc.completed;
+  }, [doc.completed, doc.id, doc.steps]);
+
+  useEffect(() => {
+    if (lastReportedCompletion.current === allDone) return;
+    lastReportedCompletion.current = allDone;
+    onToggleCompleteRef.current(allDone);
+  }, [allDone]);
 
   const toggle = (i: number) => {
     setCompletedSteps(prev => {
@@ -704,7 +893,7 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -716,13 +905,14 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
           </div>
           <button
             onClick={() => setAiSheet(true)}
+            aria-label="Open AI tools"
             className="p-2 rounded-full hover:bg-lavender-light transition-colors"
           >
             <Sparkles size={18} className="text-lavender-deep" />
           </button>
         </div>
       </header>
-      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-3">
+      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-3 sm:px-6 lg:px-8">
         {doc.steps.map((step, i) => {
           const done = completedSteps.has(i);
           return (
@@ -759,7 +949,14 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
           </div>
         )}
       </main>
-      {aiSheet && <AIActionsSheet docTitle={doc.title} onClose={() => setAiSheet(false)} />}
+      {aiSheet && (
+        <AIActionsSheet
+          docTitle={doc.title}
+          sourceLabel="training module"
+          sourceText={`${doc.title}\n\n${doc.steps.join("\n\n")}`}
+          onClose={() => setAiSheet(false)}
+        />
+      )}
     </div>
   );
 }
@@ -784,7 +981,7 @@ function SearchOverlay({ libraryDocs, trainingDocs, onClose, onSelectLibDoc, onS
   ) : [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col max-w-lg mx-auto">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       <header className="border-b border-border px-4 py-3 flex items-center gap-3">
         <Search size={16} className="text-muted-foreground shrink-0" />
         <input
@@ -895,6 +1092,21 @@ function useDragReorder<T extends { id: string }>(items: T[], onReorder: (reorde
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
 export default function Infohub() {
+  const { teamMember } = useAuth();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const { data: locations = [] } = useLocations();
+  const {
+    data: infohubData,
+    createFolder,
+    createDocument,
+    updateFolder,
+    updateDocument,
+    deleteFolder,
+    archiveDocument,
+    restoreDocument,
+    reorderFolders,
+  } = useInfohubContent();
+  const { data: trainingProgress = [], saveProgress } = useTrainingProgress();
   const [subTab, setSubTab] = useState<SubTab>("library");
   const [showSearch, setShowSearch] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -902,11 +1114,10 @@ export default function Infohub() {
   const [showCreateDoc, setShowCreateDoc] = useState(false);
 
   // Data state
-  const [libFolders, setLibFolders] = useState<FolderItem[]>(initialLibraryFolders);
-  const [libDocs, setLibDocs] = useState<DocItem[]>(initialLibraryDocs);
-  const [trainFolders, setTrainFolders] = useState<TrainingFolder[]>(initialTrainingFolders);
-  const [trainDocs, setTrainDocs] = useState<TrainingDoc[]>(initialTrainingDocs);
-  const [archivedLibDocs, setArchivedLibDocs] = useState<DocItem[]>([]);
+  const libFolders = infohubData.libraryFolders;
+  const libDocs = infohubData.libraryDocs;
+  const archivedLibDocs = infohubData.archivedLibraryDocs;
+  const trainFolders = infohubData.trainingFolders;
   const [showArchived, setShowArchived] = useState(false);
 
   // Navigation state
@@ -920,128 +1131,172 @@ export default function Infohub() {
   const [aiSheetDocTitle, setAiSheetDocTitle] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<{ type: "folder" | "doc"; id: string; section: "library" | "training" } | null>(null);
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string; section: "library" | "training" } | null>(null);
+  const [accessTarget, setAccessTarget] = useState<AccessTarget | null>(null);
+
+  const currentPrincipal: InfohubPrincipal = {
+    teamMemberId: teamMember?.id ?? null,
+    role: teamMember?.role ?? null,
+    locationIds: teamMember?.location_ids ?? [],
+    permissions: teamMember?.permissions ?? null,
+    isOwner: teamMember?.role === "Owner",
+  };
+  const canManageAccess = canManageInfohubAccess(currentPrincipal);
+  const roleOptions = useMemo(
+    () => Array.from(new Set(teamMembers.map(member => member.role).filter(Boolean))).sort(),
+    [teamMembers],
+  );
+  const trainCompletionMap = useMemo(
+    () => new Map(trainingProgress.map((row) => [row.module_id, row])),
+    [trainingProgress],
+  );
+  const trainDocs = useMemo(
+    () => infohubData.trainingDocs.map((doc) => ({
+      ...doc,
+      completed: trainCompletionMap.get(doc.id)?.is_completed ?? false,
+    })),
+    [infohubData.trainingDocs, trainCompletionMap],
+  );
 
   // Sorted folder lists
   const visibleLibFolders = useMemo(() =>
     sortFolders(libFolders.filter(f => f.parentId === currentLibFolder)),
     [libFolders, currentLibFolder]
   );
+  const accessibleLibFolders = useMemo(() =>
+    visibleLibFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
+    [visibleLibFolders, currentPrincipal]
+  );
   const docsInCurrentFolder = useMemo(() =>
-    currentLibFolder ? libDocs.filter(d => d.folderId === currentLibFolder).sort((a, b) => a.title.localeCompare(b.title)) : [],
+    currentLibFolder
+      ? libDocs
+        .filter(d => d.folderId === currentLibFolder)
+        .sort((a, b) => a.title.localeCompare(b.title))
+      : [],
     [libDocs, currentLibFolder]
+  );
+  const accessibleDocsInCurrentFolder = useMemo(() =>
+    docsInCurrentFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
+    [docsInCurrentFolder, currentPrincipal]
   );
   const visibleTrainFolders = useMemo(() =>
     sortFolders(trainFolders.filter(f => f.parentId === currentTrainFolder)),
     [trainFolders, currentTrainFolder]
   );
+  const accessibleTrainFolders = useMemo(() =>
+    visibleTrainFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
+    [visibleTrainFolders, currentPrincipal]
+  );
   const docsInCurrentTrainFolder = useMemo(() =>
-    currentTrainFolder ? trainDocs.filter(d => d.folderId === currentTrainFolder) : [],
+    currentTrainFolder
+      ? trainDocs.filter(d => d.folderId === currentTrainFolder)
+      : [],
     [trainDocs, currentTrainFolder]
+  );
+  const accessibleDocsInCurrentTrainFolder = useMemo(() =>
+    docsInCurrentTrainFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
+    [docsInCurrentTrainFolder, currentPrincipal]
+  );
+  const visibleLibDocs = useMemo(() =>
+    libDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
+    [libDocs, currentPrincipal]
+  );
+  const visibleTrainDocs = useMemo(() =>
+    trainDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
+    [trainDocs, currentPrincipal]
   );
 
   // Drag reorder
   const libDrag = useDragReorder(visibleLibFolders, (reordered) => {
-    const withOrder = reordered.map((f, i) => ({ ...f, sortOrder: i }));
-    setLibFolders(prev => [...prev.filter(f => f.parentId !== currentLibFolder), ...withOrder]);
+    reorderFolders.mutate({ section: "library", orderedIds: reordered.map((folder) => folder.id) });
   });
   const trainDrag = useDragReorder(visibleTrainFolders, (reordered) => {
-    const withOrder = reordered.map((f, i) => ({ ...f, sortOrder: i }));
-    setTrainFolders(prev => [...prev.filter(f => f.parentId !== currentTrainFolder), ...withOrder]);
+    reorderFolders.mutate({ section: "training", orderedIds: reordered.map((folder) => folder.id) });
   });
 
   // CRUD handlers
   const handleCreateLibFolder = (name: string, parentId: string | null) => {
-    setLibFolders(prev => [...prev, { id: genId(), name, parentId, sortOrder: null }]);
+    createFolder.mutate({ section: "library", name, parentId });
   };
   const handleCreateTrainFolder = (name: string, parentId: string | null) => {
-    setTrainFolders(prev => [...prev, { id: genId(), name, parentId, sortOrder: null }]);
+    createFolder.mutate({ section: "training", name, parentId });
   };
   const handleCreateLibDoc = (title: string, folderId: string, tags: string[] = []) => {
-    setLibDocs(prev => [...prev, {
-      id: genId(), title, folderId,
-      summary: "New document — tap to edit.",
-      content: "",
-      tags,
-      lastUpdated: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-    }]);
+    createDocument.mutate({ section: "library", title, folderId, tags });
   };
   const handleRenameFolder = (id: string, newName: string, section: "library" | "training") => {
-    if (section === "library") {
-      setLibFolders(prev => prev.map(f => f.id === id ? { ...f, name: newName } : f));
-    } else {
-      setTrainFolders(prev => prev.map(f => f.id === id ? { ...f, name: newName } : f));
-    }
+    updateFolder.mutate({ id, name: newName });
   };
   const handleMoveFolder = (id: string, targetParentId: string | null, section: "library" | "training") => {
-    if (section === "library") {
-      setLibFolders(prev => prev.map(f => f.id === id ? { ...f, parentId: targetParentId, sortOrder: null } : f));
-    } else {
-      setTrainFolders(prev => prev.map(f => f.id === id ? { ...f, parentId: targetParentId, sortOrder: null } : f));
-    }
+    updateFolder.mutate({ id, parentId: targetParentId, sortOrder: null });
   };
   const handleMoveDoc = (id: string, targetFolderId: string | null, section: "library" | "training") => {
-    if (section === "library" && targetFolderId) {
-      setLibDocs(prev => prev.map(d => d.id === id ? { ...d, folderId: targetFolderId } : d));
+    if (targetFolderId) {
+      updateDocument.mutate({ id, section, folderId: targetFolderId });
     }
   };
   const handleArchiveFolder = (id: string, section: "library" | "training") => {
-    if (section === "library") {
-      setLibFolders(prev => prev.filter(f => f.id !== id));
-      setLibDocs(prev => prev.filter(d => d.folderId !== id));
-    } else {
-      setTrainFolders(prev => prev.filter(f => f.id !== id));
-    }
+    deleteFolder.mutate(id);
   };
   const handleArchiveDoc = (id: string, section: "library" | "training") => {
-    if (section === "library") {
-      const doc = libDocs.find(d => d.id === id);
-      if (doc) {
-        setArchivedLibDocs(prev => [...prev, doc]);
-        setLibDocs(prev => prev.filter(d => d.id !== id));
-      }
-    }
+    archiveDocument.mutate(id);
   };
   const handleRestoreDoc = (id: string) => {
-    const doc = archivedLibDocs.find(d => d.id === id);
-    if (doc) {
-      setLibDocs(prev => [...prev, doc]);
-      setArchivedLibDocs(prev => prev.filter(d => d.id !== id));
+    restoreDocument.mutate(id);
+  };
+  const handleSaveAccess = (target: AccessTarget, access: InfohubAccessControl) => {
+    if (target.type === "folder") {
+      updateFolder.mutate({ id: target.id, access });
+      return;
     }
+
+    updateDocument.mutate({ id: target.id, section: target.section, access });
   };
 
   const allLibFolderOptions = useMemo(() => libFolders.map(f => ({ id: f.id, name: f.name })), [libFolders]);
   const allTrainFolderOptions = useMemo(() => trainFolders.map(f => ({ id: f.id, name: f.name })), [trainFolders]);
 
+  const activeSelectedDoc = selectedDoc
+    ? libDocs.find((doc) => doc.id === selectedDoc.id) ?? selectedDoc
+    : null;
+  const activeSelectedTrainingDoc = selectedTrainingDoc
+    ? trainDocs.find((doc) => doc.id === selectedTrainingDoc.id) ?? selectedTrainingDoc
+    : null;
+
   // Detail views
-  if (selectedDoc) return (
+  if (activeSelectedDoc) return (
     <LibraryDocDetail
-      doc={selectedDoc}
+      doc={activeSelectedDoc}
       folders={libFolders}
       onBack={() => setSelectedDoc(null)}
       onSave={(updated) => {
-        setLibDocs(prev => prev.map(d => d.id === updated.id ? updated : d));
+        updateDocument.mutate({
+          id: updated.id,
+          section: "library",
+          title: updated.title,
+          summary: updated.summary,
+          body: updated.content,
+          tags: updated.tags,
+        });
         setSelectedDoc(updated);
       }}
     />
   );
-  if (selectedTrainingDoc) return (
+  if (activeSelectedTrainingDoc) return (
     <TrainingDocDetail
-      doc={selectedTrainingDoc}
+      doc={activeSelectedTrainingDoc}
       onBack={() => setSelectedTrainingDoc(null)}
       onToggleComplete={(completed) => {
-        setTrainDocs(prev => {
-          const currentDoc = prev.find(d => d.id === selectedTrainingDoc.id);
-          if (!currentDoc || currentDoc.completed === completed) {
-            return prev;
-          }
-
-          return prev.map(d => d.id === selectedTrainingDoc.id ? { ...d, completed } : d);
+        const totalSteps = activeSelectedTrainingDoc.steps.length;
+        saveProgress.mutate({
+          moduleId: activeSelectedTrainingDoc.id,
+          completedStepIndices: completed ? activeSelectedTrainingDoc.steps.map((_, index) => index) : [],
+          totalSteps,
         });
       }}
     />
   );
   if (showSearch) return (
-    <SearchOverlay libraryDocs={libDocs} trainingDocs={trainDocs} onClose={() => setShowSearch(false)}
+    <SearchOverlay libraryDocs={visibleLibDocs} trainingDocs={visibleTrainDocs} onClose={() => setShowSearch(false)}
       onSelectLibDoc={d => { setShowSearch(false); setSelectedDoc(d); }}
       onSelectTrainingDoc={d => { setShowSearch(false); setSelectedTrainingDoc(d); }}
     />
@@ -1050,46 +1305,66 @@ export default function Infohub() {
   const subtitle = subTab === "library" ? "Documents & SOPs" : "Staff training modules";
 
   // Folder menu actions
-  const folderActions = (folder: { id: string; name: string }, section: "library" | "training") => [
-    { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "folder", id: folder.id, section }) },
-    { label: "Rename folder", icon: <Pencil size={16} className="text-muted-foreground" />, onClick: () => setRenameTarget({ id: folder.id, name: folder.name, section }) },
-    { label: "Archive folder", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveFolder(folder.id, section) },
-  ];
+  const folderActions = (folder: { id: string; name: string; access: InfohubAccessControl }, section: "library" | "training") => {
+    const actions = [
+      { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "folder", id: folder.id, section }) },
+      { label: "Rename folder", icon: <Pencil size={16} className="text-muted-foreground" />, onClick: () => setRenameTarget({ id: folder.id, name: folder.name, section }) },
+    ];
+    if (canManageAccess) {
+      actions.push({
+        label: "Manage access",
+        icon: <Shield size={16} className="text-muted-foreground" />,
+        onClick: () => setAccessTarget({ id: folder.id, type: "folder", section, name: folder.name, access: folder.access }),
+      });
+    }
+    actions.push({ label: "Archive folder", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveFolder(folder.id, section) });
+    return actions;
+  };
 
-  const docActions = (doc: DocItem | TrainingDoc, section: "library" | "training") => [
-    { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
-    {
-      label: "Download file",
-      icon: <Download size={16} className="text-muted-foreground" />,
-      onClick: () => {
-        let text: string;
-        if (section === "library") {
-          const libraryDoc = doc as DocItem;
-          text = `${libraryDoc.title}\n${"=".repeat(libraryDoc.title.length)}\n\n${libraryDoc.summary}\n\n${libraryDoc.content}`;
-        } else {
-          const trainingDoc = doc as TrainingDoc;
-          text = `${trainingDoc.title}\n${"=".repeat(trainingDoc.title.length)}\n\n${trainingDoc.steps.map((step, i) => `Step ${i + 1}: ${step}`).join("\n\n")}`;
-        }
-        const blob = new Blob([text], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${doc.title.replace(/[^a-z0-9]/gi, "_")}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
+  const docActions = (doc: DocItem | TrainingDoc, section: "library" | "training") => {
+    const actions = [
+      { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
+      {
+        label: "Download file",
+        icon: <Download size={16} className="text-muted-foreground" />,
+        onClick: () => {
+          let text: string;
+          if (section === "library") {
+            const libraryDoc = doc as DocItem;
+            text = `${libraryDoc.title}\n${"=".repeat(libraryDoc.title.length)}\n\n${libraryDoc.summary}\n\n${libraryDoc.content}`;
+          } else {
+            const trainingDoc = doc as TrainingDoc;
+            text = `${trainingDoc.title}\n${"=".repeat(trainingDoc.title.length)}\n\n${trainingDoc.steps.map((step, i) => `Step ${i + 1}: ${step}`).join("\n\n")}`;
+          }
+          const blob = new Blob([text], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${doc.title.replace(/[^a-z0-9]/gi, "_")}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
       },
-    },
-    { label: "Archive file", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) },
-  ];
+    ];
+    if (canManageAccess) {
+      actions.push({
+        label: "Manage access",
+        icon: <Shield size={16} className="text-muted-foreground" />,
+        onClick: () => setAccessTarget({ id: doc.id, type: "doc", section, name: doc.title, access: doc.access }),
+      });
+    }
+    actions.push({ label: "Archive file", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) });
+    return actions;
+  };
 
   return (
     <Layout title="Infohub" subtitle={subtitle}
       headerRight={
         <div className="flex items-center gap-1">
-          <button onClick={() => setShowSearch(true)} className="p-2 rounded-full hover:bg-muted transition-colors">
+          <button onClick={() => setShowSearch(true)} aria-label="Search documents" className="p-2 rounded-full hover:bg-muted transition-colors">
             <Search size={18} className="text-muted-foreground" />
           </button>
-          <button onClick={() => setShowPlusMenu(true)} className="p-2 rounded-full hover:bg-sage-light transition-colors">
+          <button onClick={() => setShowPlusMenu(true)} aria-label="Add content" className="p-2 rounded-full hover:bg-sage-light transition-colors">
             <Plus size={18} className="text-sage-deep" />
           </button>
         </div>
@@ -1119,11 +1394,11 @@ export default function Infohub() {
         <>
           <FolderBreadcrumb folders={libFolders} currentId={currentLibFolder} onNavigate={setCurrentLibFolder} />
 
-          {visibleLibFolders.length > 0 && (
+          {accessibleLibFolders.length > 0 && (
             <>
               <p className="section-label">Folders</p>
               <div className="card-surface divide-y divide-border">
-                {visibleLibFolders.map((folder, idx) => (
+                {accessibleLibFolders.map((folder, idx) => (
                   <div key={folder.id} className="relative"
                     draggable
                     onDragStart={() => libDrag.handleDragStart(idx)}
@@ -1142,7 +1417,15 @@ export default function Infohub() {
                         <Folder size={16} className="text-sage-deep" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{folder.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{folder.name}</p>
+                          {folder.access.accessScope === "restricted" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Lock size={10} />
+                              Restricted
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {countDocsInFolder(folder.id, libFolders, libDocs)} {countDocsInFolder(folder.id, libFolders, libDocs) === 1 ? "document" : "documents"}
                           {libFolders.filter(f => f.parentId === folder.id).length > 0 &&
@@ -1169,11 +1452,11 @@ export default function Infohub() {
           )}
 
           {/* Documents in current folder */}
-          {currentLibFolder && docsInCurrentFolder.length > 0 && (
+          {currentLibFolder && accessibleDocsInCurrentFolder.length > 0 && (
             <>
               <p className="section-label">Documents</p>
               <div className="card-surface divide-y divide-border">
-                {docsInCurrentFolder.map(doc => (
+                {accessibleDocsInCurrentFolder.map(doc => (
                   <div key={doc.id} className="relative">
                     <div
                       onClick={() => setSelectedDoc(doc)}
@@ -1183,12 +1466,21 @@ export default function Infohub() {
                         <FileText size={16} className="text-sage-deep" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                          {doc.access.accessScope === "restricted" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Lock size={10} />
+                              Restricted
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{doc.lastUpdated}</p>
                         <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">{doc.summary}</p>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setAiSheetDocTitle(doc.title); }}
+                        aria-label={`Open AI tools for ${doc.title}`}
                         className="p-1.5 rounded-full hover:bg-lavender-light transition-colors shrink-0"
                       >
                         <Sparkles size={14} className="text-lavender-deep" />
@@ -1212,7 +1504,7 @@ export default function Infohub() {
           )}
 
           {/* Empty state */}
-          {visibleLibFolders.length === 0 && docsInCurrentFolder.length === 0 && (
+          {accessibleLibFolders.length === 0 && accessibleDocsInCurrentFolder.length === 0 && (
             <button onClick={() => setShowPlusMenu(true)}
               className="card-surface p-8 text-center w-full hover:bg-muted/30 transition-colors cursor-pointer">
               <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center mx-auto mb-2">
@@ -1261,11 +1553,11 @@ export default function Infohub() {
 
           <FolderBreadcrumb folders={trainFolders} currentId={currentTrainFolder} onNavigate={setCurrentTrainFolder} />
 
-          {visibleTrainFolders.length > 0 && (
+          {accessibleTrainFolders.length > 0 && (
             <>
               <p className="section-label">Folders</p>
               <div className="card-surface divide-y divide-border">
-                {visibleTrainFolders.map((folder, idx) => (
+                {accessibleTrainFolders.map((folder, idx) => (
                   <div key={folder.id} className="relative"
                     draggable
                     onDragStart={() => trainDrag.handleDragStart(idx)}
@@ -1284,7 +1576,15 @@ export default function Infohub() {
                         <Folder size={16} className="text-lavender-deep" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{folder.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{folder.name}</p>
+                          {folder.access.accessScope === "restricted" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Lock size={10} />
+                              Restricted
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{countTrainingDocsInFolder(folder.id, trainFolders, trainDocs)} modules</p>
                       </div>
                       <button
@@ -1305,11 +1605,11 @@ export default function Infohub() {
             </>
           )}
 
-          {currentTrainFolder && docsInCurrentTrainFolder.length > 0 && (
+          {currentTrainFolder && accessibleDocsInCurrentTrainFolder.length > 0 && (
             <>
               <p className="section-label">Modules</p>
               <div className="card-surface divide-y divide-border">
-                {docsInCurrentTrainFolder.map(doc => (
+                {accessibleDocsInCurrentTrainFolder.map(doc => (
                   <div key={doc.id} className="relative">
                     <div
                       onClick={() => setSelectedTrainingDoc(doc)}
@@ -1320,11 +1620,20 @@ export default function Infohub() {
                         {doc.completed ? <CheckCircle size={17} className="text-sage-deep" /> : <Play size={17} className="text-muted-foreground" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                          {doc.access.accessScope === "restricted" && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <Lock size={10} />
+                              Restricted
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{doc.duration} · {doc.steps.length} steps</p>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setAiSheetDocTitle(doc.title); }}
+                        aria-label={`Open AI tools for ${doc.title}`}
                         className="p-1.5 rounded-full hover:bg-lavender-light transition-colors shrink-0"
                       >
                         <Sparkles size={14} className="text-lavender-deep" />
@@ -1350,7 +1659,7 @@ export default function Infohub() {
             </>
           )}
 
-          {visibleTrainFolders.length === 0 && docsInCurrentTrainFolder.length === 0 && currentTrainFolder && (
+          {accessibleTrainFolders.length === 0 && accessibleDocsInCurrentTrainFolder.length === 0 && currentTrainFolder && (
             <button onClick={() => setShowPlusMenu(true)}
               className="card-surface p-8 text-center w-full hover:bg-muted/30 transition-colors cursor-pointer">
               <div className="w-10 h-10 rounded-full bg-lavender-light flex items-center justify-center mx-auto mb-2">
@@ -1387,11 +1696,37 @@ export default function Infohub() {
           folderId={subTab === "library" ? currentLibFolder : currentTrainFolder}
           folders={subTab === "library" ? allLibFolderOptions : allTrainFolderOptions}
           onClose={() => setShowCreateDoc(false)}
-          onSave={(title, folderId, tags) => handleCreateLibDoc(title, folderId, tags)}
+          onSave={(title, folderId, tags) => {
+            if (subTab === "library") {
+              handleCreateLibDoc(title, folderId, tags);
+              return;
+            }
+
+            createDocument.mutate({ section: "training", title, folderId });
+          }}
+        />
+      )}
+      {accessTarget && (
+        <ManageAccessModal
+          target={accessTarget}
+          teamMembers={teamMembers.map(member => ({ id: member.id, name: member.name, role: member.role }))}
+          locations={locations.map(location => ({ id: location.id, name: location.name }))}
+          roleOptions={roleOptions}
+          onClose={() => setAccessTarget(null)}
+          onSave={(access) => handleSaveAccess(accessTarget, access)}
         />
       )}
       {aiSheetDocTitle && (
-        <AIActionsSheet docTitle={aiSheetDocTitle} onClose={() => setAiSheetDocTitle(null)} />
+        <AIActionsSheet
+          docTitle={aiSheetDocTitle}
+          sourceLabel={subTab === "library" ? "library document" : "training module"}
+          sourceText={
+            subTab === "library"
+              ? (libDocs.find(doc => doc.title === aiSheetDocTitle)?.content ?? "")
+              : (trainDocs.find(doc => doc.title === aiSheetDocTitle)?.steps.join("\n\n") ?? "")
+          }
+          onClose={() => setAiSheetDocTitle(null)}
+        />
       )}
       {moveTarget && (
         <MoveToFolderSheet

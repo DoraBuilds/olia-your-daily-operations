@@ -1,0 +1,4 @@
+# Training AI is triggered from the authenticated app shell and guarded by
+# the server-side Anthropic key, so the function itself does not require JWT.
+[functions.generate-training]
+verify_jwt = false

@@ -13,8 +13,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { MapPin, Loader2 } from "lucide-react";
+import { runtimeConfig } from "@/lib/runtime-config";
 
-const API_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || "";
+const API_KEY = runtimeConfig.googleMapsApiKey;
 
 // ── Module-level singleton script loader ─────────────────────────────────────
 // Ensures the script tag is only inserted once across all component mounts.

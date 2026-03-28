@@ -23,9 +23,13 @@ export interface ChecklistItem {
   schedule?: string;
   folderId: string | null;
   location_id?: string | null;
+  location_ids?: string[] | null;
   createdAt: string;
   sections?: SectionDef[];
   time_of_day?: "morning" | "afternoon" | "evening" | "anytime";
+  due_time?: string | null;
+  visibility_from?: string | null;
+  visibility_until?: string | null;
 }
 
 export interface FolderItem {
@@ -50,6 +54,7 @@ export interface LogicTrigger {
   type: LogicTriggerType;
   config?: {
     questionText?: string;
+    followUpQuestion?: QuestionDef;
     notifyUser?: string;
     actionTitle?: string;
     actionAssignee?: string;
@@ -65,11 +70,17 @@ export interface LogicRule {
 }
 
 export interface QuestionConfig {
+  numberMode?: "single" | "temperature";
   numberMin?: number;
   numberMax?: number;
+  temperatureUnit?: "C" | "F";
   textMinLength?: number;
   textMaxLength?: number;
   instructionText?: string;
+  instructionImageUrl?: string;
+  instructionLinkId?: string;
+  instructionLinkTitle?: string;
+  instructionLinkSection?: "library" | "training";
   logicRules?: LogicRule[];
 }
 
@@ -79,6 +90,8 @@ export interface QuestionDef {
   responseType: ResponseType;
   required: boolean;
   choices?: string[];
+  choiceColors?: string[];
+  selectionMode?: "single" | "multiple";
   config?: QuestionConfig;
   mcSetId?: string;
 }
@@ -108,7 +121,7 @@ export interface Action {
 }
 
 export interface LogEntry {
-  id: string; checklist: string; completedBy: string; date: string; score: number;
+  id: string; checklist: string; completedBy: string; date: string; score: number | null;
   type: "opening" | "closing" | "cleaning" | "delivery" | "inspection";
   answers?: LogAnswer[];
   startedAt?: string;   // ISO timestamp — present for logs created after migration 20260326000001

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ElementType } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ClipboardList, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Layout } from "@/components/Layout";
@@ -14,7 +15,14 @@ const SUB_TABS: { key: SubTab; label: string; icon: ElementType }[] = [
 ];
 
 export default function Checklists() {
-  const [tab, setTab] = useState<SubTab>("checklists");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<SubTab>(searchParams.get("tab") === "reporting" ? "reporting" : "checklists");
+
+  useEffect(() => {
+    setTab(searchParams.get("tab") === "reporting" ? "reporting" : "checklists");
+  }, [searchParams]);
+
+  const initialLocationId = searchParams.get("location") || undefined;
 
   const subtitleMap: Record<SubTab, string> = {
     checklists: "Manage your checklists & inspections",
@@ -35,7 +43,7 @@ export default function Checklists() {
       </div>
 
       {tab === "checklists" && <ChecklistsTab />}
-      {tab === "reporting" && <ReportingTab />}
+      {tab === "reporting" && <ReportingTab initialLocationId={initialLocationId} />}
     </Layout>
   );
 }

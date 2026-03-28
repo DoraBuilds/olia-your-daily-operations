@@ -4,7 +4,7 @@ import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
-import { useAuth } from "@/contexts/AuthContext";
+import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 
 // ─── Module-level persistence (survives in-app navigation) ───────────────────
 let _kioskLocationId: string | null = null;
@@ -24,12 +24,18 @@ interface Question {
   type: QuestionType;
   required?: boolean;        // if true, must be answered before "Complete" is allowed
   options?: string[];
+  optionColors?: string[];
+  selectionMode?: "single" | "multiple";
   instructionText?: string;
   imageUrl?: string;         // for instruction-type image
+  linkedResourceId?: string;
+  linkedResourceTitle?: string;
+  linkedResourceSection?: "library" | "training";
   sectionName?: string;      // section this question belongs to (for dividers in runner)
   defaultValue?: string;     // pre-fill value (used for person type defaultPerson)
   min?: number;              // number questions: acceptable range minimum
   max?: number;              // number questions: acceptable range maximum
+  temperatureUnit?: "C" | "F";
 }
 
 interface KioskChecklist {
@@ -38,6 +44,8 @@ interface KioskChecklist {
   location_id: string | null;
   time_of_day: TimeOfDay;
   due_time: string | null;   // HH:MM — kiosk visibility based on this
+  visibility_from: string | null;
+  visibility_until: string | null;
   questions: Question[];
 }
 
@@ -75,14 +83,20 @@ function flattenSectionsToQuestions(sections: any[]): Question[] {
         type: resolvedType,
         required: q.required ?? false,
         options: resolvedOptions,
+        optionColors: q.choiceColors,
+        selectionMode: q.selectionMode ?? "single",
         instructionText: q.config?.instructionText,
         imageUrl: q.config?.instructionImageUrl,
+        linkedResourceId: q.config?.instructionLinkId,
+        linkedResourceTitle: q.config?.instructionLinkTitle,
+        linkedResourceSection: q.config?.instructionLinkSection,
         sectionName: section.name || "",
         // For person type: carry the builder's default so the runner can pre-fill it
         defaultValue: isPerson ? (q.config?.defaultPerson ?? "") : "",
         // Number range: set in builder as config.numberMin / config.numberMax
         min: q.config?.numberMin != null ? Number(q.config.numberMin) : undefined,
         max: q.config?.numberMax != null ? Number(q.config.numberMax) : undefined,
+        temperatureUnit: q.config?.temperatureUnit,
       };
     })
   );
@@ -100,13 +114,22 @@ function dbToKioskChecklist(raw: any): KioskChecklist {
     location_id: raw.location_id ?? null,
     time_of_day: tod,
     due_time: raw.due_time ?? null,
+    visibility_from: raw.visibility_from ?? null,
+    visibility_until: raw.visibility_until ?? null,
     questions: flattenSectionsToQuestions(raw.sections ?? []),
   };
 }
 
+function parseTimeToMinutes(time: string | null | undefined): number | null {
+  if (!time) return null;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
 /**
- * Returns true if a checklist is DUE (should show prominently in the kiosk).
- * DUE = no due_time (always on) OR due_time is within the next 2 hours OR already past due today.
+ * Legacy due_time helper kept for older checklists that still use the old
+ * single-time visibility model.
  */
 export function isKioskDue(due_time: string | null | undefined, now: Date): boolean {
   if (!due_time) return true;
@@ -114,7 +137,46 @@ export function isKioskDue(due_time: string | null | undefined, now: Date): bool
   const dueMinutes = h * 60 + m;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   // Show from 1 hour before due (dueMinutes - 60) through end of day
-  return nowMinutes >= dueMinutes - 60;
+  return nowMinutes >= dueMinutes - 60 && nowMinutes <= dueMinutes;
+}
+
+export function isKioskOverdue(due_time: string | null | undefined, now: Date): boolean {
+  if (!due_time) return false;
+  const [h, m] = due_time.split(":").map(Number);
+  const dueMinutes = h * 60 + m;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return nowMinutes > dueMinutes;
+}
+
+export function getKioskVisibilityState(
+  checklist: Pick<KioskChecklist, "due_time" | "visibility_from" | "visibility_until">,
+  now: Date
+): "due" | "upcoming" | "overdue" {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const fromMinutes = parseTimeToMinutes(checklist.visibility_from);
+  const untilMinutes = parseTimeToMinutes(checklist.visibility_until);
+
+  if (fromMinutes != null || untilMinutes != null) {
+    const start = fromMinutes ?? 0;
+    const end = untilMinutes ?? 24 * 60 - 1;
+    if (start <= end) {
+      if (nowMinutes < start) return "upcoming";
+      if (nowMinutes > end) return "overdue";
+      return "due";
+    }
+    // Overnight visibility window: visible from start through midnight, and
+    // from midnight through end.
+    if (nowMinutes >= start || nowMinutes <= end) return "due";
+    return nowMinutes < start ? "upcoming" : "overdue";
+  }
+
+  if (checklist.due_time) {
+    if (isKioskDue(checklist.due_time, now)) return "due";
+    if (isKioskOverdue(checklist.due_time, now)) return "overdue";
+    return "upcoming";
+  }
+
+  return "due";
 }
 
 /** @deprecated — kept for test compatibility; use isKioskDue instead */
@@ -199,13 +261,6 @@ function useInactivityTimer(active: boolean, onTimeout: () => void) {
   return { secondsLeft, cancelCountdown: () => cancelFnRef.current() };
 }
 
-// ─── KioskSetupScreen ─────────────────────────────────────────────────────────
-// Fallback locations used when Supabase returns no data (offline / dev environment)
-const MOCK_LOCATIONS = [
-  { id: "00000000-0000-0000-0000-000000000011", name: "Location 1" },
-  { id: "00000000-0000-0000-0000-000000000010", name: "Location 2" },
-];
-
 function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationName: string) => void }) {
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -217,14 +272,8 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
       .select("id, name")
       .order("name")
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          setLocations(data);
-          setSelectedId(data[0].id);
-        } else {
-          // Fallback to mock locations (offline / test environment)
-          setLocations(MOCK_LOCATIONS);
-          setSelectedId(MOCK_LOCATIONS[0].id);
-        }
+        setLocations(data ?? []);
+        setSelectedId(data?.[0]?.id ?? "");
         setLoading(false);
       });
   }, []);
@@ -235,7 +284,7 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 sm:px-8 lg:px-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="w-16 h-16 rounded-full bg-sage flex items-center justify-center mx-auto mb-5">
@@ -249,7 +298,9 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
             {loading ? (
               <p className="text-sm text-muted-foreground py-3 text-center">Loading locations…</p>
             ) : locations.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-3 text-center">No locations found. Please log in as an admin first.</p>
+              <p className="text-sm text-muted-foreground py-3 text-center">
+                No locations available. Please ask an admin to add one before launching the kiosk.
+              </p>
             ) : (
               <select
                 id="location-select"
@@ -291,91 +342,85 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
 // ─── AdminLoginModal (centered) ───────────────────────────────────────────────
 function AdminLoginModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Set to true after a successful signInWithPassword call.
-  // The useEffect below watches for the auth context to update (user becomes
-  // non-null) BEFORE navigating — this prevents ProtectedRoute from
-  // redirecting back to /kiosk because auth state hadn't updated yet.
-  const [loginSuccess, setLoginSuccess] = useState(false);
-
-  useEffect(() => {
-    if (loginSuccess && user) {
-      navigate("/admin");
-    }
-  }, [loginSuccess, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
+    const locationId = _kioskLocationId ?? localStorage.getItem("kiosk_location_id");
+    if (!locationId) {
+      setLoading(false);
+      setError("Select a kiosk location before opening admin.");
+      return;
+    }
+
+    const { data, error: rpcError } = await supabase.rpc("validate_admin_pin", {
+      p_pin: pin,
+      p_location_id: locationId,
     });
 
     setLoading(false);
 
-    if (authError) {
-      setError("Invalid email or password.");
+    if (rpcError) {
+      setError("Could not verify the admin PIN. Please try again.");
       return;
     }
 
-    // Don't navigate immediately — wait for onAuthStateChange to fire and
-    // update the auth context, then the useEffect above handles navigation.
-    setLoginSuccess(true);
+    if (!data || data.length === 0) {
+      setError("Invalid PIN.");
+      return;
+    }
+
+    navigate(`/admin?from=kiosk&userId=${data[0].id}`);
   };
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
+      >
       <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-foreground">Admin login</h2>
+          <h2 className="font-display text-lg text-foreground">Admin PIN</h2>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
         <form onSubmit={handleLogin} className="space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+            <label className="text-xs text-muted-foreground mb-1 block">PIN</label>
             <input
-              id="admin-email-input"
-              autoFocus type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              id="admin-pin-input"
+              autoFocus
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="4-digit PIN"
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Password</label>
-            <input
-              id="admin-password-input"
-              type="password" value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Use the admin PIN from your team-member profile to unlock the admin area.
+          </p>
           {error && <p className="text-xs text-status-error">{error}</p>}
           <button
-            id="admin-signin-btn"
+            id="admin-pin-signin-btn"
             type="submit"
-            disabled={!email.trim() || !password || loading}
+            disabled={pin.length !== 4 || loading}
             className={cn(
               "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              email.trim() && password && !loading
+              pin.length === 4 && !loading
                 ? "bg-sage text-primary-foreground hover:bg-sage-deep"
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Checking…" : "Continue"}
           </button>
         </form>
         <p className="text-center text-xs text-muted-foreground pt-1">
@@ -617,8 +662,14 @@ function CheckboxInput({ value, onChange }: { value: boolean; onChange: (v: bool
 }
 
 function NumberInput({
-  value, onChange, min, max,
-}: { value: number | ""; onChange: (v: number | "") => void; min?: number; max?: number }) {
+  value, onChange, min, max, unit,
+}: {
+  value: number | "";
+  onChange: (v: number | "") => void;
+  min?: number;
+  max?: number;
+  unit?: "C" | "F";
+}) {
   const num = value === "" ? 0 : Number(value);
   const hasRange = min != null || max != null;
   const outOfRange = hasRange && value !== "" && (
@@ -655,7 +706,7 @@ function NumberInput({
           outOfRange ? "text-status-error font-semibold" : "text-muted-foreground",
         )}>
           {outOfRange ? "⚠ Out of acceptable range · " : ""}
-          Acceptable: {min != null ? min : "—"} – {max != null ? max : "—"}
+          Acceptable: {min != null ? min : "—"} – {max != null ? max : "—"}{unit ? ` ${unit}` : ""}
         </p>
       )}
     </div>
@@ -674,19 +725,41 @@ function TextInput({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 function MultipleChoiceInput({
-  options, value, onChange,
-}: { options: string[]; value: string; onChange: (v: string) => void }) {
+  options, optionColors, selectionMode = "single", value, onChange,
+}: {
+  options: string[];
+  optionColors?: string[];
+  selectionMode?: "single" | "multiple";
+  value: string | string[];
+  onChange: (v: string | string[]) => void;
+}) {
+  const selected = Array.isArray(value) ? value : value ? [value] : [];
+
+  const toggleOption = (option: string) => {
+    if (selectionMode === "multiple") {
+      onChange(selected.includes(option)
+        ? selected.filter(item => item !== option)
+        : [...selected, option]);
+      return;
+    }
+
+    onChange(option);
+  };
+
   return (
     <div className="space-y-2">
-      {options.map(opt => (
+      {options.map((opt, idx) => (
         <button
           key={opt}
-          onClick={() => onChange(opt)}
+          type="button"
+          onClick={() => toggleOption(opt)}
           className={cn(
             "w-full min-h-[56px] rounded-xl border-2 px-4 py-3 text-sm text-left font-medium transition-colors",
-            value === opt
-              ? "bg-sage-light border-sage text-sage-deep"
+            selected.includes(opt)
+              ? "border-sage text-sage-deep"
               : "bg-card border-border text-foreground hover:border-sage/40",
+            selected.includes(opt) && optionColors?.[idx],
+            selected.includes(opt) && !optionColors?.[idx] && "bg-sage-light",
           )}
         >
           {opt}
@@ -726,8 +799,15 @@ function DateTimeInput({ value, onChange }: { value: string; onChange: (v: strin
 }
 
 function InstructionBlock({
-  text, imageUrl, onImageClick,
-}: { text: string; imageUrl?: string; onImageClick?: (url: string) => void }) {
+  text, imageUrl, linkedResourceTitle, linkedResourceSection, onImageClick, onLinkedResourceOpen,
+}: {
+  text: string;
+  imageUrl?: string;
+  linkedResourceTitle?: string;
+  linkedResourceSection?: "library" | "training";
+  onImageClick?: (url: string) => void;
+  onLinkedResourceOpen?: () => void;
+}) {
   return (
     <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
       {text && <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>}
@@ -750,78 +830,246 @@ function InstructionBlock({
           </div>
         </button>
       )}
-    </div>
-  );
-}
-
-// ─── MediaInput ───────────────────────────────────────────────────────────────
-// Renders a "Take photo / Upload photo" button. On mobile devices the
-// `capture="environment"` attribute opens the camera directly. On desktop it
-// opens the file picker. The selected image is stored as a base64 data-URL in
-// the answer field — no Supabase Storage bucket required.
-function MediaInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = e => onChange((e.target?.result as string) ?? "");
-    reader.readAsDataURL(file);
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* Hidden file input — accepts images, prefers camera on mobile */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-        }}
-      />
-      {value ? (
-        /* Preview the captured/selected image */
-        <div className="relative rounded-xl overflow-hidden border border-border">
-          <img src={value} alt="Captured" className="w-full max-h-52 object-cover" />
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/60 flex items-center justify-center"
-            aria-label="Remove photo"
-          >
-            <X size={14} className="text-background" />
-          </button>
-        </div>
-      ) : (
-        /* CTA button */
+      {linkedResourceTitle && (
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          className="w-full min-h-[80px] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-sage hover:text-sage transition-colors"
+          onClick={onLinkedResourceOpen}
+          className="w-full rounded-lg border border-lavender-deep/20 bg-background/70 px-4 py-3 text-left transition-colors hover:bg-background"
         >
-          {/* Camera icon inline — avoids import churn */}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-            <circle cx="12" cy="13" r="3"/>
-          </svg>
-          <span className="text-sm font-medium">Take photo</span>
-          <span className="text-xs">or tap to upload from gallery</span>
+          <p className="text-xs uppercase tracking-wide text-lavender-deep/70">
+            Open linked {linkedResourceSection === "training" ? "training" : "document"}
+          </p>
+          <p className="text-sm font-medium text-lavender-deep mt-1">{linkedResourceTitle}</p>
         </button>
       )}
     </div>
   );
 }
 
+// ─── MediaInput ───────────────────────────────────────────────────────────────
+// Live camera capture only. No file picker or library access is exposed.
+function MediaInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [captured, setCaptured] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopStream = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+    setStream(null);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopStream();
+      setCaptured(null);
+      setError("");
+      return;
+    }
+
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices?.getUserMedia) {
+      setError("Camera access is not available on this device.");
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoading(true);
+
+    mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
+      .then(nextStream => {
+        if (cancelled) {
+          nextStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        streamRef.current = nextStream;
+        setStream(nextStream);
+        setError("");
+      })
+      .catch(() => {
+        if (!cancelled) setError("Camera access could not be started.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!stream || !videoRef.current) return;
+    videoRef.current.srcObject = stream;
+    void videoRef.current.play().catch(() => {});
+  }, [stream]);
+
+  useEffect(() => () => stopStream(), []);
+
+  const openCamera = () => {
+    setCaptured(null);
+    setError("");
+    setIsOpen(true);
+  };
+
+  const closeCamera = () => {
+    stopStream();
+    setCaptured(null);
+    setIsOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setCaptured(canvas.toDataURL("image/png"));
+  };
+
+  const useCapturedPhoto = () => {
+    if (!captured) return;
+    onChange(captured);
+    closeCamera();
+  };
+
+  return (
+    <div className="space-y-3">
+      {value ? (
+        <div className="space-y-2">
+          <div className="relative rounded-xl overflow-hidden border border-border">
+            <img src={value} alt="Captured" className="w-full max-h-52 object-cover" />
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/60 flex items-center justify-center"
+              aria-label="Remove photo"
+            >
+              <X size={14} className="text-background" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-sage">
+            <Check size={14} />
+            Photo attached
+          </div>
+          <button
+            type="button"
+            onClick={openCamera}
+            className="text-xs font-medium text-sage hover:underline"
+          >
+            Retake photo
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={openCamera}
+          className="w-full min-h-[80px] border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-sage hover:text-sage transition-colors"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+          <span className="text-sm font-medium">Take photo</span>
+          <span className="text-xs">Use the camera to capture this now</span>
+        </button>
+      )}
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[80] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Capture photo</p>
+                <p className="text-xs text-muted-foreground">Take a new photo now, then confirm it.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted"
+                aria-label="Close camera"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {error ? (
+                <div className="rounded-xl border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm text-status-error">
+                  {error}
+                </div>
+              ) : captured ? (
+                <div className="space-y-3">
+                  <img src={captured} alt="Captured preview" className="w-full rounded-xl border border-border max-h-[60vh] object-cover" />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCaptured(null)}
+                      className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      Retake
+                    </button>
+                    <button
+                      type="button"
+                      onClick={useCapturedPhoto}
+                      className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage/90"
+                    >
+                      Use photo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-xl overflow-hidden border border-border bg-black">
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-[60vh] object-cover" />
+                  </div>
+                  <canvas ref={canvasRef} className="hidden" />
+                  {isLoading && (
+                    <p className="text-xs text-muted-foreground">Starting camera…</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={closeCamera}
+                      className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      disabled={isLoading || !stream}
+                      className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sage/90"
+                    >
+                      Capture photo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuestionInput({
-  question, value, onChange, onImageClick,
+  question, value, onChange, onImageClick, onLinkedResourceOpen,
 }: {
   question: Question;
   value: any;
   onChange: (v: any) => void;
   onImageClick?: (url: string) => void;
+  onLinkedResourceOpen?: () => void;
 }) {
   switch (question.type) {
     case "checkbox":
@@ -829,11 +1077,19 @@ function QuestionInput({
     case "media":
       return <MediaInput value={value ?? ""} onChange={onChange} />;
     case "number":
-      return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} />;
+      return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} unit={question.temperatureUnit} />;
     case "text":
       return <TextInput value={value ?? ""} onChange={onChange} />;
     case "multiple_choice":
-      return <MultipleChoiceInput options={question.options ?? []} value={value ?? ""} onChange={onChange} />;
+      return (
+        <MultipleChoiceInput
+          options={question.options ?? []}
+          optionColors={question.optionColors}
+          selectionMode={question.selectionMode}
+          value={value ?? (question.selectionMode === "multiple" ? [] : "")}
+          onChange={onChange}
+        />
+      );
     case "datetime":
       return <DateTimeInput value={value ?? ""} onChange={onChange} />;
     case "instruction":
@@ -841,7 +1097,10 @@ function QuestionInput({
         <InstructionBlock
           text={question.instructionText ?? ""}
           imageUrl={question.imageUrl}
+          linkedResourceTitle={question.linkedResourceTitle}
+          linkedResourceSection={question.linkedResourceSection}
           onImageClick={onImageClick}
+          onLinkedResourceOpen={onLinkedResourceOpen}
         />
       );
     default:
@@ -853,12 +1112,13 @@ function QuestionInput({
 // Shows ALL questions in a single scrollable view, grouped by sections.
 // Answers are persisted to localStorage so progress survives interruptions.
 function ChecklistRunner({
-  checklist, staffName, onComplete, onCancel,
+  checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
 }: {
   checklist: KioskChecklist;
   staffName: string;
   onComplete: (answers: Record<string, any>, startedAt: Date) => void;
   onCancel: () => void;
+  onQuestionAnswerChange?: (question: Question, value: any) => void;
 }) {
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
 
@@ -883,6 +1143,7 @@ function ChecklistRunner({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [linkedResourceId, setLinkedResourceId] = useState<string | null>(null);
 
   // Accordion: track which question is currently open/active
   const [currentQIdx, setCurrentQIdx] = useState<number>(() => {
@@ -901,7 +1162,7 @@ function ChecklistRunner({
       const q = checklist.questions[i];
       if (q.type === "instruction") continue;
       const v = ans[q.id];
-      if (v === undefined || v === "" || v === null || v === false) return i;
+      if (Array.isArray(v) ? v.length === 0 : (v === undefined || v === "" || v === null || v === false)) return i;
     }
     return Math.max(0, checklist.questions.length - 1);
   });
@@ -917,7 +1178,9 @@ function ChecklistRunner({
   const scorable = questions.filter(q => q.type !== "instruction");
   const answeredCount = scorable.filter(q => {
     const v = answers[q.id];
-    return v !== undefined && v !== "" && v !== null && v !== false;
+    return Array.isArray(v)
+      ? v.length > 0
+      : v !== undefined && v !== "" && v !== null && v !== false;
   }).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
 
@@ -936,8 +1199,10 @@ function ChecklistRunner({
       const next = Math.min(prev + 1, questions.length - 1);
       // Scroll new current question into view after render
       setTimeout(() => {
-        document.getElementById(`question-${questions[next]?.id}`)
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const nextQuestion = document.getElementById(`question-${questions[next]?.id}`);
+        if (typeof nextQuestion?.scrollIntoView === "function") {
+          nextQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       }, 60);
       return next;
     });
@@ -954,16 +1219,18 @@ function ChecklistRunner({
   const handleComplete = () => {
     const missing = questions.filter(q =>
       q.required && q.type !== "instruction" &&
-      (answers[q.id] === undefined || answers[q.id] === "" ||
-       answers[q.id] === null || answers[q.id] === false)
+      (Array.isArray(answers[q.id])
+        ? answers[q.id].length === 0
+        : answers[q.id] === undefined || answers[q.id] === "" ||
+          answers[q.id] === null || answers[q.id] === false)
     );
     if (missing.length > 0) {
       setCompletionError(
         `${missing.length} required question${missing.length !== 1 ? "s" : ""} still need an answer.`
       );
       // Scroll to first missing question
-      document.getElementById(`question-${missing[0].id}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const firstMissingQuestion = document.getElementById(`question-${missing[0].id}`);
+      firstMissingQuestion?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
     // All required questions answered — clear draft and submit
@@ -972,7 +1239,7 @@ function ChecklistRunner({
   };
 
   return (
-    <div className="h-screen bg-background max-w-lg mx-auto flex flex-col overflow-x-hidden">
+    <div className="h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col overflow-x-hidden">
 
       {/* ── Sticky header ── */}
       <div className="shrink-0 bg-background border-b border-border px-5 pt-5 pb-3">
@@ -1025,8 +1292,10 @@ function ChecklistRunner({
 
           const isAnswered = isInstruction
             ? true
-            : (answers[q.id] !== undefined && answers[q.id] !== "" &&
-               answers[q.id] !== null && answers[q.id] !== false);
+            : (Array.isArray(answers[q.id])
+              ? answers[q.id].length > 0
+              : answers[q.id] !== undefined && answers[q.id] !== "" &&
+                 answers[q.id] !== null && answers[q.id] !== false);
           const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
 
           // Inject a centered section divider when section changes
@@ -1036,10 +1305,15 @@ function ChecklistRunner({
 
           // For next/acknowledge button: show on current question for types that don't auto-advance
           // "datetime" is legacy — if it resolves to "text" it's included via q.type === "text"
-          const needsNextBtn = isCurrent && (
-            isInstruction || q.type === "text" || q.type === "number" || q.type === "datetime"
-          );
           const isLastQ = qi >= questions.length - 1;
+          const needsNextBtn = isCurrent && !isLastQ && (
+            isInstruction ||
+            q.type === "text" ||
+            q.type === "number" ||
+            q.type === "datetime" ||
+            q.type === "media" ||
+            (!q.required && (q.type === "checkbox" || q.type === "multiple_choice"))
+          );
 
           return (
             <Fragment key={q.id}>
@@ -1085,16 +1359,18 @@ function ChecklistRunner({
                       value={answers[q.id]}
                       onChange={v => {
                         setAnswer(q.id, v);
+                        onQuestionAnswerChange?.(q, v);
                         // Auto-advance for single-tap inputs
                         if (q.type === "checkbox" && v === true) advanceQuestion();
-                        if (q.type === "multiple_choice" && v) advanceQuestion();
+                        if (q.type === "multiple_choice" && q.selectionMode !== "multiple" && v) advanceQuestion();
                       }}
                       onImageClick={url => setLightboxImage(url)}
+                      onLinkedResourceOpen={() => setLinkedResourceId(q.linkedResourceId ?? null)}
                     />
                   </div>
 
-                  {needsNextBtn && !isLastQ && (
-                    <div className={cn("mt-3", !isInstruction && "ml-7")}>
+                  {needsNextBtn && (
+                    <div className={cn("mt-3 flex justify-end", !isInstruction && "ml-7")}>
                       <button
                         onClick={advanceQuestion}
                         className="px-5 py-2 text-xs font-bold tracking-wide rounded-xl bg-sage text-white hover:bg-sage-deep transition-colors active:scale-[0.97]"
@@ -1194,6 +1470,44 @@ function ChecklistRunner({
         </div>
       )}
 
+      {linkedResourceId && (() => {
+        const resource = getLinkableInfohubResource(linkedResourceId);
+        if (!resource) return null;
+
+        return (
+          <div
+            className="fixed inset-0 z-[80] flex items-end justify-center bg-foreground/30 backdrop-blur-sm"
+            onClick={() => setLinkedResourceId(null)}
+          >
+            <div
+              className="bg-card w-full max-w-2xl rounded-t-2xl max-h-[80vh] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{resource.section}</p>
+                  <h3 className="text-base font-semibold text-foreground mt-1">{resource.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{resource.subtitle}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLinkedResourceId(null)}
+                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                  aria-label="Close linked resource"
+                >
+                  <X size={16} className="text-muted-foreground" />
+                </button>
+              </div>
+              <div className="px-5 py-4 overflow-y-auto max-h-[60vh]">
+                <div className="whitespace-pre-line text-sm text-foreground leading-relaxed">
+                  {resource.body}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Cancel confirm ── */}
       {showCancelConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
@@ -1259,7 +1573,7 @@ function CompletionScreen({
   const dateStr = completedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col items-center justify-center px-6 text-center">
+    <div className="min-h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col items-center justify-center px-6 text-center">
       <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center mb-6">
         <Check size={36} className="text-sage" />
       </div>
@@ -1300,6 +1614,12 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
     const h12 = h % 12 || 12;
     return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
   };
+  const formatWindow = (from: string | null, until: string | null) => {
+    if (!from && !until) return "Visible all day";
+    if (from && until) return `Visible ${formatDueTime(from)} - ${formatDueTime(until)}`;
+    if (from) return `Visible from ${formatDueTime(from)}`;
+    return `Visible until ${formatDueTime(until!)}`;
+  };
 
   return (
     <button
@@ -1321,9 +1641,17 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
         <p className="text-xs text-muted-foreground mt-1">
           {cl.questions.length} item{cl.questions.length !== 1 ? "s" : ""}
         </p>
-        {cl.due_time && (
+        {(cl.visibility_from || cl.visibility_until) ? (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+            {formatWindow(cl.visibility_from, cl.visibility_until)}
+          </p>
+        ) : cl.due_time ? (
           <p className="text-[10px] text-muted-foreground/70 mt-0.5">
             Due {formatDueTime(cl.due_time)}
+          </p>
+        ) : (
+          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+            Visible all day
           </p>
         )}
       </div>
@@ -1353,8 +1681,8 @@ export default function Kiosk() {
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [insertError, setInsertError] = useState<string | null>(null);
-  // Three-tab kiosk view: due | upcoming | done
-  const [kioskTab, setKioskTab] = useState<"due" | "upcoming" | "done">("due");
+  // Four-tab kiosk view: due | overdue | upcoming | done
+  const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -1367,6 +1695,66 @@ export default function Kiosk() {
   }, [locationId]);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const now = useLiveClock();
+  const outOfRangeTimerRefs = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({});
+  const outOfRangeValueRefs = useRef<Record<string, string | undefined>>({});
+  const outOfRangeFiredRefs = useRef<Record<string, string | undefined>>({});
+
+  const clearOutOfRangeTimer = (key: string) => {
+    const timer = outOfRangeTimerRefs.current[key];
+    if (timer) clearTimeout(timer);
+    delete outOfRangeTimerRefs.current[key];
+    delete outOfRangeValueRefs.current[key];
+  };
+
+  const isOutOfRangeNumber = (question: KioskChecklist["questions"][number], rawValue: any) => {
+    if (question.type !== "number" || (question.min == null && question.max == null)) return false;
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) return false;
+    return (question.min != null && numericValue < question.min) || (question.max != null && numericValue > question.max);
+  };
+
+  const sendOutOfRangeAlert = async (question: KioskChecklist["questions"][number], rawValue: any) => {
+    if (!selectedChecklist || !selectedOrgId) return;
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) return;
+    const rangeStr = [question.min != null ? `min ${question.min}` : null, question.max != null ? `max ${question.max}` : null]
+      .filter(Boolean).join(", ");
+    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    const { error: alertErr } = await supabase.from("alerts").insert({
+      organization_id: selectedOrgId,
+      type: "warn",
+      message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
+      area: selectedChecklist.title,
+      time: timeLabel,
+      source: "kiosk",
+    });
+    if (alertErr) {
+      const hint = alertErr.code === "42501"
+        ? " (RLS policy missing — apply migration 20260323000002)"
+        : ` (${alertErr.message})`;
+      setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}"${hint}. Apply migration 20260323000002_kiosk_anon_insert_alerts.sql in Supabase SQL Editor.`);
+      console.error("Alert insert failed for question:", question.text, alertErr);
+    }
+  };
+
+  const scheduleOutOfRangeAlert = (question: KioskChecklist["questions"][number], rawValue: any) => {
+    const timerKey = `${selectedChecklist?.id ?? "unknown"}:${question.id}`;
+    const currentValue = rawValue == null ? "" : String(rawValue);
+    if (!isOutOfRangeNumber(question, rawValue)) {
+      clearOutOfRangeTimer(timerKey);
+      delete outOfRangeFiredRefs.current[timerKey];
+      return;
+    }
+    if (outOfRangeFiredRefs.current[timerKey] === currentValue) return;
+    clearOutOfRangeTimer(timerKey);
+    outOfRangeValueRefs.current[timerKey] = currentValue;
+    outOfRangeTimerRefs.current[timerKey] = setTimeout(async () => {
+      if (outOfRangeValueRefs.current[timerKey] !== currentValue) return;
+      await sendOutOfRangeAlert(question, rawValue);
+      outOfRangeFiredRefs.current[timerKey] = currentValue;
+      clearOutOfRangeTimer(timerKey);
+    }, 90000);
+  };
 
   // ── Real checklists from Supabase ──────────────────────────────────────────
   const [kioskChecklists, setKioskChecklists] = useState<KioskChecklist[]>([]);
@@ -1498,47 +1886,6 @@ export default function Kiosk() {
         enqueueLog(logPayload);
       }
 
-      // Issue 7: Fire alert for any number answers outside their acceptable range.
-      // Requires migration 20260323000002_kiosk_anon_insert_alerts.sql to be applied
-      // so the anon role has INSERT permission on the alerts table.
-      const outOfRangeAnswers = selectedChecklist.questions.filter(q => {
-        if (q.type !== "number" || (q.min == null && q.max == null)) return false;
-        const v = Number(answers[q.id]);
-        if (isNaN(v)) return false;
-        return (q.min != null && v < q.min) || (q.max != null && v > q.max);
-      });
-      if (outOfRangeAnswers.length > 0) {
-        const timeLabel = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-        const alertErrors: string[] = [];
-        for (const q of outOfRangeAnswers) {
-          const val = answers[q.id];
-          const rangeStr = [q.min != null ? `min ${q.min}` : null, q.max != null ? `max ${q.max}` : null]
-            .filter(Boolean).join(", ");
-          const { error: alertErr } = await supabase.from("alerts").insert({
-            organization_id: selectedOrgId,
-            type: "warn",
-            message: `${q.text}: recorded ${val} — outside the allowed range (${rangeStr})`,
-            area: selectedChecklist.title,
-            time: timeLabel,
-            source: "kiosk",
-          });
-          if (alertErr) {
-            // Most likely cause: migration 20260323000002 not yet applied.
-            // Surface this prominently so the operator knows the alert was NOT saved.
-            const hint = alertErr.code === "42501"
-              ? " (RLS policy missing — apply migration 20260323000002)"
-              : ` (${alertErr.message})`;
-            alertErrors.push(`"${q.text}"${hint}`);
-            console.error("Alert insert failed for question:", q.text, alertErr);
-          }
-        }
-        if (alertErrors.length > 0) {
-          setInsertError(
-            `⚠ Out-of-range alert(s) NOT saved to DB: ${alertErrors.join("; ")}. ` +
-            `Apply migration 20260323000002_kiosk_anon_insert_alerts.sql in Supabase SQL Editor.`
-          );
-        }
-      }
     }
   };
 
@@ -1555,8 +1902,9 @@ export default function Kiosk() {
   if (!locationId) return <KioskSetupScreen onSetup={handleSetup} />;
 
   // Split checklists by state — completed items leave Due/Upcoming immediately
-  const dueChecklists = kioskChecklists.filter(c => isKioskDue(c.due_time, now) && !completedIds.has(c.id));
-  const upcomingChecklists = kioskChecklists.filter(c => !isKioskDue(c.due_time, now) && !completedIds.has(c.id));
+  const dueChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "due" && !completedIds.has(c.id));
+  const overdueChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "overdue" && !completedIds.has(c.id));
+  const upcomingChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "upcoming" && !completedIds.has(c.id));
   const doneChecklists = kioskChecklists.filter(c => completedIds.has(c.id));
   const visibleChecklists = kioskChecklists; // total — used for "no checklists" empty state
 
@@ -1568,6 +1916,10 @@ export default function Kiosk() {
         staffName={selectedStaffName}
         onComplete={handleComplete}
         onCancel={handleDone}
+        onQuestionAnswerChange={(question, value) => {
+          if (question.type !== "number") return;
+          scheduleOutOfRangeAlert(question, value);
+        }}
       />
     );
   }
@@ -1589,7 +1941,7 @@ export default function Kiosk() {
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="min-h-screen bg-background max-w-lg mx-auto flex flex-col">
+    <div className="min-h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col">
       {/* Top bar */}
       <div className="px-5 pt-7 pb-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
@@ -1623,40 +1975,51 @@ export default function Kiosk() {
           What's on the agenda<br />for today?
         </h1>
 
-        {/* Stat strip — DUE / UPCOMING / DONE (Done is a tab toggle) */}
-        <div className="grid grid-cols-3 gap-2 mt-5">
+        {/* Stat strip — DUE / OVERDUE / UPCOMING / DONE */}
+        <div className="grid grid-cols-4 gap-2 mt-5">
           <button
             data-testid="kiosk-tab-due"
             onClick={() => setKioskTab("due")}
             className={cn(
-              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              "bg-card border rounded-2xl px-2 py-3 text-center transition-colors",
               kioskTab === "due" ? "border-status-error/50 ring-1 ring-status-error/20" : "border-border",
             )}
           >
             <p className="section-label mb-1">Due now</p>
-            <p className="text-2xl font-bold text-status-error">{dueChecklists.length}</p>
+            <p className="text-xl font-bold text-status-error">{dueChecklists.length}</p>
+          </button>
+          <button
+            data-testid="kiosk-tab-overdue"
+            onClick={() => setKioskTab("overdue")}
+            className={cn(
+              "bg-card border rounded-2xl px-2 py-3 text-center transition-colors",
+              kioskTab === "overdue" ? "border-status-error/50 ring-1 ring-status-error/20" : "border-border",
+            )}
+          >
+            <p className="section-label mb-1">Overdue</p>
+            <p className="text-xl font-bold text-status-error">{overdueChecklists.length}</p>
           </button>
           <button
             data-testid="kiosk-tab-upcoming"
             onClick={() => setKioskTab("upcoming")}
             className={cn(
-              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              "bg-card border rounded-2xl px-2 py-3 text-center transition-colors",
               kioskTab === "upcoming" ? "border-status-warn/50 ring-1 ring-status-warn/20" : "border-border",
             )}
           >
             <p className="section-label mb-1">Upcoming</p>
-            <p className="text-2xl font-bold text-status-warn">{upcomingChecklists.length}</p>
+            <p className="text-xl font-bold text-status-warn">{upcomingChecklists.length}</p>
           </button>
           <button
             data-testid="kiosk-tab-done"
-            onClick={() => setKioskTab(t => t === "done" ? "due" : "done")}
+            onClick={() => setKioskTab("done")}
             className={cn(
-              "bg-card border rounded-2xl px-3 py-3 text-center transition-colors",
+              "bg-card border rounded-2xl px-2 py-3 text-center transition-colors",
               kioskTab === "done" ? "border-status-ok/50 ring-1 ring-status-ok/20" : "border-border",
             )}
           >
             <p className="section-label mb-1">Done</p>
-            <p className="text-2xl font-bold text-status-ok">{doneChecklists.length}</p>
+            <p className="text-xl font-bold text-status-ok">{doneChecklists.length}</p>
           </button>
         </div>
       </div>
@@ -1674,7 +2037,7 @@ export default function Kiosk() {
       )}
 
       {/* Checklist grid */}
-      <div className="px-5 flex-1 pb-6 mt-2">
+      <div className="px-5 sm:px-6 lg:px-8 flex-1 pb-6 mt-2">
         {checklistsLoading ? (
           <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
             <Loader2 size={16} className="animate-spin" />
@@ -1712,7 +2075,7 @@ export default function Kiosk() {
                 {dueChecklists.length > 0 ? (
                   <div>
                     <p className="section-label mb-2 text-status-error">Due now</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {dueChecklists.map((cl, idx) => (
                         <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
                       ))}
@@ -1722,10 +2085,29 @@ export default function Kiosk() {
                   <div className="text-center py-10">
                     <p className="text-sm text-status-ok font-semibold">Nothing due right now ✓</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {upcomingChecklists.length > 0
+                      {overdueChecklists.length > 0
+                        ? `${overdueChecklists.length} checklist${overdueChecklists.length > 1 ? "s are" : " is"} overdue — tap Overdue to review them.`
+                        : upcomingChecklists.length > 0
                         ? `${upcomingChecklists.length} checklist${upcomingChecklists.length > 1 ? "s" : ""} coming up — tap Upcoming to see them.`
                         : "Tap Done above to review completed checklists."}
                     </p>
+                  </div>
+                )}
+              </>
+            ) : kioskTab === "overdue" ? (
+              <>
+                {overdueChecklists.length > 0 ? (
+                  <div>
+                    <p className="section-label mb-2 text-status-error">Overdue</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {overdueChecklists.map((cl, idx) => (
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-muted-foreground">No overdue checklists.</p>
                   </div>
                 )}
               </>
@@ -1734,7 +2116,7 @@ export default function Kiosk() {
                 {upcomingChecklists.length > 0 ? (
                   <div>
                     <p className="section-label mb-2">Upcoming today</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {upcomingChecklists.map((cl, idx) => (
                         <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} dim />
                       ))}
@@ -1755,7 +2137,7 @@ export default function Kiosk() {
               ) : (
                 <div>
                   <p className="section-label mb-2 text-status-ok">Completed today</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {doneChecklists.map((cl, idx) => (
                       <div
                         key={cl.id}

@@ -52,6 +52,7 @@ describe("Notifications page", () => {
   it("renders 'All clear' when no alerts", () => {
     renderWithProviders(<Notifications />);
     expect(screen.getByText("All clear")).toBeInTheDocument();
+    expect(screen.getByText("It looks like everything is calm now.")).toBeInTheDocument();
   });
 
   it("shows 0 alerts count label", () => {

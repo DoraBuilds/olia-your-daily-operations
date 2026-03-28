@@ -1,9 +1,13 @@
 import { screen, fireEvent } from "@testing-library/react";
 import Training from "@/pages/Training";
 import { renderWithProviders } from "../test-utils";
+import { supabase } from "@/lib/supabase";
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
+    functions: {
+      invoke: vi.fn(),
+    },
     auth: {
       signInWithPassword: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       signOut: vi.fn().mockResolvedValue({}),
@@ -36,6 +40,10 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 describe("Training page", () => {
+  beforeEach(() => {
+    vi.mocked(supabase.functions.invoke).mockReset();
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<Training />);
     expect(document.body).toBeDefined();
@@ -256,6 +264,35 @@ describe("Training page", () => {
     const troubleshootingTab = screen.getByRole("button", { name: /troubleshooting/i });
     fireEvent.click(troubleshootingTab);
     expect(screen.getByText("Issue resolution guides")).toBeInTheDocument();
+  });
+
+  it("can generate a new training module with AI", async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: {
+        title: "Handle a table complaint",
+        category: "troubleshooting",
+        duration: "6 min",
+        steps: [
+          "Listen carefully to the guest.",
+          "Acknowledge the concern calmly.",
+          "Offer a practical resolution.",
+          "Escalate if the issue is outside your authority.",
+        ],
+      },
+      error: null,
+    } as any);
+
+    renderWithProviders(<Training />);
+
+    fireEvent.click(screen.getByRole("button", { name: /build with ai/i }));
+    fireEvent.change(screen.getByPlaceholderText(/train a new server to handle a customer complaint/i), {
+      target: { value: "Train a server to handle complaints" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /generate training module/i }));
+
+    expect(await screen.findByText("Handle a table complaint")).toBeInTheDocument();
+    expect(screen.getByText(/6 min/i)).toBeInTheDocument();
+    expect(screen.getByText("Listen carefully to the guest.")).toBeInTheDocument();
   });
 
   it("subtitle shows 'Staff onboarding modules' for Onboarding tab by default", () => {

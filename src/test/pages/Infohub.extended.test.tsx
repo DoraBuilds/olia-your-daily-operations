@@ -22,6 +22,9 @@ vi.mock("@/lib/supabase", () => ({
       delete: vi.fn().mockReturnThis(),
       then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
     }),
+    functions: {
+      invoke: vi.fn(),
+    },
   },
 }));
 
@@ -43,6 +46,44 @@ vi.mock("@/contexts/AuthContext", () => ({
   }),
   AuthProvider: ({ children }: any) => children,
 }));
+
+vi.mock("@/hooks/useTeamMembers", () => ({
+  useTeamMembers: () => ({
+    data: [
+      {
+        id: "u1",
+        name: "Sarah",
+        email: "s@test.com",
+        role: "Owner",
+      },
+      {
+        id: "u2",
+        name: "Jay",
+        email: "j@test.com",
+        role: "Manager",
+      },
+    ],
+  }),
+}));
+
+vi.mock("@/hooks/useLocations", () => ({
+  useLocations: () => ({
+    data: [
+      { id: "loc-1", name: "Main Branch" },
+      { id: "loc-2", name: "Terrace" },
+    ],
+  }),
+}));
+
+vi.mock("@/hooks/useInfohubContent", async () => {
+  const mod = await import("../mocks/infohub-hooks");
+  return { useInfohubContent: mod.useMockInfohubContent };
+});
+
+vi.mock("@/hooks/useTrainingProgress", async () => {
+  const mod = await import("../mocks/infohub-hooks");
+  return { useTrainingProgress: mod.useMockTrainingProgress };
+});
 
 function openFirstFolderMenu() {
   const title = screen.getByText("Cleaning & Maintenance");
@@ -85,21 +126,54 @@ function openLatteModule() {
 }
 
 describe("Infohub extended behavior", () => {
-  it("does not show Manage access in folder context menus", () => {
+  beforeEach(async () => {
+    const { supabase } = await import("@/lib/supabase");
+    const { resetInfohubMockState } = await import("../mocks/infohub-hooks");
+    vi.mocked(supabase.functions.invoke).mockReset();
+    resetInfohubMockState();
+    localStorage.clear();
+  });
+
+  it("shows Manage access in folder context menus for owners", () => {
     renderWithProviders(<Infohub />);
     const opened = openFirstFolderMenu();
     if (!opened) return;
-    expect(screen.queryByText("Manage access")).not.toBeInTheDocument();
+    expect(screen.getByText("Manage access")).toBeInTheDocument();
   });
 
-  it("does not show Manage access in document context menus", () => {
+  it("shows Manage access in document context menus for owners", () => {
     renderWithProviders(<Infohub />);
     const opened = openFirstDocMenu();
     if (!opened) return;
-    expect(screen.queryByText("Manage access")).not.toBeInTheDocument();
+    expect(screen.getByText("Manage access")).toBeInTheDocument();
   });
 
-  it("shows AI tools as disabled buttons with a coming soon state", () => {
+  it("lets an owner restrict access to a folder", () => {
+    renderWithProviders(<Infohub />);
+    const opened = openFirstFolderMenu();
+    if (!opened) return;
+    fireEvent.click(screen.getByText("Manage access"));
+
+    fireEvent.click(screen.getByRole("button", { name: /restricted access/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Jay Manager/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Terrace" }));
+    fireEvent.click(screen.getByRole("button", { name: /save access/i }));
+
+    expect(screen.getByText("Restricted")).toBeInTheDocument();
+  });
+
+  it("opens AI tools and generates a summary", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: {
+        type: "summary",
+        title: "Allergen handling procedure",
+        bullets: ["Treat all allergy queries seriously", "Notify the kitchen verbally"],
+        takeaway: "Never guess when allergens are involved.",
+      },
+      error: null,
+    } as any);
+
     renderWithProviders(<Infohub />);
     const folderRow = screen.getByText("Food Safety").closest("div[class*='flex']") as HTMLElement | null;
     if (!folderRow) return;
@@ -109,10 +183,10 @@ describe("Infohub extended behavior", () => {
     fireEvent.click(docRow);
     fireEvent.click(screen.getAllByRole("button").find((btn) => btn.className.includes("lavender"))!);
 
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
-    expect(screen.getAllByRole("button").find((btn) => btn.textContent?.includes("Generate summary"))).toBeDisabled();
-    expect(screen.getAllByRole("button").find((btn) => btn.textContent?.includes("Create flashcards"))).toBeDisabled();
-    expect(screen.getAllByRole("button").find((btn) => btn.textContent?.includes("Generate quiz"))).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+
+    expect(await screen.findByText("Never guess when allergens are involved.")).toBeInTheDocument();
+    expect(screen.getByText("Treat all allergy queries seriously")).toBeInTheDocument();
   });
 
   it("archives and restores a library document", () => {
