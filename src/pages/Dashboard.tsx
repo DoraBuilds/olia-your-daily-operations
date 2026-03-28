@@ -237,25 +237,24 @@ export default function Dashboard() {
     }, {})
   );
 
-  // Helper: map a log to a ChecklistCompliance object
-  const logToChecklist = (log: typeof tabLogs[0]): ChecklistCompliance => {
-    const ans      = Array.isArray(log.answers) ? log.answers : [];
-    const answered = ans.filter(a => a.value !== null && a.value !== "" && a.value !== undefined && a.value !== false);
-    return {
-      id:             log.id,
-      name:           log.checklist_title,
-      completedBy:    log.completed_by,
-      completion:     log.score ?? 0,
-      totalTasks:     ans.length,
-      completedTasks: answered.length,
-      unanswered:     ans.filter(a => !a.value).map(a => String(a.question ?? a.questionId ?? "")),
-      completedAt:    new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-    };
-  };
-
   // ── Group logs by location → location-level compliance cards ──
   const locationComplianceItems: LocationCompliance[] = useMemo(() => {
     const groups: Record<string, { locationId: string | null; name: string; logs: typeof tabLogs }> = {};
+
+    const logToChecklist = (log: typeof tabLogs[0]): ChecklistCompliance => {
+      const ans = Array.isArray(log.answers) ? log.answers : [];
+      const answered = ans.filter(a => a.value !== null && a.value !== "" && a.value !== undefined && a.value !== false);
+      return {
+        id:          log.id,
+        name:        log.checklist_title,
+        completedBy: log.completed_by,
+        completion:  log.score ?? 0,
+        totalTasks:  ans.length,
+        completedTasks: answered.length,
+        unanswered:  ans.filter(a => !a.value).map(a => String(a.question ?? a.questionId ?? "")),
+        completedAt: new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      };
+    };
 
     for (const log of tabLogs) {
       const key  = log.location_id ?? "unassigned";

@@ -18,6 +18,7 @@ import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { routerFutureFlags } from "@/lib/router-future-flags";
 
 const App = () => (
   <ErrorBoundary>
@@ -26,7 +27,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter basename={import.meta.env.BASE_URL} future={routerFutureFlags}>
           <ErrorBoundary>
           <Routes>
             {/* Public landing page — unauthenticated */}
