@@ -24,6 +24,12 @@ dist-ssr
 
 # Coverage reports — generated artifact, not source
 coverage/
+test-results/
+playwright-report/
+
+# Local Supabase CLI state
+supabase/.temp/
+supabase/.branches/
 
 # Editor directories and files
 .vscode/*
