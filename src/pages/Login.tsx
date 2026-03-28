@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
 type Step = "email" | "check-email";
 
@@ -22,6 +23,7 @@ export default function Login() {
   }, [user, navigate]);
 
   const emailValue = email.trim().toLowerCase();
+  const authRedirectUrl = buildPublicAuthRedirectUrl(getRuntimeConfig().publicSiteUrl, "/auth/callback");
 
   const sendCode = async () => {
     if (!emailValue) return;
@@ -34,7 +36,7 @@ export default function Login() {
       email: emailValue,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${getRuntimeConfig().publicSiteUrl}/auth/callback`,
+        emailRedirectTo: authRedirectUrl,
       },
     });
 
@@ -61,7 +63,7 @@ export default function Login() {
       email: emailValue,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${getRuntimeConfig().publicSiteUrl}/auth/callback`,
+        emailRedirectTo: authRedirectUrl,
       },
     });
     setResending(false);

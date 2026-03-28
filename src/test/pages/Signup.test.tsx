@@ -186,7 +186,7 @@ describe("Signup page", () => {
     await waitFor(() => expect(mockSignInWithOtp).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({
-          emailRedirectTo: "https://dora.github.io/olia/auth/callback",
+          emailRedirectTo: "https://dora.github.io/olia?p=%2Fauth%2Fcallback",
         }),
       })
     ));
