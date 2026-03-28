@@ -62,6 +62,7 @@ describe("Login page", () => {
   });
 
   it("sends a magic link to the email address", async () => {
+    import.meta.env.VITE_PUBLIC_SITE_URL = "https://dora.github.io/olia";
     renderPage();
     fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
       target: { value: "owner@olia.app" },
@@ -73,7 +74,7 @@ describe("Login page", () => {
         email: "owner@olia.app",
         options: expect.objectContaining({
           shouldCreateUser: false,
-          emailRedirectTo: expect.stringContaining("/auth/callback"),
+          emailRedirectTo: "https://dora.github.io/olia?p=%2Fauth%2Fcallback",
         }),
       }));
     });

@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
 type Step = "form" | "check-email";
 
@@ -28,6 +29,7 @@ export default function Signup() {
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     email.trim().length > 0;
+  const authRedirectUrl = buildPublicAuthRedirectUrl(getRuntimeConfig().publicSiteUrl, "/auth/callback");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +53,7 @@ export default function Signup() {
     const { data, error: authError } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${getRuntimeConfig().publicSiteUrl}/auth/callback`,
+        emailRedirectTo: authRedirectUrl,
         shouldCreateUser: true,
         data: {
           full_name: ownerName,

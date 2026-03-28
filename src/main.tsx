@@ -11,7 +11,11 @@ import { Capacitor } from "@capacitor/core";
 import { restoreGitHubPagesRoute as restoreGitHubPagesRoutePath } from "@/lib/github-pages-routing";
 
 function restoreGitHubPagesRoute() {
-  const targetRoute = restoreGitHubPagesRoutePath(window.location.search, import.meta.env.BASE_URL);
+  const targetRoute = restoreGitHubPagesRoutePath(
+    window.location.search,
+    import.meta.env.BASE_URL,
+    window.location.hash,
+  );
   if (targetRoute) {
     window.history.replaceState(null, "", targetRoute);
   }
