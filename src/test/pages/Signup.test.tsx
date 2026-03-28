@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Signup from "@/pages/Signup";
+import { routerFutureFlags } from "@/lib/router-future-flags";
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 const { mockSignUp } = vi.hoisted(() => ({ mockSignUp: vi.fn() }));
@@ -31,11 +32,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 // ─── Router wrapper ────────────────────────────────────────────────────────────
 function wrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-      {children}
-    </MemoryRouter>
-  );
+  return <MemoryRouter future={routerFutureFlags}>{children}</MemoryRouter>;
 }
 
 // ─── Helper: fill all required fields ────────────────────────────────────────

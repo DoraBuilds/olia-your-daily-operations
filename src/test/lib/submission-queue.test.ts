@@ -1,10 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { enqueueLog, pendingCount, drainQueue } from "@/lib/submission-queue";
 
 const STORAGE_KEY = "olia_pending_logs";
+let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   localStorage.clear();
+  consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  consoleWarnSpy.mockRestore();
 });
 
 describe("enqueueLog", () => {
@@ -73,6 +79,7 @@ describe("drainQueue", () => {
 
 describe("MAX_ATTEMPTS protection", () => {
   it("drops items that have been attempted 10 or more times", () => {
+    consoleWarnSpy.mockClear();
     // Manually write an over-limit item to localStorage
     const overLimit = [{
       id: "stale-1",
@@ -83,6 +90,9 @@ describe("MAX_ATTEMPTS protection", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(overLimit));
     // pendingCount calls loadQueue which filters out the over-limit item
     expect(pendingCount()).toBe(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("submission-queue: dropping log stale-1"),
+    );
   });
 
   it("retains items below the attempt limit", () => {
@@ -94,10 +104,21 @@ describe("MAX_ATTEMPTS protection", () => {
     }];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(underLimit));
     expect(pendingCount()).toBe(1);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 });
 
 describe("TTL_DAYS protection", () => {
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
   it("drops items older than 7 days", () => {
     const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
     const old = [{
@@ -108,6 +129,9 @@ describe("TTL_DAYS protection", () => {
     }];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
     expect(pendingCount()).toBe(0);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("submission-queue: dropping log old-1"),
+    );
   });
 
   it("retains items within the TTL window", () => {
@@ -120,5 +144,6 @@ describe("TTL_DAYS protection", () => {
     }];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(recent));
     expect(pendingCount()).toBe(1);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 });

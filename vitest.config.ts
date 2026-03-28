@@ -16,6 +16,7 @@ export default defineConfig({
     ],
     exclude: [
       "src/test/integration/**",
+      "src/**/*.integration.test.ts",
     ],
 
     // Kill any test or hook that takes longer than 15 s — prevents zombie workers.

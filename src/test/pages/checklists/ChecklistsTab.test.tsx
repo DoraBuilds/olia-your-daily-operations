@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
+import { routerFutureFlags } from "@/lib/router-future-flags";
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -101,9 +102,7 @@ function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        {children}
-      </MemoryRouter>
+      <MemoryRouter future={routerFutureFlags}>{children}</MemoryRouter>
     </QueryClientProvider>
   );
 }

@@ -80,6 +80,28 @@ SUPABASE_PROJECT_REF=your-project-ref bun run resend:audit
 ```
 
 This checks that the hosted `send-alert-email` function exists, is active, and that the core Resend alert secrets are present. Add `--require-sender` if you want the audit to fail when `ALERT_FROM_EMAIL` is still missing.
+ 
+Docker-backed integration tests use the same local stack. Once Docker and the Supabase CLI are available, run:
+
+```bash
+bun run test:integration
+```
+
+That command starts the local Supabase stack if needed, reads the live local API and keys from `supabase status -o env`, and runs the dedicated integration lane against real local services.
+
+For a minimal real-browser smoke lane against the same local stack, run:
+
+```bash
+bun run e2e:playwright:live
+```
+
+That lane keeps the existing mocked Playwright suite intact and adds a separate live kiosk smoke test against the actual local Docker Supabase environment.
+
+After each live Playwright run, open the visual HTML report at:
+
+```bash
+playwright-report/live/index.html
+```
 
 For one-command profile switching, keep these local-only files on your machine:
 
@@ -190,11 +212,13 @@ bun run test
 bun run test:watch
 bun run test:coverage
 bun run test:ci
+bun run test:integration
 bun run milestone
 bun run e2e
 bun run resend:audit
 bun run cap:ios
 bun run cap:android
+bun run e2e:playwright:live
 supabase start
 supabase stop
 supabase status -o env
