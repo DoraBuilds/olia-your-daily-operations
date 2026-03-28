@@ -8,8 +8,8 @@ export function ResponseTypePicker({ onSelect, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <h2 className="font-display text-lg text-foreground">Type of response</h2>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">

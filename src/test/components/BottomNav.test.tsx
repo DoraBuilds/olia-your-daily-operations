@@ -13,7 +13,10 @@ vi.mock("react-router-dom", async () => {
 
 function renderBottomNav() {
   return render(
-    <MemoryRouter initialEntries={["/dashboard"]}>
+    <MemoryRouter
+      initialEntries={["/dashboard"]}
+      future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+    >
       <BottomNav />
     </MemoryRouter>
   );

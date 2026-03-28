@@ -21,8 +21,8 @@ export function ItemContextMenu({ type, onAction, onClose }: {
   const actions = type === "folder" ? folderActions : checklistActions;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-2 pb-20 animate-fade-in" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8" onClick={onClose}>
+      <div className="bg-card w-full max-w-lg rounded-t-2xl p-2 pb-20 animate-fade-in sm:max-w-xl sm:rounded-2xl sm:pb-4" onClick={e => e.stopPropagation()}>
         {actions.map(a => (
           <button key={a.key} onClick={() => { onAction(a.key); onClose(); }}
             className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/50 transition-colors text-left",

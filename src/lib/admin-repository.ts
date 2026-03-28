@@ -4,9 +4,40 @@
 export type AccountRole = "Owner" | "Manager";
 export type StaffStatus = "active" | "archived";
 
-export const DEFAULT_STAFF_ROLES = [
-  "Waiter", "Kitchen", "Bartender", "Manager", "Host", "Cleaner",
+export interface StaffDepartment {
+  name: string;
+  subRoles: string[];
+}
+
+export const DEFAULT_STAFF_DEPARTMENTS: StaffDepartment[] = [
+  { name: "Front of House", subRoles: ["Server", "Bartender", "Host"] },
+  { name: "Back of House", subRoles: ["Chef", "Kitchen Helper", "Prep Cook"] },
+  { name: "Management", subRoles: ["Manager"] },
+  { name: "Cleaning Crew", subRoles: ["Cleaner"] },
 ];
+
+export function flattenStaffDepartments(departments: StaffDepartment[]): string[] {
+  return departments.flatMap((department) => [
+    department.name,
+    ...department.subRoles.map(subRole => `${department.name} / ${subRole}`),
+  ]);
+}
+
+const LEGACY_ROLE_DEPARTMENT_MAP: Record<string, string> = {
+  Waiter: "Front of House",
+  Bartender: "Front of House",
+  Host: "Front of House",
+  Kitchen: "Back of House",
+  Cleaner: "Cleaning Crew",
+  Manager: "Management",
+};
+
+export function getRoleDepartment(role: string): string {
+  const baseRole = role.split(" / ")[0]?.trim() || role;
+  return LEGACY_ROLE_DEPARTMENT_MAP[baseRole] ?? baseRole;
+}
+
+export const DEFAULT_STAFF_ROLES = flattenStaffDepartments(DEFAULT_STAFF_DEPARTMENTS);
 
 export interface ManagerPermissions {
   create_edit_checklists: boolean;
@@ -65,6 +96,7 @@ export interface TeamMember {
   location_ids: string[];
   initials: string;
   permissions: ManagerPermissions;
+  pin?: string | null;
 }
 
 export interface AuditLogEntry {
@@ -152,7 +184,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l1",
     first_name: "Maria",
     last_name: "Garcia",
-    role: "Waiter",
+    role: "Front of House / Server",
     status: "active",
     pin: "1234",
     last_used_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -164,7 +196,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l1",
     first_name: "Tariq",
     last_name: "Nasser",
-    role: "Bartender",
+    role: "Front of House / Bartender",
     status: "active",
     pin: "5678",
     last_used_at: new Date(Date.now()).toISOString(),
@@ -176,7 +208,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l1",
     first_name: "Lena",
     last_name: "Schmidt",
-    role: "Kitchen",
+    role: "Back of House / Chef",
     status: "active",
     pin: "2468",
     last_used_at: new Date(Date.now() - 86400000 * 1).toISOString(),
@@ -188,7 +220,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l1",
     first_name: "Omar",
     last_name: "Boukhari",
-    role: "Host",
+    role: "Front of House / Host",
     status: "active",
     pin: "1357",
     last_used_at: new Date(Date.now() - 86400000 * 5).toISOString(),
@@ -200,7 +232,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l2",
     first_name: "Sofia",
     last_name: "Andersen",
-    role: "Waiter",
+    role: "Front of House / Server",
     status: "active",
     pin: "9012",
     last_used_at: null,
@@ -212,7 +244,7 @@ export const initialStaffProfiles: StaffProfile[] = [
     location_id: "l2",
     first_name: "Jan",
     last_name: "Kowalski",
-    role: "Cleaner",
+    role: "Cleaning Crew / Cleaner",
     status: "archived",
     pin: "3579",
     last_used_at: new Date(Date.now() - 86400000 * 45).toISOString(),

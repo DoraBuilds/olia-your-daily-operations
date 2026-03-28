@@ -3,6 +3,16 @@ import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { PLAN_LABELS } from "@/lib/plan-features";
 import { renderWithProviders } from "../test-utils";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -19,6 +29,7 @@ describe("UpgradePrompt", () => {
 
   beforeEach(() => {
     onClose.mockClear();
+    mockNavigate.mockReset();
   });
 
   it("renders the feature name", () => {
@@ -67,6 +78,7 @@ describe("UpgradePrompt", () => {
     );
     fireEvent.click(screen.getByText("See plans"));
     expect(onClose).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/billing");
   });
 
   it("renders 'Upgrade to unlock' heading", () => {

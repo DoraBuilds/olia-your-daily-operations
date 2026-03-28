@@ -1,0 +1,27 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="fieldLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(322 222) rotate(41) scale(420 420)">
+      <stop stop-color="#B05DFF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#B05DFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fieldRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1270 140) rotate(138) scale(420 420)">
+      <stop stop-color="#4AA8FF" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#4AA8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fieldStroke" x1="300" y1="780" x2="1370" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#050608"/>
+  <rect width="1600" height="900" fill="url(#fieldLeft)"/>
+  <rect width="1600" height="900" fill="url(#fieldRight)"/>
+  <g opacity="0.18" stroke="url(#fieldStroke)">
+    <circle cx="800" cy="450" r="320" stroke-width="2"/>
+    <circle cx="800" cy="450" r="260" stroke-width="2"/>
+    <circle cx="800" cy="450" r="200" stroke-width="2"/>
+    <circle cx="800" cy="450" r="140" stroke-width="2"/>
+  </g>
+</svg>
+

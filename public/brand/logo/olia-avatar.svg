@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="avatarGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(156 124) rotate(44) scale(180 180)">
+      <stop stop-color="#B05DFF" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#B05DFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="avatarStroke" x1="72" y1="410" x2="440" y2="104" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="256" fill="#050608"/>
+  <circle cx="256" cy="256" r="256" fill="url(#avatarGlow)"/>
+  <g stroke-linecap="round">
+    <circle cx="256" cy="256" r="160" stroke="url(#avatarStroke)" stroke-width="8"/>
+    <circle cx="256" cy="256" r="128" stroke="url(#avatarStroke)" stroke-width="8" opacity="0.94"/>
+    <circle cx="256" cy="256" r="96" stroke="url(#avatarStroke)" stroke-width="8" opacity="0.9"/>
+    <circle cx="256" cy="256" r="64" stroke="#FFFFFF" stroke-width="8"/>
+  </g>
+</svg>
+

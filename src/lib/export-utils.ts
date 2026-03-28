@@ -23,9 +23,29 @@ function scoreRgb(score: number): [number, number, number] {
 
 export interface ReportingRow {
   checklist: string;
+  location?: string;
   completedBy: string;
-  date: string;
-  score: number;
+  date?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  score: number | null;
+}
+
+export interface ChecklistTemplateQuestion {
+  text: string;
+  required?: boolean;
+}
+
+export interface ChecklistTemplateSection {
+  name?: string;
+  questions: ChecklistTemplateQuestion[];
+}
+
+export interface ChecklistTemplateData {
+  title: string;
+  schedule?: string | null;
+  timeOfDay?: string | null;
+  sections: ChecklistTemplateSection[];
 }
 
 export async function exportReportingPdf(
@@ -36,7 +56,7 @@ export async function exportReportingPdf(
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   let y = 18;
 
@@ -85,8 +105,15 @@ export async function exportReportingPdf(
   // ── Table ──
   autoTable(doc, {
     startY: y,
-    head: [["Checklist", "Completed by", "Date", "Score"]],
-    body: rows.map(r => [r.checklist, r.completedBy, r.date, `${r.score}%`]),
+    head: [["Checklist", "Location", "Completed by", "Start date/time", "End date/time", "Pass %"]],
+    body: rows.map(r => [
+      r.checklist,
+      r.location ?? "—",
+      r.completedBy,
+      r.startedAt ?? r.date ?? "—",
+      r.finishedAt ?? r.date ?? "—",
+      r.score == null ? "—" : `${r.score}%`,
+    ]),
     theme: "grid",
     headStyles: {
       fillColor: SAGE,
@@ -96,11 +123,15 @@ export async function exportReportingPdf(
     },
     bodyStyles: { fontSize: 8.5, textColor: [40, 40, 40] },
     alternateRowStyles: { fillColor: LIGHT_BG },
-    columnStyles: { 3: { halign: "center", fontStyle: "bold" } },
+    columnStyles: {
+      3: { halign: "center" },
+      4: { halign: "center" },
+      5: { halign: "center", fontStyle: "bold" },
+    },
     didParseCell: (data: any) => {
-      if (data.section === "body" && data.column.index === 3) {
-        const score = rows[data.row.index]?.score ?? 0;
-        data.cell.styles.textColor = scoreRgb(score);
+      if (data.section === "body" && data.column.index === 5) {
+        const score = rows[data.row.index]?.score;
+        data.cell.styles.textColor = typeof score === "number" ? scoreRgb(score) : GRAY;
       }
     },
     margin: { left: 14, right: 14 },
@@ -118,7 +149,7 @@ export async function exportReportingPdf(
 
 export function exportReportingCsv(rows: ReportingRow[], periodLabel: string) {
   const headers = ["Checklist", "Completed by", "Date", "Score"];
-  const body = rows.map(r => [r.checklist, r.completedBy, r.date, `${r.score}%`]);
+  const body = rows.map(r => [r.checklist, r.completedBy, r.date, r.score == null ? "—" : `${r.score}%`]);
   const csv = [headers, ...body]
     .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
@@ -133,13 +164,85 @@ export function exportReportingCsv(rows: ReportingRow[], periodLabel: string) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Checklist Template: PDF ────────────────────────────────────────────────
+
+export async function exportChecklistTemplatePdf(checklist: ChecklistTemplateData) {
+  const { jsPDF } = await import("jspdf");
+
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const margin = 20;
+  let y = 30;
+
+  doc.setFontSize(20);
+  doc.setFont("helvetica", "bold");
+  doc.text(checklist.title, margin, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(120, 120, 120);
+  const meta = [
+    `${checklist.sections.flatMap(section => section.questions).length} questions`,
+    checklist.schedule ? String(checklist.schedule) : null,
+    checklist.timeOfDay && checklist.timeOfDay !== "anytime" ? checklist.timeOfDay : null,
+  ].filter(Boolean).join("  ·  ");
+  if (meta) {
+    doc.text(meta, margin, y);
+    y += 6;
+  }
+  doc.setTextColor(0, 0, 0);
+  y += 4;
+
+  doc.setDrawColor(220, 220, 220);
+  doc.line(margin, y, 210 - margin, y);
+  y += 8;
+
+  let questionNumber = 0;
+  checklist.sections.forEach((section) => {
+    if (section.name) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(100, 100, 100);
+      doc.text(section.name.toUpperCase(), margin, y);
+      y += 7;
+      doc.setTextColor(0, 0, 0);
+    }
+
+    section.questions.forEach((question) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      questionNumber += 1;
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const label = `${questionNumber}. ${question.text || `Question ${questionNumber}`}${question.required ? " *" : ""}`;
+      const lines = doc.splitTextToSize(label, 170 - margin);
+      doc.text(lines, margin, y);
+      y += lines.length * 6 + 2;
+
+      doc.setDrawColor(200, 200, 200);
+      doc.roundedRect(margin, y, 170 - margin, 8, 1, 1);
+      y += 13;
+    });
+
+    y += 2;
+  });
+
+  doc.setFontSize(8);
+  doc.setTextColor(160, 160, 160);
+  doc.text(`Generated by Olia · ${new Date().toLocaleDateString()}`, margin, 287);
+  doc.save(`${checklist.title.replace(/[^a-z0-9]/gi, "_")}.pdf`);
+}
+
 // ─── Log Detail: PDF ─────────────────────────────────────────────────────────
 
 export interface LogDetailData {
   checklist: string;
   completedBy: string;
   date: string;
-  score: number;
+  score: number | null;
   startedAt?: string;   // HH:MM — optional (not stored in DB for older logs)
   finishedAt?: string;  // HH:MM — optional (derived from created_at or passed directly)
   answers?: Array<{
@@ -185,8 +288,8 @@ export async function exportLogDetailPdf(log: LogDetailData) {
   // ── Score (top-right) ──
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.setTextColor(...scoreRgb(log.score));
-  doc.text(`${log.score}%`, pageW - 14, y + 11, { align: "right" });
+  doc.setTextColor(...(typeof log.score === "number" ? scoreRgb(log.score) : GRAY));
+  doc.text(log.score == null ? "—" : `${log.score}%`, pageW - 14, y + 11, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...GRAY);

@@ -14,25 +14,19 @@
  *
  * Optional:
  *   ALERT_FROM_EMAIL → verified sender address in Resend
- *                      Default: onboarding@resend.dev (works without domain setup)
+ *                      Default: onboarding@resend.dev (development fallback only)
  */
+
+import {
+  buildAlertEmail,
+  resolveFromEmail,
+  type AlertPayload,
+} from "./email.ts";
 
 const RESEND_API_KEY  = Deno.env.get("RESEND_API_KEY");
 const ALERT_SECRET    = Deno.env.get("ALERT_SECRET");
-const FROM_EMAIL      = Deno.env.get("ALERT_FROM_EMAIL") ?? "onboarding@resend.dev";
+const ALERT_FROM_EMAIL = Deno.env.get("ALERT_FROM_EMAIL");
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-
-interface AlertPayload {
-  id:              string;
-  type:            string;   // "warn" | "error"
-  message:         string;
-  area:            string | null;
-  time:            string | null;
-  source:          string | null;
-  created_at:      string;
-  organization_id: string;
-  recipient_email: string;  // resolved by trigger from locations.alert_email
-}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method !== "POST") {
@@ -79,54 +73,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "Server misconfiguration: RESEND_API_KEY not set" }, 500);
   }
 
+  const sender = resolveFromEmail(ALERT_FROM_EMAIL);
+
+  if (sender.usedFallback) {
+    console.warn(
+      "send-alert-email: ALERT_FROM_EMAIL is not configured; using onboarding@resend.dev fallback",
+    );
+  }
+
   // ── Build email content ─────────────────────────────────────────
-  const severityLabel = alert.type === "error" ? "🔴 Error" : "⚠️ Warning";
-  const subject       = `${severityLabel}: ${alert.message}`;
-
-  const when = alert.created_at
-    ? new Date(alert.created_at).toLocaleString("en-GB", {
-        day: "numeric", month: "short", year: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      })
-    : (alert.time ?? "unknown time");
-
-  const textBody = [
-    "Olia Operational Alert",
-    "",
-    `Severity : ${(alert.type ?? "warn").toUpperCase()}`,
-    `Message  : ${alert.message}`,
-    alert.area   ? `Checklist: ${alert.area}`   : null,
-    `Recorded : ${when}`,
-    alert.source ? `Source   : ${alert.source}` : null,
-    "",
-    "---",
-    "You are receiving this because your location has alert notifications enabled.",
-    "Log in to Olia to view and dismiss this alert.",
-  ].filter((l): l is string => l !== null).join("\n");
-
-  const htmlBody = `<!DOCTYPE html>
-<html>
-<body style="font-family:sans-serif;max-width:520px;margin:40px auto;color:#1E1410">
-  <div style="background:#1A2A47;padding:16px 24px;border-radius:8px 8px 0 0">
-    <span style="color:#fff;font-size:16px;font-weight:bold">Olia</span>
-    <span style="color:#B8A5C8;font-size:12px;margin-left:8px">Operational Alert</span>
-  </div>
-  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px">
-    <p style="margin:0 0 16px;font-size:18px;font-weight:bold;color:#1A2A47">
-      ${severityLabel}&nbsp; ${esc(alert.message)}
-    </p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      ${alert.area ? row("Checklist", alert.area) : ""}
-      ${row("Recorded", when)}
-      ${alert.source ? row("Source", alert.source) : ""}
-    </table>
-    <p style="margin:24px 0 0;font-size:12px;color:#857B72">
-      You are receiving this because your location has alert notifications enabled.
-      Log in to Olia to view and dismiss this alert.
-    </p>
-  </div>
-</body>
-</html>`;
+  const { subject, textBody, htmlBody } = buildAlertEmail(alert);
 
   // ── Send via Resend ─────────────────────────────────────────────
   const resendRes = await fetch(RESEND_ENDPOINT, {
@@ -136,7 +92,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       "Content-Type":  "application/json",
     },
     body: JSON.stringify({
-      from:    FROM_EMAIL,
+      from:    sender.fromEmail,
       to:      [alert.recipient_email],
       subject,
       text:    textBody,
@@ -165,22 +121,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   return json({ sent: true, resend_id: resendBody?.id }, 200);
 });
 
-// ── Helpers ─────────────────────────────────────────────────────────
-
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function row(label: string, value: string): string {
-  return `<tr>
-    <td style="padding:6px 0;color:#857B72;width:90px">${esc(label)}</td>
-    <td style="padding:6px 0;font-weight:500">${esc(value)}</td>
-  </tr>`;
 }

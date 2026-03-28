@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
-import { AlertCircle, TrendingUp, Plus, X, ChevronRight, ChevronLeft, AlertTriangle, Bell, ArrowLeft } from "lucide-react";
+import { AlertCircle, TrendingUp, Plus, X, ChevronRight, ChevronLeft, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAlerts } from "@/hooks/useAlerts";
@@ -13,26 +14,27 @@ import { computeMissedChecklists, computeOverdueActions } from "@/lib/overdue-ut
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface ChecklistCompliance {
-  id: string;
-  name: string;
-  completedBy: string;
-  completion: number;
-  totalTasks: number;
-  completedTasks: number;
-  unanswered: string[];
-  completedAt?: string;
-}
-
 interface LocationCompliance {
   locationId: string | null;
   name: string;
   avgScore: number;
   count: number;
-  checklists: ChecklistCompliance[];
+  completedCount: number;
 }
 
-type ComplianceTab = "today" | "yesterday" | "overdue";
+type ComplianceTab = "today" | "week" | "month";
+
+function checklistAppliesToLocation(
+  checklist: { location_id: string | null; location_ids?: string[] | null },
+  locationId: string,
+) {
+  const assignedIds = checklist.location_ids?.length
+    ? checklist.location_ids
+    : (checklist.location_id ? [checklist.location_id] : null);
+
+  if (!assignedIds || assignedIds.length === 0) return true;
+  return assignedIds.includes(locationId);
+}
 
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -132,57 +134,6 @@ function QuickTaskModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Checklist Detail Modal ───────────────────────────────────────────────────
-
-function ChecklistDetailModal({ item, onClose }: { item: ChecklistCompliance; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-10 space-y-4 animate-fade-in max-h-[80vh] overflow-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-display text-xl text-foreground">{item.name}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{item.completedBy}</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-            <X size={18} className="text-muted-foreground" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-4 p-4 bg-background rounded-xl border border-border">
-          <div className="relative" style={{ width: 56, height: 56 }}>
-            <ScoreRing score={item.completion} size={56} />
-            <span className={cn("absolute inset-0 flex items-center justify-center text-xs font-bold",
-              item.completion >= 85 ? "text-status-ok" : item.completion >= 65 ? "text-status-warn" : "text-status-error"
-            )}>
-              {item.completion}%
-            </span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{item.completedTasks} of {item.totalTasks} tasks</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{item.unanswered.length} unanswered</p>
-          </div>
-        </div>
-
-        {item.unanswered.length > 0 ? (
-          <div>
-            <p className="section-label mb-2">Unanswered questions</p>
-            <div className="card-surface divide-y divide-border overflow-hidden">
-              {item.unanswered.map((q, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
-                  <p className="text-sm text-foreground">{q}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="py-4 text-center text-sm text-status-ok font-semibold">✓ All tasks completed</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -190,9 +141,6 @@ export default function Dashboard() {
   const [showQuickTask, setShowQuickTask]          = useState(false);
   const [complianceTab, setComplianceTab]          = useState<ComplianceTab>("today");
   const [page, setPage]                            = useState(0);
-  const [selectedChecklist, setSelectedChecklist]  = useState<ChecklistCompliance | null>(null);
-  // Location drill-down: null = show location-level cards; string = show checklists for that location
-  const [drillLocationId, setDrillLocationId]      = useState<string | null | "unassigned">(null);
 
   const today    = new Date();
   const dateLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -209,86 +157,68 @@ export default function Dashboard() {
   const { data: checklists = [] }   = useChecklists();
   const { data: locations = [] }    = useLocations();
 
-  // ── Date strings — use LOCAL date arithmetic to avoid UTC midnight shifting ──
+  // ── Date helpers ──
   const pad = (n: number) => String(n).padStart(2, "0");
   const localDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayStr     = localDateStr(today);
-  const yesterdayObj = new Date(today); yesterdayObj.setDate(today.getDate() - 1);
-  const yesterdayStr = localDateStr(yesterdayObj);
 
-  // ── Derive compliance items from logs ──
-  // created_at is UTC ISO — compare only the date portion against local date strings.
-  // For logs in UTC+N timezones the first/last hour of the day may shift by one day;
-  // this is a known limitation without storing a local_date column.
-  const rawTabLogs = complianceTab !== "overdue"
-    ? logs.filter(l => {
-        // created_at is like "2026-03-26T14:39:00+00:00" — convert to local date
-        const localDate = localDateStr(new Date(l.created_at));
-        return localDate === (complianceTab === "today" ? todayStr : yesterdayStr);
-      })
-    : [];
-
-  // Deduplicate: keep only the most-recent submission per checklist per day.
-  const tabLogs = Object.values(
-    rawTabLogs.reduce<Record<string, typeof rawTabLogs[0]>>((acc, log) => {
-      const key = log.checklist_id ?? log.checklist_title;
-      if (!acc[key] || log.created_at > acc[key].created_at) acc[key] = log;
-      return acc;
-    }, {})
-  );
-
-  // Helper: map a log to a ChecklistCompliance object
-  const logToChecklist = (log: typeof tabLogs[0]): ChecklistCompliance => {
-    const ans      = Array.isArray(log.answers) ? log.answers : [];
-    const answered = ans.filter(a => a.value !== null && a.value !== "" && a.value !== undefined && a.value !== false);
-    return {
-      id:             log.id,
-      name:           log.checklist_title,
-      completedBy:    log.completed_by,
-      completion:     log.score ?? 0,
-      totalTasks:     ans.length,
-      completedTasks: answered.length,
-      unanswered:     ans.filter(a => !a.value).map(a => String(a.question ?? a.questionId ?? "")),
-      completedAt:    new Date(log.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-    };
-  };
-
-  // ── Group logs by location → location-level compliance cards ──
-  const locationComplianceItems: LocationCompliance[] = useMemo(() => {
-    const groups: Record<string, { locationId: string | null; name: string; logs: typeof tabLogs }> = {};
-
-    for (const log of tabLogs) {
-      const key  = log.location_id ?? "unassigned";
-      const name = log.location_id
-        ? (locations.find(l => l.id === log.location_id)?.name ?? "Unknown location")
-        : "All locations";
-      if (!groups[key]) groups[key] = { locationId: log.location_id, name, logs: [] };
-      groups[key].logs.push(log);
+  const periodRange = useMemo(() => {
+    if (complianceTab === "today") {
+      return { start: startOfDay(today), end: endOfDay(today) };
     }
+    if (complianceTab === "week") {
+      return {
+        start: startOfWeek(today, { weekStartsOn: 1 }),
+        end: endOfWeek(today, { weekStartsOn: 1 }),
+      };
+    }
+    return {
+      start: startOfMonth(today),
+      end: endOfMonth(today),
+    };
+  }, [complianceTab, today]);
 
-    return Object.values(groups)
-      .map(g => ({
-        locationId: g.locationId,
-        name:       g.name,
-        avgScore:   Math.round(g.logs.reduce((s, l) => s + (l.score ?? 0), 0) / g.logs.length),
-        count:      g.logs.length,
-        checklists: g.logs.map(logToChecklist).sort((a, b) => a.completion - b.completion),
-      }))
-      .sort((a, b) => a.avgScore - b.avgScore);
-  }, [tabLogs, locations]);
+  const periodLogs = useMemo(() => logs.filter(log => {
+    const createdAt = new Date(log.created_at);
+    return isWithinInterval(createdAt, periodRange);
+  }), [logs, periodRange]);
 
-  // ── When drilled into a location, show its checklist cards ──
-  const drilledLocation = drillLocationId !== null
-    ? locationComplianceItems.find(l =>
-        drillLocationId === "unassigned" ? l.locationId === null : l.locationId === drillLocationId
-      )
-    : null;
+  const complianceItems = useMemo(() => {
+    return locations.map((location): LocationCompliance => {
+      const locationLogs = periodLogs
+        .filter(log => log.location_id === location.id)
+        .sort((a, b) => (a.created_at > b.created_at ? -1 : 1));
 
-  const complianceItems: ChecklistCompliance[] = drilledLocation
-    ? drilledLocation.checklists
-    : [];
+      const latestLogByChecklist = new Map<string, typeof locationLogs[0]>();
+      for (const log of locationLogs) {
+        const key = log.checklist_id ?? log.checklist_title;
+        if (!latestLogByChecklist.has(key)) latestLogByChecklist.set(key, log);
+      }
 
-  // ── Pagination applies to both location cards and drilled checklist cards ──
+      const assignedChecklists = checklists.filter(checklist =>
+        checklistAppliesToLocation(
+          { location_id: checklist.location_id, location_ids: checklist.location_ids },
+          location.id,
+        )
+      );
+
+      const checklistScores = assignedChecklists.map(checklist => latestLogByChecklist.get(checklist.id)?.score ?? 0);
+      const completedCount = assignedChecklists.filter(checklist => latestLogByChecklist.has(checklist.id)).length;
+      const avgScore = assignedChecklists.length > 0
+        ? Math.round(checklistScores.reduce((sum, score) => sum + score, 0) / assignedChecklists.length)
+        : 0;
+
+      return {
+        locationId: location.id,
+        name: location.name,
+        avgScore,
+        count: assignedChecklists.length,
+        completedCount,
+      };
+    }).sort((a, b) => a.avgScore - b.avgScore || a.name.localeCompare(b.name));
+  }, [locations, periodLogs, checklists]);
+
+  // ── Pagination applies to location cards ──
   const ITEMS_PER_PAGE = 4;
 
   // ── Overdue open actions ──
@@ -305,15 +235,10 @@ export default function Dashboard() {
   const visibleAlerts = allAlerts.slice(0, 3);
   const hasMore = allAlerts.length > 3;
 
-  // ── Pagination: applies to location cards (top level) or checklist cards (drilled) ──
-  const paginationSource = drillLocationId !== null ? complianceItems : locationComplianceItems;
+  // ── Pagination: applies to location cards ──
+  const paginationSource = complianceItems;
   const totalPages = Math.ceil(paginationSource.length / ITEMS_PER_PAGE);
-  const pagedLocationItems = drillLocationId === null
-    ? (locationComplianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE) as LocationCompliance[])
-    : [];
-  const pagedChecklistItems = drillLocationId !== null
-    ? (complianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE) as ChecklistCompliance[])
-    : [];
+  const pagedLocationItems = complianceItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE) as LocationCompliance[];
 
   return (
     <>
@@ -365,16 +290,26 @@ export default function Dashboard() {
         </section>
 
         {/* ── A. Operational Alerts ── */}
-        {allAlerts.length > 0 && (
-          <section>
-            <p className="section-label mb-3">Operational alerts</p>
+        <section>
+          <p className="section-label mb-3">Operational alerts</p>
+          {allAlerts.length === 0 ? (
+            <div className="bg-card border border-border rounded-2xl p-6 text-center">
+              <Bell size={20} className="mx-auto text-sage" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground">All clear</p>
+              <p className="text-xs text-muted-foreground mt-1">It looks like everything is calm now.</p>
+            </div>
+          ) : (
             <div className="space-y-2">
               {visibleAlerts.map(alert => (
-                <div key={alert.id}
+                <button
+                  key={alert.id}
+                  type="button"
+                  onClick={() => navigate("/notifications")}
                   className={cn(
-                    "bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4",
+                    "w-full bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
                     alert.type === "error" ? "border-l-status-error" : "border-l-status-warn"
                   )}
+                  aria-label={`Open alerts and review ${alert.message}`}
                 >
                   <AlertCircle size={15}
                     className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
@@ -389,7 +324,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
 
               {hasMore && (
@@ -402,186 +337,76 @@ export default function Dashboard() {
                 </button>
               )}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* ── B. Daily Compliance ── */}
         <section>
           <div className="flex items-center justify-between mb-3 gap-2">
-            <div className="flex items-center gap-2">
-              {drillLocationId !== null && (
-                <button
-                  onClick={() => { setDrillLocationId(null); setPage(0); }}
-                  className="p-1 rounded-full hover:bg-muted transition-colors"
-                  aria-label="Back to locations"
-                >
-                  <ArrowLeft size={14} className="text-muted-foreground" />
-                </button>
-              )}
-              <p className="section-label">
-                {drillLocationId !== null && drilledLocation
-                  ? drilledLocation.name
-                  : "Daily compliance"}
-              </p>
-            </div>
+            <p className="section-label">Daily compliance</p>
             <div className="flex items-center bg-muted rounded-full p-0.5 text-xs shrink-0">
-              {(["yesterday", "today", "overdue"] as ComplianceTab[]).map(tab => (
+              {(["today", "week", "month"] as ComplianceTab[]).map(tab => (
                 <button key={tab}
                   data-testid={`compliance-tab-${tab}`}
-                  onClick={() => { setComplianceTab(tab); setPage(0); setDrillLocationId(null); }}
+                  onClick={() => { setComplianceTab(tab); setPage(0); }}
                   className={cn(
                     "relative px-2.5 py-1 rounded-full transition-colors capitalize whitespace-nowrap",
                     complianceTab === tab ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground"
                   )}
                 >
                   {tab}
-                  {tab === "overdue" && overdueCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-status-error text-[10px] font-bold text-white px-1">
-                      {overdueCount}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
           </div>
 
-          {complianceTab !== "overdue" ? (
-            locationComplianceItems.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
-                  <TrendingUp size={20} className="text-sage" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">No submissions yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {complianceTab === "today" ? "No checklists completed today." : "No checklists completed yesterday."}
-                  </p>
-                </div>
+          {locations.length === 0 ? (
+            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
+              <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
+                <TrendingUp size={20} className="text-sage" />
               </div>
-            ) : drillLocationId === null ? (
-              /* ── LOCATION CARDS (top level) ── */
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  {pagedLocationItems.map(loc => (
+              <div>
+                <p className="text-sm font-semibold text-foreground">No locations yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Add a location to see health scores here.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                {pagedLocationItems.map(loc => {
+                  const healthClass =
+                    loc.avgScore >= 85 ? "text-status-ok" :
+                    loc.avgScore >= 65 ? "text-status-warn" :
+                    "text-status-error";
+
+                  return (
                     <button
-                      key={loc.locationId ?? "unassigned"}
+                      key={loc.locationId ?? loc.name}
                       data-testid="location-card"
-                      onClick={() => { setDrillLocationId(loc.locationId ?? "unassigned"); setPage(0); }}
+                      onClick={() => navigate(`/checklists?tab=reporting&location=${encodeURIComponent(loc.locationId ?? "")}`)}
                       className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
                     >
                       <div className="relative" style={{ width: 72, height: 72 }}>
                         <ScoreRing score={loc.avgScore} size={72} />
-                        <span className={cn(
-                          "absolute inset-0 flex items-center justify-center text-sm font-bold",
-                          loc.avgScore >= 85 ? "text-status-ok" : loc.avgScore >= 65 ? "text-status-warn" : "text-status-error"
-                        )}>
+                        <span className={cn("absolute inset-0 flex items-center justify-center text-sm font-bold", healthClass)}>
                           {loc.avgScore}%
                         </span>
                       </div>
                       <div className="w-full">
                         <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{loc.name}</p>
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          {loc.count} checklist{loc.count !== 1 ? "s" : ""} completed
+                          {loc.count > 0
+                            ? `${loc.completedCount}/${loc.count} checklists completed`
+                            : "No checklists assigned"}
                         </p>
-                        <p className="text-[10px] text-sage mt-0.5 font-medium">Tap to drill in →</p>
+                        <p className="text-[10px] text-sage mt-0.5 font-medium">Tap to review reporting →</p>
                       </div>
                     </button>
-                  ))}
-                </div>
-                {totalPages > 1 && <PaginationDots page={page} totalPages={totalPages} setPage={setPage} />}
-              </>
-            ) : (
-              /* ── CHECKLIST CARDS (drilled into a location) ── */
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  {pagedChecklistItems.map(item => (
-                    <button key={item.id} onClick={() => setSelectedChecklist(item)}
-                      className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
-                    >
-                      <div className="relative" style={{ width: 72, height: 72 }}>
-                        <ScoreRing score={item.completion} size={72} />
-                        <span className={cn(
-                          "absolute inset-0 flex items-center justify-center text-sm font-bold",
-                          item.completion >= 85 ? "text-status-ok" : item.completion >= 65 ? "text-status-warn" : "text-status-error"
-                        )}>
-                          {item.completion}%
-                        </span>
-                      </div>
-                      <div className="w-full">
-                        <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{item.name}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">{item.completedBy}</p>
-                        <p className="text-[10px] text-muted-foreground">{item.completedTasks}/{item.totalTasks} tasks</p>
-                        {item.completedAt && (
-                          <p className="text-[10px] text-status-ok mt-0.5 font-medium">Done {item.completedAt}</p>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                {totalPages > 1 && <PaginationDots page={page} totalPages={totalPages} setPage={setPage} />}
-              </>
-            )
-          ) : (
-            overdueActions.length === 0 && missedChecklists.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
-                  <TrendingUp size={20} className="text-sage" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">All caught up</p>
-                  <p className="text-xs text-muted-foreground mt-1">No overdue tasks right now.</p>
-                </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {missedChecklists.length > 0 && (
-                  <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
-                    {missedChecklists.map((checklist) => (
-                      <button
-                        key={checklist.id}
-                        data-testid="overdue-checklist-item"
-                        onClick={() => navigate("/checklists")}
-                        className="w-full flex items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-status-warn/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle size={16} className="text-status-warn" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{checklist.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">Scheduled checklist</p>
-                          <p className="text-xs text-status-warn mt-1 font-medium">
-                            Due by {checklist.due_time} - not completed
-                          </p>
-                        </div>
-                        <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-2" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {overdueActions.length > 0 && (
-                  <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
-                    {overdueActions.map(task => (
-                      <button key={task.id} onClick={() => navigate("/checklists")}
-                        className="w-full flex items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors">
-                        <div className="w-9 h-9 rounded-xl bg-status-error/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle size={16} className="text-status-error" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {task.checklist_title ?? "—"}{task.assigned_to ? ` · ${task.assigned_to}` : ""}
-                          </p>
-                          {task.due && (
-                            <p className="text-xs text-status-error mt-1 font-medium">Due {task.due}</p>
-                          )}
-                        </div>
-                        <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-2" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
+              {totalPages > 1 && <PaginationDots page={page} totalPages={totalPages} setPage={setPage} />}
+            </>
           )}
         </section>
 
@@ -598,7 +423,6 @@ export default function Dashboard() {
       </button>
 
       {showQuickTask  && <QuickTaskModal onClose={() => setShowQuickTask(false)} />}
-      {selectedChecklist && <ChecklistDetailModal item={selectedChecklist} onClose={() => setSelectedChecklist(null)} />}
     </>
   );
 }

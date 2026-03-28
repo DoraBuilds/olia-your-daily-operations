@@ -1,0 +1,28 @@
+:root {
+  --olia-ink: #050608;
+  --olia-graphite: #10131a;
+  --olia-slate: #687086;
+  --olia-mist: #dce4f3;
+  --olia-cloud: #f5f7ff;
+  --olia-white: #ffffff;
+
+  --olia-violet: #b05dff;
+  --olia-iris: #7a68ff;
+  --olia-electric: #4aa8ff;
+
+  --olia-gradient-orbit: linear-gradient(135deg, #b05dff 0%, #7a68ff 48%, #4aa8ff 100%);
+  --olia-gradient-surface: radial-gradient(circle at 20% 20%, rgba(176, 93, 255, 0.28), transparent 38%),
+    radial-gradient(circle at 80% 10%, rgba(74, 168, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, #0b0d12 0%, #050608 100%);
+
+  --olia-font-display: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+  --olia-font-body: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+
+  --olia-radius-sm: 12px;
+  --olia-radius-md: 18px;
+  --olia-radius-lg: 28px;
+
+  --olia-shadow-glow: 0 0 40px rgba(122, 104, 255, 0.18);
+  --olia-shadow-card: 0 18px 48px rgba(0, 0, 0, 0.22);
+}
+

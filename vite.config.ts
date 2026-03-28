@@ -22,4 +22,34 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("jspdf") || id.includes("jspdf-autotable")) {
+            return "pdf-export";
+          }
+
+          if (id.includes("xlsx")) {
+            return "spreadsheet-tools";
+          }
+
+          if (id.includes("html2canvas") || id.includes("pdfjs-dist")) {
+            return "document-preview";
+          }
+
+          if (id.includes("recharts")) {
+            return "charts";
+          }
+
+          if (id.includes("@supabase")) {
+            return "supabase";
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
 }));

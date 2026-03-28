@@ -2,6 +2,19 @@ import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import Kiosk from "@/pages/Kiosk";
 import { renderWithProviders } from "../test-utils";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+const checklistLogsInsert = vi.fn().mockResolvedValue({ error: null });
+const alertsInsert = vi.fn().mockResolvedValue({ error: null });
+
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 // The KioskSetupScreen calls:
 //   supabase.from("locations").select("id, name").order("name").then(...)
@@ -15,30 +28,83 @@ vi.mock("@/lib/supabase", () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
-    from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      insert: vi.fn().mockResolvedValue({ error: null }),
-      update: vi.fn().mockReturnThis(),
-      upsert: vi.fn().mockResolvedValue({ error: null }),
-      delete: vi.fn().mockReturnThis(),
-      then: vi.fn().mockImplementation((cb) =>
-        Promise.resolve(cb({
+    from: vi.fn((table: string) => {
+      if (table === "alerts") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          insert: alertsInsert,
+          update: vi.fn().mockReturnThis(),
+          upsert: vi.fn().mockResolvedValue({ error: null }),
+          delete: vi.fn().mockReturnThis(),
+          then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
+        };
+      }
+
+      if (table === "checklist_logs") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          insert: checklistLogsInsert,
+          update: vi.fn().mockReturnThis(),
+          upsert: vi.fn().mockResolvedValue({ error: null }),
+          delete: vi.fn().mockReturnThis(),
+          then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnThis(),
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        delete: vi.fn().mockReturnThis(),
+        then: vi.fn().mockImplementation((cb) =>
+          Promise.resolve(cb({
+            data: [
+              { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
+              { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
+            ],
+            error: null,
+          }))
+        ),
+      };
+    }),
+    rpc: vi.fn().mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
           data: [
-            { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
-            { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
+            { id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] },
           ],
           error: null,
-        }))
-      ),
-    }),
-    rpc: vi.fn().mockResolvedValue({
-      data: [
-        { id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] },
-      ],
-      error: null,
+        });
+      }
+
+      if (fn === "validate_admin_pin") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "tm-1",
+              name: "Sarah Owner",
+              email: "sarah@example.com",
+              role: "Owner",
+              organization_id: "org-1",
+              location_ids: [],
+              permissions: {},
+            },
+          ],
+          error: null,
+        });
+      }
+
+      return Promise.resolve({ data: [], error: null });
     }),
   },
 }));
@@ -60,12 +126,94 @@ async function renderGridScreen() {
   await screen.findByText(/What's on the agenda/i);
 }
 
+async function openRunnerWithQuestions(questions: any[]) {
+  const { supabase } = await import("@/lib/supabase");
+  supabase.rpc.mockImplementation((fn: string) => {
+    if (fn === "get_kiosk_checklists") {
+      return Promise.resolve({
+        data: [
+          {
+            id: "ck-runner-test",
+            title: "Runner Test Checklist",
+            location_id: "00000000-0000-0000-0000-000000000011",
+            time_of_day: "anytime",
+            due_time: null,
+            sections: [
+              {
+                name: "Main",
+                questions,
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+    }
+
+    if (fn === "validate_staff_pin") {
+      return Promise.resolve({
+        data: [
+          {
+            id: "staff-1",
+            first_name: "Jay",
+            last_name: "Tester",
+            organization_id: "org-1",
+          },
+        ],
+        error: null,
+      });
+    }
+
+    if (fn === "validate_admin_pin") {
+      return Promise.resolve({
+        data: [
+          {
+            id: "tm-1",
+            name: "Sarah Owner",
+            email: "sarah@example.com",
+            role: "Owner",
+            organization_id: "org-1",
+            location_ids: [],
+            permissions: {},
+          },
+        ],
+        error: null,
+      });
+    }
+
+    return Promise.resolve({ data: [], error: null });
+  });
+
+  await renderGridScreen();
+
+  const checklistBtn = await waitFor(() =>
+    document.querySelector("[id^='checklist-card-']") as HTMLButtonElement | null
+  );
+  expect(checklistBtn).not.toBeNull();
+  fireEvent.click(checklistBtn!);
+
+  await waitFor(() => {
+    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
+  });
+
+  for (const digit of ["1", "2", "3", "4"]) {
+    fireEvent.click(screen.getByRole("button", { name: digit }));
+  }
+
+  await waitFor(() => {
+    expect(screen.getByRole("button", { name: /complete checklist/i })).toBeInTheDocument();
+  });
+}
+
 beforeEach(() => {
   localStorage.clear();
+  checklistLogsInsert.mockClear();
+  alertsInsert.mockClear();
 });
 
 afterEach(() => {
   localStorage.clear();
+  vi.useRealTimers();
 });
 
 // ─── Setup Screen tests ───────────────────────────────────────────────────────
@@ -128,6 +276,28 @@ describe("Kiosk — Setup Screen", () => {
     });
   });
 
+  it("shows a safe empty state when Supabase returns no locations", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.from.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      then: vi.fn().mockImplementation((cb) =>
+        Promise.resolve(cb({ data: [], error: null }))
+      ),
+    } as any);
+
+    renderSetup();
+
+    await waitFor(() => {
+      expect(screen.getByText(/No locations available/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Terrace")).not.toBeInTheDocument();
+    expect(screen.queryByText("Grand Ballroom")).not.toBeInTheDocument();
+    const launchBtn = document.getElementById("launch-kiosk-btn") as HTMLButtonElement;
+    expect(launchBtn.disabled).toBe(true);
+  });
+
   it("'Launch Kiosk' button is disabled when loading (before locations load)", () => {
     // Before the async .then resolves the button should be disabled
     localStorage.clear();
@@ -185,9 +355,10 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByText(/System Online/i)).toBeInTheDocument();
   });
 
-  it("grid screen shows stat strip with 'Due now', 'Upcoming', 'Done'", async () => {
+  it("grid screen shows stat strip with 'Due now', 'Overdue', 'Upcoming', 'Done'", async () => {
     await renderGridScreen();
     expect(screen.getAllByText("Due now").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Overdue")).toBeInTheDocument();
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
     expect(screen.getByText("Done")).toBeInTheDocument();
   });
@@ -209,62 +380,62 @@ describe("Kiosk — Grid Screen", () => {
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(screen.getByText("Admin login")).toBeInTheDocument();
+      expect(screen.getByText("Admin PIN")).toBeInTheDocument();
     });
   });
 
-  it("Admin Login Modal has Email and Password inputs", async () => {
+  it("Admin Login Modal has a PIN input", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-email-input")).not.toBeNull();
-      expect(document.getElementById("admin-password-input")).not.toBeNull();
+      expect(document.getElementById("admin-pin-input")).not.toBeNull();
+      expect(document.getElementById("admin-email-input")).toBeNull();
+      expect(document.getElementById("admin-password-input")).toBeNull();
     });
   });
 
-  it("Admin Login Modal has 'Sign in' button", async () => {
+  it("Admin Login Modal has 'Continue' button", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-signin-btn")).not.toBeNull();
+      expect(document.getElementById("admin-pin-signin-btn")).not.toBeNull();
     });
   });
 
-  it("filling email and password enables the sign in button", async () => {
+  it("filling PIN enables the continue button", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-email-input")).not.toBeNull();
+      expect(document.getElementById("admin-pin-input")).not.toBeNull();
     });
-    const emailInput = document.getElementById("admin-email-input") as HTMLInputElement;
-    const passwordInput = document.getElementById("admin-password-input") as HTMLInputElement;
-    fireEvent.change(emailInput, { target: { value: "admin@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    const signInBtn = document.getElementById("admin-signin-btn") as HTMLButtonElement;
+    const pinInput = document.getElementById("admin-pin-input") as HTMLInputElement;
+    fireEvent.change(pinInput, { target: { value: "1234" } });
+    const signInBtn = document.getElementById("admin-pin-signin-btn") as HTMLButtonElement;
     expect(signInBtn.disabled).toBe(false);
   });
 
-  it("clicking 'Sign in' calls supabase.auth.signInWithPassword", async () => {
+  it("clicking 'Continue' calls supabase.rpc validate_admin_pin", async () => {
     const { supabase } = await import("@/lib/supabase");
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-email-input")).not.toBeNull();
+      expect(document.getElementById("admin-pin-input")).not.toBeNull();
     });
-    const emailInput = document.getElementById("admin-email-input") as HTMLInputElement;
-    const passwordInput = document.getElementById("admin-password-input") as HTMLInputElement;
-    fireEvent.change(emailInput, { target: { value: "admin@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    const signInBtn = document.getElementById("admin-signin-btn") as HTMLButtonElement;
+    const pinInput = document.getElementById("admin-pin-input") as HTMLInputElement;
+    fireEvent.change(pinInput, { target: { value: "1234" } });
+    const signInBtn = document.getElementById("admin-pin-signin-btn") as HTMLButtonElement;
     await act(async () => {
       fireEvent.click(signInBtn);
     });
     await waitFor(() => {
-      expect(supabase.auth.signInWithPassword).toHaveBeenCalled();
+      expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
+        p_pin: "1234",
+        p_location_id: "00000000-0000-0000-0000-000000000011",
+      });
     });
   });
 
@@ -273,14 +444,14 @@ describe("Kiosk — Grid Screen", () => {
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(screen.getByText("Admin login")).toBeInTheDocument();
+      expect(screen.getByText("Admin PIN")).toBeInTheDocument();
     });
     // Click the fixed overlay backdrop (the outermost div)
     const backdrop = document.querySelector(".fixed.inset-0.z-\\[60\\]") as HTMLElement;
     if (backdrop) {
       fireEvent.click(backdrop);
       await waitFor(() => {
-        expect(screen.queryByText("Admin login")).not.toBeInTheDocument();
+        expect(screen.queryByText("Admin PIN")).not.toBeInTheDocument();
       });
     }
   });
@@ -298,6 +469,72 @@ describe("Kiosk — Grid Screen", () => {
       // No checklists for this time of day — test still passes
       expect(true).toBe(true);
     }
+  });
+
+  it("lets staff move past an optional checkbox question in the runner", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "ck-runner-1",
+              title: "Opening flow",
+              location_id: "00000000-0000-0000-0000-000000000011",
+              sections: [
+                {
+                  name: "Section A",
+                  questions: [
+                    { id: "q-optional", text: "Optional confirm", responseType: "checkbox", required: false, config: {} },
+                    { id: "q-required", text: "Required confirm", responseType: "checkbox", required: true, config: {} },
+                  ],
+                },
+              ],
+            },
+          ],
+          error: null,
+        });
+      }
+
+      if (fn === "validate_staff_pin") {
+        return Promise.resolve({
+          data: [{ id: "staff-1", first_name: "Jay", last_name: "Tester", organization_id: "org-1" }],
+          error: null,
+        });
+      }
+
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    await renderGridScreen();
+
+    await waitFor(() => {
+      expect(document.querySelector("[id^='checklist-card-']")).not.toBeNull();
+    });
+    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
+    fireEvent.click(checklistBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Insert PIN")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "1" }));
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    fireEvent.click(screen.getByRole("button", { name: "4" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Optional confirm")).toBeInTheDocument();
+    });
+
+    const nextButtons = screen.getAllByRole("button", { name: /Next/i });
+    expect(nextButtons.length).toBeGreaterThan(0);
+
+    fireEvent.click(nextButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Required confirm")).toBeInTheDocument();
+    });
   });
 });
 
@@ -435,6 +672,7 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
   it("grid screen shows stat strip for Grand Ballroom", async () => {
     await renderGrandBallroomGrid();
     expect(screen.getAllByText("Due now").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Overdue")).toBeInTheDocument();
   });
 });
 
@@ -463,6 +701,177 @@ describe("Kiosk — Completion Screen", () => {
     });
     // Back on grid screen
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+  });
+});
+
+describe("Kiosk — Checklist Runner", () => {
+  it("shows a manual next CTA for an optional unchecked checkbox and lets the user continue", async () => {
+    await openRunnerWithQuestions([
+      { id: "q-optional-checkbox", text: "Optional checkbox", responseType: "checkbox", required: false },
+      { id: "q-instruction", text: "Instruction", responseType: "instruction", config: { instructionText: "Wash hands" } },
+      { id: "q-required-text", text: "Required note", responseType: "text", required: true },
+    ]);
+
+    const nextBtn = screen.getByRole("button", { name: /next/i });
+    expect(nextBtn.parentElement?.className).toContain("justify-end");
+
+    fireEvent.click(nextBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /acknowledge/i })).toBeInTheDocument();
+    });
+  });
+
+  it("fires an out-of-range number alert after 90 seconds even if the checklist is completed", async () => {
+    await openRunnerWithQuestions([
+      {
+        id: "q-fridge-temp",
+        text: "Fridge temperature",
+        responseType: "number",
+        required: true,
+        config: { numberMin: 2, numberMax: 5 },
+      },
+    ]);
+
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "9" } });
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+
+    expect(alertsInsert).not.toHaveBeenCalled();
+
+    await act(async () => { vi.advanceTimersByTime(89_999); });
+    expect(alertsInsert).not.toHaveBeenCalled();
+
+    await act(async () => { vi.advanceTimersByTime(1); });
+
+    expect(alertsInsert).toHaveBeenCalledTimes(1);
+    expect(alertsInsert).toHaveBeenCalledWith(expect.objectContaining({
+      organization_id: "org-1",
+      type: "warn",
+      message: expect.stringContaining("Fridge temperature: recorded 9"),
+      area: "Runner Test Checklist",
+      source: "kiosk",
+    }));
+  });
+
+  it("cancels the out-of-range alert if the number is corrected within 90 seconds", async () => {
+    await openRunnerWithQuestions([
+      {
+        id: "q-fridge-temp",
+        text: "Fridge temperature",
+        responseType: "number",
+        required: true,
+        config: { numberMin: 2, numberMax: 5 },
+      },
+    ]);
+
+    vi.useFakeTimers();
+
+    const spin = screen.getByRole("spinbutton");
+    fireEvent.change(spin, { target: { value: "9" } });
+
+    await act(async () => { vi.advanceTimersByTime(30_000); });
+
+    fireEvent.change(spin, { target: { value: "4" } });
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+
+    await act(async () => { vi.advanceTimersByTime(60_000); });
+
+    expect(alertsInsert).not.toHaveBeenCalled();
+  });
+
+  it("opens linked Infohub content from an instruction and lets the user close it", async () => {
+    await openRunnerWithQuestions([
+      {
+        id: "q-instruction-link",
+        text: "Read the guide",
+        responseType: "instruction",
+        config: {
+          instructionText: "Open the linked document before you continue.",
+          instructionLinkId: "s3",
+          instructionLinkTitle: "Opening & closing procedure",
+          instructionLinkSection: "library",
+        },
+      },
+      { id: "q-required-text", text: "Required note", responseType: "text", required: true },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /open the linked document before you continue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /open linked document/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Opening & closing procedure").length).toBeGreaterThan(0);
+      expect(screen.getByText(/Arrive 30 minutes before service/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /close linked resource/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /close linked resource/i })).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows a manual next CTA for an optional photo question and uses live camera capture", async () => {
+    const originalMediaDevices = navigator.mediaDevices;
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    const originalPlay = HTMLMediaElement.prototype.play;
+    const mockStream = {
+      getTracks: () => [{ stop: vi.fn() }],
+    } as unknown as MediaStream;
+
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(mockStream),
+      },
+    });
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() });
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,test-image");
+    // @ts-expect-error test shim
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+
+    try {
+      await openRunnerWithQuestions([
+        { id: "q-optional-media", text: "Take a photo", responseType: "media", required: false },
+        { id: "q-instruction", text: "Instruction", responseType: "instruction", config: { instructionText: "Carry on" } },
+      ]);
+
+      const nextBtn = screen.getByRole("button", { name: /next/i });
+      expect(nextBtn.parentElement?.className).toContain("justify-end");
+
+      expect(document.querySelector('input[type="file"]')).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: /take photo/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /capture photo/i })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /capture photo/i }));
+      fireEvent.click(screen.getByRole("button", { name: /use photo/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Photo attached")).toBeInTheDocument();
+      });
+
+      fireEvent.click(nextBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText("Carry on")).toBeInTheDocument();
+      });
+    } finally {
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: originalMediaDevices,
+      });
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+      HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+      HTMLMediaElement.prototype.play = originalPlay;
+    }
   });
 });
 

@@ -1,0 +1,24 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="emailStroke" x1="60" y1="312" x2="308" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+    <radialGradient id="emailGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1050 44) rotate(139) scale(220 220)">
+      <stop stop-color="#4AA8FF" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#4AA8FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="400" fill="#050608"/>
+  <rect width="1200" height="400" fill="url(#emailGlow)"/>
+  <g stroke-linecap="round">
+    <circle cx="180" cy="200" r="110" stroke="url(#emailStroke)" stroke-width="5"/>
+    <circle cx="180" cy="200" r="88" stroke="url(#emailStroke)" stroke-width="5" opacity="0.94"/>
+    <circle cx="180" cy="200" r="66" stroke="url(#emailStroke)" stroke-width="5" opacity="0.9"/>
+    <circle cx="180" cy="200" r="44" stroke="#FFFFFF" stroke-width="5"/>
+  </g>
+  <text x="328" y="176" fill="#FFFFFF" font-size="64" font-family="Space Grotesk, Avenir Next, Arial, sans-serif" font-weight="600" letter-spacing="-2">OLIA</text>
+  <text x="330" y="228" fill="#A9B5CA" font-size="24" font-family="Manrope, Avenir Next, Arial, sans-serif">Operational clarity for hospitality teams</text>
+</svg>
+

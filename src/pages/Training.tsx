@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
-import { ChevronLeft, ChevronRight, Play, CheckCircle, Circle, GraduationCap, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, CheckCircle, Circle, GraduationCap, Wrench, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { useTrainingProgress, type TrainingProgressRow } from "@/hooks/useTrainingProgress";
+import { TrainingAIModal } from "@/pages/TrainingAIModal";
 
 type TrainingTab = "onboarding" | "troubleshooting";
 
@@ -16,9 +16,7 @@ interface TrainingModule {
   steps: string[];
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const modules: TrainingModule[] = [
+const INITIAL_MODULES: TrainingModule[] = [
   {
     id: "tr1",
     title: "How to make a latte",
@@ -43,7 +41,7 @@ const modules: TrainingModule[] = [
     completed: true,
     steps: [
       "Approach the table within 2 minutes of the guests being seated.",
-      "Greet the table calmly. Introduce today's specials if applicable.",
+      "Greet the table calmly. Introduce today’s specials if applicable.",
       "Note any dietary requirements or allergies before taking the order.",
       "Repeat the order back to the table clearly.",
       "Input the order accurately into the POS system.",
@@ -104,19 +102,51 @@ const modules: TrainingModule[] = [
       "Listen to the complaint fully without interrupting.",
       "Acknowledge the issue calmly. Do not be defensive.",
       "Apologise sincerely for the experience.",
-      "Offer a resolution — replacement, refund, or discount — within your authority.",
+      "Offer a resolution - replacement, refund, or discount - within your authority.",
       "If escalation is needed, involve a manager immediately.",
       "Log the complaint in the incident register after resolution.",
     ],
   },
 ];
 
-// ─── Module Detail ────────────────────────────────────────────────────────────
+function completedStepSet(module: TrainingModule, progress?: TrainingProgressRow | null) {
+  if (progress) {
+    return new Set(progress.completed_step_indices ?? []);
+  }
 
-function ModuleDetail({ module, onBack }: { module: TrainingModule; onBack: () => void }) {
+  return module.completed ? new Set(module.steps.map((_, i) => i)) : new Set<number>();
+}
+
+function effectiveCompletion(module: TrainingModule, progress?: TrainingProgressRow | null) {
+  return progress ? progress.is_completed : module.completed;
+}
+
+function ModuleDetail({
+  module,
+  savedCompletedStepIndices,
+  hasSavedProgress,
+  onBack,
+  onSaveProgress,
+}: {
+  module: TrainingModule;
+  savedCompletedStepIndices: number[];
+  hasSavedProgress: boolean;
+  onBack: () => void;
+  onSaveProgress: (indices: number[]) => void;
+}) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
-    module.completed ? new Set(module.steps.map((_, i) => i)) : new Set()
+    () => hasSavedProgress
+      ? new Set(savedCompletedStepIndices)
+      : (module.completed ? new Set(module.steps.map((_, i) => i)) : new Set<number>()),
   );
+
+  useEffect(() => {
+    setCompletedSteps(
+      hasSavedProgress
+        ? new Set(savedCompletedStepIndices)
+        : (module.completed ? new Set(module.steps.map((_, i) => i)) : new Set<number>()),
+    );
+  }, [module.id, module.completed, module.steps.length, hasSavedProgress, savedCompletedStepIndices.join(",")]);
 
   const allDone = completedSteps.size === module.steps.length;
 
@@ -124,12 +154,13 @@ function ModuleDetail({ module, onBack }: { module: TrainingModule; onBack: () =
     setCompletedSteps(prev => {
       const next = new Set(prev);
       next.has(i) ? next.delete(i) : next.add(i);
+      onSaveProgress(Array.from(next).sort((a, b) => a - b));
       return next;
     });
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -141,7 +172,7 @@ function ModuleDetail({ module, onBack }: { module: TrainingModule; onBack: () =
           </div>
         </div>
       </header>
-      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-3">
+      <main className="flex-1 overflow-auto pb-24 px-5 py-5 space-y-3 sm:px-6 lg:px-8">
         {module.steps.map((step, i) => {
           const done = completedSteps.has(i);
           return (
@@ -150,7 +181,7 @@ function ModuleDetail({ module, onBack }: { module: TrainingModule; onBack: () =
               onClick={() => toggle(i)}
               className={cn(
                 "w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all",
-                done ? "border-sage/30 bg-sage-light" : "border-border bg-card hover:border-sage/30"
+                done ? "border-sage/30 bg-sage-light" : "border-border bg-card hover:border-sage/30",
               )}
             >
               {done
@@ -177,23 +208,53 @@ function ModuleDetail({ module, onBack }: { module: TrainingModule; onBack: () =
   );
 }
 
-// ─── Training Page ────────────────────────────────────────────────────────────
-
 export default function Training() {
   const [tab, setTab] = useState<TrainingTab>("onboarding");
   const [selected, setSelected] = useState<TrainingModule | null>(null);
+  const [modules, setModules] = useState<TrainingModule[]>(INITIAL_MODULES);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const { data: progressRows = [], saveProgress } = useTrainingProgress();
 
-  if (selected) return <ModuleDetail module={selected} onBack={() => setSelected(null)} />;
+  if (selected) {
+    const selectedProgress = progressRows.find(row => row.module_id === selected.id) ?? null;
+    const selectedSteps = Array.from(completedStepSet(selected, selectedProgress));
+    return (
+      <ModuleDetail
+        module={selected}
+        savedCompletedStepIndices={selectedSteps}
+        hasSavedProgress={!!selectedProgress}
+        onBack={() => setSelected(null)}
+        onSaveProgress={(indices) => saveProgress.mutate({
+          moduleId: selected.id,
+          completedStepIndices: indices,
+          totalSteps: selected.steps.length,
+        })}
+      />
+    );
+  }
 
   const filtered = modules.filter(m => m.category === tab);
-  const completed = filtered.filter(m => m.completed).length;
+  const completedCount = filtered.filter(module => effectiveCompletion(module, progressRows.find(row => row.module_id === module.id) ?? null)).length;
 
   return (
-    <Layout title="Training" subtitle={tab === "onboarding" ? "Staff onboarding modules" : "Issue resolution guides"}>
-      {/* Tab toggle */}
+    <>
+      <Layout
+        title="Training"
+        subtitle={tab === "onboarding" ? "Staff onboarding modules" : "Issue resolution guides"}
+        headerRight={
+          <button
+            type="button"
+            onClick={() => setShowAIModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-lavender/30 bg-lavender-light text-lavender-deep text-xs font-medium hover:bg-lavender-light/80 transition-colors"
+          >
+            <Sparkles size={13} />
+            Build with AI
+          </button>
+        }
+      >
       <div className="flex gap-1 bg-muted rounded-xl p-1">
         {([
-          { key: "onboarding" as const,      label: "Onboarding",      icon: GraduationCap },
+          { key: "onboarding" as const, label: "Onboarding", icon: GraduationCap },
           { key: "troubleshooting" as const, label: "Troubleshooting", icon: Wrench },
         ]).map(({ key, label, icon: Icon }) => (
           <button
@@ -201,7 +262,7 @@ export default function Training() {
             onClick={() => setTab(key)}
             className={cn(
               "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors",
-              tab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              tab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Icon size={13} />
@@ -210,53 +271,77 @@ export default function Training() {
         ))}
       </div>
 
-      {/* Progress */}
       <div className="card-surface p-4 flex items-center gap-4">
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">{completed} of {filtered.length} completed</p>
+          <p className="text-sm font-medium text-foreground">{completedCount} of {filtered.length} completed</p>
           <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
-                width: `${filtered.length ? (completed / filtered.length) * 100 : 0}%`,
+                width: `${filtered.length ? (completedCount / filtered.length) * 100 : 0}%`,
                 backgroundColor: "hsl(var(--status-ok))",
               }}
             />
           </div>
         </div>
         <span className="text-lg font-semibold text-foreground">
-          {filtered.length ? Math.round((completed / filtered.length) * 100) : 0}%
+          {filtered.length ? Math.round((completedCount / filtered.length) * 100) : 0}%
         </span>
       </div>
 
-      {/* Module list */}
-      <div className="card-surface divide-y divide-border">
-        {filtered.map(module => (
-          <button
-            key={module.id}
-            onClick={() => setSelected(module)}
-            className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
-          >
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-              module.completed ? "bg-sage-light" : "bg-muted"
-            )}>
-              {module.completed
-                ? <CheckCircle size={17} className="text-sage-deep" />
-                : <Play size={17} className="text-muted-foreground" />
-              }
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{module.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{module.duration} · {module.steps.length} steps</p>
-            </div>
-            {module.completed && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium status-ok shrink-0">Done</span>
-            )}
-            <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-          </button>
-        ))}
+      <div className="grid gap-3 md:grid-cols-2">
+        {filtered.map(module => {
+          const moduleProgress = progressRows.find(row => row.module_id === module.id) ?? null;
+          const completed = effectiveCompletion(module, moduleProgress);
+
+          return (
+            <button
+              key={module.id}
+              onClick={() => setSelected(module)}
+              className="card-surface w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors"
+            >
+              <div className={cn(
+                "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                completed ? "bg-sage-light" : "bg-muted",
+              )}>
+                {completed
+                  ? <CheckCircle size={17} className="text-sage-deep" />
+                  : <Play size={17} className="text-muted-foreground" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{module.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{module.duration} · {module.steps.length} steps</p>
+              </div>
+              {completed && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium status-ok shrink-0">Done</span>
+              )}
+              <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+            </button>
+          );
+        })}
       </div>
-    </Layout>
+      </Layout>
+
+      {showAIModal && (
+        <TrainingAIModal
+          onClose={() => setShowAIModal(false)}
+          onGenerate={(generated) => {
+            const nextModule: TrainingModule = {
+              id: `ai-${Date.now()}`,
+              title: generated.title,
+              category: generated.category,
+              duration: generated.duration,
+              completed: false,
+              steps: generated.steps,
+            };
+
+            setModules(prev => [nextModule, ...prev]);
+            setTab(generated.category);
+            setSelected(nextModule);
+          }}
+        />
+      )}
+    </>
   );
 }

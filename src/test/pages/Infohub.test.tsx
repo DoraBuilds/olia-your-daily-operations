@@ -21,6 +21,9 @@ vi.mock("@/lib/supabase", () => ({
       delete: vi.fn().mockReturnThis(),
       then: vi.fn().mockImplementation(cb => Promise.resolve(cb({ data: [], error: null }))),
     }),
+    functions: {
+      invoke: vi.fn(),
+    },
   },
 }));
 
@@ -35,7 +38,43 @@ vi.mock("@/contexts/AuthContext", () => ({
   AuthProvider: ({ children }: any) => children,
 }));
 
+vi.mock("@/hooks/useTeamMembers", () => ({
+  useTeamMembers: () => ({
+    data: [
+      { id: "u1", name: "Sarah", role: "Owner" },
+      { id: "u2", name: "Jay", role: "Manager" },
+    ],
+  }),
+}));
+
+vi.mock("@/hooks/useLocations", () => ({
+  useLocations: () => ({
+    data: [
+      { id: "loc-1", name: "Main Branch" },
+      { id: "loc-2", name: "Terrace" },
+    ],
+  }),
+}));
+
+vi.mock("@/hooks/useInfohubContent", async () => {
+  const mod = await import("../mocks/infohub-hooks");
+  return { useInfohubContent: mod.useMockInfohubContent };
+});
+
+vi.mock("@/hooks/useTrainingProgress", async () => {
+  const mod = await import("../mocks/infohub-hooks");
+  return { useTrainingProgress: mod.useMockTrainingProgress };
+});
+
 describe("Infohub page", () => {
+  beforeEach(async () => {
+    const { supabase } = await import("@/lib/supabase");
+    const { resetInfohubMockState } = await import("../mocks/infohub-hooks");
+    vi.mocked(supabase.functions.invoke).mockReset();
+    resetInfohubMockState();
+    localStorage.clear();
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<Infohub />);
     expect(document.body).toBeDefined();
@@ -186,6 +225,33 @@ describe("Infohub page", () => {
         expect(screen.queryByText("Library")).toBeInTheDocument();
       }
     }
+  });
+
+  it("generates an AI summary for a library document", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: {
+        type: "summary",
+        title: "How to serve a customer",
+        bullets: ["Greet within 30 seconds", "Repeat the order back clearly"],
+        takeaway: "Keep service warm, calm, and accurate.",
+      },
+      error: null,
+    } as any);
+
+    renderWithProviders(<Infohub />);
+
+    fireEvent.click(screen.getByRole("button", { name: /search documents/i }));
+    fireEvent.change(screen.getByPlaceholderText("Search all documents..."), {
+      target: { value: "serve a customer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /how to serve a customer/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /open ai tools/i }));
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+
+    expect(await screen.findByText("Keep service warm, calm, and accurate.")).toBeInTheDocument();
+    expect(screen.getByText("Greet within 30 seconds")).toBeInTheDocument();
   });
 
   it("switching to Training tab shows training folders", () => {

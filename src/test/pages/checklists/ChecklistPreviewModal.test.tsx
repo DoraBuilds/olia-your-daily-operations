@@ -39,6 +39,79 @@ const mockChecklist: ChecklistItem = {
   ],
 };
 
+const multipleChoiceChecklist: ChecklistItem = {
+  id: "cl-mc",
+  title: "Multiple Choice Checklist",
+  type: "checklist",
+  questionsCount: 1,
+  folderId: null,
+  createdAt: "2026-01-01",
+  sections: [
+    {
+      id: "sec-mc",
+      name: "Service",
+      questions: [
+        {
+          id: "q-mc",
+          text: "How did service go?",
+          responseType: "multiple_choice",
+          required: true,
+          choices: ["Great", "Okay", "Poor"],
+        },
+      ],
+    },
+  ],
+};
+
+const temperatureChecklist: ChecklistItem = {
+  id: "cl-temp",
+  title: "Temperature Checklist",
+  type: "checklist",
+  questionsCount: 1,
+  folderId: null,
+  createdAt: "2026-01-01",
+  sections: [
+    {
+      id: "sec-temp",
+      name: "Kitchen",
+      questions: [
+        {
+          id: "q-temp",
+          text: "Fridge temperature",
+          responseType: "number",
+          required: true,
+          config: {
+            numberMode: "temperature",
+            numberMin: 2,
+            numberMax: 5,
+            temperatureUnit: "C",
+          },
+        },
+      ],
+    },
+  ],
+};
+
+const visibilityWindowChecklist: ChecklistItem = {
+  id: "cl-window",
+  title: "Window Checklist",
+  type: "checklist",
+  questionsCount: 1,
+  folderId: null,
+  createdAt: "2026-01-01",
+  visibility_from: "09:00",
+  visibility_until: "10:00",
+  sections: [
+    {
+      id: "sec-window",
+      name: "",
+      questions: [
+        { id: "q-window", text: "Open checklist", responseType: "checkbox", required: true },
+      ],
+    },
+  ],
+};
+
 const checklistWithoutSections: ChecklistItem = {
   id: "cl-2",
   title: "Simple Checklist",
@@ -46,6 +119,64 @@ const checklistWithoutSections: ChecklistItem = {
   questionsCount: 2,
   folderId: null,
   createdAt: "2026-01-01",
+};
+
+const nestedFollowUpChecklist: ChecklistItem = {
+  id: "cl-nested",
+  title: "Nested Follow-up Checklist",
+  type: "checklist",
+  questionsCount: 1,
+  folderId: null,
+  createdAt: "2026-01-01",
+  sections: [
+    {
+      id: "sec-nested",
+      name: "Triggers",
+      questions: [
+        {
+          id: "q-nested",
+          text: "Primary question",
+          responseType: "checkbox",
+          required: true,
+          config: {
+            logicRules: [
+              {
+                id: "lr-1",
+                comparator: "is",
+                value: "Yes",
+                triggers: [
+                  {
+                    type: "ask_question",
+                    config: {
+                      questionText: "Did you recheck the fridge?",
+                      followUpQuestion: {
+                        id: "q-follow-up",
+                        text: "Did you recheck the fridge?",
+                        responseType: "text",
+                        required: true,
+                        config: {
+                          logicRules: [
+                            {
+                              id: "lr-2",
+                              comparator: "is",
+                              value: "No",
+                              triggers: [
+                                { type: "notify", config: { notifyUser: "sarah@example.com" } },
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
 };
 
 describe("ChecklistPreviewModal", () => {
@@ -117,5 +248,31 @@ describe("ChecklistPreviewModal", () => {
     render(<ChecklistPreviewModal checklist={mockChecklist} onClose={onClose} onEdit={onEdit} />);
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("renders real multiple-choice options instead of placeholder preview text", () => {
+    render(<ChecklistPreviewModal checklist={multipleChoiceChecklist} onClose={onClose} onEdit={onEdit} />);
+    expect(screen.getByText("Great")).toBeInTheDocument();
+    expect(screen.getByText("Okay")).toBeInTheDocument();
+    expect(screen.getByText("Poor")).toBeInTheDocument();
+    expect(screen.queryByText("Option A")).not.toBeInTheDocument();
+  });
+
+  it("shows the configured unit and range for temperature-mode number questions", () => {
+    render(<ChecklistPreviewModal checklist={temperatureChecklist} onClose={onClose} onEdit={onEdit} />);
+    expect(screen.getByText("Celsius")).toBeInTheDocument();
+    expect(screen.getByText(/Acceptable range: 2 to 5 C/)).toBeInTheDocument();
+  });
+
+  it("shows the configured visibility window in the preview header", () => {
+    render(<ChecklistPreviewModal checklist={visibilityWindowChecklist} onClose={onClose} onEdit={onEdit} />);
+    expect(screen.getByText(/Visible 9am - 10am/)).toBeInTheDocument();
+  });
+
+  it("shows nested follow-up question summaries in the preview", () => {
+    render(<ChecklistPreviewModal checklist={nestedFollowUpChecklist} onClose={onClose} onEdit={onEdit} />);
+    expect(screen.getByText("Did you recheck the fridge?")).toBeInTheDocument();
+    expect(screen.getByText(/Text/i)).toBeInTheDocument();
+    expect(screen.getByText(/nested triggers enabled/i)).toBeInTheDocument();
   });
 });

@@ -1,0 +1,40 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="plStroke" x1="950" y1="724" x2="1454" y2="184" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="#0A0D14"/>
+  <g opacity="0.12" stroke="#FFFFFF">
+    <path d="M0 180H1600"/>
+    <path d="M0 360H1600"/>
+    <path d="M0 540H1600"/>
+    <path d="M0 720H1600"/>
+    <path d="M266 0V900"/>
+    <path d="M533 0V900"/>
+    <path d="M800 0V900"/>
+    <path d="M1066 0V900"/>
+    <path d="M1333 0V900"/>
+  </g>
+  <text x="100" y="128" fill="#8A93A9" font-size="28" font-family="IBM Plex Sans, Arial, sans-serif" font-weight="700" letter-spacing="4">OPTION 3</text>
+  <text x="100" y="208" fill="#FFFFFF" font-size="88" font-family="Sora, Arial, sans-serif" font-weight="600" letter-spacing="-2">Precision Loop</text>
+  <text x="100" y="306" fill="#B8C2D8" font-size="34" font-family="IBM Plex Sans, Arial, sans-serif">Sharper, technical, disciplined.</text>
+  <text x="100" y="392" fill="#B8C2D8" font-size="28" font-family="IBM Plex Sans, Arial, sans-serif">Best for enterprise, admin surfaces, implementation, and systems credibility.</text>
+  <text x="100" y="514" fill="#FFFFFF" font-size="58" font-family="Sora, Arial, sans-serif" font-weight="600">Repeatable operations,</text>
+  <text x="100" y="584" fill="#FFFFFF" font-size="58" font-family="Sora, Arial, sans-serif" font-weight="600">every shift.</text>
+  <g>
+    <rect x="100" y="714" width="112" height="48" rx="10" fill="#0A0D14" stroke="#2A3040"/>
+    <rect x="228" y="714" width="112" height="48" rx="10" fill="#151B26"/>
+    <rect x="356" y="714" width="112" height="48" rx="10" fill="#7A68FF"/>
+    <rect x="484" y="714" width="112" height="48" rx="10" fill="#4AA8FF"/>
+  </g>
+  <g stroke-linecap="square">
+    <circle cx="1188" cy="450" r="260" stroke="url(#plStroke)" stroke-width="8"/>
+    <circle cx="1188" cy="450" r="214" stroke="url(#plStroke)" stroke-width="8" opacity="0.96"/>
+    <circle cx="1188" cy="450" r="168" stroke="url(#plStroke)" stroke-width="8" opacity="0.92"/>
+    <circle cx="1188" cy="450" r="122" stroke="url(#plStroke)" stroke-width="8" opacity="0.88"/>
+    <circle cx="1188" cy="450" r="76" stroke="#FFFFFF" stroke-width="8"/>
+  </g>
+</svg>

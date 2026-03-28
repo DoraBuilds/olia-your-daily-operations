@@ -25,6 +25,16 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 describe("NotFound page", () => {
+  let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleSpy.mockRestore();
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<NotFound />);
     expect(document.body).toBeDefined();
@@ -59,13 +69,11 @@ describe("NotFound page", () => {
   });
 
   it("logs a 404 error to console on render", () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     renderWithProviders(<NotFound />);
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("404 Error"),
       expect.any(String)
     );
-    consoleSpy.mockRestore();
   });
 
   it("renders centered layout with min-h-screen", () => {

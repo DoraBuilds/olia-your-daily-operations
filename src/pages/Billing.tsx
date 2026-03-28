@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { usePlan } from "@/hooks/usePlan";
 import { useAuth } from "@/contexts/AuthContext";
+import { runtimeConfig } from "@/lib/runtime-config";
 import {
   PLAN_FEATURES,
   PLAN_LABELS,
@@ -16,14 +17,8 @@ import {
 
 // ─── Stripe Price IDs (Starter + Growth only — Enterprise is sales-led) ─────
 const PRICE_IDS: Record<"starter" | "growth", { monthly: string; annual: string }> = {
-  starter: {
-    monthly: import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY ?? "",
-    annual:  import.meta.env.VITE_STRIPE_PRICE_STARTER_ANNUAL  ?? "",
-  },
-  growth: {
-    monthly: import.meta.env.VITE_STRIPE_PRICE_GROWTH_MONTHLY ?? "",
-    annual:  import.meta.env.VITE_STRIPE_PRICE_GROWTH_ANNUAL  ?? "",
-  },
+  starter: runtimeConfig.stripe.priceIds.starter,
+  growth: runtimeConfig.stripe.priceIds.growth,
 };
 
 const ENTERPRISE_SALES_EMAIL = "enterprise@olia.com";
@@ -285,7 +280,7 @@ export default function Billing() {
           {hasStripeSubscription && (
             <button
               onClick={() => {
-                const portalUrl = import.meta.env.VITE_STRIPE_CUSTOMER_PORTAL_URL;
+                const portalUrl = runtimeConfig.stripe.customerPortalUrl;
                 if (!portalUrl) { alert("Customer portal not configured."); return; }
                 window.open(portalUrl, "_blank");
               }}

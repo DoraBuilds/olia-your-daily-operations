@@ -49,7 +49,7 @@ export default function Notifications() {
             </svg>
             <div>
               <p className="text-sm font-medium text-foreground">All clear</p>
-              <p className="text-xs text-muted-foreground mt-1">No outstanding alerts at this time.</p>
+              <p className="text-xs text-muted-foreground mt-1">It looks like everything is calm now.</p>
             </div>
           </div>
         ) : (

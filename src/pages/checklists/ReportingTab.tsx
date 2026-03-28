@@ -1,11 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
-} from "recharts";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown, Search, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,24 +14,74 @@ import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
 import type { LogEntry } from "./types";
 import { LogDetailModal } from "./LogDetailModal";
 
-const TOOLTIP_STYLE = {
-  fontSize: 12,
-  borderRadius: 12,
-  border: "1px solid hsl(var(--border))",
-  background: "hsl(var(--card))",
-  color: "hsl(var(--foreground))",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-};
-
 type Period = "today" | "week" | "month" | "custom";
 
-function scoreBadge(score: number) {
+function scoreBadge(score: number | null) {
+  if (score == null) return { label: "UNFINISHED", cls: "status-warn" };
   if (score >= 85) return { label: "PASS", cls: "status-ok" };
   if (score >= 65) return { label: "REVIEW", cls: "status-warn" };
   return { label: "ACTION REQ.", cls: "status-error" };
 }
 
-export function ReportingTab() {
+function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
+  const width = 640;
+  const height = 140;
+  const paddingX = 28;
+  const paddingTop = 14;
+  const paddingBottom = 26;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const stepX = data.length > 1 ? (width - paddingX * 2) / (data.length - 1) : 0;
+  const getX = (index: number) => paddingX + index * stepX;
+  const getY = (value: number) => paddingTop + ((100 - value) / 100) * chartHeight;
+  const points = data.map((point, index) => `${getX(index)},${getY(point.avg)}`).join(" ");
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[140px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
+        {[65, 85].map((threshold) => (
+          <line
+            key={threshold}
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={getY(threshold)}
+            y2={getY(threshold)}
+            stroke={`hsl(var(${threshold === 85 ? "--status-ok" : "--status-warn"}))`}
+            strokeDasharray="4 4"
+            strokeOpacity="0.5"
+          />
+        ))}
+        {[0, 50, 100].map((value) => (
+          <text
+            key={value}
+            x={4}
+            y={getY(value) + 4}
+            className="fill-muted-foreground text-[10px]"
+          >
+            {value}
+          </text>
+        ))}
+        <polyline
+          fill="none"
+          stroke="hsl(var(--sage))"
+          strokeWidth="3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={points}
+        />
+        {data.map((point, index) => (
+          <g key={`${point.date}-${index}`}>
+            <circle cx={getX(index)} cy={getY(point.avg)} r="4" fill="hsl(var(--sage))" />
+            <text x={getX(index)} y={height - 6} textAnchor="middle" className="fill-muted-foreground text-[10px]">
+              {point.date}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+export function ReportingTab({ initialLocationId }: { initialLocationId?: string }) {
   const { can } = usePlan();
   const [period, setPeriod] = useState<Period>("today");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -43,9 +89,20 @@ export function ReportingTab() {
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [showCsvUpgrade, setShowCsvUpgrade] = useState(false);
   // Location filter — "all" means no filter; any UUID string = filter to that location
-  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>(initialLocationId ?? "all");
+  const [personFilter, setPersonFilter] = useState<string>("all");
+  const [checklistSearch, setChecklistSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished">("all");
+
+  useEffect(() => {
+    setLocationFilter(initialLocationId ?? "all");
+  }, [initialLocationId]);
 
   const { data: locations = [] } = useLocations();
+  const locationNameById = useMemo(
+    () => new Map(locations.map(location => [location.id, location.name])),
+    [locations]
+  );
 
   // Build date + location filters
   const filters = useMemo(() => {
@@ -72,52 +129,69 @@ export function ReportingTab() {
 
   const { data: logs = [], isLoading } = useChecklistLogs(filters);
   const { data: actions = [] } = useActions();
+  const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
+  const peopleOptions = useMemo(
+    () => Array.from(new Set(logs.map(log => log.completed_by).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [logs]
+  );
+  const checklistOptions = useMemo(
+    () => Array.from(new Set(logs.map(log => log.checklist_title).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [logs]
+  );
+
+  const filteredChecklistLogs = useMemo(() => {
+    const checklistQuery = checklistSearch.trim().toLowerCase();
+    return logs.filter(log => {
+      if (personFilter !== "all" && log.completed_by !== personFilter) return false;
+      if (statusFilter === "completed" && log.score == null) return false;
+      if (statusFilter === "unfinished" && log.score != null) return false;
+      if (checklistQuery && !log.checklist_title.toLowerCase().startsWith(checklistQuery)) return false;
+      return true;
+    });
+  }, [logs, personFilter, checklistSearch, statusFilter]);
 
   const openActionsCount = useMemo(() => actions.filter(a => a.status === "open").length, [actions]);
 
   const avgScore = useMemo(() => {
-    const scored = logs.filter(l => l.score !== null);
-    if (!scored.length) return 0;
+    const scored = filteredChecklistLogs.filter(l => l.score !== null);
+    if (!scored.length) return null;
     return Math.round(scored.reduce((sum, l) => sum + (l.score ?? 0), 0) / scored.length);
-  }, [logs]);
+  }, [filteredChecklistLogs]);
+  const hasAvgScore = avgScore != null;
+  const avgScoreValue = avgScore ?? 0;
 
   // Score trend: group by date, avg per day
   const trendData = useMemo(() => {
     const byDate: Record<string, number[]> = {};
-    [...logs].reverse().forEach(log => {
+    [...filteredChecklistLogs].reverse().forEach(log => {
       const d = format(new Date(log.created_at), "d MMM");
-      if (!byDate[d]) byDate[d] = [];
-      if (log.score !== null) byDate[d].push(log.score);
+      if (log.score !== null) {
+        if (!byDate[d]) byDate[d] = [];
+        byDate[d].push(log.score);
+      }
     });
-    return Object.entries(byDate).map(([date, scores]) => ({
+    return Object.entries(byDate).filter(([, scores]) => scores.length > 0).map(([date, scores]) => ({
       date,
       avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
     }));
-  }, [logs]);
+  }, [filteredChecklistLogs]);
 
-  // By checklist: sorted desc
-  const completionData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    logs.forEach(l => { counts[l.checklist_title] = (counts[l.checklist_title] || 0) + 1; });
-    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const max = entries[0]?.[1] ?? 1;
-    return entries.map(([checklist, count]) => ({ checklist, count, pct: Math.round((count / max) * 100) }));
-  }, [logs]);
+  const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0;
 
   // Log entries
   const logEntries: LogEntry[] = useMemo(
-    () => logs.map(l => ({
+    () => filteredChecklistLogs.map(l => ({
       id: l.id,
       checklist: l.checklist_title,
       completedBy: l.completed_by,
       date: format(new Date(l.created_at), "d MMM, HH:mm"),
-      score: l.score ?? 0,
+      score: l.score,
       type: (l.type as LogEntry["type"]) ?? "opening",
       answers: l.answers ?? [],
       startedAt:  l.started_at  ?? undefined,   // null → undefined so PDF omits it
       finishedAt: l.created_at,                 // always available
     })),
-    [logs]
+    [filteredChecklistLogs]
   );
 
   const periodLabel =
@@ -135,12 +209,23 @@ export function ReportingTab() {
       : dateRange?.from ? format(dateRange.from, "d MMM yyyy")
       : "Custom";
 
+  const reportRows = useMemo(
+    () => logEntries.map(l => {
+      const log = logById.get(l.id);
+      return {
+        checklist: l.checklist,
+        location: log?.location_id ? (locationNameById.get(log.location_id) ?? "—") : "—",
+        completedBy: l.completedBy,
+        startedAt: log?.started_at ? format(new Date(log.started_at), "d MMM yyyy, HH:mm") : "—",
+        finishedAt: log?.created_at ? format(new Date(log.created_at), "d MMM yyyy, HH:mm") : "—",
+        score: l.score,
+      };
+    }),
+    [logEntries, logById, locationNameById]
+  );
+
   const handleExportPdf = async () => {
-    await exportReportingPdf(
-      logEntries.map(l => ({ checklist: l.checklist, completedBy: l.completedBy, date: l.date, score: l.score })),
-      periodLabel,
-      { completed: logs.length, avg: avgScore, open: openActionsCount }
-    );
+    await exportReportingPdf(reportRows, periodLabel, { completed: logEntries.length, avg: avgScore ?? 0, open: openActionsCount });
   };
 
   const handleExportCsv = () => {
@@ -246,9 +331,9 @@ export function ReportingTab() {
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Completed</p>
-          <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : logs.length}</p>
-          {!isLoading && logs.length === 0 && (
+          <p className="section-label mb-1">Entries</p>
+          <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : logEntries.length}</p>
+          {!isLoading && logEntries.length === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
               <span className="text-[10px] text-muted-foreground font-medium">none</span>
@@ -258,18 +343,18 @@ export function ReportingTab() {
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Avg Score</p>
           <p className={cn("text-2xl font-bold",
-            !logs.length ? "text-muted-foreground" :
-            avgScore >= 85 ? "text-status-ok" :
-            avgScore >= 65 ? "text-status-warn" :
+            avgScore == null ? "text-muted-foreground" :
+            avgScoreValue >= 85 ? "text-status-ok" :
+            avgScoreValue >= 65 ? "text-status-warn" :
             "text-status-error"
           )}>
-            {isLoading ? "—" : logs.length ? `${avgScore}%` : "—"}
+            {isLoading ? "—" : avgScore == null ? "—" : `${avgScoreValue}%`}
           </p>
-          {!isLoading && logs.length > 0 && (
+          {!isLoading && hasAvgScore && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
-              {avgScore >= 85
+              {avgScoreValue >= 85
                 ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-[10px] text-status-ok font-medium">Good</span></>
-                : avgScore >= 65
+                : avgScoreValue >= 65
                 ? <><Minus size={10} className="text-status-warn" /><span className="text-[10px] text-status-warn font-medium">Review</span></>
                 : <><TrendingDown size={10} className="text-status-error" /><span className="text-[10px] text-status-error font-medium">Action needed</span></>
               }
@@ -290,55 +375,88 @@ export function ReportingTab() {
         </div>
       </div>
 
+      {/* Filter panel */}
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="section-label">Filters</p>
+          {hasActiveFilters && (
+            <button
+              data-testid="reporting-clear-filters"
+              type="button"
+              onClick={() => {
+                setPersonFilter("all");
+                setChecklistSearch("");
+                setStatusFilter("all");
+              }}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <X size={12} />
+              Clear filters
+            </button>
+          )}
+        </div>
+        <div className="grid gap-2 md:grid-cols-3">
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Checklist name</span>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                data-testid="reporting-checklist-search"
+                type="text"
+                value={checklistSearch}
+                onChange={e => setChecklistSearch(e.target.value)}
+                placeholder="Type a checklist name"
+                className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                list="reporting-checklist-options"
+              />
+            </div>
+            <datalist id="reporting-checklist-options">
+              {checklistOptions.map(name => <option key={name} value={name} />)}
+            </datalist>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Person</span>
+            <div className="relative">
+              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <select
+                data-testid="reporting-person-filter"
+                value={personFilter}
+                onChange={e => setPersonFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">All people</option>
+                {peopleOptions.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Status</span>
+            <select
+              data-testid="reporting-status-filter"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="all">All statuses</option>
+              <option value="completed">Completed</option>
+              <option value="unfinished">Unfinished</option>
+            </select>
+          </label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Showing {logEntries.length} of {logs.length} log{logs.length === 1 ? "" : "s"}.
+        </p>
+      </div>
+
       {/* Score Trend — Line chart (no fill) */}
       {trendData.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-4">
           <p className="section-label mb-4">Score Trend</p>
-          <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
-              <CartesianGrid strokeDasharray="4 4" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="date"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false} tickLine={false}
-              />
-              <YAxis domain={[0, 100]}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false} tickLine={false}
-              />
-              <ReferenceLine y={85} stroke="hsl(var(--status-ok))" strokeDasharray="4 2" strokeOpacity={0.5} />
-              <ReferenceLine y={65} stroke="hsl(var(--status-warn))" strokeDasharray="4 2" strokeOpacity={0.5} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any) => [`${v}%`, "Avg. score"]} />
-              <Line
-                type="monotone" dataKey="avg"
-                stroke="hsl(var(--sage))" strokeWidth={2.5}
-                dot={{ r: 3.5, fill: "hsl(var(--sage))", strokeWidth: 0 }}
-                activeDot={{ r: 5, strokeWidth: 2, stroke: "hsl(var(--card))" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* By Checklist — CSS horizontal bars (no recharts) */}
-      {completionData.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-4">
-          <p className="section-label mb-4">By Checklist</p>
-          <div className="space-y-3">
-            {completionData.map(({ checklist, count, pct }) => (
-              <div key={checklist}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-medium text-foreground truncate max-w-[70%]">{checklist}</p>
-                  <span className="text-xs text-muted-foreground font-medium shrink-0 ml-2">{count}</span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-sage rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ScoreTrendChart data={trendData} />
         </div>
       )}
 
@@ -360,7 +478,7 @@ export function ReportingTab() {
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">Score</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">Status</p>
               <div className="w-4" />
             </div>
             {logEntries.map(log => {
@@ -385,7 +503,9 @@ export function ReportingTab() {
           </div>
         ) : (
           <div className="bg-card border border-border rounded-2xl p-8 text-center">
-            <p className="text-sm text-muted-foreground">No logs recorded for this period.</p>
+            <p className="text-sm text-muted-foreground">
+              {hasActiveFilters ? "No logs match your filters." : "No logs recorded for this period."}
+            </p>
           </div>
         )}
       </div>

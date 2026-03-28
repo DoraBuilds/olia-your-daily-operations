@@ -14,8 +14,8 @@ export function MoveToFolderSheet({ folders, currentFolderId, onMove, onClose }:
     .filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Move to folder</h2>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">

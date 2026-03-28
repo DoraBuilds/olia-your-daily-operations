@@ -33,8 +33,8 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:pb-8">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground flex items-center gap-2">
             Build with AI

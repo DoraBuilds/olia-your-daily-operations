@@ -14,6 +14,9 @@ export default defineConfig({
       "src/**/*.spec.ts",
       "src/**/*.spec.tsx",
     ],
+    exclude: [
+      "src/test/integration/**",
+    ],
 
     // Kill any test or hook that takes longer than 15 s — prevents zombie workers.
     testTimeout: 15000,
@@ -33,6 +36,7 @@ export default defineConfig({
       // current coverage toolchain while still producing runnable reports.
       exclude: [
         "src/test/**",
+        "src/test/integration/**",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/**/*.spec.ts",
@@ -43,14 +47,13 @@ export default defineConfig({
       ],
 
       // ── Quality Gate ──────────────────────────────────────────────────
-      // True baseline as of March 2026 with the v8 coverage provider.
-      // Target is 95% but the codebase is currently at ~56-60%.
-      // Raise these incrementally as new tests are added.
+      // Ratcheted upward after the March 2026 stabilization pass.
+      // Keep raising these in measured steps as the weakest high-risk areas improve.
       thresholds: {
-        lines:      60,
-        functions:  45,
-        branches:   48,
-        statements: 56,
+        lines:      65,
+        functions:  50,
+        branches:   55,
+        statements: 65,
       },
     },
   },

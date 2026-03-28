@@ -18,6 +18,8 @@
     "test:coverage": "mkdir -p coverage/.tmp && vitest run --coverage",
     "test:ci": "mkdir -p coverage/.tmp && vitest run --coverage",
     "test:integration": "~/.bun/bin/bun scripts/run-local-supabase-integration.mjs",
+    "supabase:parity": "~/.bun/bin/bun scripts/check-supabase-migration-parity.mjs",
+    "resend:audit": "~/.bun/bin/bun scripts/check-resend-hosted-setup.mjs",
     "milestone": "bun run lint && bun run test:ci && bun run build && echo '✅ Milestone gate passed — lint + current coverage thresholds + build all green'",
     "cap:sync": "bun run build && cap sync",
     "cap:ios": "bun run build && cap sync ios && cap open ios",

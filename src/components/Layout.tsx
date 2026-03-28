@@ -22,11 +22,11 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto relative">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none relative">
       {/* Header */}
       {title && (
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
             {headerLeft ? (
               <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
             ) : <div className="w-8" />}
@@ -58,8 +58,10 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       )}
 
       {/* Content */}
-      <main className="flex-1 overflow-auto pb-24 px-4 py-5 space-y-4 animate-fade-in">
-        {children}
+      <main className="flex-1 overflow-auto pb-24 py-5 animate-fade-in">
+        <div className="mx-auto w-full max-w-[1200px] px-4 space-y-4 sm:px-6 lg:px-8">
+          {children}
+        </div>
       </main>
 
       <BottomNav />

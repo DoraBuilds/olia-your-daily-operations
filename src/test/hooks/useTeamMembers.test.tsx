@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
@@ -102,6 +102,38 @@ describe("useSaveTeamMember", () => {
   it("is not pending by default", () => {
     const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+
+  it("hashes a raw PIN before saving team members", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      upsert,
+      delete: vi.fn().mockReturnThis(),
+    });
+
+    const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: "tm-2",
+        name: "Test User",
+        email: "test@example.com",
+        role: "Owner",
+        location_ids: [],
+        permissions: {},
+        rawPin: "1234",
+      } as any);
+    });
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pin: expect.any(String),
+      }),
+    );
+    const payload = upsert.mock.calls[0][0];
+    expect(payload.pin).toHaveLength(64);
   });
 });
 

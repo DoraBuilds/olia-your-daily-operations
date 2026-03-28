@@ -1,0 +1,18 @@
+<svg width="920" height="240" viewBox="0 0 920 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lockupGradientDark" x1="18" y1="202" x2="204" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 0)" stroke-linecap="round">
+    <circle cx="120" cy="120" r="88" stroke="url(#lockupGradientDark)" stroke-width="4"/>
+    <circle cx="120" cy="120" r="72" stroke="url(#lockupGradientDark)" stroke-width="4" opacity="0.96"/>
+    <circle cx="120" cy="120" r="56" stroke="url(#lockupGradientDark)" stroke-width="4" opacity="0.92"/>
+    <circle cx="120" cy="120" r="40" stroke="url(#lockupGradientDark)" stroke-width="4" opacity="0.9"/>
+    <circle cx="120" cy="120" r="24" stroke="#10131A" stroke-width="4"/>
+  </g>
+  <text x="268" y="148" fill="#10131A" font-size="104" font-family="Space Grotesk, Avenir Next, Arial, sans-serif" font-weight="600" letter-spacing="-4">OLIA</text>
+</svg>
+

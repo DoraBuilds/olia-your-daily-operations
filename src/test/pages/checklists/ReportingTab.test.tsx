@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
@@ -50,6 +50,12 @@ vi.mock("@/contexts/AuthContext", () => ({
 const mockExportReportingPdf = vi.fn();
 const mockExportReportingCsv = vi.fn();
 const mockExportLogDetailPdf = vi.fn();
+const mockUseChecklistLogs = vi.fn((filters?: any) => ({
+  data: filters?.location_id
+    ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
+    : MOCK_LOGS,
+  isLoading: false,
+}));
 
 vi.mock("@/lib/export-utils", () => ({
   exportReportingPdf: (...args: any[]) => mockExportReportingPdf(...args),
@@ -71,6 +77,8 @@ const MOCK_LOGS = [
       { label: "Check fridge", type: "checkbox", required: true, answer: "yes" },
     ],
     created_at: "2024-03-09T08:00:00Z",
+    started_at: "2024-03-09T07:45:00Z",
+    location_id: "loc-1",
   },
   {
     id: "l2",
@@ -82,6 +90,21 @@ const MOCK_LOGS = [
     type: "closing",
     answers: [],
     created_at: "2024-03-09T22:00:00Z",
+    started_at: "2024-03-09T21:40:00Z",
+    location_id: "loc-2",
+  },
+  {
+    id: "l3",
+    checklist_id: "c2",
+    checklist_title: "Inventory Check",
+    completed_by: "Dana",
+    staff_profile_id: "sp3",
+    score: null,
+    type: "inspection",
+    answers: [],
+    created_at: "2024-03-09T12:00:00Z",
+    started_at: "2024-03-09T11:30:00Z",
+    location_id: "loc-1",
   },
 ];
 
@@ -99,10 +122,7 @@ const MOCK_ACTIONS = [
 ];
 
 vi.mock("@/hooks/useChecklistLogs", () => ({
-  useChecklistLogs: () => ({
-    data: MOCK_LOGS,
-    isLoading: false,
-  }),
+  useChecklistLogs: (filters?: any) => mockUseChecklistLogs(filters),
   useCreateChecklistLog: () => ({ mutate: vi.fn() }),
 }));
 
@@ -113,6 +133,16 @@ vi.mock("@/hooks/useActions", () => ({
   }),
   useCreateAction: () => ({ mutate: vi.fn() }),
   useUpdateAction: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock("@/hooks/useLocations", () => ({
+  useLocations: () => ({
+    data: [
+      { id: "loc-1", name: "Main Branch" },
+      { id: "loc-2", name: "City Centre" },
+    ],
+    isLoading: false,
+  }),
 }));
 
 // Mock Recharts to avoid SVG rendering issues in jsdom
@@ -131,7 +161,9 @@ function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter>{children}</MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        {children}
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -149,6 +181,7 @@ vi.mock("@/hooks/usePlan", () => ({
 describe("ReportingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseChecklistLogs.mockClear();
   });
 
   it("renders without crashing", () => {
@@ -169,14 +202,15 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
-  it("shows Completed stat card", () => {
+  it("shows Entries stat card", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Entries")).toBeInTheDocument();
   });
 
-  it("shows 2 completed checklists", () => {
+  it("shows 3 log entries", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("2")).toBeInTheDocument();
+    const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
+    expect(statCards[0]).toHaveTextContent("3");
   });
 
   it("shows Avg Score stat card", () => {
@@ -184,7 +218,7 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Avg Score")).toBeInTheDocument();
   });
 
-  it("shows correct avg score (90+65)/2 = 77%", () => {
+  it("shows correct avg score (90+65)/2 = 78%", () => {
     render(<ReportingTab />, { wrapper });
     expect(screen.getByText("78%")).toBeInTheDocument();
   });
@@ -196,7 +230,7 @@ describe("ReportingTab", () => {
 
   it("shows 1 open action", () => {
     render(<ReportingTab />, { wrapper });
-    // "1" appears in multiple places (open actions count + By Checklist bar counts)
+    // "1" appears in multiple places (open actions count + completion log counts)
     // Verify specifically the Open Actions stat card contains "1"
     const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
     const openActionsValue = statCards[2]; // third stat card is Open Actions
@@ -210,7 +244,7 @@ describe("ReportingTab", () => {
 
   it("shows 'Opening Checklist' in the log", () => {
     render(<ReportingTab />, { wrapper });
-    // "Opening Checklist" appears in the Completion Log table AND in the By Checklist bar chart
+    // "Opening Checklist" appears in the Completion Log table
     const matches = screen.getAllByText("Opening Checklist");
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
@@ -219,6 +253,11 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     const matches = screen.getAllByText("Closing Checklist");
     expect(matches.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows UNFINISHED badge for incomplete log entries", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
   });
 
   it("shows PASS badge for score 90", () => {
@@ -233,8 +272,8 @@ describe("ReportingTab", () => {
 
   it("shows completed by names in log", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText(/Alice/)).toBeInTheDocument();
-    expect(screen.getByText(/Bob/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Alice/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Bob/).length).toBeGreaterThan(0);
   });
 
   it("shows CSV export button in the top toolbar", () => {
@@ -257,7 +296,36 @@ describe("ReportingTab", () => {
   it("clicking PDF export calls exportReportingPdf", () => {
     render(<ReportingTab />, { wrapper });
     fireEvent.click(screen.getByText("PDF"));
-    expect(mockExportReportingPdf).toHaveBeenCalled();
+    expect(mockExportReportingPdf).toHaveBeenCalledTimes(1);
+    const [rows, periodLabel, stats] = mockExportReportingPdf.mock.calls[0];
+    expect(rows).toEqual([
+      expect.objectContaining({
+        checklist: "Opening Checklist",
+        location: "Main Branch",
+        completedBy: "Alice",
+        startedAt: "9 Mar 2024, 08:45",
+        finishedAt: "9 Mar 2024, 09:00",
+        score: 90,
+      }),
+      expect.objectContaining({
+        checklist: "Closing Checklist",
+        location: "City Centre",
+        completedBy: "Bob",
+        startedAt: "9 Mar 2024, 22:40",
+        finishedAt: "9 Mar 2024, 23:00",
+        score: 65,
+      }),
+      expect.objectContaining({
+        checklist: "Inventory Check",
+        location: "Main Branch",
+        completedBy: "Dana",
+        startedAt: "9 Mar 2024, 12:30",
+        finishedAt: "9 Mar 2024, 13:00",
+        score: null,
+      }),
+    ]);
+    expect(periodLabel).toBe("Today");
+    expect(stats).toMatchObject({ completed: 3, avg: 78, open: 1 });
   });
 
   it("clicking CSV export calls exportReportingCsv", () => {
@@ -286,7 +354,7 @@ describe("ReportingTab", () => {
     fireEvent.click(logRowBtn!);
     await waitFor(() => {
       const headings = screen.getAllByText("Opening Checklist");
-      // Should appear in: By Checklist bar, log table row, AND modal heading
+      // Should appear in the completion log row and modal heading
       expect(headings.length).toBeGreaterThan(0);
     });
   });
@@ -323,8 +391,41 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Completion Log")).toBeInTheDocument();
   });
 
-  it("shows By Checklist section when data present", () => {
+  it("does not show the By Checklist section", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("By Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("By Checklist")).not.toBeInTheDocument();
+  });
+
+  it("filters logs by checklist name, person, and status", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "Opening" } });
+    expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Inventory Check")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "" } });
+    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "Bob" } });
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "all" } });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unfinished" } });
+    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
+  });
+
+  it("clears filters when the reset button is clicked", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "Inventory" } });
+    expect(screen.getByTestId("reporting-clear-filters")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("reporting-clear-filters"));
+    expect(screen.getByTestId("reporting-checklist-search")).toHaveValue("");
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+  });
+
+  it("preselects a dashboard-provided location and filters the query", () => {
+    render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    expect(screen.getByTestId("location-filter")).toHaveValue("loc-2");
+    expect(mockUseChecklistLogs).toHaveBeenCalledWith(expect.objectContaining({ location_id: "loc-2" }));
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
   });
 });
