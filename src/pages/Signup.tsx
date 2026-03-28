@@ -15,7 +15,6 @@ export default function Signup() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,8 +27,7 @@ export default function Signup() {
     businessName.trim().length > 0 &&
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
-    email.trim().length > 0 &&
-    password.length >= 8;
+    email.trim().length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,18 +48,11 @@ export default function Signup() {
       })
     );
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
+    const { data, error: authError } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
       options: {
-        // After email confirmation, Supabase redirects here. The callback
-        // page processes the auth tokens and sends the user to /admin.
-        // Hosted deployments can override the callback origin via
-        // VITE_PUBLIC_SITE_URL (for example, a GitHub Pages URL).
         emailRedirectTo: `${getRuntimeConfig().publicSiteUrl}/auth/callback`,
-        // Store both fields in auth user metadata so AuthContext can call
-        // setup_new_organization even if localStorage is cleared (e.g.
-        // when email is confirmed on a different device or browser).
+        shouldCreateUser: true,
         data: {
           full_name: ownerName,
           business_name: businessName.trim(),
@@ -78,12 +69,8 @@ export default function Signup() {
     }
 
     if (data.session) {
-      // Email confirmation is disabled in Supabase settings.
-      // AuthContext onAuthStateChange will fire → fetchTeamMember →
-      // sees pending onboarding data → calls setup_new_organization.
-      // The useEffect above will redirect to /dashboard once user is set.
+      // Some environments may sign the user in immediately.
     } else {
-      // Email confirmation required — show instructions.
       setStep("check-email");
     }
   };
@@ -98,9 +85,9 @@ export default function Signup() {
           <div>
             <h1 className="font-display text-2xl text-foreground">Check your email</h1>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-              We sent a confirmation link to{" "}
+              We sent a magic link to{" "}
               <span className="text-foreground font-medium">{email}</span>.
-              Click it and you'll land straight in your workspace.
+              Open it on this device and you'll land straight in your workspace.
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -123,7 +110,7 @@ export default function Signup() {
             <span className="text-white font-display text-2xl font-bold">O</span>
           </div>
           <h1 className="font-display text-2xl text-foreground">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business</p>
+          <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business with a magic link</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,20 +173,6 @@ export default function Signup() {
             />
           </div>
 
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Password</label>
-            <input
-              id="signup-password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              minLength={8}
-              required
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-
           {error && (
             <p id="signup-error" className="text-xs text-status-error">{error}</p>
           )}
@@ -215,7 +188,7 @@ export default function Signup() {
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
-            {loading ? "Creating account…" : "Create account"}
+            {loading ? "Sending magic link…" : "Create account"}
           </button>
         </form>
 
