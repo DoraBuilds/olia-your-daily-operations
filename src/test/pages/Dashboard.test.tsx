@@ -201,6 +201,6 @@ describe("Dashboard page", () => {
     expect(within(locationCards[2]).getByText("100%")).toBeInTheDocument();
 
     fireEvent.click(locationCards[0]);
-    expect(mockNavigate).toHaveBeenCalledWith("/checklists?tab=reporting&location=loc-3");
+    expect(mockNavigate).toHaveBeenCalledWith("/reporting?location=loc-3");
   });
 });

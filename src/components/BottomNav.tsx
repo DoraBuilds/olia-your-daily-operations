@@ -1,21 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, ClipboardList, BookOpen, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { to: "/dashboard",  label: "Dashboard",   icon: LayoutDashboard },
-  { to: "/checklists", label: "Checklists",  icon: ClipboardList },
-  { to: "/infohub",    label: "Infohub",     icon: BookOpen },
-  { to: "/admin",      label: "Admin",       icon: ShieldCheck },
-];
+import { appNavItems } from "./app-nav";
 
 export function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-pb shadow-sm">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card shadow-sm safe-area-pb md:hidden">
       <div className="mx-auto flex items-stretch w-full max-w-[1200px] px-2 sm:px-4">
-        {navItems.map(({ to, label, icon: Icon }) => {
+        {appNavItems.map(({ to, label, icon: Icon }) => {
           const active = location.pathname.startsWith(to);
           return (
             <NavLink

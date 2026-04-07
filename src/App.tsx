@@ -13,6 +13,7 @@ import { routerFutureFlags } from "@/lib/router-future-flags";
 const Landing = lazy(() => import("./pages/Landing"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Checklists = lazy(() => import("./pages/Checklists"));
+const Reporting = lazy(() => import("./pages/Reporting"));
 const Infohub = lazy(() => import("./pages/Infohub"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Kiosk = lazy(() => import("./pages/Kiosk"));
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/checklists/*" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
+                <Route path="/reporting" element={<ProtectedRoute><Reporting /></ProtectedRoute>} />
                 <Route path="/infohub/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
                 <Route path="/training/*" element={<Navigate to="/infohub" replace />} />
                 <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />

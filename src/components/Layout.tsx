@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { SidebarNav } from "./SidebarNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +17,8 @@ interface LayoutProps {
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const shellWidthClass = "mx-auto w-full max-w-[1040px] xl:max-w-[980px]";
+  const shellWidthClass = "mx-auto w-full max-w-[1380px]";
+  const contentWidthClass = "w-full max-w-[1040px] xl:max-w-[980px]";
 
   const handleLogout = async () => {
     await signOut();
@@ -28,7 +30,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       {/* Header */}
       {title && (
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-          <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8")}>
+          <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8 xl:px-10")}>
             {headerLeft ? (
               <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
             ) : <div className="w-8" />}
@@ -60,9 +62,14 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       )}
 
       {/* Content */}
-      <main className="flex-1 overflow-auto pb-24 py-5 animate-fade-in">
-        <div className={cn(shellWidthClass, "px-4 space-y-4 sm:px-6 lg:px-8")}>
-          {children}
+      <main className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
+        <div className={cn(shellWidthClass, "px-4 sm:px-6 lg:px-8 xl:px-10")}>
+          <div className="flex items-start gap-6 lg:gap-8">
+            <SidebarNav />
+            <div className={cn(contentWidthClass, "space-y-4")}>
+              {children}
+            </div>
+          </div>
         </div>
       </main>
 
