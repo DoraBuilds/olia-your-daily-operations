@@ -2,12 +2,12 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
-import { AlertCircle, TrendingUp, Plus, X, ChevronRight, ChevronLeft, Bell } from "lucide-react";
+import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
-import { useActions, useSaveAction } from "@/hooks/useActions";
+import { useActions } from "@/hooks/useActions";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { computeMissedChecklists, computeOverdueActions } from "@/lib/overdue-utils";
@@ -82,63 +82,10 @@ function PaginationDots({ page, totalPages, setPage }: { page: number; totalPage
   );
 }
 
-// ─── Quick Task Modal ─────────────────────────────────────────────────────────
-
-function QuickTaskModal({ onClose }: { onClose: () => void }) {
-  const [title, setTitle] = useState("");
-  const [area, setArea]   = useState("");
-  const [note, setNote]   = useState("");
-  const saveAction = useSaveAction();
-
-  function handleAdd() {
-    if (!title.trim()) return;
-    saveAction.mutate(
-      { title: title.trim(), checklist_title: area.trim() || null, status: "open" },
-      { onSuccess: onClose },
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-10 space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl text-foreground">Add quick task</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
-            <X size={18} className="text-muted-foreground" />
-          </button>
-        </div>
-        <input autoFocus type="text" placeholder="Task description" value={title}
-          onChange={e => setTitle(e.target.value)}
-          className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-sage/30"
-        />
-        <input type="text" placeholder="Area (e.g. Kitchen, Bar)" value={area}
-          onChange={e => setArea(e.target.value)}
-          className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-sage/30"
-        />
-        <textarea placeholder="Optional note" value={note} onChange={e => setNote(e.target.value)}
-          rows={2} className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
-        />
-        <button
-          disabled={!title.trim() || saveAction.isPending}
-          onClick={handleAdd}
-          className={cn("w-full py-3 rounded-xl text-sm font-semibold tracking-wide transition-colors",
-            title.trim() && !saveAction.isPending
-              ? "bg-sage text-white hover:bg-sage-deep"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
-          )}
-        >
-          {saveAction.isPending ? "SAVING…" : "ADD TASK"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [showQuickTask, setShowQuickTask]          = useState(false);
   const [complianceTab, setComplianceTab]          = useState<ComplianceTab>("today");
   const [page, setPage]                            = useState(0);
 
@@ -413,16 +360,6 @@ export default function Dashboard() {
         {/* Bottom spacer */}
         <div className="h-4" />
       </Layout>
-
-      {/* FAB — add quick task */}
-      <button onClick={() => setShowQuickTask(true)}
-        className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full bg-sage text-white shadow-lg flex items-center justify-center hover:bg-sage-deep transition-colors active:scale-95"
-        aria-label="Add quick task"
-      >
-        <Plus size={24} />
-      </button>
-
-      {showQuickTask  && <QuickTaskModal onClose={() => setShowQuickTask(false)} />}
     </>
   );
 }

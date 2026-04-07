@@ -76,7 +76,6 @@ vi.mock("@/hooks/useChecklistLogs", () => ({
 
 vi.mock("@/hooks/useActions", () => ({
   useActions: () => ({ data: [] }),
-  useSaveAction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useChecklists", () => ({
@@ -137,30 +136,9 @@ describe("Dashboard page", () => {
     expect(screen.queryByRole("button", { name: /^overdue$/i })).not.toBeInTheDocument();
   });
 
-  it("renders FAB add quick task button", () => {
+  it("does not render the removed quick-task floating action button", () => {
     renderWithProviders(<Dashboard />);
-    const fab = screen.getByRole("button", { name: /add quick task/i });
-    expect(fab).toBeInTheDocument();
-  });
-
-  it("opens quick task modal on FAB click", () => {
-    renderWithProviders(<Dashboard />);
-    const fab = screen.getByRole("button", { name: /add quick task/i });
-    fireEvent.click(fab);
-    expect(screen.getByText("Add quick task")).toBeInTheDocument();
-  });
-
-  it("quick task modal has task description input", () => {
-    renderWithProviders(<Dashboard />);
-    fireEvent.click(screen.getByRole("button", { name: /add quick task/i }));
-    expect(screen.getByPlaceholderText("Task description")).toBeInTheDocument();
-  });
-
-  it("quick task ADD TASK button is disabled when title is empty", () => {
-    renderWithProviders(<Dashboard />);
-    fireEvent.click(screen.getByRole("button", { name: /add quick task/i }));
-    const addBtn = screen.getByText("ADD TASK");
-    expect(addBtn).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /add quick task/i })).not.toBeInTheDocument();
   });
 
   it("renders Notifications button in header", () => {
