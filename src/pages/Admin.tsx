@@ -2192,67 +2192,69 @@ export default function Admin() {
           </button>
         ) : undefined}
       >
-        {/* Sub-tab pill toggle */}
-        <div className="flex gap-1 bg-muted rounded-2xl p-1">
-          {TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={cn(
-                "flex-1 py-2.5 text-xs font-semibold rounded-xl transition-colors tracking-wide",
-                activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
+          {/* Sub-tab pill toggle */}
+          <div className="flex gap-1 bg-muted rounded-2xl p-1">
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={cn(
+                  "flex-1 py-2.5 text-xs font-semibold rounded-xl transition-colors tracking-wide",
+                  activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "location" && (
+            <MyLocationTab
+              locations={locations}
+              staffProfiles={staffProfiles}
+              checklists={checklists}
+              roles={staffRoleOptions}
+              currentLocationId={currentLocationId}
+              setCurrentLocationId={setCurrentLocationId}
+              isOwner={isOwner}
+              permissions={permissions}
+              onAddLocation={() => setLocationModal("new")}
+              onEditLocation={loc => setLocationModal(loc)}
+              onUpdateLocation={saveLocation}
+              onAddStaff={() => setStaffModal("new")}
+              onEditStaff={sp => setStaffModal(sp)}
+              onArchiveStaff={archiveStaff}
+              onRestoreStaff={restoreStaff}
+              onDeleteStaff={deleteStaff}
+              onLaunchKiosk={() => navigate(`/kiosk?locationId=${currentLocationId}`)}
+            />
+          )}
+
+          {activeTab === "account" && isOwner && (
+            <AccountTab
+              locations={locations}
+              staffProfiles={staffProfiles}
+              teamMembers={teamMembers}
+              checklists={checklists}
+              onSavePerms={savePerms}
+              onSaveAccount={payload => saveMemberMut.mutateAsync(payload)}
+              departments={departments}
+              setDepartments={setDepartments}
+              auditLog={auditLog}
+              authMemberId={authMember?.id}
+              authUserEmail={user?.email}
+              authUserName={authMember?.name}
+              onAddLocation={() => setLocationModal("new")}
+              onLocationLimitReached={() => setShowLocationLimitModal(true)}
+              onEditLocation={loc => setLocationModal(loc)}
+              onDeleteLocation={deleteLocation}
+              onInviteMember={() => setMemberModal("new")}
+              onEditMember={m => setMemberModal(m)}
+              onDeleteMember={deleteMember}
+            />
+          )}
         </div>
-
-        {activeTab === "location" && (
-          <MyLocationTab
-            locations={locations}
-            staffProfiles={staffProfiles}
-            checklists={checklists}
-            roles={staffRoleOptions}
-            currentLocationId={currentLocationId}
-            setCurrentLocationId={setCurrentLocationId}
-            isOwner={isOwner}
-            permissions={permissions}
-            onAddLocation={() => setLocationModal("new")}
-            onEditLocation={loc => setLocationModal(loc)}
-            onUpdateLocation={saveLocation}
-            onAddStaff={() => setStaffModal("new")}
-            onEditStaff={sp => setStaffModal(sp)}
-            onArchiveStaff={archiveStaff}
-            onRestoreStaff={restoreStaff}
-            onDeleteStaff={deleteStaff}
-            onLaunchKiosk={() => navigate(`/kiosk?locationId=${currentLocationId}`)}
-          />
-        )}
-
-        {activeTab === "account" && isOwner && (
-          <AccountTab
-            locations={locations}
-            staffProfiles={staffProfiles}
-            teamMembers={teamMembers}
-            checklists={checklists}
-            onSavePerms={savePerms}
-            onSaveAccount={payload => saveMemberMut.mutateAsync(payload)}
-            departments={departments}
-            setDepartments={setDepartments}
-            auditLog={auditLog}
-            authMemberId={authMember?.id}
-            authUserEmail={user?.email}
-            authUserName={authMember?.name}
-            onAddLocation={() => setLocationModal("new")}
-            onLocationLimitReached={() => setShowLocationLimitModal(true)}
-            onEditLocation={loc => setLocationModal(loc)}
-            onDeleteLocation={deleteLocation}
-            onInviteMember={() => setMemberModal("new")}
-            onEditMember={m => setMemberModal(m)}
-            onDeleteMember={deleteMember}
-          />
-        )}
       </Layout>
 
       {/* ─── Modals ──────────────────────────────────────────────────────────── */}
