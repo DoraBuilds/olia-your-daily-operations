@@ -383,7 +383,7 @@ export default function Dashboard() {
                     <button
                       key={loc.locationId ?? loc.name}
                       data-testid="location-card"
-                      onClick={() => navigate(`/checklists?tab=reporting&location=${encodeURIComponent(loc.locationId ?? "")}`)}
+                      onClick={() => navigate(`/reporting?location=${encodeURIComponent(loc.locationId ?? "")}`)}
                       className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
                     >
                       <div className="relative" style={{ width: 72, height: 72 }}>

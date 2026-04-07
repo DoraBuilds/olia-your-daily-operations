@@ -21,18 +21,19 @@ function renderBottomNav() {
 }
 
 describe("BottomNav", () => {
-  it("renders all 4 nav labels", () => {
+  it("renders all 5 nav labels", () => {
     renderBottomNav();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Checklists")).toBeInTheDocument();
+    expect(screen.getByText("Reporting")).toBeInTheDocument();
     expect(screen.getByText("Infohub")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
-  it("renders 4 NavLink elements", () => {
+  it("renders 5 NavLink elements", () => {
     renderBottomNav();
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(5);
   });
 
   it("active nav item (Dashboard) icon span has bg-sage class", () => {
@@ -58,6 +59,7 @@ describe("BottomNav", () => {
     const hrefs = links.map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/dashboard");
     expect(hrefs).toContain("/checklists");
+    expect(hrefs).toContain("/reporting");
     expect(hrefs).toContain("/infohub");
     expect(hrefs).toContain("/admin");
   });

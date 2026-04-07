@@ -264,7 +264,7 @@ describe("Dashboard - location compliance cards", () => {
 
     renderWithProviders(<Dashboard />);
     fireEvent.click(screen.getByTestId("location-card"));
-    expect(mockNavigate).toHaveBeenCalledWith("/checklists?tab=reporting&location=loc-1");
+    expect(mockNavigate).toHaveBeenCalledWith("/reporting?location=loc-1");
   });
 
   it("shows no checklists assigned when a location has no checklist coverage", () => {

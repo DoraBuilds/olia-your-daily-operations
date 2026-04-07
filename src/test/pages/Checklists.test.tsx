@@ -57,8 +57,6 @@ vi.mock("@/pages/checklists/ChecklistBuilderModal", () => ({ ChecklistBuilderMod
 vi.mock("@/pages/checklists/ChecklistPreviewModal", () => ({ ChecklistPreviewModal: () => null }));
 vi.mock("@/pages/checklists/ItemContextMenu", () => ({ ItemContextMenu: () => null }));
 vi.mock("@/pages/checklists/MoveToFolderSheet", () => ({ MoveToFolderSheet: () => null }));
-vi.mock("@/pages/checklists/ReportingTab", () => ({ ReportingTab: () => <div>Reporting Tab</div> }));
-
 describe("Checklists page", () => {
   it("renders without crashing", () => {
     renderWithProviders(<Checklists />);
@@ -72,11 +70,11 @@ describe("Checklists page", () => {
     expect(checklistsTexts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows 'Checklists' and 'Reporting' subtab buttons", () => {
+  it("shows the Checklists title without a nested reporting tab switcher", () => {
     renderWithProviders(<Checklists />);
     const checklistBtns = screen.getAllByRole("button", { name: /checklists/i });
     expect(checklistBtns.length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole("button", { name: /reporting/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^reporting$/i })).not.toBeInTheDocument();
   });
 
   it("Checklists tab is active by default", () => {
@@ -135,31 +133,6 @@ describe("Checklists page", () => {
       // CreateMenuSheet would normally open, but it's mocked to return null
       expect(document.body).toBeDefined();
     }
-  });
-
-  it("switching to Reporting tab shows reporting content", () => {
-    renderWithProviders(<Checklists />);
-    const reportingTab = screen.getByRole("button", { name: /reporting/i });
-    fireEvent.click(reportingTab);
-    // The mocked ReportingTab shows "Reporting Tab"
-    expect(screen.getByText("Reporting Tab")).toBeInTheDocument();
-  });
-
-  it("Reporting tab subtitle changes to 'Logs & compliance overview'", () => {
-    renderWithProviders(<Checklists />);
-    const reportingTab = screen.getByRole("button", { name: /reporting/i });
-    fireEvent.click(reportingTab);
-    expect(screen.getByText("Logs & compliance overview")).toBeInTheDocument();
-  });
-
-  it("switching back to Checklists tab shows checklists content", () => {
-    renderWithProviders(<Checklists />);
-    const reportingTab = screen.getByRole("button", { name: /reporting/i });
-    fireEvent.click(reportingTab);
-    const checklistsTab = screen.getByRole("button", { name: /^checklists$/i });
-    fireEvent.click(checklistsTab);
-    // Should be back to the checklists view with search input
-    expect(screen.getByPlaceholderText("Search checklists…")).toBeInTheDocument();
   });
 
   it("searching filters the checklist list", () => {

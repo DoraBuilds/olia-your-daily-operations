@@ -69,8 +69,9 @@ describe("Layout", () => {
 
   it("renders the BottomNav", () => {
     renderWithProviders(<Layout title="T"><span /></Layout>);
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Checklists")).toBeInTheDocument();
+    expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Checklists").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Reporting").length).toBeGreaterThanOrEqual(1);
   });
 
   it("does NOT show logout button when user is not authenticated", () => {
