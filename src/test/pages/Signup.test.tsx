@@ -4,12 +4,16 @@ import Signup from "@/pages/Signup";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
-const { mockSignInWithOtp } = vi.hoisted(() => ({ mockSignInWithOtp: vi.fn() }));
+const { mockSignInWithOtp, mockVerifyOtp } = vi.hoisted(() => ({
+  mockSignInWithOtp: vi.fn(),
+  mockVerifyOtp: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       signInWithOtp: mockSignInWithOtp,
+      verifyOtp: mockVerifyOtp,
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({
         data: { subscription: { unsubscribe: vi.fn() } },
@@ -50,6 +54,13 @@ describe("Signup page", () => {
     localStorage.clear();
     delete import.meta.env.VITE_PUBLIC_SITE_URL;
     mockSignInWithOtp.mockResolvedValue({
+      data: {
+        user: { id: "new-user-1" },
+        session: { access_token: "tok", refresh_token: "ref" },
+      },
+      error: null,
+    });
+    mockVerifyOtp.mockResolvedValue({
       data: {
         user: { id: "new-user-1" },
         session: { access_token: "tok", refresh_token: "ref" },
@@ -106,9 +117,9 @@ describe("Signup page", () => {
     expect(screen.getByText("Create account")).toBeInTheDocument();
   });
 
-  it("shows the magic-link signup subtitle", () => {
+  it("shows the one-time-code signup subtitle", () => {
     render(<Signup />, { wrapper });
-    expect(screen.getByText("Set up Olia for your business with a magic link")).toBeInTheDocument();
+    expect(screen.getByText("Set up Olia for your business with a one-time code")).toBeInTheDocument();
   });
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -207,17 +218,17 @@ describe("Signup page", () => {
     }
   });
 
-  // ── Check-email screen ──────────────────────────────────────────────────────
+  // ── Code screen ─────────────────────────────────────────────────────────────
 
-  it("shows check-email screen when signUp returns no session", async () => {
+  it("shows code-entry screen when signUp returns no session", async () => {
     mockSignInWithOtp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
     render(<Signup />, { wrapper });
     fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
-    await waitFor(() => expect(screen.getByText("Check your email")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter your code")).toBeInTheDocument());
   });
 
-  it("shows the user's email on the check-email screen", async () => {
+  it("shows the user's email on the code-entry screen", async () => {
     mockSignInWithOtp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
     render(<Signup />, { wrapper });
     fillValidForm();
@@ -225,17 +236,37 @@ describe("Signup page", () => {
     await waitFor(() => expect(screen.getByText("sarah@acme.com")).toBeInTheDocument());
   });
 
-  it("check-email screen explains that a magic link was sent", async () => {
+  it("code-entry screen explains that a one-time code was sent", async () => {
     mockSignInWithOtp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
     render(<Signup />, { wrapper });
     fillValidForm();
     fireEvent.click(screen.getByText("Create account"));
-    await waitFor(() => expect(screen.getByText(/magic link/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/8-digit code/i)).toBeInTheDocument());
+  });
+
+  it("verifies the emailed code with signup verification", async () => {
+    mockSignInWithOtp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
+    render(<Signup />, { wrapper });
+    fillValidForm();
+    fireEvent.click(screen.getByText("Create account"));
+
+    await waitFor(() => expect(screen.getByPlaceholderText(/Enter the code from your email/i)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByPlaceholderText(/Enter the code from your email/i), {
+      target: { value: "12345678" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify code" }));
+
+    await waitFor(() => expect(mockVerifyOtp).toHaveBeenCalledWith({
+      email: "sarah@acme.com",
+      token: "12345678",
+      type: "signup",
+    }));
   });
 
   // ── Error handling ──────────────────────────────────────────────────────────
 
-  it("shows auth error message on signup magic-link failure", async () => {
+  it("shows auth error message on signup code-send failure", async () => {
     mockSignInWithOtp.mockResolvedValue({
       data: { user: null, session: null },
       error: { message: "Email already registered" },

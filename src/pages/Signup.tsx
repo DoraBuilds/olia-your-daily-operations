@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
-type Step = "form" | "check-email";
+type Step = "form" | "code";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -16,7 +16,9 @@ export default function Signup() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Already authenticated → go to admin (new users add their first location there)
@@ -73,26 +75,133 @@ export default function Signup() {
     if (data.session) {
       // Some environments may sign the user in immediately.
     } else {
-      setStep("check-email");
+      setStep("code");
     }
   };
 
-  if (step === "check-email") {
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim().length < 6) return;
+
+    setLoading(true);
+    setError(null);
+
+    const { error: authError } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: "signup",
+    });
+
+    setLoading(false);
+
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+
+    navigate("/admin", { replace: true });
+  };
+
+  const handleResendCode = async () => {
+    if (!isFormValid) return;
+
+    setResending(true);
+    setError(null);
+
+    const ownerName = `${firstName.trim()} ${lastName.trim()}`;
+    const { error: authError } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: authRedirectUrl,
+        shouldCreateUser: true,
+        data: {
+          full_name: ownerName,
+          business_name: businessName.trim(),
+        },
+      },
+    });
+
+    setResending(false);
+
+    if (authError) {
+      setError(authError.message);
+    }
+  };
+
+  if (step === "code") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center mx-auto text-3xl">
-            ✉
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center mx-auto text-3xl">
+              #
+            </div>
+            <div>
+              <h1 className="font-display text-2xl text-foreground">Enter your code</h1>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                We sent an 8-digit code to{" "}
+                <span className="text-foreground font-medium">{email}</span>.
+                Enter it here to finish creating your account.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-display text-2xl text-foreground">Check your email</h1>
-            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-              We sent a magic link to{" "}
-              <span className="text-foreground font-medium">{email}</span>.
-              Open it on this device and you'll land straight in your workspace.
-            </p>
+
+          <form onSubmit={handleVerifyCode} className="space-y-4">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">One-time code</label>
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                placeholder="Enter the code from your email"
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+
+            {error && (
+              <p id="signup-error" className="text-xs text-status-error">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || code.trim().length < 6}
+              className={cn(
+                "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+                !loading && code.trim().length >= 6
+                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                  : "bg-muted text-muted-foreground cursor-not-allowed",
+              )}
+            >
+              {loading ? "Verifying…" : "Verify code"}
+            </button>
+          </form>
+
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={resending || loading}
+              className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
+            >
+              {resending ? "Resending…" : "Resend code"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("form");
+                setCode("");
+                setError(null);
+              }}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              Change email
+            </button>
           </div>
-          <p className="text-xs text-muted-foreground">
+
+          <p className="text-center text-xs text-muted-foreground">
             Already confirmed?{" "}
             <Link to="/login" className="text-sage font-medium hover:underline">
               Sign in
@@ -112,7 +221,7 @@ export default function Signup() {
             <span className="text-white font-display text-2xl font-bold">O</span>
           </div>
           <h1 className="font-display text-2xl text-foreground">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business with a magic link</p>
+          <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business with a one-time code</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,7 +299,7 @@ export default function Signup() {
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
-            {loading ? "Sending magic link…" : "Create account"}
+            {loading ? "Sending code…" : "Create account"}
           </button>
         </form>
 

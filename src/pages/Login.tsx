@@ -6,13 +6,14 @@ import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
-type Step = "email" | "check-email";
+type Step = "email" | "code";
 
 export default function Login() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,13 +48,40 @@ export default function Login() {
       return;
     }
 
-    setStep("check-email");
-    setInfo(`We sent a magic link to ${emailValue}.`);
+    setStep("code");
+    setInfo(`We sent an 8-digit code to ${emailValue}.`);
+  };
+
+  const verifyCode = async () => {
+    if (!emailValue || code.trim().length < 6) return;
+
+    setLoading(true);
+    setError(null);
+
+    const { error: authError } = await supabase.auth.verifyOtp({
+      email: emailValue,
+      token: code.trim(),
+      type: "email",
+    });
+
+    setLoading(false);
+
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+
+    navigate("/admin", { replace: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await sendCode();
+    if (step === "email") {
+      await sendCode();
+      return;
+    }
+
+    await verifyCode();
   };
 
   const handleResend = async () => {
@@ -73,7 +101,7 @@ export default function Login() {
       return;
     }
 
-    setInfo(`We sent a fresh magic link to ${emailValue}.`);
+    setInfo(`We sent a fresh 8-digit code to ${emailValue}.`);
   };
 
   return (
@@ -84,7 +112,7 @@ export default function Login() {
             <span className="text-white font-display text-2xl font-bold">O</span>
           </div>
           <h1 className="font-display text-2xl text-foreground">Sign in</h1>
-          <p className="text-sm text-muted-foreground mt-1">Use a magic link from your inbox.</p>
+          <p className="text-sm text-muted-foreground mt-1">Use the one-time code from your inbox.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,6 +129,22 @@ export default function Login() {
             />
           </div>
 
+          {step === "code" && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">One-time code</label>
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                placeholder="Enter the code from your email"
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+
           {info && (
             <p className="text-xs text-sage-deep bg-sage/10 border border-sage/20 rounded-xl px-3 py-2">
               {info}
@@ -113,19 +157,19 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={loading || !emailValue}
+            disabled={loading || !emailValue || (step === "code" && code.trim().length < 6)}
             className={cn(
               "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              !loading && emailValue
+              !loading && emailValue && (step === "email" || code.trim().length >= 6)
                 ? "bg-sage text-primary-foreground hover:bg-sage-deep"
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
-            {loading ? "Sending magic link…" : "Send magic link"}
+            {loading ? (step === "email" ? "Sending code…" : "Verifying…") : (step === "email" ? "Send code" : "Verify code")}
           </button>
         </form>
 
-        {step === "check-email" && (
+        {step === "code" && (
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
@@ -133,12 +177,13 @@ export default function Login() {
               disabled={resending || loading || !emailValue}
               className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
             >
-              {resending ? "Resending…" : "Resend link"}
+              {resending ? "Resending…" : "Resend code"}
             </button>
             <button
               type="button"
               onClick={() => {
                 setStep("email");
+                setCode("");
                 setError(null);
                 setInfo(null);
               }}
