@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,6 +16,7 @@ interface LayoutProps {
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const shellWidthClass = "mx-auto w-full max-w-[1040px] xl:max-w-[980px]";
 
   const handleLogout = async () => {
     await signOut();
@@ -22,11 +24,11 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none relative">
+    <div className="min-h-screen bg-background flex flex-col w-full relative">
       {/* Header */}
       {title && (
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-          <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
+          <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8")}>
             {headerLeft ? (
               <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
             ) : <div className="w-8" />}
@@ -59,7 +61,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
       {/* Content */}
       <main className="flex-1 overflow-auto pb-24 py-5 animate-fade-in">
-        <div className="mx-auto w-full max-w-[1200px] px-4 space-y-4 sm:px-6 lg:px-8">
+        <div className={cn(shellWidthClass, "px-4 space-y-4 sm:px-6 lg:px-8")}>
           {children}
         </div>
       </main>
