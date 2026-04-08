@@ -121,7 +121,7 @@ export default function Billing() {
   const [searchParams] = useSearchParams();
   const { teamMember } = useAuth();
   const qc = useQueryClient();
-  const { plan, planStatus, hasStripeSubscription } = usePlan();
+  const { plan, resolvedPlan, planStatus, hasStripeSubscription, billingUnavailable } = usePlan();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -240,22 +240,36 @@ export default function Billing() {
         <div className="card-surface p-4 space-y-3">
           <p className="section-label">Your current plan</p>
 
+          {billingUnavailable && (
+            <div className="rounded-2xl border border-status-warn/30 bg-status-warn/5 px-4 py-3 flex items-start gap-2">
+              <AlertCircle size={15} className="text-status-warn shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">
+                We couldn't verify your billing plan just now. Refresh the page or wait for billing sync instead of relying on the Starter fallback.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-xl font-semibold text-foreground">{PLAN_LABELS[plan]}</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {billingUnavailable ? "Plan unavailable" : PLAN_LABELS[plan]}
+                </p>
                 <span className={cn(
                   "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium",
-                  plan === "enterprise" ? "bg-lavender/15 text-lavender"
+                  billingUnavailable ? "bg-muted text-muted-foreground"
+                  : plan === "enterprise" ? "bg-lavender/15 text-lavender"
                   : plan === "growth"   ? "bg-sage/15 text-sage"
                   :                       "bg-muted text-muted-foreground"
                 )}>
-                  {PLAN_ICONS[plan]}
-                  {PLAN_LABELS[plan]}
+                  {billingUnavailable ? <AlertCircle size={14} /> : PLAN_ICONS[plan]}
+                  {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                {planStatus === "trialing" ? "Free trial active" : planStatus === "active" ? "Active" : planStatus}
+                {billingUnavailable
+                  ? "Billing status unavailable"
+                  : planStatus === "trialing" ? "Free trial active" : planStatus === "active" ? "Active" : planStatus}
               </p>
             </div>
           </div>
@@ -264,11 +278,13 @@ export default function Billing() {
           <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
             <MapPin size={13} className="text-muted-foreground shrink-0" />
             <p className="text-xs text-muted-foreground">
-              {plan === "enterprise"
+              {billingUnavailable
+                ? "We couldn't confirm the current location allowance from billing."
+                : plan === "enterprise"
                 ? "Unlimited locations included"
-                : `${PLAN_FEATURES[plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[plan].maxLocations} location${PLAN_FEATURES[plan].maxLocations === 1 ? "" : "s"} included on ${PLAN_LABELS[plan]}`
+                : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included on ${PLAN_LABELS[resolvedPlan ?? plan]}`
               }
-              {plan === "starter" && (
+              {!billingUnavailable && plan === "starter" && (
                 <span className="ml-1 text-sage font-medium">
                   — Upgrade to Growth for up to 10
                 </span>

@@ -26,6 +26,64 @@ function planFromMetadata(metadata: Record<string, string>): string {
   return "starter";
 }
 
+function locationLimitForPlan(plan: string): number {
+  if (plan === "enterprise") return -1;
+  if (plan === "growth") return 10;
+  return 1;
+}
+
+async function getOrganizationBillingState(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string,
+): Promise<{ plan: string | null; location_grace_period_ends_at: string | null } | null> {
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("plan, location_grace_period_ends_at")
+    .eq("id", orgId)
+    .single();
+  if (error) return null;
+  return data;
+}
+
+async function countLocationsForOrganization(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("locations")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId);
+  return count ?? 0;
+}
+
+function buildLocationEntitlementUpdate(args: {
+  nextPlan: string;
+  previousPlan: string | null;
+  locationCount: number;
+  existingGraceEndsAt: string | null;
+}) {
+  const nextLimit = locationLimitForPlan(args.nextPlan);
+  if (nextLimit === -1 || args.locationCount <= nextLimit) {
+    return {
+      location_grace_period_ends_at: null,
+      active_location_ids: [],
+    };
+  }
+
+  const previousLimit = locationLimitForPlan(args.previousPlan ?? args.nextPlan);
+  const isDowngrade = previousLimit === -1 || previousLimit > nextLimit;
+  if (isDowngrade) {
+    return {
+      location_grace_period_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      active_location_ids: [],
+    };
+  }
+
+  return {
+    location_grace_period_ends_at: args.existingGraceEndsAt,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -81,12 +139,23 @@ Deno.serve(async (req) => {
           }
         }
 
+        const [currentOrgState, locationCount] = await Promise.all([
+          getOrganizationBillingState(supabase, orgId),
+          countLocationsForOrganization(supabase, orgId),
+        ]);
+
         await supabase
           .from("organizations")
           .update({
             stripe_subscription_id: sub.id,
             plan,
             plan_status: sub.status,
+            ...buildLocationEntitlementUpdate({
+              nextPlan: plan,
+              previousPlan: currentOrgState?.plan ?? null,
+              locationCount,
+              existingGraceEndsAt: currentOrgState?.location_grace_period_ends_at ?? null,
+            }),
           })
           .eq("id", orgId);
         break;
@@ -99,12 +168,23 @@ Deno.serve(async (req) => {
           (await getOrgIdFromCustomer(stripe, String(sub.customer)));
         if (!orgId) break;
 
+        const [currentOrgState, locationCount] = await Promise.all([
+          getOrganizationBillingState(supabase, orgId),
+          countLocationsForOrganization(supabase, orgId),
+        ]);
+
         await supabase
           .from("organizations")
           .update({
             plan: "starter",
             plan_status: "canceled",
             stripe_subscription_id: null,
+            ...buildLocationEntitlementUpdate({
+              nextPlan: "starter",
+              previousPlan: currentOrgState?.plan ?? null,
+              locationCount,
+              existingGraceEndsAt: currentOrgState?.location_grace_period_ends_at ?? null,
+            }),
           })
           .eq("id", orgId);
         break;

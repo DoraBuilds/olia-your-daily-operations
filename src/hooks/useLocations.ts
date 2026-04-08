@@ -1,22 +1,75 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Location } from "@/lib/admin-repository";
+import { usePlan } from "@/hooks/usePlan";
 
 export function useLocations() {
-  return useQuery({
+  const { features, org } = usePlan();
+  const query = useQuery({
     queryKey: ["locations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
         .select(
-          "id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, lat, lng, place_id",
+          "id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
         )
         .order("name");
       if (error) throw error;
       return (data ?? []) as Location[];
     },
   });
+
+  const allLocations = query.data ?? [];
+  const maxLocations = features.maxLocations;
+  const isOverLimit = maxLocations !== -1 && allLocations.length > maxLocations;
+  const graceEndsAt = org?.location_grace_period_ends_at ?? null;
+  const isGraceActive = Boolean(graceEndsAt && new Date(graceEndsAt).getTime() > Date.now());
+  const isGraceExpired = Boolean(isOverLimit && graceEndsAt && !isGraceActive);
+
+  const effectiveActiveLocationIds = useMemo(() => {
+    if (!isOverLimit || maxLocations === -1 || isGraceActive) {
+      return allLocations.map((location) => location.id);
+    }
+
+    const savedIds = (org?.active_location_ids ?? []).filter((id) =>
+      allLocations.some((location) => location.id === id),
+    );
+    if (savedIds.length > 0) {
+      return savedIds.slice(0, maxLocations);
+    }
+
+    return [...allLocations]
+      .sort((left, right) => {
+        const leftCreated = left.created_at ? new Date(left.created_at).getTime() : 0;
+        const rightCreated = right.created_at ? new Date(right.created_at).getTime() : 0;
+        return leftCreated - rightCreated || left.name.localeCompare(right.name);
+      })
+      .slice(0, maxLocations)
+      .map((location) => location.id);
+  }, [allLocations, isGraceActive, isOverLimit, maxLocations, org?.active_location_ids]);
+
+  const activeLocationSet = new Set(effectiveActiveLocationIds);
+  const activeLocations = allLocations.filter((location) => activeLocationSet.has(location.id));
+  const inactiveLocations =
+    isOverLimit && !isGraceActive
+      ? allLocations.filter((location) => !activeLocationSet.has(location.id))
+      : [];
+
+  return {
+    ...query,
+    data: activeLocations,
+    allLocations,
+    activeLocations,
+    inactiveLocations,
+    maxLocations,
+    isOverLimit,
+    graceEndsAt,
+    isGraceActive,
+    isGraceExpired,
+    effectiveActiveLocationIds,
+  };
 }
 
 export function useSaveLocation() {

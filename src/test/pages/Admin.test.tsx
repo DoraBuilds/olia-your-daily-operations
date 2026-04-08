@@ -65,13 +65,19 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/hooks/usePlan", () => ({
   usePlan: () => ({
     plan: "growth",
+    resolvedPlan: "growth",
     planStatus: "active",
+    billingUnavailable: false,
     features: { aiBuilder: true, fileConvert: true, recharts: true, maxLocations: 10, maxStaff: 200, maxChecklists: -1 },
     can: () => true,
     withinLimit: () => true,
     isActive: true,
     hasStripeSubscription: true,
     isLoading: false,
+  }),
+  useSaveActiveLocationsSelection: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({}),
+    isPending: false,
   }),
 }));
 
@@ -100,7 +106,18 @@ const { mockSaveTeamMember } = vi.hoisted(() => ({
     mutateAsync: vi.fn().mockResolvedValue({}),
   },
 }));
-mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
+mockUseLocations.mockReturnValue({
+  data: mockLocations,
+  allLocations: mockLocations,
+  inactiveLocations: [],
+  maxLocations: 10,
+  isOverLimit: false,
+  graceEndsAt: null,
+  isGraceActive: false,
+  isGraceExpired: false,
+  effectiveActiveLocationIds: mockLocations.map((location) => location.id),
+  isLoading: false,
+});
 
 vi.mock("@/hooks/useLocations", () => ({
   useLocations: mockUseLocations,
@@ -790,6 +807,14 @@ describe("Admin page", () => {
     // use mockReturnValue (not Once) so all re-renders get the JSON data
     mockUseLocations.mockReturnValue({
       data: [{ ...mockLocations[0], trading_hours: jsonHours }, mockLocations[1]],
+      allLocations: [{ ...mockLocations[0], trading_hours: jsonHours }, mockLocations[1]],
+      inactiveLocations: [],
+      maxLocations: 10,
+      isOverLimit: false,
+      graceEndsAt: null,
+      isGraceActive: false,
+      isGraceExpired: false,
+      effectiveActiveLocationIds: mockLocations.map((location) => location.id),
       isLoading: false,
     });
     renderWithProviders(<Admin />);
@@ -799,7 +824,18 @@ describe("Admin page", () => {
       expect(locationDetails?.textContent).toContain("09:00");
     });
     // Restore default mock for subsequent tests
-    mockUseLocations.mockReturnValue({ data: mockLocations, isLoading: false });
+    mockUseLocations.mockReturnValue({
+      data: mockLocations,
+      allLocations: mockLocations,
+      inactiveLocations: [],
+      maxLocations: 10,
+      isOverLimit: false,
+      graceEndsAt: null,
+      isGraceActive: false,
+      isGraceExpired: false,
+      effectiveActiveLocationIds: mockLocations.map((location) => location.id),
+      isLoading: false,
+    });
   });
 
   it("location form shows Opening hours with time inputs for open days and 'Closed' for closed days", async () => {
