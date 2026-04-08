@@ -396,23 +396,23 @@ export default function Billing() {
               )}
             >
               <div className={cn(
-                "rounded-3xl border bg-card border-border p-4 space-y-4",
+                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4",
                 isCurrent && "ring-1 ring-sage/60",
                 isRecommended && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
               )}>
 
                 {/* Badges row */}
-                <div className="flex items-center justify-center gap-2 min-h-5">
+                <div className="absolute left-1/2 top-0 flex min-h-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2">
                   {isCurrent && (
                     <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm",
                       "bg-sage/15 text-sage"
                     )}>
                       Current plan
                     </span>
                   )}
                   {isRecommended && !isCurrent && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm">
                       Recommended
                     </span>
                   )}
