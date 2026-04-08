@@ -125,22 +125,70 @@ export default function Billing() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
 
   const upgraded = searchParams.get("upgraded") === "1";
   const canceled  = searchParams.get("canceled")  === "1";
+  const checkoutSessionId = searchParams.get("session_id");
 
-  // After Stripe redirects back with ?upgraded=1, the webhook may still be in
-  // flight. Poll the org record up to 3 times (at 0 s, 3 s, 9 s) so the UI
-  // reflects the real plan as soon as the webhook writes it.
+  // Confirm the completed Stripe checkout session directly so the page does
+  // not stay stuck waiting only on the webhook write.
   useEffect(() => {
     if (!upgraded || !teamMember?.organization_id) return;
     const key = ["organization", teamMember.organization_id];
-    qc.invalidateQueries({ queryKey: key });
-    const t1 = setTimeout(() => qc.invalidateQueries({ queryKey: key }), 3000);
-    const t2 = setTimeout(() => qc.invalidateQueries({ queryKey: key }), 9000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    let cancelled = false;
+
+    const syncPlan = async () => {
+      const invalidateOrg = () => qc.invalidateQueries({ queryKey: key });
+      const attemptDelays = [0, 3000, 9000];
+      setActivationError(null);
+
+      for (const delay of attemptDelays) {
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        if (cancelled) return;
+
+        invalidateOrg();
+
+        if (!checkoutSessionId) continue;
+
+        const { data, error: fnError } = await supabase.functions.invoke("confirm-checkout-session", {
+          body: { sessionId: checkoutSessionId },
+        });
+
+        if (cancelled) return;
+        if (fnError) {
+          throw new Error(fnError.message ?? "We couldn't confirm the Stripe checkout session yet.");
+        }
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+        if (data?.synced) {
+          invalidateOrg();
+          return;
+        }
+      }
+
+      if (!cancelled) {
+        setActivationError("Checkout completed, but we couldn't confirm the plan change yet. Please refresh in a moment or contact us if it stays stuck.");
+      }
+    };
+
+    void syncPlan().catch((err: unknown) => {
+      if (cancelled) return;
+      setActivationError(
+        err instanceof Error
+          ? err.message
+          : "Checkout completed, but we couldn't confirm the plan change yet.",
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [upgraded, teamMember?.organization_id]);
+  }, [upgraded, checkoutSessionId, teamMember?.organization_id]);
 
   // ── Stripe checkout (unchanged logic) ──────────────────────────────────────
   const handleUpgrade = async (targetPlan: "starter" | "growth") => {
@@ -210,14 +258,22 @@ export default function Billing() {
 
         {/* ── Post-checkout banners ────────────────────────────────────────── */}
         {upgraded && (
-          // Show one of two states:
+          // Show one of three states:
           // 1. Plan is confirmed in DB (webhook already processed) → green success
-          // 2. Plan not yet updated (webhook still in flight) → neutral "activating"
+          // 2. Plan not yet updated (sync still in flight) → neutral "activating"
+          // 3. Checkout succeeded but sync could not be confirmed → actionable error
           plan !== "starter" ? (
             <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-ok/30 bg-status-ok/5">
               <Check size={15} className="text-status-ok shrink-0" />
               <p className="text-sm text-status-ok font-medium">
                 You're now on {PLAN_LABELS[plan]}. Welcome aboard!
+              </p>
+            </div>
+          ) : activationError ? (
+            <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-error/30 bg-status-error/5">
+              <AlertCircle size={15} className="text-status-error shrink-0" />
+              <p className="text-sm text-status-error">
+                {activationError}
               </p>
             </div>
           ) : (
@@ -343,42 +399,34 @@ export default function Billing() {
         )}
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
-        {plans.map((p, idx) => {
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.92fr)]">
+        {plans.map((p) => {
           const isCurrent  = p === plan;
           const price      = PLAN_PRICES[p];
           const priceVal   = billing === "monthly" ? price.monthly : price.annual;
           const isLoadingP = loading === p;
           const isEnterprise = p === "enterprise";
-          // Highlight Growth when user is on Starter (most likely next step)
-          const isRecommended = p === "growth" && plan === "starter";
+          const isRecommended = p === "growth";
 
           return (
-            <div key={p}>
-              {/* "Why upgrade" callout — between Starter and Growth for Starter users */}
-              {idx === 1 && plan === "starter" && (
-                <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-sage/5 border border-sage/20 mb-3">
-                  <Zap size={14} className="text-sage mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Need more than one location?</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Growth lets you manage multiple venues and teams from one account.
-                    </p>
-                  </div>
-                </div>
+            <div
+              key={p}
+              className={cn(
+                "h-full",
+                isRecommended && "lg:-my-3",
               )}
-
-              {/* Card */}
+            >
               <div className={cn(
-                "rounded-2xl border p-4 space-y-4",
+                "rounded-3xl border p-5 space-y-5 h-full flex flex-col",
                 isEnterprise
-                  ? "bg-sage text-primary-foreground border-sage"          // dark premium card
+                  ? "bg-sage text-primary-foreground border-sage"
                   : "bg-card border-border",
                 isCurrent && !isEnterprise && "ring-1 ring-sage/60",
-                isRecommended && !isEnterprise && "ring-2 ring-sage",
+                isRecommended && !isEnterprise && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)] lg:min-h-[640px]",
               )}>
 
                 {/* Badges row */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-h-6">
                   {isCurrent && (
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
@@ -389,14 +437,14 @@ export default function Billing() {
                   )}
                   {isRecommended && !isCurrent && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground">
-                      Most popular
+                      Recommended
                     </span>
                   )}
                 </div>
 
                 {/* Plan name + price */}
-                <div className="flex items-start justify-between">
-                  <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="max-w-[16rem]">
                     <p className={cn(
                       "font-semibold text-lg",
                       isEnterprise ? "text-white" : "text-foreground"
@@ -410,7 +458,7 @@ export default function Billing() {
                       {PLAN_DESCRIPTIONS[p]}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 ml-3">
+                  <div className="text-right shrink-0">
                     {isEnterprise ? (
                       <>
                         <p className="text-sm font-semibold text-white/90">Custom pricing</p>
@@ -443,7 +491,7 @@ export default function Billing() {
                 </div>
 
                 {/* Feature list */}
-                <ul className="space-y-1.5">
+                <ul className="space-y-2 flex-1">
                   {PLAN_HIGHLIGHTS[p].map(feature => (
                     <li key={feature} className={cn(
                       "flex items-center gap-2 text-xs",
@@ -459,6 +507,7 @@ export default function Billing() {
                 <div className={cn("border-t", isEnterprise ? "border-white/20" : "border-border")} />
 
                 {/* CTA */}
+                <div className="mt-auto">
                 {isEnterprise ? (
                   isCurrent ? (
                     <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-white/20 text-white">
@@ -488,6 +537,7 @@ export default function Billing() {
                     {ctaLabel(p)}
                   </button>
                 )}
+                </div>
 
                 {/* Enterprise — tailored pricing note */}
                 {isEnterprise && !isCurrent && (
@@ -499,6 +549,7 @@ export default function Billing() {
             </div>
           );
         })}
+        </div>
 
         {/* ── Plan comparison ──────────────────────────────────────────────── */}
         <div className="card-surface p-4 space-y-3">

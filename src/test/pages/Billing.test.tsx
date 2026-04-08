@@ -3,6 +3,10 @@ import Billing from "@/pages/Billing";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { renderWithProviders } from "../test-utils";
 
+const { mockInvoke } = vi.hoisted(() => ({
+  mockInvoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -17,7 +21,7 @@ vi.mock("@/lib/supabase", () => ({
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
     }),
     functions: {
-      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+      invoke: mockInvoke,
     },
   },
 }));
@@ -39,6 +43,8 @@ vi.mock("@/hooks/usePlan", () => ({
 }));
 
 beforeEach(() => {
+  mockInvoke.mockReset();
+  mockInvoke.mockResolvedValue({ data: null, error: null });
   mockUsePlan.mockReturnValue({
     plan: "starter",
     planStatus: "active",
@@ -122,6 +128,31 @@ describe("Billing page", () => {
   it("shows 'Current' badge on the current plan card", () => {
     renderWithProviders(<Billing />);
     expect(screen.getAllByText("Current plan").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("highlights Growth as the recommended plan", () => {
+    renderWithProviders(<Billing />);
+    expect(screen.getByText("Recommended")).toBeInTheDocument();
+  });
+
+  it("confirms the Stripe checkout session after redirect", () => {
+    mockInvoke.mockResolvedValueOnce({ data: { synced: true }, error: null });
+    renderWithProviders(<Billing />, {
+      initialEntries: ["/billing?upgraded=1&session_id=cs_test_123"],
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("confirm-checkout-session", {
+      body: { sessionId: "cs_test_123" },
+    });
+  });
+
+  it("shows an activation error when checkout confirmation fails", async () => {
+    mockInvoke.mockResolvedValueOnce({ data: { error: "Stripe sync failed." }, error: null });
+    renderWithProviders(<Billing />, {
+      initialEntries: ["/billing?upgraded=1&session_id=cs_test_456"],
+    });
+
+    expect(await screen.findByText("Stripe sync failed.")).toBeInTheDocument();
   });
 
   it("renders growth plan when current plan is growth and shows Stripe link", () => {
