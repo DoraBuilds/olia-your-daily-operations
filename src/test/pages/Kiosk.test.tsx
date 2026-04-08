@@ -29,53 +29,74 @@ vi.mock("@/lib/supabase", () => ({
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
     from: vi.fn((table: string) => {
+      let eqValue: string | null = null;
       if (table === "alerts") {
-        return {
+        const chain: any = {
           select: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockImplementation((_: string, value: string) => {
+            eqValue = value;
+            return chain;
+          }),
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           insert: alertsInsert,
           update: vi.fn().mockReturnThis(),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           delete: vi.fn().mockReturnThis(),
           then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
         };
+        return chain;
       }
 
       if (table === "checklist_logs") {
-        return {
+        const chain: any = {
           select: vi.fn().mockReturnThis(),
           order: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockImplementation((_: string, value: string) => {
+            eqValue = value;
+            return chain;
+          }),
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           insert: checklistLogsInsert,
           update: vi.fn().mockReturnThis(),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           delete: vi.fn().mockReturnThis(),
           then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
         };
+        return chain;
       }
 
-      return {
+      const locations = [
+        { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
+        { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
+      ];
+
+      const chain: any = {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockImplementation((_: string, value: string) => {
+          eqValue = value;
+          return chain;
+        }),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockImplementation(() => Promise.resolve({
+          data: table === "locations" ? locations.find((location) => location.id === eqValue) ?? null : null,
+          error: null,
+        })),
         insert: vi.fn().mockResolvedValue({ error: null }),
         update: vi.fn().mockReturnThis(),
         upsert: vi.fn().mockResolvedValue({ error: null }),
         delete: vi.fn().mockReturnThis(),
         then: vi.fn().mockImplementation((cb) =>
           Promise.resolve(cb({
-            data: [
-              { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
-              { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
-            ],
+            data: locations,
             error: null,
           }))
         ),
       };
+      return chain;
     }),
     rpc: vi.fn().mockImplementation((fn: string) => {
       if (fn === "get_kiosk_checklists") {

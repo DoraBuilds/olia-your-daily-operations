@@ -43,8 +43,9 @@ describe("ConvertFileModal", () => {
   });
 
   it("renders without crashing", () => {
-    render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
+    const { container } = render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     expect(screen.getByText("Convert file to checklist")).toBeInTheDocument();
+    expect(container.querySelector(".max-w-3xl")).toBeInTheDocument();
   });
 
   it("shows file upload instruction", () => {
