@@ -56,10 +56,14 @@ const App = () => (
                 <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="/checklists/*" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
                 <Route path="/reporting" element={<ProtectedRoute><Reporting /></ProtectedRoute>} />
-                <Route path="/infohub/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
-                <Route path="/training/*" element={<Navigate to="/infohub" replace />} />
+                <Route path="/infohub" element={<Navigate to="/infohub/library" replace />} />
+                <Route path="/infohub/library/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
+                <Route path="/infohub/training/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
+                <Route path="/training/*" element={<Navigate to="/infohub/training" replace />} />
                 <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/admin" element={<Navigate to="/admin/location" replace />} />
+                <Route path="/admin/location" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/admin/account" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

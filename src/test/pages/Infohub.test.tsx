@@ -76,44 +76,48 @@ describe("Infohub page", () => {
   });
 
   it("renders without crashing", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(document.body).toBeDefined();
   });
 
   it("shows 'Library' and 'Training' subtab buttons", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByRole("button", { name: /library/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /training/i })).toBeInTheDocument();
   });
 
-  it("Library tab is active by default (shows Folders section)", () => {
-    renderWithProviders(<Infohub />);
-    // The Library tab is active, so the Folders section should be visible
+  it("library route is active by default (shows Folders section)", () => {
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByText("Folders")).toBeInTheDocument();
   });
 
+  it("training route shows training modules", () => {
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
+    expect(screen.getByText("Staff training modules")).toBeInTheDocument();
+  });
+
   it("shows folder list on Library tab including 'Cleaning & Maintenance'", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByText("Cleaning & Maintenance")).toBeInTheDocument();
   });
 
   it("shows folder list including 'Food Safety'", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByText("Food Safety")).toBeInTheDocument();
   });
 
   it("shows folder list including 'Opening & Closing'", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByText("Opening & Closing")).toBeInTheDocument();
   });
 
   it("shows folder list including 'Service Standards'", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     expect(screen.getByText("Service Standards")).toBeInTheDocument();
   });
 
   it("clicking a folder navigates into it and shows Documents section", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     const foodSafetyFolder = screen.getByText("Food Safety");
     const folderRow = foodSafetyFolder.closest("div[class*='flex']") as HTMLElement;
     if (folderRow) {
@@ -124,7 +128,7 @@ describe("Infohub page", () => {
   });
 
   it("clicking 'All folders' breadcrumb navigates back to root", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     // Click into a folder first
     const foodSafetyFolder = screen.getByText("Food Safety");
     const folderRow = foodSafetyFolder.closest("div[class*='flex']") as HTMLElement;
@@ -141,7 +145,7 @@ describe("Infohub page", () => {
   });
 
   it("search button is visible in header", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     // The search icon button should be in the page
     const buttons = screen.getAllByRole("button");
     const hasSearchIcon = buttons.some(btn => btn.querySelector("svg") !== null);
@@ -149,7 +153,7 @@ describe("Infohub page", () => {
   });
 
   it("clicking the search button opens search overlay with input", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     // Find the search button (it has a Search icon)
     // The header has search + plus buttons; search is first
     const buttons = screen.getAllByRole("button");
@@ -172,7 +176,7 @@ describe("Infohub page", () => {
   });
 
   it("search overlay shows 'No results found' for unmatched query", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     const buttons = screen.getAllByRole("button");
     const searchButtons = buttons.filter(btn =>
       btn.className.includes("rounded-full") && btn.querySelector("svg")
@@ -188,7 +192,7 @@ describe("Infohub page", () => {
   });
 
   it("search overlay filters library docs by title", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     const buttons = screen.getAllByRole("button");
     const searchButtons = buttons.filter(btn =>
       btn.className.includes("rounded-full") && btn.querySelector("svg")
@@ -205,7 +209,7 @@ describe("Infohub page", () => {
   });
 
   it("closing search overlay (X button) returns to main view", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     const buttons = screen.getAllByRole("button");
     const searchButtons = buttons.filter(btn =>
       btn.className.includes("rounded-full") && btn.querySelector("svg")
@@ -222,7 +226,7 @@ describe("Infohub page", () => {
       if (closeBtn) {
         fireEvent.click(closeBtn);
         // Should be back to main page
-        expect(screen.queryByText("Library")).toBeInTheDocument();
+        expect(screen.getByText("Folders")).toBeInTheDocument();
       }
     }
   });
@@ -255,31 +259,22 @@ describe("Infohub page", () => {
   });
 
   it("switching to Training tab shows training folders", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
-    // Training tab shows Onboarding and Troubleshooting folders
-    expect(screen.queryByText("Onboarding") || screen.queryByText("Folders")).toBeTruthy();
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
+    expect(screen.queryByText("Onboarding") || screen.queryByText("Troubleshooting")).toBeTruthy();
   });
 
   it("Training tab shows training module folders like Onboarding", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     expect(screen.getByText("Onboarding")).toBeInTheDocument();
   });
 
   it("Training tab shows Troubleshooting folder", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     expect(screen.getByText("Troubleshooting")).toBeInTheDocument();
   });
 
   it("clicking a training folder navigates into it", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
     if (folderRow) {
@@ -290,9 +285,7 @@ describe("Infohub page", () => {
   });
 
   it("clicking a training module opens the training detail view", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     // Navigate into Onboarding folder
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
@@ -312,9 +305,7 @@ describe("Infohub page", () => {
   });
 
   it("training doc detail shows step 1 text", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
     if (folderRow) {
@@ -331,9 +322,7 @@ describe("Infohub page", () => {
   });
 
   it("training doc step can be toggled (clicking marks it done)", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
     if (folderRow) {
@@ -359,9 +348,7 @@ describe("Infohub page", () => {
   });
 
   it("back button in training doc detail returns to folder view", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
     if (folderRow) {
@@ -378,7 +365,7 @@ describe("Infohub page", () => {
           if (backBtn) {
             fireEvent.click(backBtn);
             // Should return to folder view
-            expect(screen.queryByText("Training") || screen.queryByText("Onboarding")).toBeTruthy();
+            expect(screen.getByText("Onboarding")).toBeInTheDocument();
           }
         }
       }
@@ -386,8 +373,7 @@ describe("Infohub page", () => {
   });
 
   it("completed training modules stay completed after going back and reopening", () => {
-    renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getByRole("button", { name: /training/i }));
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
 
     const onboardingFolder = screen.getByText("Onboarding");
     const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement;
@@ -715,19 +701,13 @@ describe("Infohub page", () => {
   });
 
   it("training tab: Onboarding folder shows module count", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
-    // Should show something like "3 modules"
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     expect(screen.queryAllByText(/modules/i).length).toBeGreaterThan(0);
   });
 
   it("training tab: Troubleshooting folder shows module count", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     expect(screen.getByText("Troubleshooting")).toBeInTheDocument();
-    // Both folders should show module count text
     const modulesText = screen.queryAllByText(/modules/i);
     expect(modulesText.length).toBeGreaterThan(0);
   });
@@ -750,9 +730,7 @@ describe("Infohub page", () => {
   });
 
   it("Training tab subtitle changes when tab switched", () => {
-    renderWithProviders(<Infohub />);
-    const trainingTab = screen.getByRole("button", { name: /training/i });
-    fireEvent.click(trainingTab);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     expect(screen.getByText("Staff training modules")).toBeInTheDocument();
   });
 
