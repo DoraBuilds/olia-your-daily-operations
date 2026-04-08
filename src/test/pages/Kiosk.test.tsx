@@ -460,6 +460,25 @@ describe("Kiosk — Grid Screen", () => {
     });
   });
 
+  it("offers a logout-and-login recovery path instead of a signup bypass", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    await renderGridScreen();
+    const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
+    fireEvent.click(adminBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Forgot your PIN/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Create an account/i)).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Log out and sign in again/i }));
+
+    await waitFor(() => {
+      expect(supabase.auth.signOut).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/login?reason=reset-pin");
+    });
+  });
+
   it("clicking backdrop of Admin Login Modal closes it", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;

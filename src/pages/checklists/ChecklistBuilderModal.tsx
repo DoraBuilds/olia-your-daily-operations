@@ -40,6 +40,7 @@ interface ChecklistBuilderModalProps {
   initialTitle?: string;
   initialSections?: SectionDef[];
   initialLocationIds?: string[] | null;
+  initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
   initialVisibilityUntil?: string | null;
   editId?: string;
@@ -50,7 +51,7 @@ interface ChecklistBuilderModalProps {
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialSections, initialLocationIds,
-  initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
+  initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
   const { data: dbLocations = [] } = useLocations();
@@ -60,7 +61,9 @@ export function ChecklistBuilderModal({
 
   const [title, setTitle] = useState(initialTitle || "");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
+  );
   const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
   const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
   const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
@@ -198,6 +201,7 @@ export function ChecklistBuilderModal({
       description: description.trim() || undefined,
       questionsCount: totalQuestions,
       schedule: schedLabel,
+      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       sections: sectionsWithPersonChoices,
       time_of_day: "anytime",         // visibility is handled with the explicit window below
       due_time: null,

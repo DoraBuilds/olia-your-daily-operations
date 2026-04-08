@@ -24,6 +24,7 @@ export interface ChecklistItem {
   folderId: string | null;
   location_id?: string | null;
   location_ids?: string[] | null;
+  start_date?: string | null;
   createdAt: string;
   sections?: SectionDef[];
   time_of_day?: "morning" | "afternoon" | "evening" | "anytime";

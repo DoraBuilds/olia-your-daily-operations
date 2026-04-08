@@ -15,6 +15,7 @@ export interface ChecklistItem {
   folder_id: string | null;
   location_id: string | null;
   location_ids?: string[] | null;
+  start_date: string | null;
   schedule: any;
   sections: any[];
   time_of_day: "morning" | "afternoon" | "evening" | "anytime";
@@ -77,7 +78,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, title, folder_id, location_id, location_ids, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
+        .select("id, title, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
         .order("title");
       if (error) throw error;
       return (data ?? []) as ChecklistItem[];
@@ -97,6 +98,7 @@ export function useSaveChecklist() {
         folder_id: checklist.folder_id ?? null,
         location_id: checklist.location_id ?? null,
         location_ids: checklist.location_ids ?? null,
+        start_date: checklist.start_date ?? null,
         schedule: checklist.schedule ?? null,
         sections: checklist.sections ?? [],
         time_of_day: "anytime",              // always anytime — kiosk uses visibility fields instead
