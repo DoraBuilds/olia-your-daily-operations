@@ -378,7 +378,7 @@ export default function Billing() {
         )}
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
-        <div className="pt-2 pb-3">
+        <div className="pt-5 pb-3">
         <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
         {plans.map((p) => {
           const isCurrent  = p === plan;
@@ -393,19 +393,17 @@ export default function Billing() {
               key={p}
               className={cn(
                 "h-full",
-                isRecommended && "lg:scale-[1.03] lg:-translate-y-1 lg:z-10",
+                isRecommended && "lg:scale-[1.02] lg:z-10",
               )}
             >
               <div className={cn(
-                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4 h-full",
-                !isRecommended && "lg:min-h-[34.5rem]",
-                isRecommended && "lg:min-h-[35.25rem]",
+                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4 h-full flex flex-col",
                 isCurrent && "ring-1 ring-sage/60",
                 isRecommended && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
               )}>
 
                 {/* Badges row */}
-                <div className="absolute left-1/2 top-0 z-10 flex min-h-5 -translate-x-1/2 -translate-y-[58%] items-center justify-center gap-2">
+                <div className="absolute left-1/2 top-0 z-10 flex min-h-5 -translate-x-1/2 -translate-y-[62%] items-center justify-center gap-2">
                   {isCurrent && (
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
@@ -421,7 +419,7 @@ export default function Billing() {
                 </div>
 
                 {/* Plan name + price */}
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex min-h-[7.75rem] items-start justify-between gap-4">
                   <div className="max-w-[15rem]">
                     <p className="font-semibold text-lg text-foreground">
                       {PLAN_LABELS[p]}
@@ -430,11 +428,12 @@ export default function Billing() {
                       {PLAN_DESCRIPTIONS[p]}
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 min-h-[4.75rem] flex flex-col items-end">
                     {isEnterprise ? (
                       <>
                         <p className="text-sm font-semibold text-foreground">Custom pricing</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
+                        <div className="mt-auto h-[2.25rem]" aria-hidden="true" />
                       </>
                     ) : (
                       <>
@@ -473,7 +472,7 @@ export default function Billing() {
                 </ul>
 
                 {/* Divider */}
-                <div className="border-t border-border" />
+                <div className="border-t border-border mt-auto" />
 
                 {/* CTA */}
                 <div className="space-y-3">
