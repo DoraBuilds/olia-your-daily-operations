@@ -88,8 +88,8 @@ const mockLocations = [
 ];
 
 const mockStaff = [
-  { id: "sp1", location_id: "l1", first_name: "Alice", last_name: "Smith", role: "Front of House / Server", status: "active", pin: "1234", last_used_at: null, archived_at: null, created_at: "2024-01-01T00:00:00Z" },
-  { id: "sp2", location_id: "l1", first_name: "Bob", last_name: "Jones", role: "Back of House / Chef", status: "archived", pin: "5678", last_used_at: "2024-02-01T00:00:00Z", archived_at: "2024-02-15T00:00:00Z", created_at: "2024-01-01T00:00:00Z" },
+  { id: "sp1", location_id: "l1", first_name: "Alice", last_name: "Smith", role: "Front of House", status: "active", pin: "1234", last_used_at: null, archived_at: null, created_at: "2024-01-01T00:00:00Z" },
+  { id: "sp2", location_id: "l1", first_name: "Bob", last_name: "Jones", role: "Back of House", status: "archived", pin: "5678", last_used_at: "2024-02-01T00:00:00Z", archived_at: "2024-02-15T00:00:00Z", created_at: "2024-01-01T00:00:00Z" },
 ];
 
 const mockTeam = [
@@ -207,10 +207,10 @@ describe("Admin page", () => {
   });
 
   // 8. Staff role badge shows department-based label
-  it("shows Alice Smith's role as Front of House / Server", async () => {
+  it("shows Alice Smith's role as Front of House", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      const roleBadges = screen.getAllByText("Front of House / Server");
+      const roleBadges = screen.getAllByText("Front of House");
       expect(roleBadges.length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -684,6 +684,15 @@ describe("Admin page", () => {
     });
   });
 
+  it("Department management no longer shows sub-role controls", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => {
+      expect(screen.getByText("Department management")).toBeInTheDocument();
+    });
+    expect(screen.queryByPlaceholderText("Add sub-role…")).not.toBeInTheDocument();
+    expect(screen.queryByText(/sub-role/i)).not.toBeInTheDocument();
+  });
+
   // 42. Add department input exists
   it("Account tab has 'Add department' input", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
@@ -705,6 +714,41 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />);
     await waitFor(() => {
       expect(screen.getByText(/Launch Kiosk Mode/i)).toBeInTheDocument();
+    });
+  });
+
+  it("Account tab marks inactive over-limit locations as read-only", async () => {
+    mockUseLocations.mockReturnValue({
+      data: [mockLocations[1]],
+      allLocations: mockLocations,
+      inactiveLocations: [mockLocations[0]],
+      maxLocations: 1,
+      isOverLimit: true,
+      graceEndsAt: new Date(Date.now() - 60_000).toISOString(),
+      isGraceActive: false,
+      isGraceExpired: true,
+      effectiveActiveLocationIds: ["l2"],
+      isLoading: false,
+    });
+
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+
+    await waitFor(() => {
+      expect(screen.getByText("Read-only")).toBeInTheDocument();
+      expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
+    });
+
+    mockUseLocations.mockReturnValue({
+      data: mockLocations,
+      allLocations: mockLocations,
+      inactiveLocations: [],
+      maxLocations: 10,
+      isOverLimit: false,
+      graceEndsAt: null,
+      isGraceActive: false,
+      isGraceExpired: false,
+      effectiveActiveLocationIds: mockLocations.map((location) => location.id),
+      isLoading: false,
     });
   });
 

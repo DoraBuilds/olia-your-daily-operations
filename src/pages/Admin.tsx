@@ -198,18 +198,11 @@ function SaveButton({ disabled, label }: { disabled: boolean; label: string }) {
 }
 
 function cloneDepartments(departments: StaffDepartment[]): StaffDepartment[] {
-  return departments.map(department => ({
-    name: department.name,
-    subRoles: [...department.subRoles],
-  }));
+  return departments.map((department) => ({ name: department.name }));
 }
 
 function roleUsesDepartment(role: string, departmentName: string): boolean {
   return getRoleDepartment(role) === departmentName;
-}
-
-function roleLabel(departmentName: string, subRole?: string | null): string {
-  return subRole ? `${departmentName} / ${subRole}` : departmentName;
 }
 
 function DepartmentRolePicker({
@@ -222,49 +215,23 @@ function DepartmentRolePicker({
   onChange: (role: string) => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="grid gap-2 sm:grid-cols-2">
       {departments.map(department => {
         const departmentSelected = value === department.name;
         return (
-          <div key={department.name} className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
-            <button
-              type="button"
-              onClick={() => onChange(department.name)}
-              className={cn(
-                "w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors border",
-                departmentSelected
-                  ? "bg-sage text-primary-foreground border-sage"
-                  : "bg-card border-border text-foreground hover:border-sage/40",
-              )}
-            >
-              <span>{department.name}</span>
-              <span className="text-[10px] uppercase tracking-[0.18em] opacity-70">Department</span>
-            </button>
-            {department.subRoles.length > 0 && (
-              <div className="grid gap-2 pl-3 border-l border-border">
-                {department.subRoles.map(subRole => {
-                  const roleValue = roleLabel(department.name, subRole);
-                  const selected = value === roleValue;
-                  return (
-                    <button
-                      key={roleValue}
-                      type="button"
-                      onClick={() => onChange(roleValue)}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors border",
-                        selected
-                          ? "bg-sage-light text-sage-deep border-sage"
-                          : "bg-card border-border text-muted-foreground hover:border-sage/40",
-                      )}
-                    >
-                      <span>{subRole}</span>
-                      <span className="text-[10px] uppercase tracking-[0.18em] opacity-70">Sub-role</span>
-                    </button>
-                  );
-                })}
-              </div>
+          <button
+            key={department.name}
+            type="button"
+            onClick={() => onChange(department.name)}
+            className={cn(
+              "w-full rounded-xl border px-3 py-3 text-left text-sm font-medium transition-colors",
+              departmentSelected
+                ? "bg-sage text-primary-foreground border-sage"
+                : "bg-card border-border text-foreground hover:border-sage/40",
             )}
-          </div>
+          >
+            {department.name}
+          </button>
         );
       })}
     </div>
@@ -313,7 +280,7 @@ function StaffProfileModal({
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
   const [locationId, setLocationId] = useState(profile?.location_id ?? locations[0]?.id ?? "");
-  const [role, setRole] = useState(profile?.role ?? departments[0]?.name ?? "");
+  const [role, setRole] = useState(getRoleDepartment(profile?.role ?? departments[0]?.name ?? ""));
   // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
   const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
 
@@ -998,7 +965,8 @@ function MyLocationTab({
               </p>
             </div>
           ) : filteredStaff.map(sp => {
-            const roleColor = ROLE_COLOR_MAP[sp.role] ?? "bg-muted text-muted-foreground";
+            const displayRole = getRoleDepartment(sp.role);
+            const roleColor = ROLE_COLOR_MAP[displayRole] ?? "bg-muted text-muted-foreground";
             return (
               <div key={sp.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="w-9 h-9 rounded-full bg-sage-light flex items-center justify-center text-xs font-semibold text-sage-deep shrink-0">
@@ -1010,7 +978,7 @@ function MyLocationTab({
                      title={daysAgoTooltip(sp.last_used_at)}>{daysAgo(sp.last_used_at)}</p>
                 </div>
                 <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap", roleColor)}>
-                  {sp.role}
+                  {displayRole}
                 </span>
                 {sp.status === "active" ? (
                   <>
@@ -1203,6 +1171,7 @@ function AccountTab({
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
+  const [committedActiveLocationIds, setCommittedActiveLocationIds] = useState<string[]>(activeLocationIds);
 
   useEffect(() => {
     setProfileName(authUserName ?? currentAccount?.name ?? "");
@@ -1211,6 +1180,10 @@ function AccountTab({
 
   useEffect(() => {
     setSelectedActiveLocationIds(activeLocationIds);
+  }, [activeLocationIds]);
+
+  useEffect(() => {
+    setCommittedActiveLocationIds(activeLocationIds);
   }, [activeLocationIds]);
 
   const toggleExpand = (id: string, member: TeamMember) => {
@@ -1300,14 +1273,12 @@ function AccountTab({
 
   // Department management
   const [renamingDepartment, setRenamingDepartment] = useState<{ index: number; value: string } | null>(null);
-  const [renamingSubRole, setRenamingSubRole] = useState<{ departmentIndex: number; subRoleIndex: number; value: string } | null>(null);
   const [newDepartmentName, setNewDepartmentName] = useState("");
-  const [newSubRoleNames, setNewSubRoleNames] = useState<Record<number, string>>({});
 
   const addDepartment = () => {
     const trimmed = newDepartmentName.trim();
     if (!trimmed || departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) return;
-    setDepartments(prev => [...prev, { name: trimmed, subRoles: [] }]);
+    setDepartments(prev => [...prev, { name: trimmed }]);
     setNewDepartmentName("");
   };
 
@@ -1325,52 +1296,12 @@ function AccountTab({
     setDepartments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addSubRole = (departmentIndex: number) => {
-    const trimmed = (newSubRoleNames[departmentIndex] ?? "").trim();
-    if (!trimmed) return;
-    const department = departments[departmentIndex];
-    if (!department || department.subRoles.some(subRole => subRole.toLowerCase() === trimmed.toLowerCase())) return;
-    setDepartments(prev => prev.map((dept, i) => (
-      i === departmentIndex
-        ? { ...dept, subRoles: [...dept.subRoles, trimmed] }
-        : dept
-    )));
-    setNewSubRoleNames(prev => ({ ...prev, [departmentIndex]: "" }));
-  };
-
-  const renameSubRole = (departmentIndex: number, subRoleIndex: number, newName: string) => {
-    const trimmed = newName.trim();
-    const department = departments[departmentIndex];
-    if (!department) return;
-    if (!trimmed || department.subRoles.some((subRole, i) => i !== subRoleIndex && subRole.toLowerCase() === trimmed.toLowerCase())) return;
-    const previousSubRole = department.subRoles[subRoleIndex];
-    if (staffProfiles.some(sp => sp.role === roleLabel(department.name, previousSubRole))) return;
-    setDepartments(prev => prev.map((dept, i) => (
-      i === departmentIndex
-        ? { ...dept, subRoles: dept.subRoles.map((subRole, i2) => (i2 === subRoleIndex ? trimmed : subRole)) }
-        : dept
-    )));
-    setRenamingSubRole(null);
-  };
-
-  const deleteSubRole = (departmentIndex: number, subRoleIndex: number) => {
-    const department = departments[departmentIndex];
-    const subRole = department?.subRoles[subRoleIndex];
-    if (!department || !subRole) return;
-    if (staffProfiles.some(sp => sp.role === roleLabel(department.name, subRole))) return;
-    setDepartments(prev => prev.map((dept, i) => (
-      i === departmentIndex
-        ? { ...dept, subRoles: dept.subRoles.filter((_, i2) => i2 !== subRoleIndex) }
-        : dept
-    )));
-  };
-
   // Plan limit check — checked here so the "Add" button can be disabled-adjacent.
   // The modal itself lives at Admin level (outside Layout) so position:fixed is
   // viewport-relative and not trapped inside the animate-fade-in containing block.
   const maxLocations = locationLimit;
   const atLocationLimit = maxLocations !== -1 && locations.length >= maxLocations;
-  const activeLocationSet = new Set(activeLocationIds);
+  const activeLocationSet = new Set(committedActiveLocationIds);
   const inactiveLocationSet = new Set(inactiveLocationIds);
   const graceDeadlineLabel = locationGraceEndsAt
     ? new Date(locationGraceEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
@@ -1408,6 +1339,7 @@ function AccountTab({
     }
     try {
       await onSaveActiveLocations(selectedActiveLocationIds);
+      setCommittedActiveLocationIds(selectedActiveLocationIds);
       toast.success("Active locations updated");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update active locations");
@@ -1663,11 +1595,26 @@ function AccountTab({
         )}
         <div className="card-surface divide-y divide-border">
           {locations.map(loc => (
-            <div key={loc.id} className="flex items-center gap-3 px-4 py-4">
-              <MapPin size={15} className="text-sage shrink-0" />
+            <div
+              key={loc.id}
+              className={cn(
+                "flex items-center gap-3 px-4 py-4 transition-colors",
+                inactiveLocationSet.has(loc.id) && "bg-muted/35 opacity-65",
+              )}
+            >
+              <MapPin
+                size={15}
+                className={cn("shrink-0", inactiveLocationSet.has(loc.id) ? "text-muted-foreground" : "text-sage")}
+              />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{loc.name}</p>
-                {loc.address && <p className="text-xs text-muted-foreground truncate">{loc.address}</p>}
+                <p className={cn("text-sm font-medium", inactiveLocationSet.has(loc.id) ? "text-muted-foreground" : "text-foreground")}>
+                  {loc.name}
+                </p>
+                {loc.address && (
+                  <p className={cn("text-xs truncate", inactiveLocationSet.has(loc.id) ? "text-muted-foreground/80" : "text-muted-foreground")}>
+                    {loc.address}
+                  </p>
+                )}
                 {isLocationOverLimit && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {activeLocationSet.has(loc.id) ? (
@@ -1686,7 +1633,10 @@ function AccountTab({
               <button
                 onClick={() => onEditLocation(loc)}
                 disabled={inactiveLocationSet.has(loc.id)}
-                className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  inactiveLocationSet.has(loc.id) ? "cursor-not-allowed" : "hover:bg-muted",
+                )}
               >
                 <Pencil size={14} className={cn("text-muted-foreground", inactiveLocationSet.has(loc.id) && "opacity-40")} />
               </button>
@@ -1849,6 +1799,9 @@ function AccountTab({
       {/* Department Management */}
       <section>
         <p className="section-label mb-3">Department management</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          Staff roles are managed at the department level only.
+        </p>
         <div className="space-y-3">
           {departments.map((department, departmentIndex) => {
             const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
@@ -1888,9 +1841,7 @@ function AccountTab({
                     <>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">{department.name}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {department.subRoles.length} sub-role{department.subRoles.length === 1 ? "" : "s"}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
                       </div>
                       <button
                         onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
@@ -1911,97 +1862,6 @@ function AccountTab({
                       </button>
                     </>
                   )}
-                </div>
-
-                <div className="space-y-2 pl-1">
-                  {department.subRoles.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No sub-roles yet.</p>
-                  ) : department.subRoles.map((subRole, subRoleIndex) => {
-                    const role = roleLabel(department.name, subRole);
-                    const isSubRoleInUse = staffProfiles.some(sp => sp.role === role);
-                    const isRenamingSubRole = renamingSubRole?.departmentIndex === departmentIndex && renamingSubRole.subRoleIndex === subRoleIndex;
-                    return (
-                      <div key={role} className="flex items-center gap-2 pl-3 border-l border-border">
-                        {isRenamingSubRole ? (
-                          <>
-                            <input
-                              autoFocus
-                              type="text"
-                              value={renamingSubRole.value}
-                              onChange={e => setRenamingSubRole({
-                                departmentIndex,
-                                subRoleIndex,
-                                value: e.target.value,
-                              })}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  renameSubRole(departmentIndex, subRoleIndex, renamingSubRole.value);
-                                }
-                              }}
-                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                            <button
-                              onClick={() => renameSubRole(departmentIndex, subRoleIndex, renamingSubRole.value)}
-                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                            >
-                              <Check size={14} className="text-sage" />
-                            </button>
-                            <button
-                              onClick={() => setRenamingSubRole(null)}
-                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                            >
-                              <X size={14} className="text-muted-foreground" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="flex-1 text-sm text-foreground">{subRole}</p>
-                            <button
-                              onClick={() => setRenamingSubRole({ departmentIndex, subRoleIndex, value: subRole })}
-                              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                            >
-                              <Pencil size={14} className="text-muted-foreground" />
-                            </button>
-                            <button
-                              onClick={() => deleteSubRole(departmentIndex, subRoleIndex)}
-                              disabled={isSubRoleInUse}
-                              title={isSubRoleInUse ? "Sub-role is in use" : "Delete sub-role"}
-                              className={cn(
-                                "p-1.5 rounded-lg transition-colors",
-                                isSubRoleInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
-                              )}
-                            >
-                              <Trash2 size={14} className="text-status-error" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newSubRoleNames[departmentIndex] ?? ""}
-                    onChange={e => setNewSubRoleNames(prev => ({ ...prev, [departmentIndex]: e.target.value }))}
-                    placeholder="Add sub-role…"
-                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSubRole(departmentIndex); } }}
-                    className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
-                  <button
-                    onClick={() => addSubRole(departmentIndex)}
-                    disabled={!(newSubRoleNames[departmentIndex] ?? "").trim()}
-                    className={cn(
-                      "p-1.5 rounded-lg transition-colors",
-                      (newSubRoleNames[departmentIndex] ?? "").trim()
-                        ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                        : "bg-muted text-muted-foreground cursor-not-allowed",
-                    )}
-                  >
-                    <Plus size={14} />
-                  </button>
                 </div>
               </div>
             );

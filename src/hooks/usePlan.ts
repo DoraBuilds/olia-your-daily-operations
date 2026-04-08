@@ -109,11 +109,15 @@ export function useSaveActiveLocationsSelection() {
       if (!organizationId) {
         throw new Error("Your billing organization could not be resolved.");
       }
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("organizations")
         .update({ active_location_ids: locationIds })
-        .eq("id", organizationId);
+        .eq("id", organizationId)
+        .select("id, active_location_ids");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("We could not save the active location selection. Please refresh and try again.");
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["organization", organizationId] });
