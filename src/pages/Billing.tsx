@@ -239,6 +239,14 @@ export default function Billing() {
   };
 
   const plans: Plan[] = ["starter", "growth", "enterprise"];
+  const currentPlanSummary = billingUnavailable
+    ? "We couldn't verify your billing plan just now."
+    : `${PLAN_LABELS[plan]} is active${planStatus === "trialing" ? " on trial" : ""}.`;
+  const currentPlanAllowance = billingUnavailable
+    ? "Refresh in a moment and we’ll pull the latest billing state."
+    : plan === "enterprise"
+      ? "Unlimited locations included."
+      : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included.`;
 
   return (
     <Layout
@@ -292,63 +300,34 @@ export default function Billing() {
           </div>
         )}
 
-        {/* ── Current plan status card ─────────────────────────────────────── */}
-        <div className="card-surface p-4 space-y-3">
-          <p className="section-label">Your current plan</p>
-
-          {billingUnavailable && (
-            <div className="rounded-2xl border border-status-warn/30 bg-status-warn/5 px-4 py-3 flex items-start gap-2">
-              <AlertCircle size={15} className="text-status-warn shrink-0 mt-0.5" />
-              <p className="text-sm text-muted-foreground">
-                We couldn't verify your billing plan just now. Refresh the page or wait for billing sync instead of relying on the Starter fallback.
+        {/* ── Current plan summary ─────────────────────────────────────────── */}
+        <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/70 px-4 py-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn(
+                "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium",
+                billingUnavailable ? "bg-muted text-muted-foreground"
+                : plan === "enterprise" ? "bg-lavender/15 text-lavender"
+                : plan === "growth"   ? "bg-sage/15 text-sage"
+                :                       "bg-muted text-muted-foreground"
+              )}>
+                {billingUnavailable ? <AlertCircle size={14} /> : PLAN_ICONS[plan]}
+                {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
+              </span>
+              <p className="text-sm font-medium text-foreground">
+                {currentPlanSummary}
               </p>
             </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="text-xl font-semibold text-foreground">
-                  {billingUnavailable ? "Plan unavailable" : PLAN_LABELS[plan]}
-                </p>
-                <span className={cn(
-                  "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium",
-                  billingUnavailable ? "bg-muted text-muted-foreground"
-                  : plan === "enterprise" ? "bg-lavender/15 text-lavender"
-                  : plan === "growth"   ? "bg-sage/15 text-sage"
-                  :                       "bg-muted text-muted-foreground"
-                )}>
-                  {billingUnavailable ? <AlertCircle size={14} /> : PLAN_ICONS[plan]}
-                  {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                {billingUnavailable
-                  ? "Billing status unavailable"
-                  : planStatus === "trialing" ? "Free trial active" : planStatus === "active" ? "Active" : planStatus}
-              </p>
-            </div>
-          </div>
-
-          {/* Location allowance */}
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
-            <MapPin size={13} className="text-muted-foreground shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              {billingUnavailable
-                ? "We couldn't confirm the current location allowance from billing."
-                : plan === "enterprise"
-                ? "Unlimited locations included"
-                : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included on ${PLAN_LABELS[resolvedPlan ?? plan]}`
-              }
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentPlanAllowance}
               {!billingUnavailable && plan === "starter" && (
                 <span className="ml-1 text-sage font-medium">
-                  — Upgrade to Growth for up to 10
+                  Upgrade to Growth for up to 10 locations.
                 </span>
               )}
             </p>
           </div>
 
-          {/* Stripe portal link */}
           {hasStripeSubscription && (
             <button
               onClick={() => {
@@ -356,7 +335,7 @@ export default function Billing() {
                 if (!portalUrl) { alert("Customer portal not configured."); return; }
                 window.open(portalUrl, "_blank");
               }}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
             >
               <ExternalLink size={12} />
               Manage subscription on Stripe
@@ -399,7 +378,8 @@ export default function Billing() {
         )}
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
-        <div className="grid gap-4 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.92fr)]">
+        <div className="pt-2 pb-3">
+        <div className="grid gap-4 lg:grid-cols-3 lg:items-start xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)_minmax(0,0.96fr)]">
         {plans.map((p) => {
           const isCurrent  = p === plan;
           const price      = PLAN_PRICES[p];
@@ -413,20 +393,20 @@ export default function Billing() {
               key={p}
               className={cn(
                 "h-full",
-                isRecommended && "lg:-my-3",
+                isRecommended && "lg:py-4",
               )}
             >
               <div className={cn(
-                "rounded-3xl border p-5 space-y-5 h-full flex flex-col",
+                "rounded-3xl border p-4 space-y-4 h-full flex flex-col",
                 isEnterprise
                   ? "bg-sage text-primary-foreground border-sage"
                   : "bg-card border-border",
                 isCurrent && !isEnterprise && "ring-1 ring-sage/60",
-                isRecommended && !isEnterprise && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)] lg:min-h-[640px]",
+                isRecommended && !isEnterprise && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
               )}>
 
                 {/* Badges row */}
-                <div className="flex items-center gap-2 min-h-6">
+                <div className="flex items-center gap-2 min-h-5">
                   {isCurrent && (
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
@@ -444,7 +424,7 @@ export default function Billing() {
 
                 {/* Plan name + price */}
                 <div className="flex items-start justify-between gap-4">
-                  <div className="max-w-[16rem]">
+                  <div className="max-w-[15rem]">
                     <p className={cn(
                       "font-semibold text-lg",
                       isEnterprise ? "text-white" : "text-foreground"
@@ -466,7 +446,7 @@ export default function Billing() {
                       </>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-foreground">
+                        <p className="text-[1.75rem] font-bold leading-none text-foreground">
                           {price.currency}{priceVal}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
@@ -491,7 +471,7 @@ export default function Billing() {
                 </div>
 
                 {/* Feature list */}
-                <ul className="space-y-2 flex-1">
+                <ul className="space-y-1.5">
                   {PLAN_HIGHLIGHTS[p].map(feature => (
                     <li key={feature} className={cn(
                       "flex items-center gap-2 text-xs",
@@ -549,6 +529,7 @@ export default function Billing() {
             </div>
           );
         })}
+        </div>
         </div>
 
         {/* ── Plan comparison ──────────────────────────────────────────────── */}

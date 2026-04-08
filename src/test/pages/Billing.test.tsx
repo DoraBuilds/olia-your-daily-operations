@@ -82,9 +82,9 @@ describe("Billing page", () => {
     expect(labels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders 'Current plan' section label", () => {
+  it("renders a compact current plan summary", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText("Your current plan")).toBeInTheDocument();
+    expect(screen.getByText("Starter is active.")).toBeInTheDocument();
   });
 
   it("renders plan price cards for all 3 plans", () => {
