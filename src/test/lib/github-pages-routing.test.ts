@@ -27,6 +27,15 @@ describe("github-pages-routing", () => {
     );
   });
 
+  it("unwraps nested fallback params instead of recursively growing the route", () => {
+    expect(
+      buildGitHubPagesRoute(
+        "?p=%2Fadmin%2F%3Fp%3D%252Fadmin%252Flocation",
+        "/olia-your-daily-operations/",
+      ),
+    ).toBe("/olia-your-daily-operations/admin/location");
+  });
+
   it("builds a GitHub Pages-safe auth redirect URL", () => {
     expect(buildPublicAuthRedirectUrl("https://dorabuilds.github.io/olia-your-daily-operations", "/auth/callback")).toBe(
       "https://dorabuilds.github.io/olia-your-daily-operations?p=%2Fauth%2Fcallback",

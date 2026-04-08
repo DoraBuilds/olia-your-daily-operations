@@ -7,6 +7,23 @@ function normalizeFallbackRoute(fallbackRoute: string): string {
   return fallbackRoute.startsWith("/") ? fallbackRoute : `/${fallbackRoute}`;
 }
 
+function unwrapNestedFallbackRoute(fallbackRoute: string): string {
+  let currentRoute = normalizeFallbackRoute(fallbackRoute);
+
+  for (let i = 0; i < 10; i += 1) {
+    const url = new URL(currentRoute, "https://olia.app");
+    const nestedRoute = url.searchParams.get("p");
+
+    if (!nestedRoute) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+
+    currentRoute = normalizeFallbackRoute(nestedRoute);
+  }
+
+  return currentRoute;
+}
+
 function isGitHubPagesUrl(publicSiteUrl: string) {
   return new URL(publicSiteUrl).hostname.endsWith("github.io");
 }
@@ -17,7 +34,7 @@ export function buildGitHubPagesRoute(search: string, basePath: string): string 
   if (!fallbackRoute) return null;
 
   const normalizedBasePath = normalizeBasePath(basePath);
-  const normalizedRoute = normalizeFallbackRoute(fallbackRoute);
+  const normalizedRoute = unwrapNestedFallbackRoute(fallbackRoute);
   return `${normalizedBasePath}${normalizedRoute}`;
 }
 

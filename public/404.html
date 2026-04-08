@@ -9,14 +9,20 @@
         var pathname = window.location.pathname;
         var firstRouteSlash = pathname.indexOf("/", 1);
         var route = firstRouteSlash === -1 ? "/" : pathname.slice(firstRouteSlash);
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+        var searchParams = new URLSearchParams(search);
 
         if (route === "/") {
           window.location.replace("./");
           return;
         }
 
-        var search = window.location.search || "";
-        var hash = window.location.hash || "";
+        if (searchParams.get("p")) {
+          window.location.replace("./" + search + hash);
+          return;
+        }
+
         window.location.replace("./?p=" + encodeURIComponent(route + search + hash));
       })();
     </script>
