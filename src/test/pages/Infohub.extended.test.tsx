@@ -230,7 +230,7 @@ describe("Infohub extended behavior", () => {
 
   it("creates a document with tags", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     fireEvent.click(screen.getByText("New document"));
     fireEvent.change(screen.getByTestId("doc-title-input"), { target: { value: "Weekly briefing" } });
     fireEvent.change(screen.getByTestId("doc-tags-input"), { target: { value: "Weekly, Team" } });

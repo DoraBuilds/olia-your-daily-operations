@@ -4,6 +4,7 @@ import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocations } from "@/hooks/useLocations";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 
@@ -356,6 +357,8 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
 // ─── AdminLoginModal (centered) ───────────────────────────────────────────────
 function AdminLoginModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
+  const { teamMember } = useAuth();
+  const { allLocations = [], isFetched: locationsFetched } = useLocations();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -370,6 +373,16 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
       setLoading(false);
       setError("Select a kiosk location before opening admin.");
       return;
+    }
+
+    if (teamMember?.organization_id && locationsFetched) {
+      const locationStillAccessible = allLocations.some((location) => location.id === locationId);
+      if (!locationStillAccessible) {
+        clearKioskLocationSelection();
+        setLoading(false);
+        setError("This kiosk location is no longer linked to your account. Select a location again.");
+        return;
+      }
     }
 
     const { data, error: rpcError } = await supabase.rpc("validate_admin_pin", {
@@ -1682,16 +1695,29 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, teamMember, loading } = useAuth();
+  const { allLocations = [], isFetched: locationsFetched } = useLocations();
 
   const [locationId, setLocationId] = useState<string | null>(() => {
     const url = searchParams.get("locationId");
     if (url) { _kioskLocationId = url; return url; }
+    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
+    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
     const stored = localStorage.getItem("kiosk_location_id");
-    if (stored) { _kioskLocationId = stored; return stored; }
-    return _kioskLocationId;
+    if (stored && storedOwnerId && storedOwnerOrgId) { _kioskLocationId = stored; return stored; }
+    if (stored && (!storedOwnerId || !storedOwnerOrgId)) {
+      clearKioskLocationSelection();
+    }
+    _kioskLocationId = null;
+    return null;
   });
   const [locationName, setLocationName] = useState<string>(() => {
+    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
+    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
+    if (!storedOwnerId || !storedOwnerOrgId) {
+      _kioskLocationName = null;
+      return "";
+    }
     return localStorage.getItem("kiosk_location_name") ?? _kioskLocationName ?? "";
   });
   const [screen, setScreen] = useState<KioskScreen>("grid");
@@ -1707,28 +1733,59 @@ export default function Kiosk() {
 
   useEffect(() => {
     const ownerKey = "kiosk_owner_user_id";
+    const ownerOrgKey = "kiosk_owner_org_id";
     const storedOwnerId = localStorage.getItem(ownerKey);
+    const storedOwnerOrgId = localStorage.getItem(ownerOrgKey);
+    const hasStoredLocation = Boolean(_kioskLocationId ?? localStorage.getItem("kiosk_location_id"));
+    const currentOrgId = teamMember?.organization_id ?? null;
+
+    if (loading) return;
 
     if (!user?.id) {
-      if (storedOwnerId) {
+      if (storedOwnerId || hasStoredLocation) {
         clearKioskLocationSelection();
         localStorage.removeItem(ownerKey);
+        localStorage.removeItem(ownerOrgKey);
         setLocationId(null);
         setLocationName("");
+        setScreen("grid");
         setKioskChecklists([]);
       }
       return;
     }
 
-    if (storedOwnerId && storedOwnerId !== user.id) {
+    if (
+      !storedOwnerId
+      || storedOwnerId !== user.id
+      || (storedOwnerOrgId && currentOrgId && storedOwnerOrgId !== currentOrgId)
+    ) {
       clearKioskLocationSelection();
+      localStorage.removeItem(ownerKey);
+      localStorage.removeItem(ownerOrgKey);
       setLocationId(null);
       setLocationName("");
+      setScreen("grid");
       setKioskChecklists([]);
     }
 
     localStorage.setItem(ownerKey, user.id);
-  }, [user?.id]);
+    if (currentOrgId) {
+      localStorage.setItem(ownerOrgKey, currentOrgId);
+    }
+  }, [loading, teamMember?.organization_id, user?.id]);
+
+  useEffect(() => {
+    if (!locationId || !teamMember?.organization_id || !locationsFetched) return;
+
+    const locationStillAccessible = allLocations.some((location) => location.id === locationId);
+    if (!locationStillAccessible) {
+      clearKioskLocationSelection();
+      setLocationId(null);
+      setLocationName("");
+      setScreen("grid");
+      setKioskChecklists([]);
+    }
+  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id]);
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -1808,7 +1865,7 @@ export default function Kiosk() {
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!locationId) return;
+    if (loading || !user?.id || !locationId) return;
     let cancelled = false;
 
     supabase
@@ -1851,7 +1908,7 @@ export default function Kiosk() {
     }).then(n => {
       if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
     });
-  }, [locationId]);
+  }, [loading, locationId, user?.id]);
 
   // Fetch checklists for the selected location whenever it changes and keep the
   // grid fresh when the kiosk regains focus after checklist/admin edits.
@@ -1904,6 +1961,12 @@ export default function Kiosk() {
     _kioskLocationName = name;
     localStorage.setItem("kiosk_location_id", id);
     localStorage.setItem("kiosk_location_name", name);
+    if (user?.id) {
+      localStorage.setItem("kiosk_owner_user_id", user.id);
+    }
+    if (teamMember?.organization_id) {
+      localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
+    }
     setLocationId(id);
     setLocationName(name);
   };

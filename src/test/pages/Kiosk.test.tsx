@@ -130,6 +130,16 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
+vi.mock("@/hooks/useLocations", () => ({
+  useLocations: () => ({
+    allLocations: [
+      { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
+      { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
+    ],
+    isFetched: true,
+  }),
+}));
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Render the Kiosk in Setup screen (no stored location). */
@@ -143,6 +153,8 @@ function renderSetup() {
 async function renderGridScreen() {
   localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
   localStorage.setItem("kiosk_location_name", "Terrace");
+  localStorage.setItem("kiosk_owner_user_id", "u1");
+  localStorage.setItem("kiosk_owner_org_id", "org-1");
   renderWithProviders(<Kiosk />);
   await screen.findByText(/What's on the agenda/i);
 }
@@ -350,6 +362,19 @@ describe("Kiosk — Grid Screen", () => {
   it("grid screen shows 'What's on the agenda' heading", async () => {
     await renderGridScreen();
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+  });
+
+  it("clears stale kiosk location state when no kiosk owner is stored for the signed-in account", async () => {
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    localStorage.setItem("kiosk_location_name", "Terrace");
+    renderWithProviders(<Kiosk />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Select a location to launch/i)).toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+    expect(localStorage.getItem("kiosk_location_name")).toBeNull();
   });
 
   it("grid screen shows checklist cards for Terrace location", async () => {
@@ -686,6 +711,8 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
   beforeEach(() => {
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000010");
     localStorage.setItem("kiosk_location_name", "Grand Ballroom");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
   });
 
   async function renderGrandBallroomGrid() {
@@ -722,6 +749,8 @@ describe("Kiosk — Completion Screen", () => {
   it("returns to the grid after closing the PIN modal", async () => {
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
     localStorage.setItem("kiosk_location_name", "Terrace");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
     renderWithProviders(<Kiosk />);
     await screen.findByText(/What's on the agenda/i);
 

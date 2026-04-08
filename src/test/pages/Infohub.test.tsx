@@ -373,13 +373,13 @@ describe("Infohub page", () => {
 
   it("plus (+) button opens the Plus menu", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     expect(screen.getByText("Create new")).toBeInTheDocument();
   });
 
   it("Plus menu shows 'New document', 'Upload file', and 'New folder' options", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     expect(screen.getByText("New document")).toBeInTheDocument();
     expect(screen.getByText("Upload file")).toBeInTheDocument();
     expect(screen.getByText("New folder")).toBeInTheDocument();
@@ -387,7 +387,7 @@ describe("Infohub page", () => {
 
   it("clicking 'New folder' from Plus menu opens CreateFolder modal", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     fireEvent.click(screen.getByText("New folder"));
     expect(screen.getByText("New folder")).toBeInTheDocument();
     expect(screen.queryByText("Folder name")).toBeTruthy();
@@ -395,7 +395,7 @@ describe("Infohub page", () => {
 
   it("CreateFolder modal: typing a name and clicking 'Create folder' adds a new folder", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     fireEvent.click(screen.getByText("New folder"));
     const input = screen.queryByPlaceholderText("e.g. Health & Safety");
     if (input) {
@@ -408,7 +408,7 @@ describe("Infohub page", () => {
 
   it("clicking 'New document' from Plus menu opens CreateDoc modal", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     const newDocBtn = screen.queryByText("New document");
     if (newDocBtn) {
       fireEvent.click(newDocBtn);
@@ -660,7 +660,7 @@ describe("Infohub page", () => {
 
   it("Plus menu closes when backdrop is clicked (via X button)", () => {
     renderWithProviders(<Infohub />);
-    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByLabelText("Add content"));
     const menuHeading = screen.getByText("Create new");
     const closeBtn = menuHeading.parentElement?.querySelector("button");
     if (closeBtn) {
