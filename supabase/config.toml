@@ -101,3 +101,12 @@ secure_password_change = false
 max_frequency = "1s"
 otp_length = 6
 otp_expiry = 3600
+
+[functions.create-checkout-session]
+verify_jwt = false
+
+[functions.confirm-checkout-session]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false

@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
       return err("Stripe is not configured. Set STRIPE_SECRET_KEY in Supabase Edge Function secrets.");
     }
 
+    // Edge auth is disabled for this function in Supabase config because we
+    // validate the caller session ourselves here and return friendly billing
+    // errors instead of transport-level 401s.
     // Verify the user's JWT from the Authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return err("Not authenticated");
