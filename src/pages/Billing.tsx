@@ -146,7 +146,7 @@ export default function Billing() {
   const handleUpgrade = async (targetPlan: "starter" | "growth") => {
     const priceId = PRICE_IDS[targetPlan][billing];
     if (!priceId) {
-      setError("Stripe Price ID is not configured yet. Please add it to .env.local and redeploy.");
+      setError("Online upgrades are not configured for this deployment yet. Please contact us so we can complete billing setup.");
       return;
     }
     setLoading(targetPlan);
