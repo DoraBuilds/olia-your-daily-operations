@@ -1164,11 +1164,8 @@ function AccountTab({
   const assignedLocationIds = currentAccount?.location_ids ?? [];
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [pin, setPin] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
-  const [passwordSaving, setPasswordSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
   const [committedActiveLocationIds, setCommittedActiveLocationIds] = useState<string[]>(activeLocationIds);
@@ -1233,22 +1230,6 @@ function AccountTab({
     }
   };
 
-  const savePassword = async () => {
-    if (password.length < 8 || password !== confirmPassword) return;
-    setPasswordSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      setPassword("");
-      setConfirmPassword("");
-      toast.success("Password updated");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not update password");
-    } finally {
-      setPasswordSaving(false);
-    }
-  };
-
   const savePin = async () => {
     if (!currentAccount || pin.length !== 4) return;
     setPinSaving(true);
@@ -1263,9 +1244,9 @@ function AccountTab({
         rawPin: pin,
       });
       setPin("");
-      toast.success("PIN updated");
+      toast.success("Admin PIN updated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not update PIN");
+      toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
     } finally {
       setPinSaving(false);
     }
@@ -1424,57 +1405,21 @@ function AccountTab({
       <section className="card-surface p-4 space-y-4">
         <div>
           <p className="section-label">Security</p>
-          <p className="text-xs text-muted-foreground mt-1">Password for app sign-in. PIN for kiosk-side operational access.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Admin app sign-in uses email codes. Use a 4-digit PIN for kiosk-side admin access, or create a new PIN if the old one was forgotten.
+          </p>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">New password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              minLength={8}
-              placeholder="At least 8 characters"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">Confirm password</span>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              minLength={8}
-              placeholder="Repeat password"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-        </div>
-        <button
-          type="button"
-          onClick={savePassword}
-          disabled={passwordSaving || password.length < 8 || password !== confirmPassword}
-          className={cn(
-            "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-            passwordSaving || password.length < 8 || password !== confirmPassword
-              ? "bg-muted text-muted-foreground cursor-not-allowed"
-              : "bg-sage text-primary-foreground hover:bg-sage-deep",
-          )}
-        >
-          {passwordSaving ? "Updating password…" : "Change password"}
-        </button>
 
         <div className="space-y-3">
           <label className="space-y-1 block">
-            <span className="text-xs text-muted-foreground font-medium">Admin PIN</span>
+            <span className="text-xs text-muted-foreground font-medium">Create a new Admin PIN</span>
             <input
               type="text"
               inputMode="numeric"
               maxLength={4}
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="4-digit PIN"
+              placeholder="Enter a new 4-digit PIN"
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.4em]"
             />
           </label>
@@ -1489,7 +1434,7 @@ function AccountTab({
                 : "bg-sage text-primary-foreground hover:bg-sage-deep",
             )}
           >
-            {pinSaving ? "Updating PIN…" : "Save PIN"}
+            {pinSaving ? "Saving new PIN…" : "Create or reset PIN"}
           </button>
         </div>
       </section>
