@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { runtimeConfig } from "@/lib/runtime-config";
+import { useAuth } from "@/contexts/AuthContext";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 
@@ -121,39 +121,15 @@ function dbToKioskChecklist(raw: any): KioskChecklist {
   };
 }
 
+function clearKioskLocationSelection() {
+  _kioskLocationId = null;
+  _kioskLocationName = null;
+  localStorage.removeItem("kiosk_location_id");
+  localStorage.removeItem("kiosk_location_name");
+}
+
 async function fetchKioskChecklists(locationId: string) {
   const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
-  if (!error && (data?.length ?? 0) > 0) {
-    return (data ?? []).map(dbToKioskChecklist);
-  }
-
-  // Kiosk is a public operational surface. When an authenticated browser
-  // session has stale org context, the authenticated RPC path can return an
-  // empty set even though the anon kiosk RPC still has the correct result for
-  // the selected location. Retry anonymously so kiosk visibility does not
-  // depend on whichever admin session was previously open in the tab.
-  if (!import.meta.env.TEST) {
-    try {
-      const response = await fetch(`${runtimeConfig.supabaseUrl}/rest/v1/rpc/get_kiosk_checklists`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: runtimeConfig.supabaseAnonKey,
-          Authorization: `Bearer ${runtimeConfig.supabaseAnonKey}`,
-        },
-        body: JSON.stringify({ p_location_id: locationId }),
-      });
-      if (response.ok) {
-        const anonData = await response.json();
-        if (Array.isArray(anonData)) {
-          return anonData.map(dbToKioskChecklist);
-        }
-      }
-    } catch {
-      // Fall back to the original RPC error below.
-    }
-  }
-
   if (error) throw error;
   return (data ?? []).map(dbToKioskChecklist);
 }
@@ -1706,6 +1682,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
   const [locationId, setLocationId] = useState<string | null>(() => {
     const url = searchParams.get("locationId");
@@ -1727,6 +1704,31 @@ export default function Kiosk() {
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
+
+  useEffect(() => {
+    const ownerKey = "kiosk_owner_user_id";
+    const storedOwnerId = localStorage.getItem(ownerKey);
+
+    if (!user?.id) {
+      if (storedOwnerId) {
+        clearKioskLocationSelection();
+        localStorage.removeItem(ownerKey);
+        setLocationId(null);
+        setLocationName("");
+        setKioskChecklists([]);
+      }
+      return;
+    }
+
+    if (storedOwnerId && storedOwnerId !== user.id) {
+      clearKioskLocationSelection();
+      setLocationId(null);
+      setLocationName("");
+      setKioskChecklists([]);
+    }
+
+    localStorage.setItem(ownerKey, user.id);
+  }, [user?.id]);
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -1824,10 +1826,7 @@ export default function Kiosk() {
           }
           return;
         }
-        _kioskLocationId = null;
-        _kioskLocationName = null;
-        localStorage.removeItem("kiosk_location_id");
-        localStorage.removeItem("kiosk_location_name");
+        clearKioskLocationSelection();
         setLocationId(null);
         setLocationName("");
         setKioskChecklists([]);
@@ -2076,7 +2075,7 @@ export default function Kiosk() {
 
       {/* Agenda heading */}
       <div className="px-5 pt-6 pb-2">
-        <h1 className="font-display text-3xl italic text-foreground leading-tight">
+        <h1 className="font-display text-3xl italic text-foreground leading-tight text-center">
           What's on the agenda<br />for today?
         </h1>
 

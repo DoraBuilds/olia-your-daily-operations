@@ -2,6 +2,16 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import Infohub from "@/pages/Infohub";
 import { renderWithProviders } from "../test-utils";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -112,7 +122,6 @@ function openFirstDocMenu() {
 }
 
 function openLatteModule() {
-  fireEvent.click(screen.getByRole("button", { name: /training/i }));
   const onboardingFolder = screen.getByText("Onboarding");
   const folderRow = onboardingFolder.closest("div[class*='flex']") as HTMLElement | null;
   if (!folderRow) return false;
@@ -220,11 +229,8 @@ describe("Infohub extended behavior", () => {
   });
 
   it("creates a document with tags", () => {
-    renderWithProviders(<Infohub />);
-    const headerButtons = screen.getAllByRole("button").filter((btn) =>
-      btn.className.includes("rounded-full") && btn.querySelector("svg")
-    );
-    fireEvent.click(headerButtons[1]);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
     fireEvent.click(screen.getByText("New document"));
     fireEvent.change(screen.getByTestId("doc-title-input"), { target: { value: "Weekly briefing" } });
     fireEvent.change(screen.getByTestId("doc-tags-input"), { target: { value: "Weekly, Team" } });
@@ -235,7 +241,7 @@ describe("Infohub extended behavior", () => {
   });
 
   it("allows completed training to be marked incomplete", () => {
-    renderWithProviders(<Infohub />);
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
     const opened = openLatteModule();
     if (!opened) return;
 

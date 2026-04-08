@@ -109,13 +109,13 @@ export function ChecklistsTab() {
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [previewChecklist, setPreviewChecklist] = useState<ChecklistItem | null>(null);
   const editingChecklist = editingChecklistId ? dbChecklists.find(c => c.id === editingChecklistId) : null;
+  const normalizedSearch = search.trim().toLowerCase();
   const visibleFolders = [...folders]
-    .filter(f => f.parentId === currentFolder)
-    .filter(f => !search || f.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(f => normalizedSearch ? f.name.toLowerCase().includes(normalizedSearch) : f.parentId === currentFolder)
     .sort((a, b) => folderOrder.indexOf(a.id) - folderOrder.indexOf(b.id));
   const selectedLocationObj = dbLocations.find(l => l.name === selectedLocation);
-  const visibleChecklists = checklists.filter(c => c.folderId === currentFolder)
-    .filter(c => !search || c.title.toLowerCase().includes(search.toLowerCase()))
+  const visibleChecklists = checklists
+    .filter(c => normalizedSearch ? c.title.toLowerCase().includes(normalizedSearch) : c.folderId === currentFolder)
     .filter(c => {
       if (selectedLocation === "All locations") return true;
       if (!selectedLocationObj) return true;
@@ -125,7 +125,7 @@ export function ChecklistsTab() {
       );
     });
 
-  const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !search;
+  const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
