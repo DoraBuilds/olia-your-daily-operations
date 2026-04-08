@@ -379,7 +379,7 @@ export default function Billing() {
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
         <div className="pt-2 pb-3">
-        <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-start xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
+        <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
         {plans.map((p) => {
           const isCurrent  = p === plan;
           const price      = PLAN_PRICES[p];
@@ -392,27 +392,29 @@ export default function Billing() {
             <div
               key={p}
               className={cn(
+                "h-full",
                 isRecommended && "lg:scale-[1.03] lg:-translate-y-1 lg:z-10",
               )}
             >
               <div className={cn(
-                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4",
+                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4 h-full",
+                !isRecommended && "lg:min-h-[34.5rem]",
+                isRecommended && "lg:min-h-[35.25rem]",
                 isCurrent && "ring-1 ring-sage/60",
                 isRecommended && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
               )}>
 
                 {/* Badges row */}
-                <div className="absolute left-1/2 top-0 flex min-h-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2">
+                <div className="absolute left-1/2 top-0 z-10 flex min-h-5 -translate-x-1/2 -translate-y-[58%] items-center justify-center gap-2">
                   {isCurrent && (
                     <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm",
-                      "bg-sage/15 text-sage"
+                      "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
                     )}>
                       Current plan
                     </span>
                   )}
                   {isRecommended && !isCurrent && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm border border-sage">
                       Recommended
                     </span>
                   )}
