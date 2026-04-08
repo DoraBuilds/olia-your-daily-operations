@@ -1388,17 +1388,6 @@ export default function Infohub() {
 
   return (
     <Layout title="Infohub" subtitle={subtitle}
-      headerRight={
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowPlusMenu(true)}
-            aria-label="Add content"
-            className="hidden h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep md:flex"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
-      }
     >
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -1414,7 +1403,7 @@ export default function Infohub() {
         <button
           onClick={() => setShowPlusMenu(true)}
           aria-label="Add content"
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep shrink-0"
         >
           <Plus size={18} />
         </button>

@@ -27,8 +27,9 @@ export interface ChecklistItem {
 }
 
 export function useFolders() {
+  const { teamMember } = useAuth();
   return useQuery({
-    queryKey: ["folders"],
+    queryKey: ["folders", teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("folders")
@@ -37,6 +38,7 @@ export function useFolders() {
       if (error) throw error;
       return (data ?? []) as FolderItem[];
     },
+    enabled: !!teamMember?.organization_id,
   });
 }
 
@@ -73,8 +75,9 @@ export function useDeleteFolder() {
 }
 
 export function useChecklists() {
+  const { teamMember } = useAuth();
   return useQuery({
-    queryKey: ["checklists"],
+    queryKey: ["checklists", teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
@@ -83,6 +86,7 @@ export function useChecklists() {
       if (error) throw error;
       return (data ?? []) as ChecklistItem[];
     },
+    enabled: !!teamMember?.organization_id,
   });
 }
 

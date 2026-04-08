@@ -6,9 +6,10 @@ import type { Location } from "@/lib/admin-repository";
 import { usePlan } from "@/hooks/usePlan";
 
 export function useLocations() {
+  const { teamMember } = useAuth();
   const { features, org } = usePlan();
   const query = useQuery({
-    queryKey: ["locations"],
+    queryKey: ["locations", teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
@@ -19,6 +20,7 @@ export function useLocations() {
       if (error) throw error;
       return (data ?? []) as Location[];
     },
+    enabled: !!teamMember?.organization_id,
   });
 
   const allLocations = query.data ?? [];
