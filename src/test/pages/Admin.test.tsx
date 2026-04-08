@@ -386,9 +386,10 @@ describe("Admin page", () => {
       expect(screen.getByText("Role and permissions")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Sarah")).toBeInTheDocument();
       expect(screen.getByDisplayValue("manager@example.com")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("At least 8 characters")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("Repeat password")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("4-digit PIN")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter a new 4-digit PIN")).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("At least 8 characters")).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("Repeat password")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Create or reset PIN" })).toBeInTheDocument();
     });
   });
 
