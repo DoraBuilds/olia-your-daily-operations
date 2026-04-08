@@ -60,6 +60,7 @@ export function ChecklistsTab() {
     folderId: c.folder_id,
     location_id: c.location_id,
     location_ids: c.location_ids ?? (c.location_id ? [c.location_id] : null),
+    start_date: c.start_date ?? null,
     createdAt: c.created_at,
     sections: c.sections as SectionDef[],
     due_time: c.due_time ?? null,
@@ -197,6 +198,7 @@ export function ChecklistsTab() {
             folder_id: currentFolder,
             location_id: item.location_id ?? null,
             location_ids: locationIds,
+            start_date: item.start_date ?? null,
             sections: item.sections ?? [],
             schedule: item.schedule ?? null,
             time_of_day: "anytime",
@@ -214,6 +216,7 @@ export function ChecklistsTab() {
             schedule: updates.schedule ?? orig.schedule,
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
             location_ids: updates.location_ids !== undefined ? updates.location_ids : orig.location_ids,
+            start_date: updates.start_date !== undefined ? updates.start_date : orig.start_date,
             time_of_day: "anytime",
             due_time: updates.due_time !== undefined ? updates.due_time : orig.due_time,
             visibility_from: updates.visibility_from !== undefined ? updates.visibility_from : (orig.visibility_from ?? null),
@@ -223,6 +226,7 @@ export function ChecklistsTab() {
         initialTitle={prefillTitle}
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
+        initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
         editId={editingChecklistId || undefined}

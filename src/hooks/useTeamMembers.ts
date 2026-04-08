@@ -29,16 +29,47 @@ export function useSaveTeamMember() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (tm: Partial<TeamMember> & { id?: string; rawPin?: string }) => {
-      const { error } = await supabase.from("team_members").upsert({
-        id: tm.id || undefined,
-        organization_id: teamMember!.organization_id,
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+      }
+
+      if (tm.id) {
+        const updatePayload: Record<string, unknown> = {
+          name: tm.name,
+          email: tm.email,
+          role: tm.role ?? "Manager",
+          location_ids: tm.location_ids ?? [],
+          permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
+        };
+        if (tm.rawPin) {
+          updatePayload.pin = await hashPin(tm.rawPin);
+        }
+
+        const { data: updated, error } = await supabase
+          .from("team_members")
+          .update(updatePayload)
+          .eq("id", tm.id)
+          .select("id");
+        if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error("Account update failed. Please refresh the page and try again.");
+        }
+        return;
+      }
+
+      const insertPayload: Record<string, unknown> = {
+        organization_id: teamMember.organization_id,
         name: tm.name,
         email: tm.email,
         role: tm.role ?? "Manager",
         location_ids: tm.location_ids ?? [],
         permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
-        ...(tm.rawPin ? { pin: await hashPin(tm.rawPin) } : {}),
-      });
+      };
+      if (tm.rawPin) {
+        insertPayload.pin = await hashPin(tm.rawPin);
+      }
+
+      const { error } = await supabase.from("team_members").insert(insertPayload);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),

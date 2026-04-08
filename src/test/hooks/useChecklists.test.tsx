@@ -163,6 +163,7 @@ describe("useChecklists", () => {
         title: "Opening Checklist",
         folder_id: null,
         location_id: null,
+        start_date: "2026-04-08",
         schedule: "daily",
         sections: [],
         created_at: "2026-01-01",
@@ -200,6 +201,37 @@ describe("useSaveChecklist", () => {
   it("returns a mutateAsync function", () => {
     const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
     expect(typeof result.current.mutateAsync).toBe("function");
+  });
+
+  it("persists a checklist start date when saving", async () => {
+    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-1" }], error: null });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
+      update: vi.fn().mockReturnThis(),
+      upsert,
+      delete: vi.fn().mockReturnThis(),
+      then: vi.fn().mockImplementation((cb) =>
+        Promise.resolve(cb({ data: [], error: null }))
+      ),
+    });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({
+      id: "cl-1",
+      title: "Opening Checklist",
+      start_date: "2026-04-08",
+      sections: [],
+    } as any);
+
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+      start_date: "2026-04-08",
+    }));
   });
 });
 

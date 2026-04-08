@@ -45,7 +45,8 @@ beforeEach(() => {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data: [], error: null }),
-    upsert: vi.fn().mockResolvedValue({ error: null }),
+    update: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockResolvedValue({ error: null }),
     delete: vi.fn().mockReturnThis(),
   });
 });
@@ -105,12 +106,15 @@ describe("useSaveTeamMember", () => {
   });
 
   it("hashes a raw PIN before saving team members", async () => {
-    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const select = vi.fn().mockResolvedValue({ data: [{ id: "tm-2" }], error: null });
+    const eq = vi.fn().mockReturnValue({ select });
+    const update = vi.fn().mockReturnValue({ eq });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      upsert,
+      update,
+      insert: vi.fn().mockResolvedValue({ error: null }),
       delete: vi.fn().mockReturnThis(),
     });
 
@@ -127,13 +131,38 @@ describe("useSaveTeamMember", () => {
       } as any);
     });
 
-    expect(upsert).toHaveBeenCalledWith(
+    expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         pin: expect.any(String),
       }),
     );
-    const payload = upsert.mock.calls[0][0];
+    const payload = update.mock.calls[0][0];
     expect(payload.pin).toHaveLength(64);
+  });
+
+  it("fails loudly when an existing team member update affects no rows", async () => {
+    const select = vi.fn().mockResolvedValue({ data: [], error: null });
+    const eq = vi.fn().mockReturnValue({ select });
+    const update = vi.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      update,
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      delete: vi.fn().mockReturnThis(),
+    });
+
+    const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
+
+    await expect(result.current.mutateAsync({
+      id: "tm-2",
+      name: "Test User",
+      email: "test@example.com",
+      role: "Owner",
+      location_ids: [],
+      permissions: {},
+    } as any)).rejects.toThrow(/Account update failed/i);
   });
 });
 

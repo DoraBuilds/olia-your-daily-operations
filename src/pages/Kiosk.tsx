@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { runtimeConfig } from "@/lib/runtime-config";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 
@@ -122,6 +123,37 @@ function dbToKioskChecklist(raw: any): KioskChecklist {
 
 async function fetchKioskChecklists(locationId: string) {
   const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
+  if (!error && (data?.length ?? 0) > 0) {
+    return (data ?? []).map(dbToKioskChecklist);
+  }
+
+  // Kiosk is a public operational surface. When an authenticated browser
+  // session has stale org context, the authenticated RPC path can return an
+  // empty set even though the anon kiosk RPC still has the correct result for
+  // the selected location. Retry anonymously so kiosk visibility does not
+  // depend on whichever admin session was previously open in the tab.
+  if (!import.meta.env.TEST) {
+    try {
+      const response = await fetch(`${runtimeConfig.supabaseUrl}/rest/v1/rpc/get_kiosk_checklists`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: runtimeConfig.supabaseAnonKey,
+          Authorization: `Bearer ${runtimeConfig.supabaseAnonKey}`,
+        },
+        body: JSON.stringify({ p_location_id: locationId }),
+      });
+      if (response.ok) {
+        const anonData = await response.json();
+        if (Array.isArray(anonData)) {
+          return anonData.map(dbToKioskChecklist);
+        }
+      }
+    } catch {
+      // Fall back to the original RPC error below.
+    }
+  }
+
   if (error) throw error;
   return (data ?? []).map(dbToKioskChecklist);
 }
@@ -384,6 +416,12 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
     navigate(`/admin?from=kiosk&userId=${data[0].id}`);
   };
 
+  const handlePinRecovery = async () => {
+    await supabase.auth.signOut();
+    onClose();
+    navigate("/login?reason=reset-pin");
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
@@ -430,12 +468,12 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
           </button>
         </form>
         <p className="text-center text-xs text-muted-foreground pt-1">
-          New to Olia?{" "}
+          Forgot your PIN?{" "}
           <button
-            onClick={() => { onClose(); navigate("/signup"); }}
+            onClick={() => { void handlePinRecovery(); }}
             className="text-sage font-medium hover:underline"
           >
-            Create an account
+            Log out and sign in again
           </button>
         </p>
       </div>

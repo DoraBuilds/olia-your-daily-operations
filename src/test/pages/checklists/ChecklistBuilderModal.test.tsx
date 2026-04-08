@@ -431,6 +431,26 @@ describe("ChecklistBuilderModal - new checklist", () => {
       due_time: null,
     }));
   });
+
+  it("stores the selected start date on save", async () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Select start date"));
+    await waitFor(() => {
+      expect(screen.getByText("15")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("15"));
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Date Checklist" },
+    });
+
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Date Checklist",
+      start_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    }));
+  });
 });
 
 describe("ChecklistBuilderModal - edit mode", () => {
@@ -528,5 +548,19 @@ describe("ChecklistBuilderModal - edit mode", () => {
     fireEvent.click(screen.getByText("Save checklist"));
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Existing Checklist" }));
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("pre-fills the saved start date in edit mode", () => {
+    renderWithClient(
+      <ChecklistBuilderModal
+        onClose={onClose}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        editId="cl-1"
+        initialTitle="Existing Checklist"
+        initialStartDate="2026-04-08"
+      />
+    );
+    expect(screen.getByText(/Apr/i)).toBeInTheDocument();
   });
 });
