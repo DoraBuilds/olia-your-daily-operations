@@ -120,6 +120,12 @@ function dbToKioskChecklist(raw: any): KioskChecklist {
   };
 }
 
+async function fetchKioskChecklists(locationId: string) {
+  const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
+  if (error) throw error;
+  return (data ?? []).map(dbToKioskChecklist);
+}
+
 function parseTimeToMinutes(time: string | null | undefined): number | null {
   if (!time) return null;
   const [h, m] = time.split(":").map(Number);
@@ -1761,6 +1767,39 @@ export default function Kiosk() {
   const [checklistsLoading, setChecklistsLoading] = useState(false);
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!locationId) return;
+    let cancelled = false;
+
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("id", locationId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.id) {
+          if (data.name && data.name !== locationName) {
+            _kioskLocationName = data.name;
+            localStorage.setItem("kiosk_location_name", data.name);
+            setLocationName(data.name);
+          }
+          return;
+        }
+        _kioskLocationId = null;
+        _kioskLocationName = null;
+        localStorage.removeItem("kiosk_location_id");
+        localStorage.removeItem("kiosk_location_name");
+        setLocationId(null);
+        setLocationName("");
+        setKioskChecklists([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locationId, locationName]);
+
   // Drain any queued submissions from previous offline sessions.
   // Legacy queue entries may contain location_id values that reference mock/test
   // location UUIDs which fail the FK constraint — strip it so those entries can
@@ -1777,22 +1816,50 @@ export default function Kiosk() {
     });
   }, [locationId]);
 
-  // Fetch checklists for the selected location whenever it changes
+  // Fetch checklists for the selected location whenever it changes and keep the
+  // grid fresh when the kiosk regains focus after checklist/admin edits.
   useEffect(() => {
     if (!locationId) return;
-    setChecklistsLoading(true);
-    setChecklistsError(null);
-    supabase
-      .rpc("get_kiosk_checklists", { p_location_id: locationId })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("get_kiosk_checklists failed:", error.message);
-          setChecklistsError("Could not load checklists. Check your connection and try again.");
-        } else {
-          setKioskChecklists((data ?? []).map(dbToKioskChecklist));
+    let cancelled = false;
+
+    const load = async (showSpinner = false) => {
+      if (showSpinner) setChecklistsLoading(true);
+      setChecklistsError(null);
+      try {
+        const next = await fetchKioskChecklists(locationId);
+        if (!cancelled) {
+          setKioskChecklists(next);
         }
-        setChecklistsLoading(false);
-      });
+      } catch (error: any) {
+        if (!cancelled) {
+          console.error("get_kiosk_checklists failed:", error?.message ?? error);
+          setChecklistsError("Could not load checklists. Check your connection and try again.");
+        }
+      } finally {
+        if (!cancelled && showSpinner) setChecklistsLoading(false);
+      }
+    };
+
+    const handleFocusRefresh = () => {
+      void load(false);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void load(false);
+      }
+    };
+
+    void load(true);
+    const intervalId = window.setInterval(() => void load(false), 30000);
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [locationId]);
 
   const handleSetup = (id: string, name: string) => {
@@ -2050,13 +2117,12 @@ export default function Kiosk() {
               onClick={() => {
                 setChecklistsError(null);
                 setChecklistsLoading(true);
-                supabase
-                  .rpc("get_kiosk_checklists", { p_location_id: locationId! })
-                  .then(({ data, error }) => {
-                    if (error) setChecklistsError("Retry failed. Check your connection.");
-                    else setKioskChecklists((data ?? []).map(dbToKioskChecklist));
-                    setChecklistsLoading(false);
-                  });
+                fetchKioskChecklists(locationId!)
+                  .then((data) => {
+                    setKioskChecklists(data);
+                  })
+                  .catch(() => setChecklistsError("Retry failed. Check your connection."))
+                  .finally(() => setChecklistsLoading(false));
               }}
               className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted transition-colors"
             >

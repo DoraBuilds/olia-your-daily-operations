@@ -84,10 +84,14 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
   };
 
   return (
-    // No pb-16 on outer wrapper — that created a dead zone covered by the bottom nav.
-    // The card itself has pb-safe to clear nav on mobile.
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-card w-full rounded-t-2xl p-5 pb-safe space-y-5 animate-fade-in" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm animate-fade-in sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card w-full max-w-3xl rounded-2xl p-5 pb-safe shadow-2xl space-y-5 animate-fade-in sm:rounded-3xl sm:p-6"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Convert file to checklist</h2>
           <button
