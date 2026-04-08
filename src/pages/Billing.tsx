@@ -379,7 +379,7 @@ export default function Billing() {
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
         <div className="pt-2 pb-3">
-        <div className="grid gap-4 lg:grid-cols-3 lg:items-start xl:grid-cols-[minmax(0,0.96fr)_minmax(0,1.04fr)_minmax(0,0.96fr)]">
+        <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-start xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
         {plans.map((p) => {
           const isCurrent  = p === plan;
           const price      = PLAN_PRICES[p];
@@ -392,17 +392,13 @@ export default function Billing() {
             <div
               key={p}
               className={cn(
-                "h-full",
-                isRecommended && "lg:py-4",
+                isRecommended && "lg:scale-[1.03] lg:-translate-y-1 lg:z-10",
               )}
             >
               <div className={cn(
-                "rounded-3xl border p-4 space-y-4 h-full flex flex-col",
-                isEnterprise
-                  ? "bg-sage text-primary-foreground border-sage"
-                  : "bg-card border-border",
-                isCurrent && !isEnterprise && "ring-1 ring-sage/60",
-                isRecommended && !isEnterprise && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
+                "rounded-3xl border bg-card border-border p-4 space-y-4",
+                isCurrent && "ring-1 ring-sage/60",
+                isRecommended && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
               )}>
 
                 {/* Badges row */}
@@ -410,7 +406,7 @@ export default function Billing() {
                   {isCurrent && (
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                      isEnterprise ? "bg-white/20 text-white" : "bg-sage/15 text-sage"
+                      "bg-sage/15 text-sage"
                     )}>
                       Current plan
                     </span>
@@ -425,24 +421,18 @@ export default function Billing() {
                 {/* Plan name + price */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="max-w-[15rem]">
-                    <p className={cn(
-                      "font-semibold text-lg",
-                      isEnterprise ? "text-white" : "text-foreground"
-                    )}>
+                    <p className="font-semibold text-lg text-foreground">
                       {PLAN_LABELS[p]}
                     </p>
-                    <p className={cn(
-                      "text-xs mt-0.5 leading-relaxed",
-                      isEnterprise ? "text-white/70" : "text-muted-foreground"
-                    )}>
+                    <p className="text-xs mt-0.5 leading-relaxed text-muted-foreground">
                       {PLAN_DESCRIPTIONS[p]}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     {isEnterprise ? (
                       <>
-                        <p className="text-sm font-semibold text-white/90">Custom pricing</p>
-                        <p className="text-[10px] text-white/50 mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
+                        <p className="text-sm font-semibold text-foreground">Custom pricing</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
                       </>
                     ) : (
                       <>
@@ -473,30 +463,27 @@ export default function Billing() {
                 {/* Feature list */}
                 <ul className="space-y-1.5">
                   {PLAN_HIGHLIGHTS[p].map(feature => (
-                    <li key={feature} className={cn(
-                      "flex items-center gap-2 text-xs",
-                      isEnterprise ? "text-white/80" : "text-muted-foreground"
-                    )}>
-                      <Check size={12} className={isEnterprise ? "text-white/60 shrink-0" : "text-status-ok shrink-0"} />
+                    <li key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Check size={12} className="text-status-ok shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
                 {/* Divider */}
-                <div className={cn("border-t", isEnterprise ? "border-white/20" : "border-border")} />
+                <div className="border-t border-border" />
 
                 {/* CTA */}
-                <div className="mt-auto">
+                <div>
                 {isEnterprise ? (
                   isCurrent ? (
-                    <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-white/20 text-white">
+                    <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
                       Current plan
                     </div>
                   ) : (
                     <a
                       href={`mailto:${ENTERPRISE_SALES_EMAIL}`}
-                      className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-white text-sage hover:bg-white/90"
+                      className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
                     >
                       Book a demo
                     </a>
@@ -521,7 +508,7 @@ export default function Billing() {
 
                 {/* Enterprise — tailored pricing note */}
                 {isEnterprise && !isCurrent && (
-                  <p className="text-[10px] text-white/50 text-center -mt-2">
+                  <p className="text-[10px] text-muted-foreground/70 text-center -mt-2">
                     Pricing tailored to your operation
                   </p>
                 )}
