@@ -93,6 +93,8 @@ Deno.serve(async (req) => {
   const sig = req.headers.get("stripe-signature");
   if (!sig) return new Response("Missing stripe-signature", { status: 400 });
 
+  // Supabase JWT verification is disabled for this function in config because
+  // Stripe webhooks authenticate with their signing secret, not a Supabase token.
   const stripe = new Stripe(STRIPE_SECRET_KEY, {
     apiVersion: "2024-12-18.acacia",
     httpClient: Stripe.createFetchHttpClient(),
