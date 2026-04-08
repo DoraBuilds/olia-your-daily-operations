@@ -156,35 +156,33 @@ vi.mock("@/hooks/useChecklists", () => ({
 describe("Admin page", () => {
   // 1. Renders without crashing
   it("renders the Admin page without crashing", () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     expect(document.body).toBeDefined();
   });
 
   // 2. Shows both tabs
   it("shows 'My Location' and 'Account' tabs", () => {
-    renderWithProviders(<Admin />);
-    expect(screen.getByText("My Location")).toBeInTheDocument();
-    expect(screen.getByText("Account")).toBeInTheDocument();
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+    expect(screen.getAllByText("My Location").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Account").length).toBeGreaterThanOrEqual(1);
   });
 
   // 3. My Location is active by default
   it("'My Location' tab is active by default", () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     // The location picker / section-label should be visible
     expect(screen.getByText("Location details")).toBeInTheDocument();
   });
 
-  // 4. Clicking Account tab shows account content
-  it("clicking 'Account' tab shows account content", () => {
-    renderWithProviders(<Admin />);
-    const accountTab = screen.getByText("Account");
-    fireEvent.click(accountTab);
+  // 4. Account route shows account content
+  it("account route shows account content", () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     expect(screen.getByText("My account")).toBeInTheDocument();
   });
 
   // 5. Location section shows location names
   it("location select shows location names (Main Branch, City Centre)", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       // Either in a dropdown or displayed text somewhere
       const mainBranch = screen.queryByText("Main Branch") || screen.queryAllByText(/Main Branch/i)[0];
@@ -194,7 +192,7 @@ describe("Admin page", () => {
 
   // 6. Location details card appears when a location exists
   it("location details card is rendered when location is selected", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getByText("Location details")).toBeInTheDocument();
     });
@@ -202,7 +200,7 @@ describe("Admin page", () => {
 
   // 7. Staff Profiles section shows active staff (Alice Smith)
   it("staff profiles section shows Alice Smith", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getByText("Alice Smith")).toBeInTheDocument();
     });
@@ -210,7 +208,7 @@ describe("Admin page", () => {
 
   // 8. Staff role badge shows department-based label
   it("shows Alice Smith's role as Front of House / Server", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       const roleBadges = screen.getAllByText("Front of House / Server");
       expect(roleBadges.length).toBeGreaterThanOrEqual(1);
@@ -219,7 +217,7 @@ describe("Admin page", () => {
 
   // 9. Active staff shows Edit button (Pencil)
   it("active staff has edit (pencil) button", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       const editBtns = screen.getAllByRole("button", { name: /edit/i });
       expect(editBtns.length).toBeGreaterThanOrEqual(1);
@@ -228,7 +226,7 @@ describe("Admin page", () => {
 
   // 10. Active staff has Archive button
   it("active staff has archive button", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       const archiveBtns = screen.getAllByRole("button", { name: /archive/i });
       expect(archiveBtns.length).toBeGreaterThanOrEqual(1);
@@ -237,7 +235,7 @@ describe("Admin page", () => {
 
   // 11. Clicking "Add" staff button opens staff profile form
   it("clicking 'Add' staff opens the staff profile form sheet", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getByText("Staff profiles")).toBeInTheDocument();
     });
@@ -251,7 +249,7 @@ describe("Admin page", () => {
 
   // 12. Staff form has First Name field
   it("staff profile form has First name field", async () => {
-    renderWithProviders(<Admin />);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByText("Staff profiles")).toBeInTheDocument());
     const addBtns = screen.getAllByText("Add");
     fireEvent.click(addBtns[0]);
@@ -354,8 +352,7 @@ describe("Admin page", () => {
 
   // 21. Account tab shows "All locations" section with locations
   it("Account tab shows all locations", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1);
     });
@@ -363,8 +360,7 @@ describe("Admin page", () => {
 
   // 22. Account tab shows "City Centre" location
   it("Account tab shows City Centre location", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getAllByText("City Centre").length).toBeGreaterThanOrEqual(1);
     });
@@ -372,18 +368,16 @@ describe("Admin page", () => {
 
   // 23. Team Members section shows Sarah Owner and Mike Manager
   it("Account tab shows team members Sarah Owner and Mike Manager", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
-      expect(screen.getByText("Sarah Owner")).toBeInTheDocument();
-      expect(screen.getByText("Mike Manager")).toBeInTheDocument();
+      expect(screen.getAllByText("Sarah Owner").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Mike Manager").length).toBeGreaterThanOrEqual(1);
     });
   });
 
   // 23b. Account tab shows self-service account settings
   it("Account tab shows my account settings", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
 
     await waitFor(() => {
       expect(screen.getByText("My account")).toBeInTheDocument();
@@ -405,8 +399,7 @@ describe("Admin page", () => {
     mockSaveTeamMember.mutateAsync.mockClear();
     updateUser.mockClear();
 
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
 
     await waitFor(() => expect(screen.getByText("Save profile")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
@@ -423,8 +416,7 @@ describe("Admin page", () => {
 
   // 24. "Add location" button visible in Account tab
   it("'Add location' button is visible in Account tab", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Add location")).toBeInTheDocument();
     });
@@ -432,8 +424,7 @@ describe("Admin page", () => {
 
   // 25. Clicking "Add location" opens a location form
   it("clicking 'Add location' opens location form sheet", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Add location")).toBeInTheDocument();
     });
@@ -445,8 +436,7 @@ describe("Admin page", () => {
 
   // 26. Location form has Name field
   it("location form has 'Location name (required)' field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
@@ -456,8 +446,7 @@ describe("Admin page", () => {
 
   // 27. Location form has Address field
   it("location form has Address field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
@@ -484,8 +473,7 @@ describe("Admin page", () => {
 
   // 28. Location form does not show email for new locations
   it("location form hides email field for new locations", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
@@ -495,8 +483,7 @@ describe("Admin page", () => {
 
   // 29. Location form has Location phone field
   it("location form has Location phone field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
@@ -506,8 +493,7 @@ describe("Admin page", () => {
 
   // 30. Clicking Edit on a location opens edit form with "Edit location" heading
   it("clicking Edit on a location opens edit form", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       // There are pencil (Edit) buttons next to each location
       const editBtns = screen.getAllByRole("button");
@@ -532,8 +518,7 @@ describe("Admin page", () => {
 
   // 31. Delete location button opens confirm modal
   it("clicking delete on a location shows confirm modal", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1);
     });
@@ -566,8 +551,7 @@ describe("Admin page", () => {
 
   // 32. Confirm modal has "Cancel" button
   it("confirm modal has Cancel button", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
     const allLocationsHeading = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"));
     const section = allLocationsHeading?.closest("section");
@@ -588,8 +572,7 @@ describe("Admin page", () => {
 
   // 33. Clicking "Invite" opens team member form
   it("clicking 'Invite' opens team member form", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Add")).toBeInTheDocument();
     });
@@ -601,8 +584,7 @@ describe("Admin page", () => {
 
   // 34. Team member form has Full name field
   it("team member form has Full name field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
@@ -612,8 +594,7 @@ describe("Admin page", () => {
 
   // 35. Team member form has Email field
   it("team member form has Email field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
@@ -623,8 +604,7 @@ describe("Admin page", () => {
 
   // 35b. Team member form has PIN field for kiosk/admin access
   it("team member form has Kiosk PIN field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add"));
     await waitFor(() => {
@@ -634,9 +614,8 @@ describe("Admin page", () => {
 
   // 35c. Owner edit form shows Admin PIN field
   it("owner team member edit form has Admin PIN field", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
-    await waitFor(() => expect(screen.getByText("Sarah Owner")).toBeInTheDocument());
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => expect(screen.getAllByText("Sarah Owner").length).toBeGreaterThanOrEqual(1));
     fireEvent.click(screen.getByLabelText("Edit Sarah Owner"));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Edit team member" })).toBeInTheDocument());
     await waitFor(() => expect(screen.getByText("Generate")).toBeInTheDocument());
@@ -644,8 +623,7 @@ describe("Admin page", () => {
 
   // 36. Billing card is visible in Account tab
   it("billing card is visible in Account tab", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Current Plan")).toBeInTheDocument();
     });
@@ -653,8 +631,7 @@ describe("Admin page", () => {
 
   // 37. Billing card shows "Olia Growth" plan name
   it("billing card shows plan name", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Olia Growth")).toBeInTheDocument();
     });
@@ -662,8 +639,7 @@ describe("Admin page", () => {
 
   // 38. Manage Billing button is visible
   it("'Manage Billing' button is visible in Account tab", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Manage Billing")).toBeInTheDocument();
     });
@@ -671,10 +647,9 @@ describe("Admin page", () => {
 
   // 39. At least one permission label appears in team member expand
   it("permission labels appear when team member is expanded", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
-      expect(screen.getByText("Mike Manager")).toBeInTheDocument();
+      expect(screen.getAllByText("Mike Manager").length).toBeGreaterThanOrEqual(1);
     });
     // Click the expand (ChevronDown) button for Mike Manager
     const mikeRow = screen.getByText("Mike Manager").closest("[class*='flex items-center']");
@@ -692,8 +667,7 @@ describe("Admin page", () => {
 
   // 40. Department management section shows default departments
   it("Account tab shows Department management section with default departments", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Department management")).toBeInTheDocument();
     });
@@ -701,8 +675,7 @@ describe("Admin page", () => {
 
   // 41. Default departments listed
   it("Department management section shows default department names", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Front of House")).toBeInTheDocument();
       expect(screen.getByText("Back of House")).toBeInTheDocument();
@@ -713,8 +686,7 @@ describe("Admin page", () => {
 
   // 42. Add department input exists
   it("Account tab has 'Add department' input", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Add department…")).toBeInTheDocument();
     });
@@ -722,8 +694,7 @@ describe("Admin page", () => {
 
   // 43. Audit log section exists
   it("Account tab has Audit log section", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Audit log")).toBeInTheDocument();
     });
@@ -776,8 +747,7 @@ describe("Admin page", () => {
 
   // 49. Team members section label in Account tab
   it("Account tab shows 'Team members' section label", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Team members")).toBeInTheDocument();
     });
@@ -785,8 +755,7 @@ describe("Admin page", () => {
 
   // 50. Checklist coverage summary in Account tab
   it("Account tab shows Checklist coverage summary", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Checklist coverage")).toBeInTheDocument();
     });
@@ -839,8 +808,7 @@ describe("Admin page", () => {
   });
 
   it("location form shows Opening hours with time inputs for open days and 'Closed' for closed days", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
     // click the pencil/edit button on the first location
     const allLocationsSection = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"))?.closest("section");
@@ -858,8 +826,7 @@ describe("Admin page", () => {
   });
 
   it("location form supports split-day hours and copying them to later days", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
 
@@ -925,8 +892,7 @@ describe("Admin page", () => {
   });
 
   it("Account tab shows checklist coverage with checklist titles", async () => {
-    renderWithProviders(<Admin />);
-    fireEvent.click(screen.getByText("Account"));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Checklist coverage")).toBeInTheDocument();
       expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);

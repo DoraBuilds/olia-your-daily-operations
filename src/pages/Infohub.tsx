@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -1092,6 +1093,8 @@ function useDragReorder<T extends { id: string }>(items: T[], onReorder: (reorde
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
 export default function Infohub() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { teamMember } = useAuth();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: locations = [] } = useLocations();
@@ -1107,7 +1110,8 @@ export default function Infohub() {
     reorderFolders,
   } = useInfohubContent();
   const { data: trainingProgress = [], saveProgress } = useTrainingProgress();
-  const [subTab, setSubTab] = useState<SubTab>("library");
+  const routeSubTab: SubTab = location.pathname.startsWith("/infohub/training") ? "training" : "library";
+  const [subTab, setSubTab] = useState<SubTab>(routeSubTab);
   const [showSearch, setShowSearch] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -1132,6 +1136,10 @@ export default function Infohub() {
   const [moveTarget, setMoveTarget] = useState<{ type: "folder" | "doc"; id: string; section: "library" | "training" } | null>(null);
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string; section: "library" | "training" } | null>(null);
   const [accessTarget, setAccessTarget] = useState<AccessTarget | null>(null);
+
+  useEffect(() => {
+    setSubTab(routeSubTab);
+  }, [routeSubTab]);
 
   const currentPrincipal: InfohubPrincipal = {
     teamMemberId: teamMember?.id ?? null,
@@ -1371,13 +1379,17 @@ export default function Infohub() {
       }
     >
       {/* Sub-tab toggle */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1">
+      <div className="flex gap-1 bg-muted rounded-xl p-1 md:hidden">
         {([
           { key: "library" as const, label: "Library", icon: BookOpen },
           { key: "training" as const, label: "Training", icon: GraduationCap },
         ]).map(({ key, label, icon: Icon }) => (
           <button key={key}
-            onClick={() => { setSubTab(key); setCurrentLibFolder(null); setCurrentTrainFolder(null); }}
+            onClick={() => {
+              setCurrentLibFolder(null);
+              setCurrentTrainFolder(null);
+              navigate(key === "library" ? "/infohub/library" : "/infohub/training");
+            }}
             className={cn(
               "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors",
               subTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"

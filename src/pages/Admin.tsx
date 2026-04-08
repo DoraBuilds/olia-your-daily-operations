@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import {
   MapPin, Clock, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
@@ -2073,6 +2073,7 @@ type ConfirmState = {
 } | null;
 
 export default function Admin() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
@@ -2111,7 +2112,8 @@ export default function Admin() {
   const auditLog: AuditLogEntry[] = [];
 
   // UI state
-  const [activeTab, setActiveTab] = useState<"location" | "account">("location");
+  const routeTab: "location" | "account" = location.pathname.startsWith("/admin/account") ? "account" : "location";
+  const [activeTab, setActiveTab] = useState<"location" | "account">(routeTab);
   const [currentLocationId, setCurrentLocationId] = useState("");
 
   // Set default location once data loads
@@ -2133,6 +2135,14 @@ export default function Admin() {
   // Determine active user from URL param
   const activeUser = userId ? (teamMembers.find(m => m.id === userId) ?? null) : null;
   const isOwner = !activeUser || activeUser.role === "Owner";
+
+  useEffect(() => {
+    if (!isOwner && routeTab === "account") {
+      navigate("/admin/location", { replace: true });
+      return;
+    }
+    setActiveTab(routeTab);
+  }, [isOwner, navigate, routeTab]);
   const permissions: ManagerPermissions | null = isOwner ? null : (activeUser?.permissions ?? null);
 
   // Inactivity timer — when from kiosk, redirect back after 90s idle
@@ -2346,11 +2356,11 @@ export default function Admin() {
       >
         <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
           {/* Sub-tab pill toggle */}
-          <div className="flex gap-1 bg-muted rounded-2xl p-1">
+          <div className="flex gap-1 bg-muted rounded-2xl p-1 md:hidden">
             {TABS.map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => setActiveTab(key)}
+                onClick={() => navigate(key === "location" ? "/admin/location" : "/admin/account")}
                 className={cn(
                   "flex-1 py-2.5 text-xs font-semibold rounded-xl transition-colors tracking-wide",
                   activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
