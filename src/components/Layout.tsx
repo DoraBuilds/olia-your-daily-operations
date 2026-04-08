@@ -17,8 +17,8 @@ interface LayoutProps {
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const shellWidthClass = "mx-auto w-full max-w-[1380px]";
-  const contentWidthClass = "w-full max-w-[1040px] xl:max-w-[980px]";
+  const shellWidthClass = "mx-auto w-full max-w-[1320px]";
+  const contentWidthClass = "w-full max-w-[960px] xl:max-w-[920px]";
 
   const handleLogout = async () => {
     await signOut();

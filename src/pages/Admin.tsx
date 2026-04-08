@@ -1120,6 +1120,7 @@ interface AccountTabProps {
   departments: StaffDepartment[];
   setDepartments: React.Dispatch<React.SetStateAction<StaffDepartment[]>>;
   auditLog: AuditLogEntry[];
+  authAccount: TeamMember | null;
   authMemberId: string | undefined;
   authUserEmail: string | undefined;
   authUserName: string | undefined;
@@ -1142,7 +1143,7 @@ interface AccountTabProps {
 
 function AccountTab({
   locations, activeLocationIds, inactiveLocationIds, staffProfiles, teamMembers, checklists, onSavePerms,
-  onSaveAccount, departments, setDepartments, auditLog, authMemberId, authUserEmail, authUserName,
+  onSaveAccount, departments, setDepartments, auditLog, authAccount, authMemberId, authUserEmail, authUserName,
   billingUnavailable, locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
   onInviteMember, onEditMember, onDeleteMember,
@@ -1153,7 +1154,7 @@ function AccountTab({
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [pendingPerms, setPendingPerms] = useState<Record<string, ManagerPermissions>>({});
   const currentTeamMember = teamMembers.find(member => member.id === authMemberId);
-  const currentAccount = currentTeamMember ?? (authMemberId ? {
+  const currentAccount = currentTeamMember ?? authAccount ?? (authMemberId ? {
     id: authMemberId,
     name: authUserName ?? "",
     email: authUserEmail ?? "",
@@ -2211,6 +2212,15 @@ export default function Admin() {
               departments={departments}
               setDepartments={setDepartments}
               auditLog={auditLog}
+              authAccount={authMember ? {
+                id: authMember.id,
+                name: authMember.name,
+                email: user?.email ?? authMember.email,
+                role: authMember.role,
+                initials: getInitials(authMember.name),
+                location_ids: authMember.location_ids,
+                permissions: authMember.permissions,
+              } : null}
               authMemberId={authMember?.id}
               authUserEmail={user?.email}
               authUserName={authMember?.name}

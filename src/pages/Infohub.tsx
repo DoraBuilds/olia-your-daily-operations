@@ -42,6 +42,33 @@ type AccessTarget = {
   access: InfohubAccessControl;
 };
 
+function CenteredModalShell({
+  children,
+  onClose,
+  maxWidthClass = "max-w-lg",
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  maxWidthClass?: string;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/30 px-4 pb-8 backdrop-blur-sm sm:items-center sm:px-6 sm:py-10"
+      onClick={onClose}
+    >
+      <div
+        className={cn(
+          "relative w-full rounded-3xl border border-border bg-card p-5 pb-6 shadow-2xl animate-fade-in max-h-[85vh] overflow-y-auto",
+          maxWidthClass,
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function sortFolders<T extends { name: string; sortOrder: number | null }>(folders: T[]): T[] {
@@ -122,9 +149,8 @@ function MoveToFolderSheet({ folders, currentParentId, onClose, onMove }: {
     folders.filter(f => f.parentId === parentId && f.id !== currentParentId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-3 animate-fade-in max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-3">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-display text-base text-foreground">Move to folder</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -177,7 +203,7 @@ function MoveToFolderSheet({ folders, currentParentId, onClose, onMove }: {
           <p className="text-sm text-muted-foreground text-center py-4">No folders found.</p>
         )}
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -190,9 +216,8 @@ function CreateFolderModal({ parentId, onClose, onSave }: {
 }) {
   const [name, setName] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">New folder</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -214,7 +239,7 @@ function CreateFolderModal({ parentId, onClose, onSave }: {
           Create folder
         </button>
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -227,9 +252,8 @@ function RenameFolderModal({ currentName, onClose, onSave }: {
 }) {
   const [name, setName] = useState(currentName);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">Rename folder</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -251,7 +275,7 @@ function RenameFolderModal({ currentName, onClose, onSave }: {
           Rename
         </button>
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -267,9 +291,8 @@ function CreateDocModal({ folderId, folders, onClose, onSave }: {
   const [selectedFolder, setSelectedFolder] = useState(folderId || folders[0]?.id || "");
   const [tagsInput, setTagsInput] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">New document</h3>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -310,7 +333,7 @@ function CreateDocModal({ folderId, folders, onClose, onSave }: {
           Create document
         </button>
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -321,20 +344,12 @@ function PlusMenu({ onClose, onAction }: {
   onAction: (action: "document" | "upload" | "folder") => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div
-        className="relative w-full bg-card rounded-t-2xl border-t border-border p-5 pb-6 space-y-1 animate-fade-in max-h-[85vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
+    <CenteredModalShell onClose={onClose} maxWidthClass="max-w-md">
+      <div className="space-y-1">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-base text-foreground">Create new</h3>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
-          >
-            <X size={14} />
-            Close
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+            <X size={18} className="text-muted-foreground" />
           </button>
         </div>
         <button onClick={() => onAction("document")} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-muted/50 transition-colors text-left">
@@ -365,7 +380,7 @@ function PlusMenu({ onClose, onAction }: {
           </div>
         </button>
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -406,12 +421,8 @@ function ManageAccessModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-2xl bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <CenteredModalShell onClose={onClose} maxWidthClass="max-w-2xl">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-display text-base text-foreground">Manage access</h3>
@@ -517,7 +528,7 @@ function ManageAccessModal({
           Save access
         </button>
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -570,12 +581,8 @@ function AIActionsSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-      <div
-        className="relative w-full max-w-lg bg-card rounded-t-2xl border-t border-border p-5 pb-8 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-lavender-deep" />
@@ -711,7 +718,7 @@ function AIActionsSheet({
           </div>
         )}
       </div>
-    </div>
+    </CenteredModalShell>
   );
 }
 
@@ -1113,6 +1120,7 @@ export default function Infohub() {
   const routeSubTab: SubTab = location.pathname.startsWith("/infohub/training") ? "training" : "library";
   const [subTab, setSubTab] = useState<SubTab>(routeSubTab);
   const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showCreateDoc, setShowCreateDoc] = useState(false);
@@ -1164,41 +1172,54 @@ export default function Infohub() {
     })),
     [infohubData.trainingDocs, trainCompletionMap],
   );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
 
   // Sorted folder lists
   const visibleLibFolders = useMemo(() =>
-    sortFolders(libFolders.filter(f => f.parentId === currentLibFolder)),
-    [libFolders, currentLibFolder]
+    sortFolders(libFolders.filter((folder) => {
+      if (normalizedSearch) return folder.name.toLowerCase().includes(normalizedSearch);
+      return folder.parentId === currentLibFolder;
+    })),
+    [libFolders, currentLibFolder, normalizedSearch]
   );
   const accessibleLibFolders = useMemo(() =>
     visibleLibFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
     [visibleLibFolders, currentPrincipal]
   );
   const docsInCurrentFolder = useMemo(() =>
-    currentLibFolder
-      ? libDocs
-        .filter(d => d.folderId === currentLibFolder)
-        .sort((a, b) => a.title.localeCompare(b.title))
-      : [],
-    [libDocs, currentLibFolder]
+    (normalizedSearch
+      ? libDocs.filter((doc) =>
+          doc.title.toLowerCase().includes(normalizedSearch)
+          || doc.summary.toLowerCase().includes(normalizedSearch)
+        )
+      : currentLibFolder
+        ? libDocs.filter(d => d.folderId === currentLibFolder)
+        : []
+    ).sort((a, b) => a.title.localeCompare(b.title)),
+    [libDocs, currentLibFolder, normalizedSearch]
   );
   const accessibleDocsInCurrentFolder = useMemo(() =>
     docsInCurrentFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
     [docsInCurrentFolder, currentPrincipal]
   );
   const visibleTrainFolders = useMemo(() =>
-    sortFolders(trainFolders.filter(f => f.parentId === currentTrainFolder)),
-    [trainFolders, currentTrainFolder]
+    sortFolders(trainFolders.filter((folder) => {
+      if (normalizedSearch) return folder.name.toLowerCase().includes(normalizedSearch);
+      return folder.parentId === currentTrainFolder;
+    })),
+    [trainFolders, currentTrainFolder, normalizedSearch]
   );
   const accessibleTrainFolders = useMemo(() =>
     visibleTrainFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
     [visibleTrainFolders, currentPrincipal]
   );
   const docsInCurrentTrainFolder = useMemo(() =>
-    currentTrainFolder
-      ? trainDocs.filter(d => d.folderId === currentTrainFolder)
-      : [],
-    [trainDocs, currentTrainFolder]
+    normalizedSearch
+      ? trainDocs.filter(d => d.title.toLowerCase().includes(normalizedSearch))
+      : currentTrainFolder
+        ? trainDocs.filter(d => d.folderId === currentTrainFolder)
+        : [],
+    [trainDocs, currentTrainFolder, normalizedSearch]
   );
   const accessibleDocsInCurrentTrainFolder = useMemo(() =>
     docsInCurrentTrainFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
@@ -1369,15 +1390,36 @@ export default function Infohub() {
     <Layout title="Infohub" subtitle={subtitle}
       headerRight={
         <div className="flex items-center gap-1">
-          <button onClick={() => setShowSearch(true)} aria-label="Search documents" className="p-2 rounded-full hover:bg-muted transition-colors">
-            <Search size={18} className="text-muted-foreground" />
-          </button>
-          <button onClick={() => setShowPlusMenu(true)} aria-label="Add content" className="p-2 rounded-full hover:bg-sage-light transition-colors">
-            <Plus size={18} className="text-sage-deep" />
+          <button
+            onClick={() => setShowPlusMenu(true)}
+            aria-label="Add content"
+            className="hidden h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep md:flex"
+          >
+            <Plus size={18} />
           </button>
         </div>
       }
     >
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder={subTab === "library" ? "Search documents and folders…" : "Search training and folders…"}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <button
+          onClick={() => setShowPlusMenu(true)}
+          aria-label="Add content"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep md:hidden"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
       {/* Sub-tab toggle */}
       <div className="flex gap-1 bg-muted rounded-xl p-1 md:hidden">
         {([
@@ -1464,7 +1506,7 @@ export default function Infohub() {
           )}
 
           {/* Documents in current folder */}
-          {currentLibFolder && accessibleDocsInCurrentFolder.length > 0 && (
+          {(currentLibFolder || normalizedSearch) && accessibleDocsInCurrentFolder.length > 0 && (
             <>
               <p className="section-label">Documents</p>
               <div className="card-surface divide-y divide-border">
@@ -1522,7 +1564,11 @@ export default function Infohub() {
               <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center mx-auto mb-2">
                 <Plus size={18} className="text-sage-deep" />
               </div>
-              <p className="text-sm text-muted-foreground">{currentLibFolder ? "This folder is empty." : "No folders yet."}</p>
+              <p className="text-sm text-muted-foreground">
+                {normalizedSearch
+                  ? "No matching library items."
+                  : currentLibFolder ? "This folder is empty." : "No folders yet."}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">Tap to create a folder or document.</p>
             </button>
           )}
@@ -1617,7 +1663,7 @@ export default function Infohub() {
             </>
           )}
 
-          {currentTrainFolder && accessibleDocsInCurrentTrainFolder.length > 0 && (
+          {(currentTrainFolder || normalizedSearch) && accessibleDocsInCurrentTrainFolder.length > 0 && (
             <>
               <p className="section-label">Modules</p>
               <div className="card-surface divide-y divide-border">
@@ -1671,13 +1717,15 @@ export default function Infohub() {
             </>
           )}
 
-          {accessibleTrainFolders.length === 0 && accessibleDocsInCurrentTrainFolder.length === 0 && currentTrainFolder && (
+          {accessibleTrainFolders.length === 0 && accessibleDocsInCurrentTrainFolder.length === 0 && (currentTrainFolder || normalizedSearch) && (
             <button onClick={() => setShowPlusMenu(true)}
               className="card-surface p-8 text-center w-full hover:bg-muted/30 transition-colors cursor-pointer">
               <div className="w-10 h-10 rounded-full bg-lavender-light flex items-center justify-center mx-auto mb-2">
                 <Plus size={18} className="text-lavender-deep" />
               </div>
-              <p className="text-sm text-muted-foreground">This folder is empty.</p>
+              <p className="text-sm text-muted-foreground">
+                {normalizedSearch ? "No matching training items." : "This folder is empty."}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">Tap to create a folder or document.</p>
             </button>
           )}

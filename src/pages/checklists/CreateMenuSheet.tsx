@@ -15,8 +15,8 @@ export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI,
   ];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-1 animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 px-4 pb-8 backdrop-blur-sm animate-fade-in sm:items-center sm:px-6 sm:py-10">
+      <div className="bg-card w-full max-w-md rounded-3xl border border-border p-5 pb-6 space-y-1 shadow-2xl animate-fade-in">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-lg text-foreground">Create new</h2>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">

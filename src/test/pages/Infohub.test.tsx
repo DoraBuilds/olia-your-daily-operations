@@ -2,6 +2,16 @@ import { screen, fireEvent, within } from "@testing-library/react";
 import Infohub from "@/pages/Infohub";
 import { renderWithProviders } from "../test-utils";
 
+const mockNavigate = vi.fn();
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -144,91 +154,40 @@ describe("Infohub page", () => {
     }
   });
 
-  it("search button is visible in header", () => {
+  it("search field is visible in header", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    // The search icon button should be in the page
-    const buttons = screen.getAllByRole("button");
-    const hasSearchIcon = buttons.some(btn => btn.querySelector("svg") !== null);
-    expect(hasSearchIcon).toBe(true);
+    expect(screen.getByPlaceholderText("Search documents and folders…")).toBeInTheDocument();
   });
 
-  it("clicking the search button opens search overlay with input", () => {
+  it("inline search field accepts input", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    // Find the search button (it has a Search icon)
-    // The header has search + plus buttons; search is first
-    const buttons = screen.getAllByRole("button");
-    // Search button is in the headerRight area
-    // Find by looking at buttons with aria-label or by position
-    // The search overlay shows "Search all documents..." placeholder
-    const searchButtons = buttons.filter(btn => {
-      const svgPath = btn.querySelector("svg");
-      return svgPath && btn.className.includes("rounded-full");
+    const input = screen.getByPlaceholderText("Search documents and folders…");
+    fireEvent.change(input, { target: { value: "allergen" } });
+    expect(input).toHaveValue("allergen");
+  });
+
+  it("inline search shows empty state for unmatched query", () => {
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
+    fireEvent.change(screen.getByPlaceholderText("Search documents and folders…"), {
+      target: { value: "xyznonexistentterm" },
     });
-    if (searchButtons.length > 0) {
-      fireEvent.click(searchButtons[0]);
-      const input = screen.queryByPlaceholderText("Search all documents...");
-      if (input) {
-        expect(input).toBeInTheDocument();
-      }
-    }
-    // At least the buttons exist
-    expect(buttons.length).toBeGreaterThan(0);
+    expect(screen.getByText("No matching library items.")).toBeInTheDocument();
   });
 
-  it("search overlay shows 'No results found' for unmatched query", () => {
+  it("inline search filters library docs by title", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    const buttons = screen.getAllByRole("button");
-    const searchButtons = buttons.filter(btn =>
-      btn.className.includes("rounded-full") && btn.querySelector("svg")
-    );
-    if (searchButtons.length > 0) {
-      fireEvent.click(searchButtons[0]);
-    }
-    const input = screen.queryByPlaceholderText("Search all documents...");
-    if (input) {
-      fireEvent.change(input, { target: { value: "xyznonexistentterm" } });
-      expect(screen.getByText("No results found.")).toBeInTheDocument();
-    }
+    fireEvent.change(screen.getByPlaceholderText("Search documents and folders…"), {
+      target: { value: "allergen" },
+    });
+    expect(screen.queryAllByText(/allergen/i).length).toBeGreaterThan(0);
   });
 
-  it("search overlay filters library docs by title", () => {
+  it("clearing inline search returns to main view", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    const buttons = screen.getAllByRole("button");
-    const searchButtons = buttons.filter(btn =>
-      btn.className.includes("rounded-full") && btn.querySelector("svg")
-    );
-    if (searchButtons.length > 0) {
-      fireEvent.click(searchButtons[0]);
-    }
-    const input = screen.queryByPlaceholderText("Search all documents...");
-    if (input) {
-      fireEvent.change(input, { target: { value: "allergen" } });
-      // Should find allergen handling documents from library
-      expect(screen.queryAllByText(/allergen/i).length).toBeGreaterThan(0);
-    }
-  });
-
-  it("closing search overlay (X button) returns to main view", () => {
-    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
-    const buttons = screen.getAllByRole("button");
-    const searchButtons = buttons.filter(btn =>
-      btn.className.includes("rounded-full") && btn.querySelector("svg")
-    );
-    if (searchButtons.length > 0) {
-      fireEvent.click(searchButtons[0]);
-    }
-    const input = screen.queryByPlaceholderText("Search all documents...");
-    if (input) {
-      // Find and click the X close button
-      const closeBtn = screen.getAllByRole("button").find(btn =>
-        btn.className.includes("rounded-full") && btn !== searchButtons[0]
-      );
-      if (closeBtn) {
-        fireEvent.click(closeBtn);
-        // Should be back to main page
-        expect(screen.getByText("Folders")).toBeInTheDocument();
-      }
-    }
+    const input = screen.getByPlaceholderText("Search documents and folders…");
+    fireEvent.change(input, { target: { value: "allergen" } });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(screen.getByText("Folders")).toBeInTheDocument();
   });
 
   it("generates an AI summary for a library document", async () => {
@@ -236,26 +195,25 @@ describe("Infohub page", () => {
     vi.mocked(supabase.functions.invoke).mockResolvedValue({
       data: {
         type: "summary",
-        title: "How to serve a customer",
-        bullets: ["Greet within 30 seconds", "Repeat the order back clearly"],
-        takeaway: "Keep service warm, calm, and accurate.",
+        title: "Allergen handling procedure",
+        bullets: ["Treat all allergy queries seriously", "Notify the kitchen verbally"],
+        takeaway: "Never guess when allergens are involved.",
       },
       error: null,
     } as any);
 
     renderWithProviders(<Infohub />);
 
-    fireEvent.click(screen.getByRole("button", { name: /search documents/i }));
-    fireEvent.change(screen.getByPlaceholderText("Search all documents..."), {
-      target: { value: "serve a customer" },
+    fireEvent.change(screen.getByPlaceholderText("Search documents and folders…"), {
+      target: { value: "allergen" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /how to serve a customer/i }));
+    fireEvent.click(screen.getByText(/allergen handling procedure/i).closest("div[class*='cursor-pointer']") as HTMLElement);
 
     fireEvent.click(screen.getByRole("button", { name: /open ai tools/i }));
     fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
 
-    expect(await screen.findByText("Keep service warm, calm, and accurate.")).toBeInTheDocument();
-    expect(screen.getByText("Greet within 30 seconds")).toBeInTheDocument();
+    expect(await screen.findByText("Never guess when allergens are involved.")).toBeInTheDocument();
+    expect(screen.getByText("Treat all allergy queries seriously")).toBeInTheDocument();
   });
 
   it("switching to Training tab shows training folders", () => {
@@ -415,87 +373,47 @@ describe("Infohub page", () => {
 
   it("plus (+) button opens the Plus menu", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    // Plus button is next to search in the header
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      expect(screen.getByText("Create new")).toBeInTheDocument();
-    }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    expect(screen.getByText("Create new")).toBeInTheDocument();
   });
 
   it("Plus menu shows 'New document', 'Upload file', and 'New folder' options", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      expect(screen.getByText("New document")).toBeInTheDocument();
-      expect(screen.getByText("Upload file")).toBeInTheDocument();
-      expect(screen.getByText("New folder")).toBeInTheDocument();
-    }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    expect(screen.getByText("New document")).toBeInTheDocument();
+    expect(screen.getByText("Upload file")).toBeInTheDocument();
+    expect(screen.getByText("New folder")).toBeInTheDocument();
   });
 
   it("clicking 'New folder' from Plus menu opens CreateFolder modal", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      const newFolderBtn = screen.queryByText("New folder");
-      if (newFolderBtn) {
-        fireEvent.click(newFolderBtn);
-        expect(screen.getByText("New folder")).toBeInTheDocument();
-        // Create folder modal also shows "Folder name" label
-        expect(screen.queryByText("Folder name")).toBeTruthy();
-      }
-    }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByText("New folder"));
+    expect(screen.getByText("New folder")).toBeInTheDocument();
+    expect(screen.queryByText("Folder name")).toBeTruthy();
   });
 
   it("CreateFolder modal: typing a name and clicking 'Create folder' adds a new folder", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      const newFolderBtn = screen.queryByText("New folder");
-      if (newFolderBtn) {
-        fireEvent.click(newFolderBtn);
-        const input = screen.queryByPlaceholderText("e.g. Health & Safety");
-        if (input) {
-          fireEvent.change(input, { target: { value: "Test New Folder" } });
-          const createBtn = screen.getByText("Create folder");
-          fireEvent.click(createBtn);
-          // Modal closes, new folder should appear in the list
-          expect(screen.queryByText("Test New Folder")).toBeTruthy();
-        }
-      }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    fireEvent.click(screen.getByText("New folder"));
+    const input = screen.queryByPlaceholderText("e.g. Health & Safety");
+    if (input) {
+      fireEvent.change(input, { target: { value: "Test New Folder" } });
+      const createBtn = screen.getByText("Create folder");
+      fireEvent.click(createBtn);
+      expect(screen.queryByText("Test New Folder")).toBeTruthy();
     }
   });
 
   it("clicking 'New document' from Plus menu opens CreateDoc modal", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      const newDocBtn = screen.queryByText("New document");
-      if (newDocBtn) {
-        fireEvent.click(newDocBtn);
-        expect(screen.getByText("New document")).toBeInTheDocument();
-        // Modal has a folder selector
-        expect(screen.queryByText("Title")).toBeTruthy();
-      }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    const newDocBtn = screen.queryByText("New document");
+    if (newDocBtn) {
+      fireEvent.click(newDocBtn);
+      expect(screen.getByText("New document")).toBeInTheDocument();
+      expect(screen.queryByText("Title")).toBeTruthy();
     }
   });
 
@@ -742,21 +660,12 @@ describe("Infohub page", () => {
 
   it("Plus menu closes when backdrop is clicked (via X button)", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const plusBtn = buttons.find(btn =>
-      btn.className.includes("rounded-full") && btn.className.includes("sage")
-    );
-    if (plusBtn) {
-      fireEvent.click(plusBtn);
-      // Menu is open, find close button
-      const closeBtn = screen.queryAllByRole("button").find(btn =>
-        btn.querySelector("svg") && btn.className.includes("rounded-full")
-      );
-      if (closeBtn) {
-        fireEvent.click(closeBtn);
-        // Menu should be closed
-        expect(screen.queryByText("Create new")).toBeNull();
-      }
+    fireEvent.click(screen.getAllByLabelText("Add content")[0]);
+    const menuHeading = screen.getByText("Create new");
+    const closeBtn = menuHeading.parentElement?.querySelector("button");
+    if (closeBtn) {
+      fireEvent.click(closeBtn);
+      expect(screen.queryByText("Create new")).toBeNull();
     }
   });
 
@@ -779,18 +688,8 @@ describe("Infohub page", () => {
     }
   });
 
-  it("search overlay shows 'Start typing' hint when query is empty", () => {
+  it("inline search is empty by default", () => {
     renderWithProviders(<Infohub />);
-    const buttons = screen.getAllByRole("button");
-    const searchButtons = buttons.filter(btn =>
-      btn.className.includes("rounded-full") && btn.querySelector("svg")
-    );
-    if (searchButtons.length > 0) {
-      fireEvent.click(searchButtons[0]);
-    }
-    const searchHint = screen.queryByText(/Start typing to search/i);
-    if (searchHint) {
-      expect(searchHint).toBeInTheDocument();
-    }
+    expect(screen.getByPlaceholderText("Search documents and folders…")).toHaveValue("");
   });
 });
