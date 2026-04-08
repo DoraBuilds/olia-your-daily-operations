@@ -402,7 +402,7 @@ export default function Billing() {
               )}>
 
                 {/* Badges row */}
-                <div className="flex items-center gap-2 min-h-5">
+                <div className="flex items-center justify-center gap-2 min-h-5">
                   {isCurrent && (
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full font-medium",
@@ -474,7 +474,12 @@ export default function Billing() {
                 <div className="border-t border-border" />
 
                 {/* CTA */}
-                <div>
+                <div className="space-y-3">
+                {isEnterprise && !isCurrent && (
+                  <p className="text-[10px] text-muted-foreground/70 text-center">
+                    Pricing tailored to your operation
+                  </p>
+                )}
                 {isEnterprise ? (
                   isCurrent ? (
                     <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
@@ -505,13 +510,6 @@ export default function Billing() {
                   </button>
                 )}
                 </div>
-
-                {/* Enterprise — tailored pricing note */}
-                {isEnterprise && !isCurrent && (
-                  <p className="text-[10px] text-muted-foreground/70 text-center -mt-2">
-                    Pricing tailored to your operation
-                  </p>
-                )}
               </div>
             </div>
           );
