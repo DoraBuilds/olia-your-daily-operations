@@ -20,7 +20,7 @@ import {
   getInitials, daysAgo, daysAgoTooltip, staffDisplayName, formatTimestamp, generatePin,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePlan } from "@/hooks/usePlan";
+import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
 import {
@@ -1142,6 +1142,8 @@ function MyLocationTab({
 
 interface AccountTabProps {
   locations: Location[];
+  activeLocationIds: string[];
+  inactiveLocationIds: string[];
   staffProfiles: StaffProfile[];
   teamMembers: TeamMember[];
   checklists: ChecklistItem[];
@@ -1153,19 +1155,28 @@ interface AccountTabProps {
   authMemberId: string | undefined;
   authUserEmail: string | undefined;
   authUserName: string | undefined;
+  billingUnavailable: boolean;
+  locationLimit: number;
+  isLocationOverLimit: boolean;
+  locationGraceEndsAt: string | null;
+  isGraceActive: boolean;
+  isGraceExpired: boolean;
   onAddLocation: () => void;
   onLocationLimitReached: () => void;
   onEditLocation: (loc: Location) => void;
   onDeleteLocation: (id: string) => void;
+  onSaveActiveLocations: (locationIds: string[]) => Promise<unknown>;
+  savingActiveLocations: boolean;
   onInviteMember: () => void;
   onEditMember: (m: TeamMember) => void;
   onDeleteMember: (m: TeamMember) => void;
 }
 
 function AccountTab({
-  locations, staffProfiles, teamMembers, checklists, onSavePerms,
+  locations, activeLocationIds, inactiveLocationIds, staffProfiles, teamMembers, checklists, onSavePerms,
   onSaveAccount, departments, setDepartments, auditLog, authMemberId, authUserEmail, authUserName,
-  onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation,
+  billingUnavailable, locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
+  onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
   onInviteMember, onEditMember, onDeleteMember,
 }: AccountTabProps) {
   const navigate = useNavigate();
@@ -1191,11 +1202,16 @@ function AccountTab({
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
+  const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
 
   useEffect(() => {
     setProfileName(authUserName ?? currentAccount?.name ?? "");
     setProfileEmail(authUserEmail ?? currentAccount?.email ?? "");
   }, [authUserEmail, authUserName, currentAccount?.email, currentAccount?.name]);
+
+  useEffect(() => {
+    setSelectedActiveLocationIds(activeLocationIds);
+  }, [activeLocationIds]);
 
   const toggleExpand = (id: string, member: TeamMember) => {
     if (expandedMemberId === id) {
@@ -1352,14 +1368,49 @@ function AccountTab({
   // Plan limit check — checked here so the "Add" button can be disabled-adjacent.
   // The modal itself lives at Admin level (outside Layout) so position:fixed is
   // viewport-relative and not trapped inside the animate-fade-in containing block.
-  const maxLocations = PLAN_FEATURES[plan].maxLocations; // -1 = unlimited
+  const maxLocations = locationLimit;
   const atLocationLimit = maxLocations !== -1 && locations.length >= maxLocations;
+  const activeLocationSet = new Set(activeLocationIds);
+  const inactiveLocationSet = new Set(inactiveLocationIds);
+  const graceDeadlineLabel = locationGraceEndsAt
+    ? new Date(locationGraceEndsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : null;
 
   const handleAddLocationClick = () => {
+    if (billingUnavailable) {
+      toast.error("We couldn't verify your billing plan. Open Billing and refresh the subscription status first.");
+      return;
+    }
     if (atLocationLimit) {
       onLocationLimitReached();
     } else {
       onAddLocation();
+    }
+  };
+
+  const toggleActiveLocation = (locationId: string) => {
+    setSelectedActiveLocationIds((current) => {
+      if (current.includes(locationId)) {
+        return current.filter((id) => id !== locationId);
+      }
+      if (maxLocations !== -1 && current.length >= maxLocations) {
+        return current;
+      }
+      return [...current, locationId];
+    });
+  };
+
+  const saveActiveSelection = async () => {
+    if (maxLocations === -1) return;
+    if (selectedActiveLocationIds.length !== maxLocations) {
+      toast.error(`Choose exactly ${maxLocations} active location${maxLocations === 1 ? "" : "s"} to continue.`);
+      return;
+    }
+    try {
+      await onSaveActiveLocations(selectedActiveLocationIds);
+      toast.success("Active locations updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update active locations");
     }
   };
 
@@ -1525,16 +1576,91 @@ function AccountTab({
         </div>
         {/* Usage + plan line */}
         <div className="flex items-center gap-2 mb-3">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
-            {PLAN_LABELS[plan]}
+          <span className={cn(
+            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
+            billingUnavailable
+              ? "bg-muted text-muted-foreground"
+              : "bg-sage/10 text-sage",
+          )}>
+            {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
           </span>
           <span className={cn(
             "text-xs",
-            atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
+            billingUnavailable
+              ? "text-status-warn font-medium"
+              : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
           )}>
-            {locations.length} / {maxLocations === -1 ? "∞" : maxLocations} locations used
+            {billingUnavailable
+              ? "Plan status could not be verified."
+              : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations} locations used`}
           </span>
         </div>
+        {isLocationOverLimit && (
+          <div className="card-surface border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">Location limit grace period</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {isGraceActive
+                  ? `This account is over the ${PLAN_LABELS[plan]} location limit. Choose which ${maxLocations} location${maxLocations === 1 ? "" : "s"} stay active by ${graceDeadlineLabel}.`
+                  : `The 7-day grace period has ended. Only ${maxLocations} location${maxLocations === 1 ? "" : "s"} can stay operational on ${PLAN_LABELS[plan]}. Extra locations are now read-only until you upgrade or reduce usage.`}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Choose active locations
+              </p>
+              <div className="grid gap-2">
+                {locations.map((location) => (
+                  <label
+                    key={`active-select-${location.id}`}
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm",
+                      selectedActiveLocationIds.includes(location.id)
+                        ? "border-sage bg-sage/5"
+                        : "border-border bg-background",
+                    )}
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium text-foreground">{location.name}</span>
+                      {location.address ? (
+                        <span className="block text-xs text-muted-foreground truncate">{location.address}</span>
+                      ) : null}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={selectedActiveLocationIds.includes(location.id)}
+                      onChange={() => toggleActiveLocation(location.id)}
+                      disabled={
+                        !selectedActiveLocationIds.includes(location.id) &&
+                        maxLocations !== -1 &&
+                        selectedActiveLocationIds.length >= maxLocations
+                      }
+                      className="h-4 w-4 rounded border-border text-sage focus:ring-sage"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  {selectedActiveLocationIds.length} of {maxLocations} selected
+                </p>
+                <button
+                  type="button"
+                  onClick={saveActiveSelection}
+                  disabled={savingActiveLocations || selectedActiveLocationIds.length !== maxLocations}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
+                    savingActiveLocations || selectedActiveLocationIds.length !== maxLocations
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-sage text-primary-foreground hover:bg-sage-deep",
+                  )}
+                >
+                  {savingActiveLocations ? "Saving…" : "Save active locations"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="card-surface divide-y divide-border">
           {locations.map(loc => (
             <div key={loc.id} className="flex items-center gap-3 px-4 py-4">
@@ -1542,12 +1668,27 @@ function AccountTab({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">{loc.name}</p>
                 {loc.address && <p className="text-xs text-muted-foreground truncate">{loc.address}</p>}
+                {isLocationOverLimit && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {activeLocationSet.has(loc.id) ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
+                        {isGraceExpired ? "Active" : "Grace window"}
+                      </span>
+                    ) : null}
+                    {inactiveLocationSet.has(loc.id) ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium tracking-wide">
+                        Read-only
+                      </span>
+                    ) : null}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => onEditLocation(loc)}
+                disabled={inactiveLocationSet.has(loc.id)}
                 className="p-1.5 rounded-lg hover:bg-muted transition-colors"
               >
-                <Pencil size={14} className="text-muted-foreground" />
+                <Pencil size={14} className={cn("text-muted-foreground", inactiveLocationSet.has(loc.id) && "opacity-40")} />
               </button>
               <button
                 onClick={() => onDeleteLocation(loc.id)}
@@ -1937,13 +2078,24 @@ export default function Admin() {
   const fromKiosk = searchParams.get("from") === "kiosk";
   const userId = searchParams.get("userId");
   const { user, teamMember: authMember, setupError, retrySetup } = useAuth();
-  const { plan } = usePlan();
+  const { plan, billingUnavailable } = usePlan();
 
   // Data — from Supabase
-  const { data: locations = [] } = useLocations();
+  const {
+    data: locations = [],
+    allLocations = [],
+    inactiveLocations = [],
+    maxLocations,
+    isOverLimit,
+    graceEndsAt,
+    isGraceActive,
+    isGraceExpired,
+    effectiveActiveLocationIds,
+  } = useLocations();
   const { data: staffProfiles = [] } = useStaffProfiles();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: checklists = [] } = useChecklists();
+  const saveActiveLocationsMut = useSaveActiveLocationsSelection();
   const saveLocationMut = useSaveLocation();
   const deleteLocationMut = useDeleteLocation();
   const saveStaffMut = useSaveStaffProfile();
@@ -2233,7 +2385,9 @@ export default function Admin() {
 
           {activeTab === "account" && isOwner && (
             <AccountTab
-              locations={locations}
+              locations={allLocations}
+              activeLocationIds={effectiveActiveLocationIds}
+              inactiveLocationIds={inactiveLocations.map((location) => location.id)}
               staffProfiles={staffProfiles}
               teamMembers={teamMembers}
               checklists={checklists}
@@ -2245,10 +2399,18 @@ export default function Admin() {
               authMemberId={authMember?.id}
               authUserEmail={user?.email}
               authUserName={authMember?.name}
+              billingUnavailable={billingUnavailable}
+              locationLimit={maxLocations}
+              isLocationOverLimit={isOverLimit}
+              locationGraceEndsAt={graceEndsAt}
+              isGraceActive={isGraceActive}
+              isGraceExpired={isGraceExpired}
               onAddLocation={() => setLocationModal("new")}
               onLocationLimitReached={() => setShowLocationLimitModal(true)}
               onEditLocation={loc => setLocationModal(loc)}
               onDeleteLocation={deleteLocation}
+              onSaveActiveLocations={locationIds => saveActiveLocationsMut.mutateAsync(locationIds)}
+              savingActiveLocations={saveActiveLocationsMut.isPending}
               onInviteMember={() => setMemberModal("new")}
               onEditMember={m => setMemberModal(m)}
               onDeleteMember={deleteMember}

@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
 
 const mockFrom = vi.fn();
+const mockUsePlan = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -25,6 +26,10 @@ vi.mock("@/contexts/AuthContext", () => ({
   }),
 }));
 
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => mockUsePlan(),
+}));
+
 function makeWrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return function wrapper({ children }: { children: ReactNode }) {
@@ -33,6 +38,10 @@ function makeWrapper() {
 }
 
 beforeEach(() => {
+  mockUsePlan.mockReturnValue({
+    features: { maxLocations: 10, maxStaff: 200, maxChecklists: -1, aiBuilder: true, fileConvert: true, advancedReporting: true, exportPdf: true, exportCsv: true, multiLocation: true, prioritySupport: false },
+    org: { location_grace_period_ends_at: null, active_location_ids: [] },
+  });
   mockFrom.mockReturnValue({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -59,6 +68,64 @@ describe("useLocations", () => {
     const { result } = renderHook(() => useLocations(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockFrom).toHaveBeenCalledWith("locations");
+  });
+
+  it("keeps all locations active while the grace period is still running", async () => {
+    mockUsePlan.mockReturnValue({
+      features: { maxLocations: 1, maxStaff: 15, maxChecklists: 10, aiBuilder: false, fileConvert: false, advancedReporting: false, exportPdf: true, exportCsv: false, multiLocation: false, prioritySupport: false },
+      org: {
+        location_grace_period_ends_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        active_location_ids: [],
+      },
+    });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          { id: "l1", name: "A", created_at: "2026-04-01T10:00:00Z" },
+          { id: "l2", name: "B", created_at: "2026-04-02T10:00:00Z" },
+        ],
+        error: null,
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      delete: vi.fn().mockReturnThis(),
+    });
+
+    const { result } = renderHook(() => useLocations(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data?.map((location) => location.id)).toEqual(["l1", "l2"]);
+    expect(result.current.inactiveLocations).toEqual([]);
+    expect(result.current.isGraceActive).toBe(true);
+  });
+
+  it("filters to the saved active locations after the grace period expires", async () => {
+    mockUsePlan.mockReturnValue({
+      features: { maxLocations: 1, maxStaff: 15, maxChecklists: 10, aiBuilder: false, fileConvert: false, advancedReporting: false, exportPdf: true, exportCsv: false, multiLocation: false, prioritySupport: false },
+      org: {
+        location_grace_period_ends_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        active_location_ids: ["l2"],
+      },
+    });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          { id: "l1", name: "A", created_at: "2026-04-01T10:00:00Z" },
+          { id: "l2", name: "B", created_at: "2026-04-02T10:00:00Z" },
+        ],
+        error: null,
+      }),
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+      delete: vi.fn().mockReturnThis(),
+    });
+
+    const { result } = renderHook(() => useLocations(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.data?.map((location) => location.id)).toEqual(["l2"]);
+    expect(result.current.inactiveLocations.map((location) => location.id)).toEqual(["l1"]);
+    expect(result.current.isGraceExpired).toBe(true);
   });
 });
 
