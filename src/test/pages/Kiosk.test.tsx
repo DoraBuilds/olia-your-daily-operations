@@ -553,6 +553,66 @@ describe("Kiosk — Grid Screen", () => {
     }
   });
 
+  it("falls back to admin PIN validation when no staff PIN matches", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "ck-runner-test",
+              title: "Runner Test Checklist",
+              location_id: "00000000-0000-0000-0000-000000000011",
+              time_of_day: "anytime",
+              due_time: null,
+              sections: [{ name: "Main", questions: [] }],
+            },
+          ],
+          error: null,
+        });
+      }
+
+      if (fn === "validate_staff_pin") {
+        return Promise.resolve({ data: [], error: null });
+      }
+
+      if (fn === "validate_admin_pin") {
+        return Promise.resolve({
+          data: [
+            {
+              id: "tm-1",
+              name: "Sarah Owner",
+              organization_id: "org-1",
+            },
+          ],
+          error: null,
+        });
+      }
+
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    await renderGridScreen();
+    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
+    expect(checklistBtn).not.toBeNull();
+    fireEvent.click(checklistBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Insert PIN")).toBeInTheDocument();
+    });
+
+    for (const digit of ["1", "2", "3", "4"]) {
+      fireEvent.click(screen.getByRole("button", { name: digit }));
+    }
+
+    await waitFor(() => {
+      expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
+        p_pin: "1234",
+        p_location_id: "00000000-0000-0000-0000-000000000011",
+      });
+    });
+  });
+
   it("lets staff move past an optional checkbox question in the runner", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {

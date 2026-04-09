@@ -544,7 +544,7 @@ function PinEntryModal({
 }: {
   checklist: KioskChecklist;
   locationId: string;
-  onSuccess: (staffId: string, staffName: string, orgId: string) => void;
+  onSuccess: (staffId: string | null, staffName: string, orgId: string) => void;
   onCancel: () => void;
 }) {
   const [pin, setPin] = useState("");
@@ -584,10 +584,10 @@ function PinEntryModal({
       p_pin: enteredPin,
       p_location_id: locationId,
     });
-    setValidating(false);
 
     if (!rpcError && data && data.length > 0) {
       const staff = data[0];
+      setValidating(false);
       onSuccess(staff.id, `${staff.first_name} ${staff.last_name}`, staff.organization_id ?? "");
       return;
     }
@@ -595,6 +595,25 @@ function PinEntryModal({
     // Distinguish network / server errors from a simple wrong PIN so we don't
     // burn the user's attempt allowance on connectivity issues.
     if (rpcError) {
+      setValidating(false);
+      setPin("");
+      setError("Connection error. Check your network and try again.");
+      return;
+    }
+
+    const { data: adminData, error: adminRpcError } = await supabase.rpc("validate_admin_pin", {
+      p_pin: enteredPin,
+      p_location_id: locationId,
+    });
+    setValidating(false);
+
+    if (!adminRpcError && adminData && adminData.length > 0) {
+      const admin = adminData[0];
+      onSuccess(null, admin.name, admin.organization_id ?? "");
+      return;
+    }
+
+    if (adminRpcError) {
       setPin("");
       setError("Connection error. Check your network and try again.");
       return;
