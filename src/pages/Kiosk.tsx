@@ -276,12 +276,26 @@ function useInactivityTimer(active: boolean, onTimeout: () => void) {
   return { secondsLeft, cancelCountdown: () => cancelFnRef.current() };
 }
 
-function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationName: string) => void }) {
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+function KioskSetupScreen({
+  onSetup,
+  presetLocations,
+}: {
+  onSetup: (locationId: string, locationName: string) => void;
+  presetLocations?: { id: string; name: string }[];
+}) {
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>(presetLocations ?? []);
   const [selectedId, setSelectedId] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!presetLocations);
 
   useEffect(() => {
+    if (!presetLocations) return;
+    setLocations(presetLocations);
+    setSelectedId((current) => current || presetLocations[0]?.id || "");
+    setLoading(false);
+  }, [presetLocations]);
+
+  useEffect(() => {
+    if (presetLocations) return;
     supabase
       .from("locations")
       .select("id, name")
@@ -291,7 +305,7 @@ function KioskSetupScreen({ onSetup }: { onSetup: (locationId: string, locationN
         setSelectedId(data?.[0]?.id ?? "");
         setLoading(false);
       });
-  }, []);
+  }, [presetLocations]);
 
   const handleLaunch = () => {
     const loc = locations.find(l => l.id === selectedId);
@@ -2066,7 +2080,12 @@ export default function Kiosk() {
   };
 
   // ── Setup screen ──────────────────────────────────────────────────────────
-  if (!locationId) return <KioskSetupScreen onSetup={handleSetup} />;
+  if (!locationId) {
+    const setupLocations = user?.id
+      ? allLocations.map((location) => ({ id: location.id, name: location.name }))
+      : undefined;
+    return <KioskSetupScreen onSetup={handleSetup} presetLocations={setupLocations} />;
+  }
 
   // Split checklists by state — completed items leave Due/Upcoming immediately
   const dueChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "due" && !completedIds.has(c.id));

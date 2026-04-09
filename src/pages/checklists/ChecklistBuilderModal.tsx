@@ -17,6 +17,7 @@ import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
   QuestionDef, LogicComparator, LogicTrigger, LogicTriggerType, LogicRule, ResponseType
 } from "./types";
+import { parseScheduleType, SCHEDULE_LABELS } from "./types";
 import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
@@ -40,6 +41,7 @@ interface ChecklistBuilderModalProps {
   initialTitle?: string;
   initialSections?: SectionDef[];
   initialLocationIds?: string[] | null;
+  initialSchedule?: string | null;
   initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
   initialVisibilityUntil?: string | null;
@@ -51,7 +53,7 @@ interface ChecklistBuilderModalProps {
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialSections, initialLocationIds,
-  initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
+  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
   const { data: dbLocations = [] } = useLocations();
@@ -67,7 +69,7 @@ export function ChecklistBuilderModal({
   const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
   const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
   const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
-  const [schedule, setSchedule] = useState<ScheduleType>("none");
+  const [schedule, setSchedule] = useState<ScheduleType>(() => parseScheduleType(initialSchedule));
   const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>({
     interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13,
   });
@@ -93,12 +95,12 @@ export function ChecklistBuilderModal({
   const [instructionPickerQuestionId, setInstructionPickerQuestionId] = useState<string | null>(null);
 
   const SCHEDULE_OPTIONS: { key: ScheduleType; label: string }[] = [
-    { key: "none", label: "Once" },
-    { key: "daily", label: "Every day" },
-    { key: "weekday", label: "Every weekday" },
-    { key: "weekly", label: "Every week" },
-    { key: "monthly", label: "Every month" },
-    { key: "yearly", label: "Every year" },
+    { key: "none", label: SCHEDULE_LABELS.none },
+    { key: "daily", label: SCHEDULE_LABELS.daily },
+    { key: "weekday", label: SCHEDULE_LABELS.weekday },
+    { key: "weekly", label: SCHEDULE_LABELS.weekly },
+    { key: "monthly", label: SCHEDULE_LABELS.monthly },
+    { key: "yearly", label: SCHEDULE_LABELS.yearly },
     { key: "custom", label: "Custom" },
   ];
 
@@ -165,9 +167,9 @@ export function ChecklistBuilderModal({
 
   const handleCreate = () => {
     if (!title.trim()) return;
-    const schedLabel = schedule === "none" ? undefined
+    const savedSchedule = schedule === "none" ? null
       : schedule === "custom" ? `Every ${customRecurrence.interval} ${customRecurrence.unit}(s)`
-      : SCHEDULE_OPTIONS.find(s => s.key === schedule)?.label;
+      : schedule;
 
     // Collect all "require_action" logic triggers → write to alerts table
     sections.forEach(section => {
@@ -200,7 +202,7 @@ export function ChecklistBuilderModal({
       title: title.trim(),
       description: description.trim() || undefined,
       questionsCount: totalQuestions,
-      schedule: schedLabel,
+      schedule: savedSchedule,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       sections: sectionsWithPersonChoices,
       time_of_day: "anytime",         // visibility is handled with the explicit window below

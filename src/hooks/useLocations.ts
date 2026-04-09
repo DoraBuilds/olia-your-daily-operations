@@ -9,16 +9,19 @@ export function useLocations() {
   const { teamMember } = useAuth();
   const { features, org } = usePlan();
   const query = useQuery({
-    queryKey: ["locations", teamMember?.organization_id ?? null],
+    queryKey: ["locations", teamMember?.id ?? null, teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("locations")
         .select(
-          "id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
+          "id, organization_id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
         )
         .order("name");
       if (error) throw error;
-      return (data ?? []) as Location[];
+      const scoped = (data ?? []).filter(
+        (location: any) => location.organization_id === teamMember?.organization_id,
+      );
+      return scoped.map(({ organization_id: _organizationId, ...location }: any) => location) as Location[];
     },
     enabled: !!teamMember?.organization_id,
   });
