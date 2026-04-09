@@ -4,6 +4,7 @@ import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, C
 import { cn } from "@/lib/utils";
 import { exportChecklistTemplatePdf } from "@/lib/export-utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
+import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { usePlan } from "@/hooks/usePlan";
@@ -72,7 +73,7 @@ export function ChecklistsTab() {
   const downloadChecklistPdf = (cl: typeof dbChecklists[0]) =>
     exportChecklistTemplatePdf({
       title: cl.title,
-      schedule: cl.schedule ? String(cl.schedule) : null,
+      schedule: getScheduleLabel(cl.schedule ? String(cl.schedule) : null),
       timeOfDay: cl.time_of_day ?? null,
       sections: (cl.sections as SectionDef[] ?? []).map(section => ({
         name: section.name,
@@ -226,6 +227,7 @@ export function ChecklistsTab() {
         initialTitle={prefillTitle}
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
+        initialSchedule={editingChecklist?.schedule ?? null}
         initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
@@ -341,7 +343,7 @@ export function ChecklistsTab() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{cl.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {cl.questionsCount} questions{cl.schedule ? ` · ${cl.schedule}` : ""}
+                    {cl.questionsCount} questions{cl.schedule ? ` · ${getScheduleLabel(cl.schedule)}` : ""}
                   </p>
                 </div>
               </button>

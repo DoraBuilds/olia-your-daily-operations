@@ -76,6 +76,7 @@ describe("useTeamMembers", () => {
         data: [
           {
             id: "tm-2",
+            organization_id: "org-1",
             name: "John Doe",
             email: "john@test.com",
             role: "Manager",

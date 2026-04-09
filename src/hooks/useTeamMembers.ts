@@ -6,21 +6,25 @@ import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
 import { hashPin } from "@/hooks/useStaffProfiles";
 
 export function useTeamMembers() {
+  const { teamMember } = useAuth();
   return useQuery({
-    queryKey: ["team_members"],
+    queryKey: ["team_members", teamMember?.id ?? null, teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, name, email, role, location_ids, permissions")
+        .select("id, organization_id, name, email, role, location_ids, permissions")
         .order("name");
       if (error) throw error;
-      return ((data ?? []) as any[]).map((m) => ({
+      return ((data ?? []) as any[])
+        .filter((member) => member.organization_id === teamMember?.organization_id)
+        .map((m) => ({
         ...m,
         initials: getInitials(m.name),
         permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
         location_ids: m.location_ids ?? [],
       })) as TeamMember[];
     },
+    enabled: !!teamMember?.organization_id,
   });
 }
 

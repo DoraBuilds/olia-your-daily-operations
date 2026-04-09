@@ -83,8 +83,8 @@ describe("useLocations", () => {
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({
         data: [
-          { id: "l1", name: "A", created_at: "2026-04-01T10:00:00Z" },
-          { id: "l2", name: "B", created_at: "2026-04-02T10:00:00Z" },
+          { id: "l1", organization_id: "org-1", name: "A", created_at: "2026-04-01T10:00:00Z" },
+          { id: "l2", organization_id: "org-1", name: "B", created_at: "2026-04-02T10:00:00Z" },
         ],
         error: null,
       }),
@@ -112,8 +112,8 @@ describe("useLocations", () => {
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({
         data: [
-          { id: "l1", name: "A", created_at: "2026-04-01T10:00:00Z" },
-          { id: "l2", name: "B", created_at: "2026-04-02T10:00:00Z" },
+          { id: "l1", organization_id: "org-1", name: "A", created_at: "2026-04-01T10:00:00Z" },
+          { id: "l2", organization_id: "org-1", name: "B", created_at: "2026-04-02T10:00:00Z" },
         ],
         error: null,
       }),

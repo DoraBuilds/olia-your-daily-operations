@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
+import { getScheduleLabel } from "./types";
 import { RESPONSE_TYPES } from "./data";
 
 function formatTime12h(time24: string) {
@@ -159,7 +160,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
               {checklist.schedule && (
                 <>
                   <span className="text-muted-foreground/40 text-xs">·</span>
-                  <span className="text-xs text-muted-foreground">{checklist.schedule}</span>
+                  <span className="text-xs text-muted-foreground">{getScheduleLabel(checklist.schedule)}</span>
                 </>
               )}
               {checklist.time_of_day && checklist.time_of_day !== "anytime" && (

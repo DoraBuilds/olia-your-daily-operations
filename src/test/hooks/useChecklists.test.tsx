@@ -160,6 +160,7 @@ describe("useChecklists", () => {
     const mockChecklists = [
       {
         id: "cl-1",
+        organization_id: "org1",
         title: "Opening Checklist",
         folder_id: null,
         location_id: null,

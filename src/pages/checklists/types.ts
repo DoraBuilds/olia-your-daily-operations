@@ -105,6 +105,44 @@ export interface SectionDef {
 
 export type ScheduleType = "daily" | "weekday" | "weekly" | "monthly" | "yearly" | "custom" | "none";
 
+export const SCHEDULE_LABELS: Record<Exclude<ScheduleType, "custom">, string> = {
+  none: "Once",
+  daily: "Every day",
+  weekday: "Every weekday",
+  weekly: "Every week",
+  monthly: "Every month",
+  yearly: "Every year",
+};
+
+export function parseScheduleType(schedule?: string | null): ScheduleType {
+  if (!schedule) return "none";
+  const normalized = schedule.trim().toLowerCase();
+  if (
+    normalized === "daily"
+    || normalized === "weekday"
+    || normalized === "weekly"
+    || normalized === "monthly"
+    || normalized === "yearly"
+    || normalized === "none"
+  ) {
+    return normalized;
+  }
+  if (normalized === "once") return "none";
+  if (normalized === "every day") return "daily";
+  if (normalized === "every weekday") return "weekday";
+  if (normalized === "every week") return "weekly";
+  if (normalized === "every month") return "monthly";
+  if (normalized === "every year") return "yearly";
+  return normalized.startsWith("every ") ? "custom" : "none";
+}
+
+export function getScheduleLabel(schedule?: string | null): string | null {
+  if (!schedule) return null;
+  const parsed = parseScheduleType(schedule);
+  if (parsed === "custom") return schedule;
+  return SCHEDULE_LABELS[parsed];
+}
+
 export interface CustomRecurrence {
   interval: number;
   unit: "day" | "week" | "month" | "year";

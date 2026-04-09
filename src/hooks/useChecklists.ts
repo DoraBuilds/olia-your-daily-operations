@@ -11,6 +11,7 @@ export interface FolderItem {
 
 export interface ChecklistItem {
   id: string;
+  organization_id?: string;
   title: string;
   folder_id: string | null;
   location_id: string | null;
@@ -77,14 +78,16 @@ export function useDeleteFolder() {
 export function useChecklists() {
   const { teamMember } = useAuth();
   return useQuery({
-    queryKey: ["checklists", teamMember?.organization_id ?? null],
+    queryKey: ["checklists", teamMember?.id ?? null, teamMember?.organization_id ?? null],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, title, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
+        .select("id, organization_id, title, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
         .order("title");
       if (error) throw error;
-      return (data ?? []) as ChecklistItem[];
+      return ((data ?? []) as ChecklistItem[]).filter(
+        (checklist) => checklist.organization_id === teamMember?.organization_id,
+      );
     },
     enabled: !!teamMember?.organization_id,
   });
@@ -95,6 +98,25 @@ export function useSaveChecklist() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (checklist: Partial<ChecklistItem> & { id?: string }) => {
+      const candidateLocationIds = [
+        ...(checklist.location_id ? [checklist.location_id] : []),
+        ...((checklist.location_ids ?? []).filter(Boolean)),
+      ];
+      const uniqueLocationIds = [...new Set(candidateLocationIds)];
+      if (uniqueLocationIds.length > 0) {
+        const { data: accessibleLocations, error: locationError } = await supabase
+          .from("locations")
+          .select("id");
+        if (locationError) throw locationError;
+        const accessibleIds = new Set((accessibleLocations ?? []).map((location) => location.id));
+        const invalidLocationId = uniqueLocationIds.find((id) => !accessibleIds.has(id));
+        if (invalidLocationId) {
+          throw new Error(
+            "This checklist includes a location that does not belong to your current account. Refresh the page and select locations again.",
+          );
+        }
+      }
+
       const { error } = await supabase.from("checklists").upsert({
         id: checklist.id || undefined,
         organization_id: teamMember!.organization_id,
