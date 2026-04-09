@@ -129,6 +129,11 @@ function clearKioskLocationSelection() {
   localStorage.removeItem("kiosk_location_name");
 }
 
+function clearKioskOwnership() {
+  localStorage.removeItem("kiosk_owner_user_id");
+  localStorage.removeItem("kiosk_owner_org_id");
+}
+
 async function fetchKioskChecklists(locationId: string) {
   const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
   if (error) throw error;
@@ -1714,31 +1719,12 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const [searchParams] = useSearchParams();
+  const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
   const { allLocations = [], isFetched: locationsFetched } = useLocations();
 
-  const [locationId, setLocationId] = useState<string | null>(() => {
-    const url = searchParams.get("locationId");
-    if (url) { _kioskLocationId = url; return url; }
-    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
-    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
-    const stored = localStorage.getItem("kiosk_location_id");
-    if (stored && storedOwnerId && storedOwnerOrgId) { _kioskLocationId = stored; return stored; }
-    if (stored && (!storedOwnerId || !storedOwnerOrgId)) {
-      clearKioskLocationSelection();
-    }
-    _kioskLocationId = null;
-    return null;
-  });
-  const [locationName, setLocationName] = useState<string>(() => {
-    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
-    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
-    if (!storedOwnerId || !storedOwnerOrgId) {
-      _kioskLocationName = null;
-      return "";
-    }
-    return localStorage.getItem("kiosk_location_name") ?? _kioskLocationName ?? "";
-  });
+  const [locationId, setLocationId] = useState<string | null>(null);
+  const [locationName, setLocationName] = useState<string>("");
   const [screen, setScreen] = useState<KioskScreen>("grid");
   const [selectedChecklist, setSelectedChecklist] = useState<KioskChecklist | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
@@ -1763,8 +1749,7 @@ export default function Kiosk() {
     if (!user?.id) {
       if (storedOwnerId || hasStoredLocation) {
         clearKioskLocationSelection();
-        localStorage.removeItem(ownerKey);
-        localStorage.removeItem(ownerOrgKey);
+        clearKioskOwnership();
         setLocationId(null);
         setLocationName("");
         setScreen("grid");
@@ -1779,8 +1764,7 @@ export default function Kiosk() {
       || (storedOwnerOrgId && currentOrgId && storedOwnerOrgId !== currentOrgId)
     ) {
       clearKioskLocationSelection();
-      localStorage.removeItem(ownerKey);
-      localStorage.removeItem(ownerOrgKey);
+      clearKioskOwnership();
       setLocationId(null);
       setLocationName("");
       setScreen("grid");
@@ -1794,11 +1778,78 @@ export default function Kiosk() {
   }, [loading, teamMember?.organization_id, user?.id]);
 
   useEffect(() => {
+    if (loading || !user?.id || !teamMember?.organization_id || !locationsFetched) return;
+
+    if (urlLocationId) {
+      const matchedUrlLocation = allLocations.find((location) => location.id === urlLocationId);
+      if (!matchedUrlLocation) {
+        clearKioskLocationSelection();
+        clearKioskOwnership();
+        setLocationId(null);
+        setLocationName("");
+        setKioskChecklists([]);
+        return;
+      }
+
+      _kioskLocationId = matchedUrlLocation.id;
+      _kioskLocationName = matchedUrlLocation.name;
+      localStorage.setItem("kiosk_location_id", matchedUrlLocation.id);
+      localStorage.setItem("kiosk_location_name", matchedUrlLocation.name);
+      localStorage.setItem("kiosk_owner_user_id", user.id);
+      localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
+      setLocationId(matchedUrlLocation.id);
+      setLocationName(matchedUrlLocation.name);
+      return;
+    }
+
+    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
+    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
+    const storedLocationId = localStorage.getItem("kiosk_location_id");
+
+    if (
+      !storedLocationId ||
+      storedOwnerId !== user.id ||
+      storedOwnerOrgId !== teamMember.organization_id
+    ) {
+      if (locationId !== null || locationName !== "") {
+        setLocationId(null);
+        setLocationName("");
+      }
+      return;
+    }
+
+    const matchedStoredLocation = allLocations.find((location) => location.id === storedLocationId);
+    if (!matchedStoredLocation) {
+      clearKioskLocationSelection();
+      clearKioskOwnership();
+      setLocationId(null);
+      setLocationName("");
+      setKioskChecklists([]);
+      return;
+    }
+
+    if (locationId !== matchedStoredLocation.id || locationName !== matchedStoredLocation.name) {
+      _kioskLocationId = matchedStoredLocation.id;
+      _kioskLocationName = matchedStoredLocation.name;
+      setLocationId(matchedStoredLocation.id);
+      setLocationName(matchedStoredLocation.name);
+    }
+  }, [
+    allLocations,
+    loading,
+    locationsFetched,
+    teamMember?.organization_id,
+    urlLocationId,
+    user?.id,
+  ]);
+
+  useEffect(() => {
     if (!locationId || !teamMember?.organization_id || !locationsFetched) return;
 
     const locationStillAccessible = allLocations.some((location) => location.id === locationId);
     if (!locationStillAccessible) {
       clearKioskLocationSelection();
+      clearKioskOwnership();
       setLocationId(null);
       setLocationName("");
       setScreen("grid");
@@ -1885,6 +1936,25 @@ export default function Kiosk() {
 
   useEffect(() => {
     if (loading || !user?.id || !locationId) return;
+    const matchedLocation = allLocations.find((location) => location.id === locationId);
+    if (matchedLocation) {
+      if (matchedLocation.name !== locationName) {
+        _kioskLocationName = matchedLocation.name;
+        localStorage.setItem("kiosk_location_name", matchedLocation.name);
+        setLocationName(matchedLocation.name);
+      }
+      return;
+    }
+
+    clearKioskLocationSelection();
+    clearKioskOwnership();
+    setLocationId(null);
+    setLocationName("");
+    setKioskChecklists([]);
+  }, [allLocations, loading, locationId, locationName, user?.id]);
+
+  useEffect(() => {
+    if (loading || user?.id || !locationId) return;
     let cancelled = false;
 
     supabase
@@ -1911,7 +1981,7 @@ export default function Kiosk() {
     return () => {
       cancelled = true;
     };
-  }, [locationId, locationName]);
+  }, [loading, locationId, locationName, user?.id]);
 
   // Drain any queued submissions from previous offline sessions.
   // Legacy queue entries may contain location_id values that reference mock/test
@@ -1933,6 +2003,10 @@ export default function Kiosk() {
   // grid fresh when the kiosk regains focus after checklist/admin edits.
   useEffect(() => {
     if (!locationId) return;
+    if (user?.id && teamMember?.organization_id && locationsFetched) {
+      const locationStillAccessible = allLocations.some((location) => location.id === locationId);
+      if (!locationStillAccessible) return;
+    }
     let cancelled = false;
 
     const load = async (showSpinner = false) => {
@@ -1973,7 +2047,7 @@ export default function Kiosk() {
       window.removeEventListener("focus", handleFocusRefresh);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [locationId]);
+  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id]);
 
   const handleSetup = (id: string, name: string) => {
     _kioskLocationId = id;

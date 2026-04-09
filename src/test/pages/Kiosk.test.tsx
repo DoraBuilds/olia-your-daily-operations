@@ -377,6 +377,23 @@ describe("Kiosk — Grid Screen", () => {
     expect(localStorage.getItem("kiosk_location_name")).toBeNull();
   });
 
+  it("does not restore a stored kiosk location from another organization", async () => {
+    localStorage.setItem("kiosk_location_id", "foreign-location");
+    localStorage.setItem("kiosk_location_name", "Little Fern Bakery");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "foreign-org");
+
+    renderWithProviders(<Kiosk />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Select a location to launch/i)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Little Fern Bakery")).not.toBeInTheDocument();
+    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+    expect(localStorage.getItem("kiosk_location_name")).toBeNull();
+  });
+
   it("grid screen shows checklist cards for Terrace location", async () => {
     await renderGridScreen();
     // The RPC mock returns "Table Setup Check" for the Terrace location.
