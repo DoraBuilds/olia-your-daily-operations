@@ -218,6 +218,22 @@ describe("Signup page", () => {
     }
   });
 
+  it("keeps signup on the code step when email send is rate-limited", async () => {
+    mockSignInWithOtp.mockResolvedValue({
+      data: {},
+      error: { message: "email rate limit exceeded" },
+    });
+
+    render(<Signup />, { wrapper });
+    fillValidForm();
+    fireEvent.click(screen.getByText("Create account"));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Enter the code from your email/i)).toBeInTheDocument();
+      expect(screen.getByText(/email rate limit exceeded/i)).toBeInTheDocument();
+    });
+  });
+
   // ── Code screen ─────────────────────────────────────────────────────────────
 
   it("shows code-entry screen when signUp returns no session", async () => {

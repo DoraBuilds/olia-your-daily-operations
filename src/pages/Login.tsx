@@ -8,6 +8,11 @@ import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
 type Step = "email" | "code";
 
+function isEmailRateLimited(message: string | null | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("rate limit") || normalized.includes("over_email_send_rate_limit");
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -44,6 +49,10 @@ export default function Login() {
     setLoading(false);
 
     if (authError) {
+      if (isEmailRateLimited(authError.message)) {
+        setStep("code");
+        setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
+      }
       setError(authError.message);
       return;
     }
@@ -67,6 +76,10 @@ export default function Login() {
     setLoading(false);
 
     if (authError) {
+      if (isEmailRateLimited(authError.message)) {
+        setStep("code");
+        setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
+      }
       setError(authError.message);
       return;
     }
@@ -153,6 +166,21 @@ export default function Login() {
 
           {error && (
             <p className="text-xs text-status-error">{error}</p>
+          )}
+
+          {step === "email" && (
+            <button
+              type="button"
+              onClick={() => {
+                setStep("code");
+                setError(null);
+                setInfo(emailValue ? `Enter the most recent code sent to ${emailValue}.` : "Enter the most recent code sent to your email.");
+              }}
+              disabled={!emailValue || loading}
+              className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
+            >
+              I already have a code
+            </button>
           )}
 
           <button

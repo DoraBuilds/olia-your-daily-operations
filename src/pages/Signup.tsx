@@ -8,6 +8,11 @@ import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 
 type Step = "form" | "code";
 
+function isEmailRateLimited(message: string | null | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("rate limit") || normalized.includes("over_email_send_rate_limit");
+}
+
 export default function Signup() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -68,6 +73,9 @@ export default function Signup() {
 
     if (authError) {
       localStorage.removeItem("olia_pending_onboarding");
+      if (isEmailRateLimited(authError.message)) {
+        setStep("code");
+      }
       setError(authError.message);
       return;
     }
@@ -124,6 +132,9 @@ export default function Signup() {
     setResending(false);
 
     if (authError) {
+      if (isEmailRateLimited(authError.message)) {
+        setStep("code");
+      }
       setError(authError.message);
     }
   };

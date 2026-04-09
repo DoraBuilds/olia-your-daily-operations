@@ -420,8 +420,13 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
   };
 
   const handlePinRecovery = async () => {
-    await supabase.auth.signOut();
     onClose();
+    if (teamMember) {
+      navigate("/admin/account?from=kiosk&focus=pin");
+      return;
+    }
+
+    await supabase.auth.signOut();
     navigate("/login?reason=reset-pin");
   };
 
@@ -476,7 +481,7 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
             onClick={() => { void handlePinRecovery(); }}
             className="text-sage font-medium hover:underline"
           >
-            Log out and sign in again
+            {teamMember ? "Reset it in Admin" : "Log out and sign in again"}
           </button>
         </p>
       </div>

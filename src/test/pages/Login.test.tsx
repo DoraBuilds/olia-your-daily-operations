@@ -117,6 +117,38 @@ describe("Login page", () => {
     expect(screen.getByRole("link", { name: /Create one/i })).toHaveAttribute("href", "/signup");
   });
 
+  it("lets users switch to code entry if they already have a code", async () => {
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
+      target: { value: "owner@olia.app" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /I already have a code/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Enter the code from your email/i)).toBeInTheDocument();
+      expect(screen.getByText(/most recent code sent to owner@olia.app/i)).toBeInTheDocument();
+    });
+  });
+
+  it("keeps users on the code step when the email send is rate-limited", async () => {
+    mockSignInWithOtp.mockResolvedValue({
+      data: {},
+      error: { message: "email rate limit exceeded" },
+    });
+
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
+      target: { value: "owner@olia.app" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Enter the code from your email/i)).toBeInTheDocument();
+      expect(screen.getByText(/Too many email attempts/i)).toBeInTheDocument();
+    });
+  });
+
   it("redirects authenticated users to admin", () => {
     mockUseAuth.mockReturnValue({ user: { id: "u1" }, loading: false });
     renderPage();
