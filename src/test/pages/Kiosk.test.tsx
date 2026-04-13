@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor, act } from "@testing-library/react";
-import Kiosk from "@/pages/Kiosk";
+import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { renderWithProviders } from "../test-utils";
 
 const mockNavigate = vi.fn();
@@ -156,6 +156,19 @@ async function renderGridScreen() {
   localStorage.setItem("kiosk_owner_user_id", "u1");
   localStorage.setItem("kiosk_owner_org_id", "org-1");
   renderWithProviders(<Kiosk />);
+
+  if (!screen.queryByText(/What's on the agenda/i)) {
+    await waitFor(() => {
+      expect(document.getElementById("location-select")).not.toBeNull();
+    });
+    const launchBtn = document.getElementById("launch-kiosk-btn") as HTMLButtonElement | null;
+    if (launchBtn) {
+      await act(async () => {
+        fireEvent.click(launchBtn);
+      });
+    }
+  }
+
   await screen.findByText(/What's on the agenda/i);
 }
 
@@ -847,6 +860,56 @@ describe("Kiosk — Checklist Runner", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /acknowledge/i })).toBeInTheDocument();
+    });
+  });
+
+  it("shows a next CTA for required multi-select multiple choice after an answer is selected", async () => {
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={{
+          id: "ck-multi",
+          title: "Multi Select Checklist",
+          location_id: "00000000-0000-0000-0000-000000000011",
+          time_of_day: "anytime",
+          due_time: null,
+          visibility_from: null,
+          visibility_until: null,
+          questions: [
+            {
+              id: "q-required-multi",
+              text: "Select all that apply",
+              type: "multiple_choice",
+              required: true,
+              selectionMode: "multiple",
+              options: ["A", "B", "C"],
+            },
+            {
+              id: "q-followup",
+              text: "Next question",
+              type: "text",
+              required: true,
+            },
+          ],
+        }}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const nextBtn = screen.getAllByRole("button", { name: /next/i })[0];
+    expect(nextBtn).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "A" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: /next/i })[0]).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /next/i })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Next question")).toBeInTheDocument();
     });
   });
 

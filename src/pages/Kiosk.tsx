@@ -1166,7 +1166,7 @@ function QuestionInput({
 // ─── ChecklistRunner (Screen 3) ───────────────────────────────────────────────
 // Shows ALL questions in a single scrollable view, grouped by sections.
 // Answers are persisted to localStorage so progress survives interruptions.
-function ChecklistRunner({
+export function ChecklistRunner({
   checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
 }: {
   checklist: KioskChecklist;
@@ -1367,8 +1367,10 @@ function ChecklistRunner({
             q.type === "number" ||
             q.type === "datetime" ||
             q.type === "media" ||
-            (!q.required && (q.type === "checkbox" || q.type === "multiple_choice"))
+            (!q.required && q.type === "checkbox") ||
+            (q.type === "multiple_choice" && (q.selectionMode === "multiple" || !q.required))
           );
+          const nextBtnDisabled = q.type === "multiple_choice" && q.selectionMode === "multiple" && q.required && !isAnswered;
 
           return (
             <Fragment key={q.id}>
@@ -1428,7 +1430,13 @@ function ChecklistRunner({
                     <div className={cn("mt-3 flex justify-end", !isInstruction && "ml-7")}>
                       <button
                         onClick={advanceQuestion}
-                        className="px-5 py-2 text-xs font-bold tracking-wide rounded-xl bg-sage text-white hover:bg-sage-deep transition-colors active:scale-[0.97]"
+                        disabled={nextBtnDisabled}
+                        className={cn(
+                          "px-5 py-2 text-xs font-bold tracking-wide rounded-xl transition-colors",
+                          nextBtnDisabled
+                            ? "bg-muted text-muted-foreground cursor-not-allowed"
+                            : "bg-sage text-white hover:bg-sage-deep active:scale-[0.97]",
+                        )}
                       >
                         {isInstruction ? "Acknowledge" : "Next →"}
                       </button>
