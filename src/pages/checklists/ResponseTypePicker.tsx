@@ -11,12 +11,13 @@ function getAnchoredStyle(anchorRect: ResponseTypePickerAnchorRect): CSSProperti
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
   const padding = 16;
   const panelWidth = Math.min(380, viewportWidth - padding * 2);
-  const panelMaxHeight = Math.min(460, viewportHeight - padding * 2);
-  const preferredTop = anchorRect.bottom + 12;
-  const fitsBelow = preferredTop + panelMaxHeight <= viewportHeight - padding;
-  const top = fitsBelow
-    ? preferredTop
-    : Math.max(padding, anchorRect.top - panelMaxHeight - 12);
+  const availableBelow = Math.max(0, viewportHeight - anchorRect.bottom - padding - 12);
+  const availableAbove = Math.max(0, anchorRect.top - padding - 12);
+  const prefersBelow = availableBelow >= 260 || availableBelow >= availableAbove;
+  const maxHeight = Math.min(460, Math.max(260, prefersBelow ? availableBelow : availableAbove));
+  const top = prefersBelow
+    ? anchorRect.bottom + 12
+    : Math.max(padding, anchorRect.top - maxHeight - 12);
   const left = Math.min(
     Math.max(anchorRect.left, padding),
     Math.max(padding, viewportWidth - panelWidth - padding),
@@ -26,7 +27,7 @@ function getAnchoredStyle(anchorRect: ResponseTypePickerAnchorRect): CSSProperti
     top,
     left,
     width: panelWidth,
-    maxHeight: panelMaxHeight,
+    maxHeight,
   };
 }
 

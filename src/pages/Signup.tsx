@@ -13,6 +13,8 @@ function isEmailRateLimited(message: string | null | undefined) {
   return normalized.includes("rate limit") || normalized.includes("over_email_send_rate_limit");
 }
 
+const DEFAULT_ADMIN_PIN_NOTICE_KEY = "olia_default_admin_pin_notice";
+
 export default function Signup() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -80,6 +82,8 @@ export default function Signup() {
       return;
     }
 
+    localStorage.setItem(DEFAULT_ADMIN_PIN_NOTICE_KEY, "1");
+
     if (data.session) {
       // Some environments may sign the user in immediately.
     } else {
@@ -107,6 +111,7 @@ export default function Signup() {
       return;
     }
 
+    localStorage.setItem(DEFAULT_ADMIN_PIN_NOTICE_KEY, "1");
     navigate("/admin", { replace: true });
   };
 

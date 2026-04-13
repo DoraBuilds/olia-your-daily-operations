@@ -255,6 +255,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
+
   it("shows Start date picker", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByText("Select start date")).toBeInTheDocument();
