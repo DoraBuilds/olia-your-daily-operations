@@ -185,6 +185,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
     fireEvent.click(within(followUpEditor).getByRole("button", { name: /Add logic/i }));
     fireEvent.click(within(followUpEditor).getByRole("button", { name: /trigger/i }));
+    expect(within(followUpEditor).queryByText("Create action")).not.toBeInTheDocument();
     fireEvent.click(within(followUpEditor).getByText("Notify (email)"));
 
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
@@ -213,6 +214,45 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(trigger.type).toBe("ask_question");
     expect(trigger.config.followUpQuestion.text).toBe("Did you recheck the fridge?");
     expect(trigger.config.followUpQuestion.config.logicRules[0].triggers[0].type).toBe("notify");
+  });
+
+  it("lets logic rules use a not-provided comparator and keep triggers attached", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
+    fireEvent.change(screen.getByDisplayValue("is"), { target: { value: "unanswered" } });
+    expect(screen.getByText(/No response provided/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /trigger/i }));
+    fireEvent.click(screen.getByText("Require note"));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Unanswered Checklist" },
+    });
+    fireEvent.click(screen.getByText("Create checklist"));
+
+    const saved = onAdd.mock.calls[0][0] as any;
+    expect(saved.sections[0].questions[0].config.logicRules[0].comparator).toBe("unanswered");
+    expect(saved.sections[0].questions[0].config.logicRules[0].value).toBe("");
+    expect(saved.sections[0].questions[0].config.logicRules[0].triggers[0].type).toBe("require_note");
+  });
+
+  it("shows colored multiple-choice options and hides the create action trigger option", async () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Checkbox" }));
+    fireEvent.click(screen.getByText("Good"));
+
+    await waitFor(() => {
+      const blueColorButtons = screen.getAllByRole("button", { name: "Blue" });
+      expect(blueColorButtons[0]).toHaveClass("bg-blue-100");
+      fireEvent.click(blueColorButtons[0]);
+      expect(blueColorButtons[0]).toHaveAttribute("aria-pressed", "true");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
+    fireEvent.click(screen.getByRole("button", { name: /trigger/i }));
+    expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
   it("shows Start date picker", () => {
@@ -347,10 +387,22 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
     const optionInputs = screen.getAllByDisplayValue(/Good|Fair|Poor|N\/A/);
     fireEvent.change(optionInputs[0], { target: { value: "Perhaps" } });
+    const blueColorButtons = screen.getAllByRole("button", { name: "Blue" });
+    fireEvent.click(blueColorButtons[0]);
+    expect(blueColorButtons[0]).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByText("Add option"));
     expect(screen.getByDisplayValue("Perhaps")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Option 5")).toBeInTheDocument();
+  });
+
+  it("hides Create action from the trigger menu until the full flow exists", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
+    fireEvent.click(screen.getByRole("button", { name: /trigger/i }));
+
+    expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
   it("keeps number questions in single-value mode by default", () => {

@@ -19,7 +19,7 @@ import type {
 } from "./types";
 import { parseScheduleType, SCHEDULE_LABELS } from "./types";
 import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
-import { ResponseTypePicker } from "./ResponseTypePicker";
+import { ResponseTypePicker, type ResponseTypePickerAnchorRect } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
 
@@ -31,8 +31,10 @@ const MC_COLOR_OPTIONS = [
   { label: "Green", value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
   { label: "Yellow", value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
   { label: "Red", value: "bg-status-error/10 border-status-error/40 text-status-error" },
+  { label: "Blue", value: "bg-blue-100 border-blue-300 text-blue-700" },
   { label: "Neutral", value: "bg-muted text-muted-foreground border-border" },
 ];
+const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
 
 interface ChecklistBuilderModalProps {
   onClose: () => void;
@@ -86,8 +88,8 @@ export function ChecklistBuilderModal({
     id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
   }]);
   const [showResponsePicker, setShowResponsePicker] = useState<
-    | { scope: "main"; sectionIdx: number; questionIdx: number }
-    | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
+    | { scope: "main"; sectionIdx: number; questionIdx: number; anchorRect: ResponseTypePickerAnchorRect }
+    | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number; anchorRect: ResponseTypePickerAnchorRect }
     | null
   >(null);
   const [requiredError, setRequiredError] = useState("");
@@ -565,7 +567,13 @@ export function ChecklistBuilderModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <button onClick={() => setShowResponsePicker({ scope: "main", sectionIdx: si, questionIdx: qi })}
+                    <button
+                      onClick={e => setShowResponsePicker({
+                        scope: "main",
+                        sectionIdx: si,
+                        questionIdx: qi,
+                        anchorRect: e.currentTarget.getBoundingClientRect(),
+                      })}
                       className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-sage/40 transition-colors flex items-center gap-1">
                       {responseTypeLabel(q.responseType)}
                       <ChevronDown size={10} />
@@ -728,19 +736,33 @@ export function ChecklistBuilderModal({
                                 }}
                                 className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                               />
-                              <select
-                                value={questionChoiceColors[choiceIdx] ?? MC_COLOR_OPTIONS[3].value}
-                                onChange={e => {
-                                  const nextColors = [...questionChoiceColors];
-                                  nextColors[choiceIdx] = e.target.value;
-                                  updateQuestion(si, qi, { choiceColors: nextColors });
-                                }}
-                                className="w-28 text-xs border border-border rounded-lg px-2 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                              >
-                                {MC_COLOR_OPTIONS.map(option => (
-                                  <option key={option.label} value={option.value}>{option.label}</option>
-                                ))}
-                              </select>
+                              <div className="flex flex-wrap justify-end gap-1.5 min-w-[220px]">
+                                {MC_COLOR_OPTIONS.map(option => {
+                                  const selectedColor = questionChoiceColors[choiceIdx] ?? DEFAULT_MC_COLOR;
+                                  const isSelected = selectedColor === option.value;
+                                  return (
+                                    <button
+                                      key={option.label}
+                                      type="button"
+                                      aria-pressed={isSelected}
+                                      onClick={() => {
+                                        const nextColors = [...questionChoiceColors];
+                                        nextColors[choiceIdx] = option.value;
+                                        updateQuestion(si, qi, { choiceColors: nextColors });
+                                      }}
+                                      className={cn(
+                                        "px-2.5 py-1 rounded-full border text-[11px] font-medium transition-all whitespace-nowrap",
+                                        option.value,
+                                        isSelected
+                                          ? "ring-2 ring-ring ring-offset-2 ring-offset-background shadow-sm"
+                                          : "opacity-75 hover:opacity-100",
+                                      )}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -764,14 +786,14 @@ export function ChecklistBuilderModal({
                           Choose a preset to add answer options.
                         </p>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => updateQuestion(si, qi, {
-                          choices: [...questionChoices, `Option ${questionChoices.length + 1}`],
-                          choiceColors: [...questionChoiceColors, MC_COLOR_OPTIONS[3].value],
-                        })}
-                        className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
-                      >
+                              <button
+                                type="button"
+                                onClick={() => updateQuestion(si, qi, {
+                                  choices: [...questionChoices, `Option ${questionChoices.length + 1}`],
+                                  choiceColors: [...questionChoiceColors, DEFAULT_MC_COLOR],
+                                })}
+                                className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
+                              >
                         <Plus size={11} /> Add option
                       </button>
                     </div>
@@ -952,21 +974,29 @@ export function ChecklistBuilderModal({
                       { key: "gt", label: "Greater than" },
                       { key: "between", label: "Between" },
                       { key: "not_between", label: "Not between" },
+                      { key: "unanswered", label: "Not provided" },
                     ];
                     const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
-                      { key: "is", label: "Is" }, { key: "is_not", label: "Is not" },
+                      { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
                     ];
                     const TEXT_COMPARATORS: { key: LogicComparator; label: string }[] = [
-                      { key: "is", label: "Is" }, { key: "is_not", label: "Is not" },
+                      { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
                     ];
                     const comparators = isNumericType ? NUMERIC_COMPARATORS : isMcType ? CHOICE_COMPARATORS : TEXT_COMPARATORS;
+                    const describeCondition = (rule: LogicRule) => {
+                      if (rule.comparator === "unanswered") return "left unanswered";
+                      const label = comparators.find(c => c.key === rule.comparator)?.label || rule.comparator;
+                      if (rule.comparator === "between" || rule.comparator === "not_between") {
+                        return `answered ${label.toLowerCase()} ${rule.value}${rule.valueTo ? ` and ${rule.valueTo}` : ""}`;
+                      }
+                      return `answered ${label.toLowerCase()} ${rule.value}`;
+                    };
 
                     const TRIGGER_OPTIONS: { key: LogicTriggerType; label: string; icon: React.ElementType }[] = [
                       { key: "ask_question", label: "Ask question", icon: MessageSquare },
                       { key: "notify", label: "Notify (email)", icon: Bell },
                       { key: "require_note", label: "Require note", icon: FileText },
                       { key: "require_media", label: "Require media", icon: Image },
-                      { key: "require_action", label: "Create action", icon: AlertTriangle },
                     ];
 
                     const mcChoices = questionChoices.length > 0 ? questionChoices : ["Yes", "No", "N/A"];
@@ -998,8 +1028,7 @@ export function ChecklistBuilderModal({
                       }
                       if (triggerType === "require_action") {
                         const qLabel = q.text || `Question ${qi + 1}`;
-                        const cLabel = `${comparators.find(c => c.key === rule.comparator)?.label || rule.comparator} ${rule.value}${rule.valueTo ? ` – ${rule.valueTo}` : ""}`;
-                        triggerConfig.actionTitle = `Action required: "${qLabel}" answered ${cLabel}`;
+                        triggerConfig.actionTitle = `Action required: "${qLabel}" ${describeCondition(rule)}`;
                       }
                       updateRule(ri, { triggers: [...rule.triggers, { type: triggerType, config: triggerConfig }] });
                     };
@@ -1031,13 +1060,24 @@ export function ChecklistBuilderModal({
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-xs text-muted-foreground">If answer</span>
                                   <select value={rule.comparator}
-                                    onChange={e => updateRule(ri, { comparator: e.target.value as LogicComparator })}
+                                    onChange={e => {
+                                      const nextComparator = e.target.value as LogicComparator;
+                                      updateRule(ri, {
+                                        comparator: nextComparator,
+                                        value: nextComparator === "unanswered" ? "" : rule.value,
+                                        valueTo: nextComparator === "unanswered" ? undefined : rule.valueTo,
+                                      });
+                                    }}
                                     className="text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring">
                                     {comparators.map(c => (
                                       <option key={c.key} value={c.key}>{c.label.toLowerCase()}</option>
                                     ))}
                                   </select>
-                                  {isMcType ? (
+                                  {rule.comparator === "unanswered" ? (
+                                    <span className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-muted-foreground">
+                                      No response provided
+                                    </span>
+                                  ) : isMcType ? (
                                     <select value={rule.value}
                                       onChange={e => updateRule(ri, { value: e.target.value })}
                                       className="text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring">
@@ -1182,10 +1222,10 @@ export function ChecklistBuilderModal({
                                       <Plus size={11} /> trigger
                                     </button>
                                     <div className="hidden group-focus-within:block absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
-                                      {TRIGGER_OPTIONS.filter(t => !rule.triggers.some(rt => rt.type === t.key)).map(t => (
-                                        <button key={t.key} onClick={() => addTrigger(ri, t.key)}
-                                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
-                                          <t.icon size={13} className="text-sage shrink-0" />
+                    {TRIGGER_OPTIONS.filter(t => t.key !== "require_action" && !rule.triggers.some(rt => rt.type === t.key)).map(t => (
+                      <button key={t.key} onClick={() => addTrigger(ri, t.key)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
+                        <t.icon size={13} className="text-sage shrink-0" />
                                           <span className="text-xs text-foreground">{t.label}</span>
                                         </button>
                                       ))}
@@ -1258,6 +1298,7 @@ export function ChecklistBuilderModal({
       )}
       {showResponsePicker && (
         <ResponseTypePicker
+          anchorRect={showResponsePicker.anchorRect}
           onSelect={(type, mcSetId) => {
             const mcSet = mcSetId ? multipleChoiceSets.find(m => m.id === mcSetId) : null;
             if (showResponsePicker.scope === "main") {

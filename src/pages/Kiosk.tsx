@@ -232,7 +232,7 @@ function useLiveClock() {
     if (import.meta.env.TEST) return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [DRAFT_KEY]);
+  }, []);
   return now;
 }
 
@@ -1181,11 +1181,12 @@ type KioskDraftSnapshot = {
 };
 
 const INSTRUCTION_ACKNOWLEDGED = "__instruction_acknowledged__";
+const UNANSWERED_SENTINEL = "__unanswered__";
 
 function isBlankAnswer(value: any) {
   return Array.isArray(value)
     ? value.length === 0
-    : value === undefined || value === "" || value === null || value === false;
+    : value === UNANSWERED_SENTINEL || value === undefined || value === "" || value === null || value === false;
 }
 
 function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskDraftSnapshot {
@@ -1250,6 +1251,9 @@ function getQuestionAnswer(question: Question, answers: Record<string, any>) {
 
 function doesRuleMatch(question: Question, rule: LogicRule, answers: Record<string, any>) {
   const rawAnswer = getQuestionAnswer(question, answers);
+  if (rule.comparator === "unanswered") {
+    return rawAnswer === UNANSWERED_SENTINEL;
+  }
   if (isBlankAnswer(rawAnswer)) return false;
 
   const answerText = normalizeAnswerText(rawAnswer).toLowerCase();
@@ -1307,7 +1311,7 @@ function createRuntimeQuestion(
 
 function getTriggeredRuntimeQuestions(question: Question, answers: Record<string, any>) {
   const rawAnswer = getQuestionAnswer(question, answers);
-  if (isBlankAnswer(rawAnswer)) return [];
+  if (isBlankAnswer(rawAnswer) && rawAnswer !== UNANSWERED_SENTINEL) return [];
 
   const rules = question.config?.logicRules ?? [];
   const followUps: Question[] = [];
@@ -1407,6 +1411,8 @@ export function ChecklistRunner({
   }).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
   const currentQuestionIndex = Math.max(0, questions.findIndex(q => q.id === currentQuestionId));
+  const hasUnansweredTrigger = (question: Question) =>
+    Boolean(question.config?.logicRules?.some(rule => rule.comparator === "unanswered" && (rule.triggers?.length ?? 0) > 0));
 
   const persistDraft = useCallback((nextAnswers: Record<string, any>, nextCurrentQuestionId: string) => {
     draftRef.current = {
@@ -1548,6 +1554,7 @@ export function ChecklistRunner({
           // For next/acknowledge button: show on current question for types that don't auto-advance
           // "datetime" is legacy — if it resolves to "text" it's included via q.type === "text"
           const isLastQ = qi >= questions.length - 1;
+          const hasBlankUnansweredTrigger = hasUnansweredTrigger(q);
           const needsNextBtn = isCurrent && (
             isInstruction ||
             q.type === "text" ||
@@ -1555,9 +1562,10 @@ export function ChecklistRunner({
             q.type === "datetime" ||
             q.type === "media" ||
             (!q.required && q.type === "checkbox") ||
+            hasBlankUnansweredTrigger ||
             (q.type === "multiple_choice" && (q.selectionMode === "multiple" || !q.required))
           );
-          const nextBtnDisabled = q.type === "multiple_choice" && q.selectionMode === "multiple" && q.required && !isAnswered;
+          const nextBtnDisabled = q.type === "multiple_choice" && q.selectionMode === "multiple" && q.required && !isAnswered && !hasBlankUnansweredTrigger;
 
           return (
             <Fragment key={q.id}>
@@ -1631,6 +1639,13 @@ export function ChecklistRunner({
                             } else {
                               advanceQuestion(nextAnswers);
                             }
+                            return;
+                          }
+
+                          if (hasBlankUnansweredTrigger && isBlankAnswer(answers[q.id])) {
+                            const nextAnswers = { ...answers, [q.id]: UNANSWERED_SENTINEL };
+                            setAnswers(nextAnswers);
+                            advanceQuestion(nextAnswers);
                             return;
                           }
 
