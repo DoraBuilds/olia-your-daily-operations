@@ -19,7 +19,7 @@ import type {
 } from "./types";
 import { parseScheduleType, SCHEDULE_LABELS } from "./types";
 import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
-import { ResponseTypePicker } from "./ResponseTypePicker";
+import { ResponseTypePicker, type ResponseTypePickerAnchorRect } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
 
@@ -86,8 +86,8 @@ export function ChecklistBuilderModal({
     id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
   }]);
   const [showResponsePicker, setShowResponsePicker] = useState<
-    | { scope: "main"; sectionIdx: number; questionIdx: number }
-    | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
+    | { scope: "main"; sectionIdx: number; questionIdx: number; anchorRect?: ResponseTypePickerAnchorRect }
+    | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number; anchorRect?: ResponseTypePickerAnchorRect }
     | null
   >(null);
   const [requiredError, setRequiredError] = useState("");
@@ -565,7 +565,7 @@ export function ChecklistBuilderModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <button onClick={() => setShowResponsePicker({ scope: "main", sectionIdx: si, questionIdx: qi })}
+                    <button onClick={e => setShowResponsePicker({ scope: "main", sectionIdx: si, questionIdx: qi, anchorRect: e.currentTarget.getBoundingClientRect() })}
                       className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-sage/40 transition-colors flex items-center gap-1">
                       {responseTypeLabel(q.responseType)}
                       <ChevronDown size={10} />
@@ -1258,6 +1258,7 @@ export function ChecklistBuilderModal({
       )}
       {showResponsePicker && (
         <ResponseTypePicker
+          anchorRect={showResponsePicker.anchorRect}
           onSelect={(type, mcSetId) => {
             const mcSet = mcSetId ? multipleChoiceSets.find(m => m.id === mcSetId) : null;
             if (showResponsePicker.scope === "main") {
