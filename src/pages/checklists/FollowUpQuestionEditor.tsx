@@ -450,9 +450,9 @@ export function FollowUpQuestionEditor({
           anchorRect={showResponsePicker}
           onSelect={(type, mcSetId) => {
             setResponseType(type, mcSetId);
-            setShowResponsePicker(false);
+            setShowResponsePicker(null);
           }}
-          onClose={() => setShowResponsePicker(false)}
+          onClose={() => setShowResponsePicker(null)}
         />
       )}
     </div>

@@ -75,6 +75,18 @@ describe("ResponseTypePicker", () => {
     expect(screen.getByText("Good")).toBeInTheDocument();
   });
 
+  it("positions as an anchored popover when an anchor rect is provided", () => {
+    render(
+      <ResponseTypePicker
+        onSelect={onSelect}
+        onClose={onClose}
+        anchorRect={{ top: 220, right: 420, bottom: 260, left: 220, width: 200, height: 40 }}
+      />
+    );
+
+    expect(screen.getByRole("dialog")).toHaveStyle({ top: "272px" });
+  });
+
   it("has a close button that calls onClose", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
     const buttons = screen.getAllByRole("button");
