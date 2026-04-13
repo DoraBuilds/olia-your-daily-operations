@@ -984,6 +984,63 @@ describe("Kiosk — Checklist Runner", () => {
     });
   });
 
+  it("executes unanswered triggers after skipping a blank question", async () => {
+    renderRunner({
+      id: "ck-unanswered",
+      title: "Unanswered Trigger Checklist",
+      location_id: "00000000-0000-0000-0000-000000000011",
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: null,
+      visibility_until: null,
+      questions: [
+        {
+          id: "q-base",
+          text: "Optional note",
+          type: "text",
+          required: false,
+          config: {
+            logicRules: [
+              {
+                id: "lr-unanswered",
+                comparator: "unanswered",
+                value: "",
+                triggers: [
+                  {
+                    type: "ask_question",
+                    config: {
+                      followUpQuestion: {
+                        id: "q-unanswered-follow",
+                        text: "Why was this left blank?",
+                        responseType: "text",
+                        required: true,
+                        config: {},
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: "q-final",
+          text: "Final question",
+          type: "text",
+          required: true,
+        },
+      ],
+    });
+
+    expect(screen.queryByText("Why was this left blank?")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Why was this left blank?")).toBeInTheDocument();
+    });
+  });
+
   it("executes require-note triggers by inserting a required note step", async () => {
     renderRunner({
       id: "ck-note-trigger",
