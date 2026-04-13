@@ -25,7 +25,7 @@ import type {
   ResponseType,
 } from "./types";
 import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
-import { ResponseTypePicker } from "./ResponseTypePicker";
+import { ResponseTypePicker, type ResponseTypePickerAnchorRect } from "./ResponseTypePicker";
 
 const MC_COLOR_OPTIONS = [
   { label: "Green", value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
@@ -66,7 +66,7 @@ export function FollowUpQuestionEditor({
   label?: string;
   depth?: number;
 }) {
-  const [showResponsePicker, setShowResponsePicker] = useState(false);
+  const [showResponsePicker, setShowResponsePicker] = useState<ResponseTypePickerAnchorRect | null>(null);
   const imgInputRef = useRef<HTMLInputElement | null>(null);
 
   const cfg = question.config || {};
@@ -398,7 +398,7 @@ export function FollowUpQuestionEditor({
         />
         <button
           type="button"
-          onClick={() => setShowResponsePicker(true)}
+          onClick={e => setShowResponsePicker(e.currentTarget.getBoundingClientRect())}
           className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:border-sage/40 transition-colors flex items-center gap-1"
         >
           {responseTypeLabel(question.responseType)}
@@ -432,11 +432,12 @@ export function FollowUpQuestionEditor({
 
       {showResponsePicker && (
         <ResponseTypePicker
+          anchorRect={showResponsePicker}
           onSelect={(type, mcSetId) => {
             setResponseType(type, mcSetId);
-            setShowResponsePicker(false);
+            setShowResponsePicker(null);
           }}
-          onClose={() => setShowResponsePicker(false)}
+          onClose={() => setShowResponsePicker(null)}
         />
       )}
     </div>
