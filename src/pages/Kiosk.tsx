@@ -134,6 +134,12 @@ function clearKioskOwnership() {
   localStorage.removeItem("kiosk_owner_org_id");
 }
 
+async function validateKioskAdminPin(pin: string, locationId: string) {
+  return supabase.rpc("validate_admin_pin", {
+    p_pin: pin,
+    p_location_id: locationId,
+  });
+}
 async function fetchKioskChecklists(locationId: string) {
   const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
   if (error) throw error;
@@ -404,10 +410,7 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
       }
     }
 
-    const { data, error: rpcError } = await supabase.rpc("validate_admin_pin", {
-      p_pin: pin,
-      p_location_id: locationId,
-    });
+    const { data, error: rpcError } = await validateKioskAdminPin(pin, locationId);
 
     setLoading(false);
 
@@ -555,6 +558,8 @@ function PinEntryModal({
   const [validating, setValidating] = useState(false);
 
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
+  const { teamMember } = useAuth();
+  const { allLocations = [] } = useLocations();
 
   // Lock countdown
   useEffect(() => {
@@ -580,36 +585,22 @@ function PinEntryModal({
 
   const validate = async (enteredPin: string) => {
     setValidating(true);
-    const { data, error: rpcError } = await supabase.rpc("validate_staff_pin", {
-      p_pin: enteredPin,
-      p_location_id: locationId,
-    });
-
-    if (!rpcError && data && data.length > 0) {
-      const staff = data[0];
-      setValidating(false);
-      onSuccess(staff.id, `${staff.first_name} ${staff.last_name}`, staff.organization_id ?? "");
-      return;
-    }
-
-    // Distinguish network / server errors from a simple wrong PIN so we don't
-    // burn the user's attempt allowance on connectivity issues.
-    if (rpcError) {
-      setValidating(false);
-      setPin("");
-      setError("Connection error. Check your network and try again.");
-      return;
-    }
-
-    const { data: adminData, error: adminRpcError } = await supabase.rpc("validate_admin_pin", {
-      p_pin: enteredPin,
-      p_location_id: locationId,
-    });
+    const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
     setValidating(false);
 
     if (!adminRpcError && adminData && adminData.length > 0) {
       const admin = adminData[0];
       onSuccess(null, admin.name, admin.organization_id ?? "");
+      return;
+    }
+
+    const canUseAuthenticatedAdminShortcut = Boolean(
+      teamMember?.organization_id
+      && allLocations.some((location) => location.id === locationId),
+    );
+
+    if (!adminRpcError && canUseAuthenticatedAdminShortcut && teamMember) {
+      onSuccess(null, teamMember.name, teamMember.organization_id);
       return;
     }
 
@@ -1738,6 +1729,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
   const { allLocations = [], isFetched: locationsFetched } = useLocations();
@@ -2083,11 +2075,32 @@ export default function Kiosk() {
     setLocationName(name);
   };
 
-  const handleStart = (staffId: string, staffName: string, orgId: string) => {
+  const handleStart = (staffId: string | null, staffName: string, orgId: string) => {
     setSelectedStaffId(staffId);
     setSelectedStaffName(staffName);
     setSelectedOrgId(orgId);
     setScreen("runner");
+  };
+
+  const canUseAuthenticatedAdminShortcut = Boolean(
+    teamMember?.organization_id
+    && locationId
+    && allLocations.some((location) => location.id === locationId),
+  );
+
+  const handleChecklistSelect = (checklist: KioskChecklist) => {
+    setSelectedChecklist(checklist);
+    if (canUseAuthenticatedAdminShortcut && teamMember) {
+      handleStart(null, teamMember.name, teamMember.organization_id);
+    }
+  };
+
+  const handleAdminButtonClick = () => {
+    if (canUseAuthenticatedAdminShortcut) {
+      navigate("/admin?from=kiosk");
+      return;
+    }
+    setShowAdminLogin(true);
   };
 
   const handleComplete = async (answers: Record<string, any>, startedAt?: Date) => {
@@ -2246,7 +2259,7 @@ export default function Kiosk() {
         </div>
         <button
           id="admin-btn"
-          onClick={() => setShowAdminLogin(true)}
+          onClick={handleAdminButtonClick}
           className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors ml-2 shrink-0"
         >
           Admin
@@ -2360,7 +2373,7 @@ export default function Kiosk() {
                     <p className="section-label mb-2 text-status-error">Due now</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {dueChecklists.map((cl, idx) => (
-                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} />
                       ))}
                     </div>
                   </div>
@@ -2384,7 +2397,7 @@ export default function Kiosk() {
                     <p className="section-label mb-2 text-status-error">Overdue</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {overdueChecklists.map((cl, idx) => (
-                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} />
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} />
                       ))}
                     </div>
                   </div>
@@ -2401,7 +2414,7 @@ export default function Kiosk() {
                     <p className="section-label mb-2">Upcoming today</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {upcomingChecklists.map((cl, idx) => (
-                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={setSelectedChecklist} dim />
+                        <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} dim />
                       ))}
                     </div>
                   </div>
