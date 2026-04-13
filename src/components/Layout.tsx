@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { ReactNode, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
@@ -17,6 +17,8 @@ interface LayoutProps {
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement | null>(null);
   const shellWidthClass = "mx-auto w-full max-w-[1320px]";
   const contentWidthClass = "w-full max-w-[960px] xl:max-w-[920px]";
 
@@ -24,6 +26,13 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
     await signOut();
     navigate("/");
   };
+
+  useEffect(() => {
+    mainRef.current?.scrollTo?.({ top: 0, behavior: "auto" });
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col w-full relative">
@@ -62,7 +71,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       )}
 
       {/* Content */}
-      <main className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
+      <main ref={mainRef} className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
         <div className={cn(shellWidthClass, "px-4 sm:px-6 lg:px-8 xl:px-10")}>
           <div className="flex items-start gap-6 lg:gap-8">
             <SidebarNav />

@@ -440,6 +440,9 @@ describe("ChecklistBuilderModal - new checklist", () => {
       expect(screen.getByText("15")).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText("15"));
+    await waitFor(() => {
+      expect(screen.queryByText("April 2026")).not.toBeInTheDocument();
+    });
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Date Checklist" },
     });
