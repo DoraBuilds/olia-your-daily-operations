@@ -140,7 +140,6 @@ async function validateKioskAdminPin(pin: string, locationId: string) {
     p_location_id: locationId,
   });
 }
-
 async function fetchKioskChecklists(locationId: string) {
   const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
   if (error) throw error;
