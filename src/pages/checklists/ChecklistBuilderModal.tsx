@@ -66,6 +66,7 @@ export function ChecklistBuilderModal({
   const [startDate, setStartDate] = useState<Date | undefined>(
     initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
   );
+  const [startDateOpen, setStartDateOpen] = useState(false);
   const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
   const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
   const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
@@ -388,7 +389,7 @@ export function ChecklistBuilderModal({
           {/* Start date */}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Start date</label>
-            <Popover>
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <button className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted text-sm text-foreground hover:bg-muted/80 transition-colors">
                   <CalendarIcon size={14} className="text-muted-foreground shrink-0" />
@@ -396,7 +397,16 @@ export function ChecklistBuilderModal({
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 z-[70]" align="start">
-                <CalendarPicker mode="single" selected={startDate} onSelect={setStartDate} initialFocus className="p-3 pointer-events-auto" />
+                <CalendarPicker
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date) => {
+                    setStartDate(date ?? undefined);
+                    if (date) setStartDateOpen(false);
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
               </PopoverContent>
             </Popover>
           </div>
