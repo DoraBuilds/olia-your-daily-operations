@@ -183,20 +183,6 @@ async function openRunnerWithQuestions(questions: any[]) {
       });
     }
 
-    if (fn === "validate_staff_pin") {
-      return Promise.resolve({
-        data: [
-          {
-            id: "staff-1",
-            first_name: "Jay",
-            last_name: "Tester",
-            organization_id: "org-1",
-          },
-        ],
-        error: null,
-      });
-    }
-
     if (fn === "validate_admin_pin") {
       return Promise.resolve({
         data: [
@@ -553,7 +539,7 @@ describe("Kiosk — Grid Screen", () => {
     }
   });
 
-  it("falls back to admin PIN validation when no staff PIN matches", async () => {
+  it("uses the admin PIN validation path when starting a checklist", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {
       if (fn === "get_kiosk_checklists") {
@@ -570,10 +556,6 @@ describe("Kiosk — Grid Screen", () => {
           ],
           error: null,
         });
-      }
-
-      if (fn === "validate_staff_pin") {
-        return Promise.resolve({ data: [], error: null });
       }
 
       if (fn === "validate_admin_pin") {
@@ -638,9 +620,9 @@ describe("Kiosk — Grid Screen", () => {
         });
       }
 
-      if (fn === "validate_staff_pin") {
+      if (fn === "validate_admin_pin") {
         return Promise.resolve({
-          data: [{ id: "staff-1", first_name: "Jay", last_name: "Tester", organization_id: "org-1" }],
+          data: [{ id: "tm-1", name: "Jay Tester", organization_id: "org-1" }],
           error: null,
         });
       }
