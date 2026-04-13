@@ -846,6 +846,159 @@ describe("Kiosk — Completion Screen", () => {
 });
 
 describe("Kiosk — Checklist Runner", () => {
+  it("restores a multi-select draft without skipping ahead to the next question", async () => {
+    const checklist = {
+      id: "ck-multi-resume",
+      title: "Resume Multi Select Checklist",
+      location_id: "00000000-0000-0000-0000-000000000011",
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: null,
+      visibility_until: null,
+      questions: [
+        {
+          id: "q-required-multi",
+          text: "Select all that apply",
+          type: "multiple_choice",
+          required: true,
+          selectionMode: "multiple",
+          options: ["A", "B", "C"],
+        },
+        {
+          id: "q-followup",
+          text: "Next question",
+          type: "text",
+          required: true,
+        },
+      ],
+    } as const;
+
+    const { unmount } = renderWithProviders(
+      <ChecklistRunner
+        checklist={checklist}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "A" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Select all that apply")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={checklist}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      const currentQuestion = document.getElementById("question-q-required-multi");
+      expect(currentQuestion).not.toBeNull();
+      expect(currentQuestion?.tagName).toBe("DIV");
+      expect(screen.getByText("Select all that apply")).toBeInTheDocument();
+    });
+  });
+
+  it("restores an instruction draft without marking the instruction as done before it is acknowledged", async () => {
+    const checklist = {
+      id: "ck-instruction-resume",
+      title: "Resume Instruction Checklist",
+      location_id: "00000000-0000-0000-0000-000000000011",
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: null,
+      visibility_until: null,
+      questions: [
+        {
+          id: "q-checkbox",
+          text: "Confirm the setup",
+          type: "checkbox",
+          required: true,
+        },
+        {
+          id: "q-instruction",
+          text: "Instruction",
+          type: "instruction",
+          instructionText: "Wash your hands",
+        },
+        {
+          id: "q-followup",
+          text: "Next question",
+          type: "text",
+          required: true,
+        },
+      ],
+    } as const;
+
+    const { unmount } = renderWithProviders(
+      <ChecklistRunner
+        checklist={checklist}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Wash your hands")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /acknowledge/i })).toBeInTheDocument();
+    });
+
+    unmount();
+
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={checklist}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      const currentQuestion = document.getElementById("question-q-instruction");
+      expect(currentQuestion).not.toBeNull();
+      expect(currentQuestion?.tagName).toBe("DIV");
+      expect(screen.getByText("Wash your hands")).toBeInTheDocument();
+    });
+  });
+
+  it("constrains the desktop runner shell to a centered column", () => {
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={{
+          id: "ck-width",
+          title: "Runner Width Check",
+          location_id: "00000000-0000-0000-0000-000000000011",
+          time_of_day: "anytime",
+          due_time: null,
+          visibility_from: null,
+          visibility_until: null,
+          questions: [
+            { id: "q-text", text: "Runner width check", type: "text", required: true },
+          ],
+        }}
+        staffName="Sarah Owner"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    const shell = screen.getByTestId("kiosk-runner-shell");
+    expect(shell.className).toContain("min-[900px]:max-w-[1120px]");
+    expect(shell.className).toContain("mx-auto");
+  });
+
   it("shows a manual next CTA for an optional unchecked checkbox and lets the user continue", async () => {
     await openRunnerWithQuestions([
       { id: "q-optional-checkbox", text: "Optional checkbox", responseType: "checkbox", required: false },

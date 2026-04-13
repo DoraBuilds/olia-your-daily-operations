@@ -1163,6 +1163,63 @@ function QuestionInput({
   }
 }
 
+type KioskDraftSnapshot = {
+  answers: Record<string, any>;
+  currentQIdx?: number;
+  hasSavedDraft: boolean;
+};
+
+function isBlankAnswer(value: any) {
+  return Array.isArray(value)
+    ? value.length === 0
+    : value === undefined || value === "" || value === null || value === false;
+}
+
+function getFirstUnansweredQuestionIndex(questions: Question[], answers: Record<string, any>) {
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    if (q.type === "instruction") continue;
+    if (isBlankAnswer(answers[q.id])) return i;
+  }
+  return Math.max(0, questions.length - 1);
+}
+
+function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskDraftSnapshot {
+  const defaults: Record<string, any> = {};
+  for (const q of questions) {
+    if (q.defaultValue) defaults[q.id] = q.defaultValue;
+  }
+
+  try {
+    const raw = localStorage.getItem(draftKey);
+    if (!raw) {
+      return { answers: defaults, hasSavedDraft: false };
+    }
+
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if ("answers" in parsed && parsed.answers && typeof parsed.answers === "object" && !Array.isArray(parsed.answers)) {
+        return {
+          answers: { ...defaults, ...(parsed.answers as Record<string, any>) },
+          currentQIdx: typeof parsed.currentQIdx === "number" && Number.isFinite(parsed.currentQIdx)
+            ? parsed.currentQIdx
+            : undefined,
+          hasSavedDraft: true,
+        };
+      }
+
+      return {
+        answers: { ...defaults, ...(parsed as Record<string, any>) },
+        hasSavedDraft: true,
+      };
+    }
+  } catch {
+    // Ignore malformed draft data and fall back to a clean run.
+  }
+
+  return { answers: defaults, hasSavedDraft: false };
+}
+
 // ─── ChecklistRunner (Screen 3) ───────────────────────────────────────────────
 // Shows ALL questions in a single scrollable view, grouped by sections.
 // Answers are persisted to localStorage so progress survives interruptions.
@@ -1176,23 +1233,12 @@ export function ChecklistRunner({
   onQuestionAnswerChange?: (question: Question, value: any) => void;
 }) {
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
+  const [initialDraft] = useState<KioskDraftSnapshot>(() => loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions));
+  const draftRef = useRef(initialDraft);
 
-  // Initialise answers: start from defaultValues then overlay any saved draft
-  const [answers, setAnswers] = useState<Record<string, any>>(() => {
-    const defaults: Record<string, any> = {};
-    for (const q of checklist.questions) {
-      if (q.defaultValue) defaults[q.id] = q.defaultValue;
-    }
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return { ...defaults, ...JSON.parse(raw) };
-    } catch { /* ignore */ }
-    return defaults;
-  });
+  const [answers, setAnswers] = useState<Record<string, any>>(() => initialDraft.answers);
 
-  const hasSavedDraft = (() => {
-    try { return !!localStorage.getItem(DRAFT_KEY); } catch { return false; }
-  })();
+  const hasSavedDraft = initialDraft.hasSavedDraft;
 
   const [showDraftBanner, setShowDraftBanner] = useState(hasSavedDraft);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1202,24 +1248,10 @@ export function ChecklistRunner({
 
   // Accordion: track which question is currently open/active
   const [currentQIdx, setCurrentQIdx] = useState<number>(() => {
-    // Compute initial answers (same logic as the answers useState above)
-    const defaults: Record<string, any> = {};
-    for (const q of checklist.questions) {
-      if (q.defaultValue) defaults[q.id] = q.defaultValue;
+    if (typeof initialDraft.currentQIdx === "number" && Number.isFinite(initialDraft.currentQIdx)) {
+      return Math.min(Math.max(0, initialDraft.currentQIdx), Math.max(0, checklist.questions.length - 1));
     }
-    let ans = defaults;
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) ans = { ...defaults, ...JSON.parse(raw) };
-    } catch { /* ignore */ }
-    // Start at first unanswered non-instruction question
-    for (let i = 0; i < checklist.questions.length; i++) {
-      const q = checklist.questions[i];
-      if (q.type === "instruction") continue;
-      const v = ans[q.id];
-      if (Array.isArray(v) ? v.length === 0 : (v === undefined || v === "" || v === null || v === false)) return i;
-    }
-    return Math.max(0, checklist.questions.length - 1);
+    return getFirstUnansweredQuestionIndex(checklist.questions, initialDraft.answers);
   });
 
   // Track when the runner was opened (for PDF metadata)
@@ -1233,17 +1265,28 @@ export function ChecklistRunner({
   const scorable = questions.filter(q => q.type !== "instruction");
   const answeredCount = scorable.filter(q => {
     const v = answers[q.id];
-    return Array.isArray(v)
-      ? v.length > 0
-      : v !== undefined && v !== "" && v !== null && v !== false;
+    return !isBlankAnswer(v);
   }).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
 
-  // Persist answer immediately to localStorage
+  const persistDraft = (nextAnswers: Record<string, any>, nextCurrentQIdx: number) => {
+    draftRef.current = {
+      answers: nextAnswers,
+      currentQIdx: nextCurrentQIdx,
+      hasSavedDraft: true,
+    };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        answers: nextAnswers,
+        currentQIdx: nextCurrentQIdx,
+      }));
+    } catch { /* ignore */ }
+  };
+
   const setAnswer = (id: string, v: any) => {
     setAnswers(prev => {
       const next = { ...prev, [id]: v };
-      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      persistDraft(next, draftRef.current.currentQIdx ?? currentQIdx);
       return next;
     });
   };
@@ -1252,6 +1295,7 @@ export function ChecklistRunner({
   const advanceQuestion = () => {
     setCurrentQIdx(prev => {
       const next = Math.min(prev + 1, questions.length - 1);
+      persistDraft(draftRef.current.answers, next);
       // Scroll new current question into view after render
       setTimeout(() => {
         const nextQuestion = document.getElementById(`question-${questions[next]?.id}`);
@@ -1274,10 +1318,7 @@ export function ChecklistRunner({
   const handleComplete = () => {
     const missing = questions.filter(q =>
       q.required && q.type !== "instruction" &&
-      (Array.isArray(answers[q.id])
-        ? answers[q.id].length === 0
-        : answers[q.id] === undefined || answers[q.id] === "" ||
-          answers[q.id] === null || answers[q.id] === false)
+      isBlankAnswer(answers[q.id])
     );
     if (missing.length > 0) {
       setCompletionError(
@@ -1294,10 +1335,14 @@ export function ChecklistRunner({
   };
 
   return (
-    <div className="h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col overflow-x-hidden">
+    <div className="h-screen bg-background w-full overflow-x-hidden">
+      <div
+        data-testid="kiosk-runner-shell"
+        className="mx-auto flex h-full w-full flex-col min-[900px]:max-w-[1120px]"
+      >
 
-      {/* ── Sticky header ── */}
-      <div className="shrink-0 bg-background border-b border-border px-5 pt-5 pb-3">
+        {/* ── Sticky header ── */}
+        <div className="shrink-0 bg-background border-b border-border px-5 pt-5 pb-3">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0 pr-4">
             <h2 className="font-display text-xl text-foreground leading-tight">{checklist.title}</h2>
@@ -1321,25 +1366,25 @@ export function ChecklistRunner({
             {answeredCount}/{scorable.length} answered
           </p>
         </div>
-      </div>
+        </div>
 
       {/* ── Draft-restored banner ── */}
-      {showDraftBanner && (
-        <div className="shrink-0 mx-5 mt-3">
-          <div className="bg-sage/10 border border-sage/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
-            <p className="text-xs text-sage font-medium">Continuing from where you left off</p>
-            <button
-              onClick={() => setShowDraftBanner(false)}
-              className="text-sage/60 hover:text-sage ml-2 p-0.5"
-            >
-              <X size={12} />
-            </button>
+        {showDraftBanner && (
+          <div className="shrink-0 mx-5 mt-3">
+            <div className="bg-sage/10 border border-sage/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
+              <p className="text-xs text-sage font-medium">Continuing from where you left off</p>
+              <button
+                onClick={() => setShowDraftBanner(false)}
+                className="text-sage/60 hover:text-sage ml-2 p-0.5"
+              >
+                <X size={12} />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ── Accordion questions ── */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
         {questions.map((q, qi) => {
           const isInstruction = q.type === "instruction";
           const isCurrent = qi === currentQIdx;
@@ -1492,10 +1537,10 @@ export function ChecklistRunner({
 
         {/* Bottom padding so the last card clears the sticky footer */}
         <div className="h-4" />
-      </div>
+        </div>
 
       {/* ── Sticky footer ── */}
-      <div className="shrink-0 bg-background border-t border-border px-5 py-4 space-y-2.5">
+        <div className="shrink-0 bg-background border-t border-border px-5 py-4 space-y-2.5">
         {completionError && (
           <div className="bg-status-error/10 border border-status-error/20 rounded-xl px-4 py-2.5 text-xs text-status-error font-medium text-center">
             {completionError}
@@ -1509,31 +1554,31 @@ export function ChecklistRunner({
           <Check size={16} />
           Complete Checklist
         </button>
-      </div>
+        </div>
 
       {/* ── Image lightbox ── */}
-      {lightboxImage && (
-        <div
-          className="fixed inset-0 z-[90] bg-foreground/95 flex items-center justify-center p-4"
-          onClick={() => setLightboxImage(null)}
-        >
-          <button
+        {lightboxImage && (
+          <div
+            className="fixed inset-0 z-[90] bg-foreground/95 flex items-center justify-center p-4"
             onClick={() => setLightboxImage(null)}
-            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-background/20 hover:bg-background/30 flex items-center justify-center transition-colors"
-            aria-label="Close"
           >
-            <X size={20} className="text-background" />
-          </button>
-          <img
-            src={lightboxImage}
-            alt="Full view"
-            className="max-w-full max-h-full object-contain rounded-xl"
-            onClick={e => e.stopPropagation()}
-          />
-        </div>
-      )}
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-5 right-5 w-10 h-10 rounded-full bg-background/20 hover:bg-background/30 flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <X size={20} className="text-background" />
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Full view"
+              className="max-w-full max-h-full object-contain rounded-xl"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+        )}
 
-      {linkedResourceId && (() => {
+        {linkedResourceId && (() => {
         const resource = getLinkableInfohubResource(linkedResourceId);
         if (!resource) return null;
 
@@ -1569,41 +1614,42 @@ export function ChecklistRunner({
             </div>
           </div>
         );
-      })()}
+        })()}
 
       {/* ── Cancel confirm ── */}
-      {showCancelConfirm && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4">
-            <h3 className="font-display text-lg text-foreground">Cancel checklist?</h3>
-            <p className="text-sm text-muted-foreground">
-              Your answers are saved as a draft. You can pick up where you left off next time.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowCancelConfirm(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
-              >
-                Keep going
-              </button>
-              <button
-                onClick={onCancel}
-                className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors"
-              >
-                Cancel
-              </button>
+        {showCancelConfirm && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
+            <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4">
+              <h3 className="font-display text-lg text-foreground">Cancel checklist?</h3>
+              <p className="text-sm text-muted-foreground">
+                Your answers are saved as a draft. You can pick up where you left off next time.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
+                >
+                  Keep going
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* ── Inactivity countdown ── */}
-      {secondsLeft !== null && (
-        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[80]">
-          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
-          <button onClick={cancelCountdown} className="text-sm font-semibold underline">Stay</button>
-        </div>
-      )}
+        {secondsLeft !== null && (
+          <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[80]">
+            <p className="text-sm">Returning to home in {secondsLeft}s…</p>
+            <button onClick={cancelCountdown} className="text-sm font-semibold underline">Stay</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
