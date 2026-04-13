@@ -264,7 +264,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     }));
   });
 
-  it("supports selecting all locations from the specific selector", () => {
+  it("keeps a specific selection even when every location is picked manually", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
@@ -278,7 +278,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "All Locations Checklist",
       location_id: null,
-      location_ids: null,
+      location_ids: ["loc-1", "loc-2", "loc-3"],
     }));
   });
 
@@ -562,5 +562,26 @@ describe("ChecklistBuilderModal - edit mode", () => {
       />
     );
     expect(screen.getByText(/Apr/i)).toBeInTheDocument();
+  });
+
+  it("pre-fills and saves a specific location selection in edit mode", () => {
+    renderWithClient(
+      <ChecklistBuilderModal
+        onClose={onClose}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        editId="cl-1"
+        initialTitle="Existing Checklist"
+        initialLocationIds={["loc-2"]}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Select specific locations" })).toHaveClass("bg-sage");
+    fireEvent.click(screen.getByText("Save checklist"));
+
+    expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({
+      location_id: "loc-2",
+      location_ids: ["loc-2"],
+    }));
   });
 });

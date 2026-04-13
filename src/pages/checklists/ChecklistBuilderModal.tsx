@@ -197,7 +197,7 @@ export function ChecklistBuilderModal({
     const allLocationIds = dbLocations.map(loc => loc.id);
     const selectedIds = locationMode === "all" ? [] : selectedLocationIds.filter(id => allLocationIds.includes(id));
     if (locationMode === "specific" && selectedIds.length === 0) return;
-    const isAllLocations = locationMode === "all" || selectedIds.length === 0 || selectedIds.length === allLocationIds.length;
+    const isAllLocations = locationMode === "all";
     const payload: Partial<ChecklistItem> = {
       title: title.trim(),
       description: description.trim() || undefined,
@@ -355,9 +355,11 @@ export function ChecklistBuilderModal({
                       ? `Selected: ${selectedLocations[0].name}`
                       : `${selectedLocations.length} locations selected`}
               </p>
-              {locationMode === "specific" && selectedLocations.length === dbLocations.length && dbLocations.length > 0 && (
+              {locationMode === "specific" && selectedLocations.length > 0 && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
-                  All locations selected
+                  {selectedLocations.length === 1
+                    ? "Specific location selected"
+                    : `${selectedLocations.length} specific locations selected`}
                 </span>
               )}
             </div>
@@ -1216,8 +1218,12 @@ export function ChecklistBuilderModal({
         {locationMode === "specific" && selectedLocationIds.length === 0 && (
           <p className="text-xs text-status-error mb-2 text-center">Select at least one location or switch back to all locations.</p>
         )}
-        {locationMode === "specific" && selectedLocationIds.length > 0 && dbLocations.length > 0 && selectedLocationIds.length === dbLocations.length && (
-          <p className="text-xs text-muted-foreground mb-2 text-center">All locations are selected.</p>
+        {locationMode === "specific" && selectedLocationIds.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-2 text-center">
+            {selectedLocationIds.length === 1
+              ? "One specific location is selected."
+              : `${selectedLocationIds.length} specific locations are selected.`}
+          </p>
         )}
         <button
           disabled={!title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
