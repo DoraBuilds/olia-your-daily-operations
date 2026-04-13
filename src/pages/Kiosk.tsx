@@ -558,8 +558,6 @@ function PinEntryModal({
   const [validating, setValidating] = useState(false);
 
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
-  const { teamMember } = useAuth();
-  const { allLocations = [] } = useLocations();
 
   // Lock countdown
   useEffect(() => {
@@ -591,16 +589,6 @@ function PinEntryModal({
     if (!adminRpcError && adminData && adminData.length > 0) {
       const admin = adminData[0];
       onSuccess(null, admin.name, admin.organization_id ?? "");
-      return;
-    }
-
-    const canUseAuthenticatedAdminShortcut = Boolean(
-      teamMember?.organization_id
-      && allLocations.some((location) => location.id === locationId),
-    );
-
-    if (!adminRpcError && canUseAuthenticatedAdminShortcut && teamMember) {
-      onSuccess(null, teamMember.name, teamMember.organization_id);
       return;
     }
 
@@ -1729,7 +1717,6 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
   const { allLocations = [], isFetched: locationsFetched } = useLocations();
@@ -2082,24 +2069,11 @@ export default function Kiosk() {
     setScreen("runner");
   };
 
-  const canUseAuthenticatedAdminShortcut = Boolean(
-    teamMember?.organization_id
-    && locationId
-    && allLocations.some((location) => location.id === locationId),
-  );
-
   const handleChecklistSelect = (checklist: KioskChecklist) => {
     setSelectedChecklist(checklist);
-    if (canUseAuthenticatedAdminShortcut && teamMember) {
-      handleStart(null, teamMember.name, teamMember.organization_id);
-    }
   };
 
   const handleAdminButtonClick = () => {
-    if (canUseAuthenticatedAdminShortcut) {
-      navigate("/admin?from=kiosk");
-      return;
-    }
     setShowAdminLogin(true);
   };
 
