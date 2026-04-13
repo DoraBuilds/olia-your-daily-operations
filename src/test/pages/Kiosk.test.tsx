@@ -846,6 +846,18 @@ describe("Kiosk — Completion Screen", () => {
 });
 
 describe("Kiosk — Checklist Runner", () => {
+  function renderRunner(checklist: any, onComplete = vi.fn()) {
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={checklist}
+        staffName="Sarah Owner"
+        onComplete={onComplete}
+        onCancel={vi.fn()}
+      />,
+    );
+    return onComplete;
+  }
+
   it("restores a multi-select draft without skipping ahead to the next question", async () => {
     const checklist = {
       id: "ck-multi-resume",
@@ -905,6 +917,209 @@ describe("Kiosk — Checklist Runner", () => {
       expect(currentQuestion?.tagName).toBe("DIV");
       expect(screen.getByText("Select all that apply")).toBeInTheDocument();
     });
+  });
+
+  it("executes ask-question triggers by moving into the generated follow-up question", async () => {
+    renderRunner({
+      id: "ck-follow-up",
+      title: "Follow-up Trigger Checklist",
+      location_id: "00000000-0000-0000-0000-000000000011",
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: null,
+      visibility_until: null,
+      questions: [
+        {
+          id: "q-base",
+          text: "Confirm the fridge check",
+          type: "checkbox",
+          required: true,
+          config: {
+            logicRules: [
+              {
+                id: "lr-follow",
+                comparator: "is",
+                value: "Yes",
+                triggers: [
+                  {
+                    type: "ask_question",
+                    config: {
+                      followUpQuestion: {
+                        id: "q-follow",
+                        text: "Did you recheck the fridge?",
+                        responseType: "text",
+                        required: true,
+                        config: {},
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          id: "q-final",
+          text: "Final question",
+          type: "text",
+          required: true,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Did you recheck the fridge?")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), {
+      target: { value: "Yes, I rechecked it." },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Final question")).toBeInTheDocument();
+    });
+  });
+
+  it("executes require-note triggers by inserting a required note step", async () => {
+    renderRunner({
+      id: "ck-note-trigger",
+      title: "Require Note Checklist",
+      location_id: "00000000-0000-0000-0000-000000000011",
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: null,
+      visibility_until: null,
+      questions: [
+        {
+          id: "q-base",
+          text: "Confirm the setup",
+          type: "checkbox",
+          required: true,
+          config: {
+            logicRules: [
+              {
+                id: "lr-note",
+                comparator: "is",
+                value: "Yes",
+                triggers: [{ type: "require_note" }],
+              },
+            ],
+          },
+        },
+        {
+          id: "q-final",
+          text: "After note",
+          type: "text",
+          required: true,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/note required/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), {
+      target: { value: "All good." },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("After note")).toBeInTheDocument();
+    });
+  });
+
+  it("executes require-media triggers by inserting a required photo step", async () => {
+    const originalMediaDevices = navigator.mediaDevices;
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    const originalPlay = HTMLMediaElement.prototype.play;
+    const mockStream = {
+      getTracks: () => [{ stop: vi.fn() }],
+    } as unknown as MediaStream;
+
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(mockStream),
+      },
+    });
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() });
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,test-image");
+    // @ts-expect-error test shim
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+
+    try {
+      renderRunner({
+        id: "ck-media-trigger",
+        title: "Require Media Checklist",
+        location_id: "00000000-0000-0000-0000-000000000011",
+        time_of_day: "anytime",
+        due_time: null,
+        visibility_from: null,
+        visibility_until: null,
+        questions: [
+          {
+            id: "q-base",
+            text: "Confirm the delivery",
+            type: "checkbox",
+            required: true,
+            config: {
+              logicRules: [
+                {
+                  id: "lr-media",
+                  comparator: "is",
+                  value: "Yes",
+                  triggers: [{ type: "require_media" }],
+                },
+              ],
+            },
+          },
+          {
+            id: "q-final",
+            text: "After photo",
+            type: "text",
+            required: true,
+          },
+        ],
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/photo required/i)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /take photo/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /capture photo/i })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: /capture photo/i }));
+      fireEvent.click(screen.getByRole("button", { name: /use photo/i }));
+
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("After photo")).toBeInTheDocument();
+      });
+    } finally {
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: originalMediaDevices,
+      });
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+      HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+      HTMLMediaElement.prototype.play = originalPlay;
+    }
   });
 
   it("restores an instruction draft without marking the instruction as done before it is acknowledged", async () => {

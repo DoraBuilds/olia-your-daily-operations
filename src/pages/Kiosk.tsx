@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocations } from "@/hooks/useLocations";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
+import type { LogicComparator, LogicRule, QuestionDef } from "@/pages/checklists/types";
 
 // ─── Module-level persistence (survives in-app navigation) ───────────────────
 let _kioskLocationId: string | null = null;
@@ -38,6 +39,9 @@ interface Question {
   min?: number;              // number questions: acceptable range minimum
   max?: number;              // number questions: acceptable range maximum
   temperatureUnit?: "C" | "F";
+  config?: {
+    logicRules?: LogicRule[];
+  };
 }
 
 interface KioskChecklist {
@@ -68,40 +72,46 @@ const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
  */
 function flattenSectionsToQuestions(sections: any[]): Question[] {
   return (sections ?? []).flatMap((section: any) =>
-    (section.questions ?? []).map((q: any): Question => {
-      // Legacy "person" type: render as multiple_choice using the baked-in choices.
-      // Legacy "signature" type: falls through to "text" (the runner renders a plain text input).
-      // Neither type is available in the builder any more.
-      const isPerson = q.responseType === "person";
-      const resolvedType = isPerson
-        ? "multiple_choice"
-        : (SUPPORTED_QUESTION_TYPES.includes(q.responseType) ? q.responseType : "text") as QuestionType;
-      const resolvedOptions = isPerson
-        ? (q.config?.personChoices ?? q.choices ?? [])
-        : q.choices;
-      return {
-        id: q.id,
-        text: q.text,
-        type: resolvedType,
-        required: q.required ?? false,
-        options: resolvedOptions,
-        optionColors: q.choiceColors,
-        selectionMode: q.selectionMode ?? "single",
-        instructionText: q.config?.instructionText,
-        imageUrl: q.config?.instructionImageUrl,
-        linkedResourceId: q.config?.instructionLinkId,
-        linkedResourceTitle: q.config?.instructionLinkTitle,
-        linkedResourceSection: q.config?.instructionLinkSection,
-        sectionName: section.name || "",
-        // For person type: carry the builder's default so the runner can pre-fill it
-        defaultValue: isPerson ? (q.config?.defaultPerson ?? "") : "",
-        // Number range: set in builder as config.numberMin / config.numberMax
-        min: q.config?.numberMin != null ? Number(q.config.numberMin) : undefined,
-        max: q.config?.numberMax != null ? Number(q.config.numberMax) : undefined,
-        temperatureUnit: q.config?.temperatureUnit,
-      };
-    })
+    (section.questions ?? []).map((q: any) => convertQuestionDefToKioskQuestion(q, section.name || ""))
   );
+}
+
+function convertQuestionDefToKioskQuestion(question: QuestionDef, sectionName = ""): Question {
+  // Legacy "person" type: render as multiple_choice using the baked-in choices.
+  // Legacy "signature" type: falls through to "text" (the runner renders a plain text input).
+  // Neither type is available in the builder any more.
+  const isPerson = question.responseType === "person";
+  const resolvedType = isPerson
+    ? "multiple_choice"
+    : (SUPPORTED_QUESTION_TYPES.includes(question.responseType) ? question.responseType : "text") as QuestionType;
+  const resolvedOptions = isPerson
+    ? (question.config?.personChoices ?? question.choices ?? [])
+    : question.choices;
+
+  return {
+    id: question.id,
+    text: question.text,
+    type: resolvedType,
+    required: question.required ?? false,
+    options: resolvedOptions,
+    optionColors: question.choiceColors,
+    selectionMode: question.selectionMode ?? "single",
+    instructionText: question.config?.instructionText,
+    imageUrl: question.config?.instructionImageUrl,
+    linkedResourceId: question.config?.instructionLinkId,
+    linkedResourceTitle: question.config?.instructionLinkTitle,
+    linkedResourceSection: question.config?.instructionLinkSection,
+    sectionName,
+    // For person type: carry the builder's default so the runner can pre-fill it
+    defaultValue: isPerson ? (question.config?.defaultPerson ?? "") : "",
+    // Number range: set in builder as config.numberMin / config.numberMax
+    min: question.config?.numberMin != null ? Number(question.config.numberMin) : undefined,
+    max: question.config?.numberMax != null ? Number(question.config.numberMax) : undefined,
+    temperatureUnit: question.config?.temperatureUnit,
+    config: question.config?.logicRules?.length
+      ? { logicRules: question.config.logicRules }
+      : undefined,
+  };
 }
 
 const VALID_TIMES_OF_DAY: TimeOfDay[] = ["morning", "afternoon", "evening", "anytime"];
@@ -222,7 +232,7 @@ function useLiveClock() {
     if (import.meta.env.TEST) return;
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [DRAFT_KEY]);
   return now;
 }
 
@@ -1166,22 +1176,16 @@ function QuestionInput({
 type KioskDraftSnapshot = {
   answers: Record<string, any>;
   currentQIdx?: number;
+  currentQuestionId?: string;
   hasSavedDraft: boolean;
 };
+
+const INSTRUCTION_ACKNOWLEDGED = "__instruction_acknowledged__";
 
 function isBlankAnswer(value: any) {
   return Array.isArray(value)
     ? value.length === 0
     : value === undefined || value === "" || value === null || value === false;
-}
-
-function getFirstUnansweredQuestionIndex(questions: Question[], answers: Record<string, any>) {
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i];
-    if (q.type === "instruction") continue;
-    if (isBlankAnswer(answers[q.id])) return i;
-  }
-  return Math.max(0, questions.length - 1);
 }
 
 function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskDraftSnapshot {
@@ -1201,6 +1205,9 @@ function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskD
       if ("answers" in parsed && parsed.answers && typeof parsed.answers === "object" && !Array.isArray(parsed.answers)) {
         return {
           answers: { ...defaults, ...(parsed.answers as Record<string, any>) },
+          currentQuestionId: typeof parsed.currentQuestionId === "string" && parsed.currentQuestionId
+            ? parsed.currentQuestionId
+            : undefined,
           currentQIdx: typeof parsed.currentQIdx === "number" && Number.isFinite(parsed.currentQIdx)
             ? parsed.currentQIdx
             : undefined,
@@ -1218,6 +1225,130 @@ function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskD
   }
 
   return { answers: defaults, hasSavedDraft: false };
+}
+
+function runtimeTriggerKey(questionId: string, ruleId: string, triggerIdx: number, kind: "note" | "media") {
+  return `__trigger_${kind}:${questionId}:${ruleId}:${triggerIdx}`;
+}
+
+function normalizeAnswerText(value: any): string {
+  if (Array.isArray(value)) return value.map(item => String(item)).join(" | ");
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value).trim();
+}
+
+function parseComparableNumber(value: any): number | null {
+  if (value === undefined || value === null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getQuestionAnswer(question: Question, answers: Record<string, any>) {
+  return answers[question.id];
+}
+
+function doesRuleMatch(question: Question, rule: LogicRule, answers: Record<string, any>) {
+  const rawAnswer = getQuestionAnswer(question, answers);
+  if (isBlankAnswer(rawAnswer)) return false;
+
+  const answerText = normalizeAnswerText(rawAnswer).toLowerCase();
+  const ruleValue = normalizeAnswerText(rule.value).toLowerCase();
+  const ruleValueTo = normalizeAnswerText(rule.valueTo).toLowerCase();
+  const answerNumber = parseComparableNumber(rawAnswer);
+  const ruleNumber = parseComparableNumber(rule.value);
+  const ruleNumberTo = parseComparableNumber(rule.valueTo);
+
+  switch (rule.comparator as LogicComparator) {
+    case "is":
+    case "eq":
+      if (Array.isArray(rawAnswer)) return rawAnswer.map(item => normalizeAnswerText(item).toLowerCase()).includes(ruleValue);
+      return answerText === ruleValue;
+    case "is_not":
+    case "neq":
+      if (Array.isArray(rawAnswer)) return !rawAnswer.map(item => normalizeAnswerText(item).toLowerCase()).includes(ruleValue);
+      return answerText !== ruleValue;
+    case "lt":
+      return answerNumber != null && ruleNumber != null ? answerNumber < ruleNumber : false;
+    case "lte":
+      return answerNumber != null && ruleNumber != null ? answerNumber <= ruleNumber : false;
+    case "gte":
+      return answerNumber != null && ruleNumber != null ? answerNumber >= ruleNumber : false;
+    case "gt":
+      return answerNumber != null && ruleNumber != null ? answerNumber > ruleNumber : false;
+    case "between":
+      return answerNumber != null && ruleNumber != null && ruleNumberTo != null
+        ? answerNumber >= ruleNumber && answerNumber <= ruleNumberTo
+        : false;
+    case "not_between":
+      return answerNumber != null && ruleNumber != null && ruleNumberTo != null
+        ? answerNumber < ruleNumber || answerNumber > ruleNumberTo
+        : false;
+    default:
+      return answerText === ruleValue;
+  }
+}
+
+function createRuntimeQuestion(
+  kind: "note" | "media",
+  question: Question,
+  rule: LogicRule,
+  triggerIdx: number,
+): Question {
+  const suffix = kind === "note" ? "Note required" : "Photo required";
+  return {
+    id: runtimeTriggerKey(question.id, rule.id, triggerIdx, kind),
+    text: `${suffix}: ${question.text || "Question"}`,
+    type: kind === "note" ? "text" : "media",
+    required: true,
+    sectionName: question.sectionName,
+  };
+}
+
+function getTriggeredRuntimeQuestions(question: Question, answers: Record<string, any>) {
+  const rawAnswer = getQuestionAnswer(question, answers);
+  if (isBlankAnswer(rawAnswer)) return [];
+
+  const rules = question.config?.logicRules ?? [];
+  const followUps: Question[] = [];
+  let noteQuestion: Question | null = null;
+  let mediaQuestion: Question | null = null;
+
+  rules.forEach((rule) => {
+    if (!doesRuleMatch(question, rule, answers)) return;
+    rule.triggers.forEach((trigger, triggerIdx) => {
+      if (trigger.type === "ask_question" && trigger.config?.followUpQuestion) {
+        followUps.push(convertQuestionDefToKioskQuestion(trigger.config.followUpQuestion, question.sectionName));
+      }
+      if (trigger.type === "require_note" && !noteQuestion) {
+        noteQuestion = createRuntimeQuestion("note", question, rule, triggerIdx);
+      }
+      if (trigger.type === "require_media" && !mediaQuestion) {
+        mediaQuestion = createRuntimeQuestion("media", question, rule, triggerIdx);
+      }
+    });
+  });
+
+  return [...followUps, ...(noteQuestion ? [noteQuestion] : []), ...(mediaQuestion ? [mediaQuestion] : [])];
+}
+
+function buildRuntimeQuestions(baseQuestions: Question[], answers: Record<string, any>): Question[] {
+  const next: Question[] = [];
+  for (const question of baseQuestions) {
+    next.push(question);
+    const children = getTriggeredRuntimeQuestions(question, answers);
+    if (children.length > 0) {
+      next.push(...buildRuntimeQuestions(children, answers));
+    }
+  }
+  return next;
+}
+
+function getFirstUnansweredQuestionId(questions: Question[], answers: Record<string, any>) {
+  for (const question of questions) {
+    if (isBlankAnswer(getQuestionAnswer(question, answers))) return question.id;
+  }
+  return questions[0]?.id ?? null;
 }
 
 // ─── ChecklistRunner (Screen 3) ───────────────────────────────────────────────
@@ -1239,6 +1370,7 @@ export function ChecklistRunner({
   const [answers, setAnswers] = useState<Record<string, any>>(() => initialDraft.answers);
 
   const hasSavedDraft = initialDraft.hasSavedDraft;
+  const initialRuntimeQuestions = buildRuntimeQuestions(checklist.questions, initialDraft.answers);
 
   const [showDraftBanner, setShowDraftBanner] = useState(hasSavedDraft);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1247,11 +1379,17 @@ export function ChecklistRunner({
   const [linkedResourceId, setLinkedResourceId] = useState<string | null>(null);
 
   // Accordion: track which question is currently open/active
-  const [currentQIdx, setCurrentQIdx] = useState<number>(() => {
-    if (typeof initialDraft.currentQIdx === "number" && Number.isFinite(initialDraft.currentQIdx)) {
-      return Math.min(Math.max(0, initialDraft.currentQIdx), Math.max(0, checklist.questions.length - 1));
+  const [currentQuestionId, setCurrentQuestionId] = useState<string>(() => {
+    if (typeof initialDraft.currentQuestionId === "string" && initialDraft.currentQuestionId) {
+      return initialDraft.currentQuestionId;
     }
-    return getFirstUnansweredQuestionIndex(checklist.questions, initialDraft.answers);
+    if (typeof initialDraft.currentQIdx === "number" && Number.isFinite(initialDraft.currentQIdx)) {
+      return initialRuntimeQuestions[Math.min(
+        Math.max(0, initialDraft.currentQIdx),
+        Math.max(0, initialRuntimeQuestions.length - 1),
+      )]?.id ?? initialRuntimeQuestions[0]?.id ?? "";
+    }
+    return getFirstUnansweredQuestionId(initialRuntimeQuestions, initialDraft.answers) ?? initialRuntimeQuestions[0]?.id ?? "";
   });
 
   // Track when the runner was opened (for PDF metadata)
@@ -1261,51 +1399,57 @@ export function ChecklistRunner({
   const now = useLiveClock();
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-  const questions = checklist.questions;
+  const questions = buildRuntimeQuestions(checklist.questions, answers);
   const scorable = questions.filter(q => q.type !== "instruction");
   const answeredCount = scorable.filter(q => {
     const v = answers[q.id];
     return !isBlankAnswer(v);
   }).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
+  const currentQuestionIndex = Math.max(0, questions.findIndex(q => q.id === currentQuestionId));
 
-  const persistDraft = (nextAnswers: Record<string, any>, nextCurrentQIdx: number) => {
+  const persistDraft = useCallback((nextAnswers: Record<string, any>, nextCurrentQuestionId: string) => {
     draftRef.current = {
       answers: nextAnswers,
-      currentQIdx: nextCurrentQIdx,
+      currentQuestionId: nextCurrentQuestionId,
       hasSavedDraft: true,
     };
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         answers: nextAnswers,
-        currentQIdx: nextCurrentQIdx,
+        currentQuestionId: nextCurrentQuestionId,
       }));
     } catch { /* ignore */ }
-  };
-
-  const setAnswer = (id: string, v: any) => {
-    setAnswers(prev => {
-      const next = { ...prev, [id]: v };
-      persistDraft(next, draftRef.current.currentQIdx ?? currentQIdx);
-      return next;
-    });
-  };
+  }, []);
 
   // Move to the next question in the accordion
-  const advanceQuestion = () => {
-    setCurrentQIdx(prev => {
-      const next = Math.min(prev + 1, questions.length - 1);
-      persistDraft(draftRef.current.answers, next);
+  const advanceQuestion = (nextAnswers = answers) => {
+    const runtimeQuestions = buildRuntimeQuestions(checklist.questions, nextAnswers);
+    setCurrentQuestionId(prev => {
+      const currentIndex = runtimeQuestions.findIndex(q => q.id === prev);
+      const nextIndex = Math.min(Math.max(currentIndex, 0) + 1, runtimeQuestions.length - 1);
+      const nextQuestionId = runtimeQuestions[nextIndex]?.id ?? prev;
+      persistDraft(nextAnswers, nextQuestionId);
       // Scroll new current question into view after render
       setTimeout(() => {
-        const nextQuestion = document.getElementById(`question-${questions[next]?.id}`);
+        const nextQuestion = document.getElementById(`question-${nextQuestionId}`);
         if (typeof nextQuestion?.scrollIntoView === "function") {
           nextQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }, 60);
-      return next;
+      return nextQuestionId;
     });
   };
+
+  useEffect(() => {
+    if (!questions.some(q => q.id === currentQuestionId)) {
+      const fallbackId = getFirstUnansweredQuestionId(questions, answers) ?? questions[0]?.id ?? "";
+      if (fallbackId && fallbackId !== currentQuestionId) {
+        persistDraft(answers, fallbackId);
+        setCurrentQuestionId(fallbackId);
+      }
+    }
+  }, [answers, currentQuestionId, questions, persistDraft]);
 
   // ESC key closes lightbox
   useEffect(() => {
@@ -1387,15 +1531,13 @@ export function ChecklistRunner({
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
         {questions.map((q, qi) => {
           const isInstruction = q.type === "instruction";
-          const isCurrent = qi === currentQIdx;
-          const isPast = qi < currentQIdx;
+          const isCurrent = qi === currentQuestionIndex;
+          const isPast = qi < currentQuestionIndex;
 
-          const isAnswered = isInstruction
-            ? true
-            : (Array.isArray(answers[q.id])
-              ? answers[q.id].length > 0
-              : answers[q.id] !== undefined && answers[q.id] !== "" &&
-                 answers[q.id] !== null && answers[q.id] !== false);
+          const isAnswered = Array.isArray(answers[q.id])
+            ? answers[q.id].length > 0
+            : answers[q.id] !== undefined && answers[q.id] !== "" &&
+               answers[q.id] !== null && answers[q.id] !== false;
           const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
 
           // Inject a centered section divider when section changes
@@ -1406,7 +1548,7 @@ export function ChecklistRunner({
           // For next/acknowledge button: show on current question for types that don't auto-advance
           // "datetime" is legacy — if it resolves to "text" it's included via q.type === "text"
           const isLastQ = qi >= questions.length - 1;
-          const needsNextBtn = isCurrent && !isLastQ && (
+          const needsNextBtn = isCurrent && (
             isInstruction ||
             q.type === "text" ||
             q.type === "number" ||
@@ -1460,11 +1602,17 @@ export function ChecklistRunner({
                       question={q}
                       value={answers[q.id]}
                       onChange={v => {
-                        setAnswer(q.id, v);
+                        const nextAnswers = { ...answers, [q.id]: v };
+                        setAnswers(nextAnswers);
+                        persistDraft(nextAnswers, currentQuestionId);
                         onQuestionAnswerChange?.(q, v);
-                        // Auto-advance for single-tap inputs
-                        if (q.type === "checkbox" && v === true) advanceQuestion();
-                        if (q.type === "multiple_choice" && q.selectionMode !== "multiple" && v) advanceQuestion();
+                        const shouldAutoAdvance = (
+                          (q.type === "checkbox" && v === true) ||
+                          (q.type === "multiple_choice" && q.selectionMode !== "multiple" && v)
+                        );
+                        if (shouldAutoAdvance) {
+                          advanceQuestion(nextAnswers);
+                        }
                       }}
                       onImageClick={url => setLightboxImage(url)}
                       onLinkedResourceOpen={() => setLinkedResourceId(q.linkedResourceId ?? null)}
@@ -1474,7 +1622,25 @@ export function ChecklistRunner({
                   {needsNextBtn && (
                     <div className={cn("mt-3 flex justify-end", !isInstruction && "ml-7")}>
                       <button
-                        onClick={advanceQuestion}
+                        onClick={() => {
+                          if (isInstruction) {
+                            const nextAnswers = { ...answers, [q.id]: INSTRUCTION_ACKNOWLEDGED };
+                            setAnswers(nextAnswers);
+                            if (isLastQ) {
+                              persistDraft(nextAnswers, q.id);
+                            } else {
+                              advanceQuestion(nextAnswers);
+                            }
+                            return;
+                          }
+
+                          if (isLastQ) {
+                            persistDraft(answers, q.id);
+                            return;
+                          }
+
+                          advanceQuestion();
+                        }}
                         disabled={nextBtnDisabled}
                         className={cn(
                           "px-5 py-2 text-xs font-bold tracking-wide rounded-xl transition-colors",
@@ -1493,7 +1659,7 @@ export function ChecklistRunner({
                 <button
                   id={`question-${q.id}`}
                   type="button"
-                  onClick={() => { if (isPast) setCurrentQIdx(qi); }}
+                  onClick={() => { if (isPast) setCurrentQuestionId(q.id); }}
                   disabled={!isPast}
                   className={cn(
                     "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors",
@@ -2164,6 +2330,8 @@ export default function Kiosk() {
         label: q.text,
         type: q.type,          // q.responseType does not exist on the local Question type
         answer: String(answers[q.id] ?? ""),
+        hasPhoto: q.type === "media" ? Boolean(answers[q.id]) : undefined,
+        comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
       }));
 
       // Base payload — columns that exist in the initial schema (20260304000001).
