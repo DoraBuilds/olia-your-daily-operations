@@ -149,6 +149,25 @@ describe("Login page", () => {
     });
   });
 
+  it("shows a friendly create-account message when the email has no sign-in account yet", async () => {
+    mockSignInWithOtp.mockResolvedValue({
+      data: {},
+      error: { message: "Signups not allowed for otp" },
+    });
+
+    renderPage();
+    fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
+      target: { value: "owner@olia.app" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/No Olia account was found/i)).toBeInTheDocument();
+      expect(screen.getByText(/create one first/i)).toBeInTheDocument();
+      expect(screen.queryByText(/signups not allowed for otp/i)).not.toBeInTheDocument();
+    });
+  });
+
   it("redirects authenticated users to admin", () => {
     mockUseAuth.mockReturnValue({ user: { id: "u1" }, loading: false });
     renderPage();

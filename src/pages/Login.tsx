@@ -13,6 +13,25 @@ function isEmailRateLimited(message: string | null | undefined) {
   return normalized.includes("rate limit") || normalized.includes("over_email_send_rate_limit");
 }
 
+function isMissingAccount(message: string | null | undefined) {
+  const normalized = (message ?? "").toLowerCase();
+  return (
+    normalized.includes("signups not allowed for otp") ||
+    normalized.includes("signup not allowed") ||
+    normalized.includes("user not found") ||
+    normalized.includes("email not found") ||
+    normalized.includes("no account")
+  );
+}
+
+function getFriendlyAuthError(message: string | null | undefined) {
+  if (isMissingAccount(message)) {
+    return "No Olia account was found for that email yet. Please create one first.";
+  }
+
+  return message ?? "Something went wrong. Please try again.";
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -53,7 +72,7 @@ export default function Login() {
         setStep("code");
         setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
       }
-      setError(authError.message);
+      setError(getFriendlyAuthError(authError.message));
       return;
     }
 
@@ -80,7 +99,7 @@ export default function Login() {
         setStep("code");
         setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
       }
-      setError(authError.message);
+      setError(getFriendlyAuthError(authError.message));
       return;
     }
 
