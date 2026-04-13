@@ -31,9 +31,21 @@ describe("Layout", () => {
     mockNavigate.mockClear();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders children content", () => {
     renderWithProviders(<Layout><p>Hello children</p></Layout>);
     expect(screen.getByText("Hello children")).toBeInTheDocument();
+  });
+
+  it("scrolls the shared content container to the top on mount", () => {
+    const scrollTopSpy = vi.spyOn(HTMLElement.prototype, "scrollTop", "set");
+
+    renderWithProviders(<Layout title="T"><span /></Layout>);
+
+    expect(scrollTopSpy).toHaveBeenCalledWith(0);
   });
 
   it("shows header with title when title prop is provided", () => {
