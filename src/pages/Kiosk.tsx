@@ -1540,10 +1540,7 @@ export function ChecklistRunner({
           const isCurrent = qi === currentQuestionIndex;
           const isPast = qi < currentQuestionIndex;
 
-          const isAnswered = Array.isArray(answers[q.id])
-            ? answers[q.id].length > 0
-            : answers[q.id] !== undefined && answers[q.id] !== "" &&
-               answers[q.id] !== null && answers[q.id] !== false;
+          const isAnswered = !isBlankAnswer(answers[q.id]);
           const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
 
           // Inject a centered section divider when section changes

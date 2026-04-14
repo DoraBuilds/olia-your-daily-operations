@@ -131,6 +131,10 @@ export default function Billing() {
   const canceled  = searchParams.get("canceled")  === "1";
   const checkoutSessionId = searchParams.get("session_id");
 
+  // Always start at the top — navigating here from Admin's "Manage Billing" CTA
+  // can land mid-page otherwise.
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
   // Confirm the completed Stripe checkout session directly so the page does
   // not stay stuck waiting only on the webhook write.
   useEffect(() => {
