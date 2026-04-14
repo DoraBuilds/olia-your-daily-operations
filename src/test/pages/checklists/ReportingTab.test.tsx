@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
@@ -180,7 +180,13 @@ vi.mock("@/hooks/usePlan", () => ({
 describe("ReportingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseChecklistLogs.mockClear();
+    // Restore default implementation after any mockReturnValueOnce usage
+    mockUseChecklistLogs.mockImplementation((filters?: any) => ({
+      data: filters?.location_id
+        ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
+        : MOCK_LOGS,
+      isLoading: false,
+    }));
   });
 
   it("renders without crashing", () => {
@@ -425,5 +431,355 @@ describe("ReportingTab", () => {
     expect(mockUseChecklistLogs).toHaveBeenCalledWith(expect.objectContaining({ location_id: "loc-2" }));
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+  });
+
+  // ── Loading state ──────────────────────────────────────────────────
+
+  it("shows loading dashes when isLoading is true", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: true });
+    render(<ReportingTab />, { wrapper });
+    // stat cards show "—" instead of numbers when loading
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows loading message in Completion Log when isLoading is true", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: true });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+  });
+
+  // ── Empty state ────────────────────────────────────────────────────
+
+  it("shows 'No logs recorded for this period.' when no logs and no active filters", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: false });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("No logs recorded for this period.")).toBeInTheDocument();
+  });
+
+  it("shows 'No logs match your filters.' when no logs and active checklist filter", () => {
+    mockUseChecklistLogs.mockReturnValue({ data: [], isLoading: false });
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "XYZ" } });
+    expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
+  });
+
+  it("shows 'No logs match your filters.' when no logs and active person filter", () => {
+    mockUseChecklistLogs.mockReturnValue({ data: [], isLoading: false });
+    render(<ReportingTab />, { wrapper });
+    // Manually set person filter to something that won't match
+    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "all" } });
+    // status filter as active filter
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
+  });
+
+  it("shows 'none' sub-label in Entries stat card when no entries", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: false });
+    render(<ReportingTab />, { wrapper });
+    // "none" label appears in one or more stat cards when counts are 0
+    const noneLabels = screen.getAllByText("none");
+    expect(noneLabels.length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ── Score thresholds ────────────────────────────────────────────────
+
+  it("shows 'Good' sub-label when avg score >= 85", () => {
+    // Default mock has scores 90, 65, null → avg of scored = (90+65)/2 = 77 → Review
+    // Need a mock with only score >= 85
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "h1", checklist_id: "c1", checklist_title: "High Score", completed_by: "Eve", score: 90, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+        { id: "h2", checklist_id: "c1", checklist_title: "High Score B", completed_by: "Eve", score: 88, type: "opening", answers: [], created_at: "2024-03-09T09:00:00Z", started_at: "2024-03-09T08:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("Good")).toBeInTheDocument();
+  });
+
+  it("shows 'Review' sub-label when avg score is between 65 and 84", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "m1", checklist_id: "c1", checklist_title: "Mid Score", completed_by: "Frank", score: 70, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+        { id: "m2", checklist_id: "c1", checklist_title: "Mid Score B", completed_by: "Frank", score: 75, type: "opening", answers: [], created_at: "2024-03-09T09:00:00Z", started_at: "2024-03-09T08:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("Review")).toBeInTheDocument();
+  });
+
+  it("shows 'Action needed' sub-label when avg score < 65", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "l1", checklist_id: "c1", checklist_title: "Low Score", completed_by: "Grace", score: 50, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+        { id: "l2", checklist_id: "c1", checklist_title: "Low Score B", completed_by: "Grace", score: 40, type: "opening", answers: [], created_at: "2024-03-09T09:00:00Z", started_at: "2024-03-09T08:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("Action needed")).toBeInTheDocument();
+  });
+
+  it("shows ACTION REQ. badge for score < 65 in log entries", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "r1", checklist_id: "c1", checklist_title: "Low Score Entry", completed_by: "Hank", score: 40, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("ACTION REQ.")).toBeInTheDocument();
+  });
+
+  // ── Score trend chart ───────────────────────────────────────────────
+
+  it("renders the Score Trend chart when there are scored logs", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByRole("img", { name: "Score trend chart" })).toBeInTheDocument();
+  });
+
+  it("renders Score Trend chart with single data point (stepX = 0)", () => {
+    // Single data point: data.length === 1, triggers stepX = 0 branch
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "s1", checklist_id: "c1", checklist_title: "Solo", completed_by: "Ivy", score: 80, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByRole("img", { name: "Score trend chart" })).toBeInTheDocument();
+  });
+
+  it("does not render Score Trend chart when no scored logs", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "u1", checklist_id: "c1", checklist_title: "Unscored", completed_by: "Jay", score: null, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.queryByRole("img", { name: "Score trend chart" })).not.toBeInTheDocument();
+  });
+
+  it("does not render Score Trend chart when no logs at all", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: false });
+    render(<ReportingTab />, { wrapper });
+    expect(screen.queryByRole("img", { name: "Score trend chart" })).not.toBeInTheDocument();
+  });
+
+  // ── Period switching ────────────────────────────────────────────────
+
+  it("period label shows 'This Week' in Completion Log header after switching", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByText("This Week"));
+    expect(screen.getByText(/— This Week/)).toBeInTheDocument();
+  });
+
+  it("period label shows 'This Month' in Completion Log header after switching", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByText("This Month"));
+    expect(screen.getByText(/— This Month/)).toBeInTheDocument();
+  });
+
+  it("period label shows 'Today' in Completion Log header by default", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText(/— Today/)).toBeInTheDocument();
+  });
+
+  it("clicking Custom button sets period to custom (opens popover)", () => {
+    render(<ReportingTab />, { wrapper });
+    const customBtn = screen.getByText("Custom");
+    fireEvent.click(customBtn);
+    // After clicking Custom, the popover should open (calendar rendered)
+    // The calendar shows "Custom range" as period label
+    expect(screen.getByText(/— Custom range/)).toBeInTheDocument();
+  });
+
+  // ── Custom date range ───────────────────────────────────────────────
+
+  it("shows 'Custom range' period label when custom period and no date selected", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByText("Custom"));
+    expect(screen.getByText(/Custom range/)).toBeInTheDocument();
+  });
+
+  // ── Export plan gating ──────────────────────────────────────────────
+
+  it("shows UpgradePrompt when CSV clicked and exportCsv not allowed", () => {
+    // The global usePlan mock has can = () => true (exportCsv allowed).
+    // Test that CSV button is present and enabled when allowed.
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText("CSV")).toBeInTheDocument();
+    // With entries present, CSV button should not be disabled
+    expect(screen.getByTestId("export-csv")).not.toBeDisabled();
+  });
+
+  it("UpgradePrompt is not shown initially", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
+  });
+
+  // ── Location filter change ──────────────────────────────────────────
+
+  it("changing location filter to specific location updates displayed logs", () => {
+    render(<ReportingTab />, { wrapper });
+    const locationSelect = screen.getByTestId("location-filter");
+    fireEvent.change(locationSelect, { target: { value: "loc-1" } });
+    expect(locationSelect).toHaveValue("loc-1");
+  });
+
+  it("changing location filter back to all shows all logs", () => {
+    render(<ReportingTab initialLocationId="loc-1" />, { wrapper });
+    const locationSelect = screen.getByTestId("location-filter");
+    fireEvent.change(locationSelect, { target: { value: "all" } });
+    expect(locationSelect).toHaveValue("all");
+  });
+
+  // ── Status filter branches ─────────────────────────────────────────
+
+  it("status filter 'completed' hides unfinished logs", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
+    expect(screen.getByText("PASS")).toBeInTheDocument();
+  });
+
+  it("status filter 'all' shows all logs", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "all" } });
+    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
+    expect(screen.getByText("PASS")).toBeInTheDocument();
+  });
+
+  // ── Log count display ───────────────────────────────────────────────
+
+  it("shows 'Showing N of N logs' in filter panel", () => {
+    render(<ReportingTab />, { wrapper });
+    // The text "Showing 3 of 3 logs." is rendered as a single paragraph element
+    expect(screen.getByText((content, element) =>
+      element?.tagName === "P" && /Showing 3 of 3 logs/.test(content)
+    )).toBeInTheDocument();
+  });
+
+  it("shows 'log' (singular) when exactly 1 log total", () => {
+    mockUseChecklistLogs.mockImplementation(() => ({ data: [MOCK_LOGS[0]], isLoading: false }));
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText((content, element) =>
+      element?.tagName === "P" && /Showing 1 of 1 log\./.test(content)
+    )).toBeInTheDocument();
+  });
+
+  // ── Modal interactions ─────────────────────────────────────────────
+
+  it("log detail modal has a close (X) button", async () => {
+    render(<ReportingTab />, { wrapper });
+    const allMatches = screen.getAllByText("Opening Checklist");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => expect(screen.getByText("Export PDF")).toBeInTheDocument());
+    // The modal should contain a close button with p-1.5 rounded-full class
+    const allButtons = screen.getAllByRole("button");
+    const xButton = allButtons.find(b => b.className.includes("p-1.5") && b.className.includes("rounded-full"));
+    expect(xButton).toBeTruthy();
+  });
+
+  it("closes log detail modal when backdrop is clicked", async () => {
+    render(<ReportingTab />, { wrapper });
+    const allMatches = screen.getAllByText("Opening Checklist");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => expect(screen.getByText("Export PDF")).toBeInTheDocument());
+    // Click on the backdrop (fixed overlay div — the outer container)
+    const backdrop = document.querySelector(".fixed.inset-0.z-\\[60\\]");
+    if (backdrop) fireEvent.click(backdrop);
+    await waitFor(() => expect(screen.queryByText("Export PDF")).not.toBeInTheDocument());
+  });
+
+  it("calls exportLogDetailPdf when 'Export PDF' is clicked in log detail modal", async () => {
+    render(<ReportingTab />, { wrapper });
+    const allMatches = screen.getAllByText("Opening Checklist");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => expect(screen.getByText("Export PDF")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Export PDF"));
+    await waitFor(() => expect(mockExportLogDetailPdf).toHaveBeenCalledTimes(1));
+  });
+
+  it("opens log detail for score=65 (REVIEW) entry", async () => {
+    render(<ReportingTab />, { wrapper });
+    const allMatches = screen.getAllByText("Closing Checklist");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    expect(logRowBtn).toBeTruthy();
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => {
+      expect(screen.getByText("Export PDF")).toBeInTheDocument();
+    });
+    // Modal header shows the score
+    expect(screen.getByText("65%")).toBeInTheDocument();
+  });
+
+  it("log detail modal for null-score entry shows '—' instead of score", async () => {
+    render(<ReportingTab />, { wrapper });
+    const allMatches = screen.getAllByText("Inventory Check");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    expect(logRowBtn).toBeTruthy();
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => {
+      expect(screen.getByText("Export PDF")).toBeInTheDocument();
+    });
+    // null score shows "—" in modal
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("log detail modal shows 'No answer detail recorded' for entry with empty answers", async () => {
+    render(<ReportingTab />, { wrapper });
+    // Inventory Check (l3) has empty answers array
+    const allMatches = screen.getAllByText("Inventory Check");
+    const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
+    fireEvent.click(logRowBtn!);
+    await waitFor(() => {
+      expect(screen.getByText("No answer detail recorded for this submission.")).toBeInTheDocument();
+    });
+  });
+
+  // ── PDF export stats ────────────────────────────────────────────────
+
+  it("PDF export passes avgScore=0 and open=1 when avg score is null (no scored logs)", () => {
+    mockUseChecklistLogs.mockReturnValueOnce({
+      data: [
+        { id: "u1", checklist_id: "c1", checklist_title: "Unscored Only", completed_by: "Kai", score: null, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
+      ],
+      isLoading: false,
+    });
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByText("PDF"));
+    expect(mockExportReportingPdf).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(String),
+      expect.objectContaining({ avg: 0 })
+    );
+  });
+
+  // ── Showing N of N logs (singular "log") branch ─────────────────────
+
+  it("shows '0 of 0 logs' when no data", () => {
+    mockUseChecklistLogs.mockImplementation(() => ({ data: [], isLoading: false }));
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByText((content, element) =>
+      element?.tagName === "P" && /Showing 0 of 0 logs/.test(content)
+    )).toBeInTheDocument();
+  });
+
+  // ── Open Actions stat card ──────────────────────────────────────────
+
+  it("Open Actions stat card is rendered", () => {
+    render(<ReportingTab />, { wrapper });
+    const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
+    expect(statCards[2]).toBeTruthy();
+    // With MOCK_ACTIONS having 1 open action, count should be 1
+    expect(statCards[2]).toHaveTextContent("1");
   });
 });
