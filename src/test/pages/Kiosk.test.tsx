@@ -538,7 +538,7 @@ describe("Kiosk — Grid Screen", () => {
     });
   });
 
-  it("sends authenticated testers straight to Admin PIN reset without signing out", async () => {
+  it("always signs out before redirecting to login for PIN recovery, even for authenticated admins", async () => {
     const { supabase } = await import("@/lib/supabase");
     mockUseAuth.mockReturnValue({
       teamMember: {
@@ -561,15 +561,17 @@ describe("Kiosk — Grid Screen", () => {
     fireEvent.click(adminBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Reset it in Admin/i })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Log out and sign in again/i })).not.toBeInTheDocument();
+      // "Log out and sign in again" is shown regardless of auth state — the
+      // direct-to-admin bypass was removed to close the kiosk PIN security hole.
+      expect(screen.getByRole("button", { name: /Log out and sign in again/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Reset it in Admin/i })).not.toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Reset it in Admin/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Log out and sign in again/i }));
 
     await waitFor(() => {
-      expect(supabase.auth.signOut).not.toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith("/admin/account?from=kiosk&focus=pin");
+      expect(supabase.auth.signOut).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/login?reason=reset-pin");
     });
   });
 
