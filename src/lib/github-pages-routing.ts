@@ -15,7 +15,12 @@ function unwrapNestedFallbackRoute(fallbackRoute: string): string {
     const nestedRoute = url.searchParams.get("p");
 
     if (!nestedRoute) {
-      return `${url.pathname}${url.search}${url.hash}`;
+      // Always strip any residual ?p= (e.g. empty ?p=) so the restored URL
+      // never carries the sentinel param — preventing re-encoding on the
+      // next page refresh.
+      url.searchParams.delete("p");
+      const cleanSearch = url.searchParams.toString() ? `?${url.searchParams.toString()}` : "";
+      return `${url.pathname}${cleanSearch}${url.hash}`;
     }
 
     currentRoute = normalizeFallbackRoute(nestedRoute);

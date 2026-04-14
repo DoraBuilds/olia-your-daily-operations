@@ -21,8 +21,7 @@ function makeMockDoc() {
 }
 
 // Module-level reference to the current mock doc — the vi.mock closure always reads this
-// eslint-disable-next-line prefer-const
-let _doc = makeMockDoc();
+const _doc = makeMockDoc();
 const mockAutoTable = vi.fn();
 
 vi.mock("jspdf", () => ({
