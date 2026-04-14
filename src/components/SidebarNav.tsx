@@ -45,7 +45,7 @@ export function SidebarNav() {
                   </span>
                   <span className="tracking-[0.02em]">{label}</span>
                 </NavLink>
-                {active && visibleChildren.length > 0 ? (
+                {visibleChildren.length > 0 ? (
                   <div className="ml-5 border-l border-border/70 pl-4 space-y-1">
                     {visibleChildren.map((child) => {
                       const childActive = location.pathname.startsWith(child.to);

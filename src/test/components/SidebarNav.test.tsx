@@ -20,11 +20,25 @@ describe("SidebarNav", () => {
     });
   });
 
+  it("always shows Infohub child links regardless of active route", () => {
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+
+    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Training" })).toBeInTheDocument();
+  });
+
   it("shows Infohub child links when Infohub is active", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/infohub/library"] });
 
     expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Training" })).toBeInTheDocument();
+  });
+
+  it("always shows Admin child links for owners regardless of active route", () => {
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+
+    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
   });
 
   it("shows Admin child links for owners when Admin is active", () => {
@@ -43,6 +57,20 @@ describe("SidebarNav", () => {
     });
 
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
+
+    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+  });
+
+  it("hides the Account child link for non-owners even when not on admin route", () => {
+    mockUseAuth.mockReturnValue({
+      teamMember: {
+        id: "tm-2",
+        role: "Manager",
+      },
+    });
+
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
 
     expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
