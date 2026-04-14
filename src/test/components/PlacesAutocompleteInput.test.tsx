@@ -45,6 +45,17 @@ describe("PlacesAutocompleteInput", () => {
         callback({
           place_id: request.placeId,
           formatted_address: "14 Rue de la Paix, 69002 Lyon, France",
+          opening_hours: {
+            weekday_text: [
+              "Monday: 9:00 AM – 6:00 PM",
+              "Tuesday: 9:00 AM – 6:00 PM",
+              "Wednesday: 9:00 AM – 6:00 PM",
+              "Thursday: 9:00 AM – 6:00 PM",
+              "Friday: 9:00 AM – 6:00 PM",
+              "Saturday: Closed",
+              "Sunday: Closed",
+            ],
+          },
           geometry: {
             location: {
               lat: () => 45.7608,
@@ -120,6 +131,15 @@ describe("PlacesAutocompleteInput", () => {
       lat: 45.7608,
       lng: 4.8597,
       placeId: "place-1",
+      openingHoursText: [
+        "Monday: 9:00 AM – 6:00 PM",
+        "Tuesday: 9:00 AM – 6:00 PM",
+        "Wednesday: 9:00 AM – 6:00 PM",
+        "Thursday: 9:00 AM – 6:00 PM",
+        "Friday: 9:00 AM – 6:00 PM",
+        "Saturday: Closed",
+        "Sunday: Closed",
+      ],
     });
   });
 });

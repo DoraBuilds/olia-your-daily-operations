@@ -69,6 +69,7 @@ export interface PlaceResult {
   lat: number;
   lng: number;
   placeId: string;
+  openingHoursText?: string[] | null;
 }
 
 interface Prediction {
@@ -170,7 +171,7 @@ export function PlacesAutocompleteInput({
     const helperDiv = document.createElement("div");
     const placeSvc = new g.maps.places.PlacesService(helperDiv);
     placeSvc.getDetails(
-      { placeId: p.place_id, fields: ["geometry", "formatted_address", "place_id"] },
+      { placeId: p.place_id, fields: ["geometry", "formatted_address", "place_id", "opening_hours"] },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (place: any, status: string) => {
         if (status === g.maps.places.PlacesServiceStatus.OK && place?.geometry) {
@@ -179,6 +180,7 @@ export function PlacesAutocompleteInput({
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
             placeId: place.place_id,
+            openingHoursText: place.opening_hours?.weekday_text ?? null,
           });
         }
       },
