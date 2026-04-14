@@ -3,6 +3,7 @@ import Dashboard from "@/pages/Dashboard";
 import { renderWithProviders } from "../test-utils";
 
 const mockNavigate = vi.fn();
+const alertsState = { data: [] as any[] };
 
 const MOCK_LOCATIONS = [
   { id: "loc-1", name: "Main Branch" },
@@ -66,7 +67,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 vi.mock("@/hooks/useAlerts", () => ({
-  useAlerts: vi.fn(() => ({ data: [] })),
+  useAlerts: vi.fn(() => alertsState),
   useCreateAlert: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -89,6 +90,7 @@ vi.mock("@/hooks/useLocations", () => ({
 describe("Dashboard page", () => {
   beforeEach(() => {
     mockNavigate.mockReset();
+    alertsState.data = [];
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-27T12:00:00Z"));
   });
@@ -163,6 +165,28 @@ describe("Dashboard page", () => {
     expect(screen.getByText("Operational alerts")).toBeInTheDocument();
     expect(screen.getByText("All clear")).toBeInTheDocument();
     expect(screen.getByText("It looks like everything is calm now.")).toBeInTheDocument();
+  });
+
+  it("renders user-friendly alert copy instead of the raw trigger text", () => {
+    alertsState.data = [
+      {
+        id: "a-1",
+        type: "warn",
+        message: 'Action required: "Trigger test (n/a is the trigger) - " answered Is N/A',
+        area: "Kitchen",
+        time: "Now",
+        source: "action",
+        dismissed_at: null,
+        created_at: "2026-03-09T09:00:00Z",
+      },
+    ];
+
+    renderWithProviders(<Dashboard />);
+
+    expect(screen.getByText("Follow-up needed")).toBeInTheDocument();
+    expect(screen.getByText("Trigger test (n/a is the trigger) was left unanswered.")).toBeInTheDocument();
+    expect(screen.getByText("A response was not provided, so this item needs attention.")).toBeInTheDocument();
+    expect(screen.queryByText(/Action required:/i)).not.toBeInTheDocument();
   });
 
   it("sorts location health from worst to best and opens reporting with the location filter", () => {
