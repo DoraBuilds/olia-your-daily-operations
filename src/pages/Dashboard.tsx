@@ -11,6 +11,7 @@ import { useActions } from "@/hooks/useActions";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { computeMissedChecklists, computeOverdueActions } from "@/lib/overdue-utils";
+import { formatOperationalAlertCopy } from "@/lib/alert-copy";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -247,32 +248,30 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {visibleAlerts.map(alert => (
-                <button
-                  key={alert.id}
-                  type="button"
-                  onClick={() => navigate("/notifications")}
-                  className={cn(
-                    "w-full bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
-                    alert.type === "error" ? "border-l-status-error" : "border-l-status-warn"
-                  )}
-                  aria-label={`Open alerts and review ${alert.message}`}
-                >
-                  <AlertCircle size={15}
-                    className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground leading-snug">{alert.message}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-muted-foreground">{alert.area}</span>
-                      {alert.time && (
-                        <><span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-muted-foreground">{alert.time}</span></>
-                      )}
+              {visibleAlerts.map(alert => {
+                const copy = formatOperationalAlertCopy(alert);
+                return (
+                  <button
+                    key={alert.id}
+                    type="button"
+                    onClick={() => navigate("/notifications")}
+                    className={cn(
+                      "w-full bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
+                      alert.type === "error" ? "border-l-status-error" : "border-l-status-warn",
+                    )}
+                    aria-label={`Open alerts and review ${copy.title}`}
+                  >
+                    <AlertCircle size={15}
+                      className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground leading-snug">{copy.title}</p>
+                      <p className="text-sm text-foreground/90 leading-snug mt-0.5">{copy.body}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{copy.helper}</p>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
 
               {hasMore && (
                 <button

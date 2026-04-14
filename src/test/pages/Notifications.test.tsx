@@ -70,7 +70,7 @@ describe("Notifications page", () => {
       {
         id: "a-1",
         type: "warn",
-        message: "Fridge temperature high",
+        message: 'Action required: "Trigger test (n/a is the trigger) - " answered Is N/A',
         area: "Kitchen",
         time: "09:00",
         source: "checklist",
@@ -79,7 +79,10 @@ describe("Notifications page", () => {
       },
     ];
     renderWithProviders(<Notifications />);
-    expect(screen.getByText("Fridge temperature high")).toBeInTheDocument();
+    expect(screen.getByText("Follow-up needed")).toBeInTheDocument();
+    expect(screen.getByText("Trigger test (n/a is the trigger) was left unanswered.")).toBeInTheDocument();
+    expect(screen.getByText("A response was not provided, so this item needs attention.")).toBeInTheDocument();
+    expect(screen.queryByText(/Action required:/i)).not.toBeInTheDocument();
   });
 
   it("shows 'Clear all' button when there are alerts", () => {

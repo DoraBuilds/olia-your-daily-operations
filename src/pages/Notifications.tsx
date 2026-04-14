@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { AlertCircle, ArrowLeft, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAlerts, useDismissAlert, useClearAlerts } from "@/hooks/useAlerts";
+import { formatOperationalAlertCopy } from "@/lib/alert-copy";
 
 export default function Notifications() {
   const navigate = useNavigate();
@@ -54,39 +55,35 @@ export default function Notifications() {
           </div>
         ) : (
           <div className="card-surface divide-y divide-border overflow-hidden">
-            {alerts.map(alert => (
-              <div
-                key={alert.id}
-                className={cn(
-                  "flex items-start gap-3 p-4",
-                  alert.type === "error" ? "border-l-2 border-l-status-error" : "border-l-2 border-l-status-warn"
-                )}
-              >
-                <AlertCircle
-                  size={16}
-                  className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground leading-snug">{alert.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">{alert.area}</span>
-                    {alert.time && (
-                      <>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className="text-xs text-muted-foreground">{alert.time}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => clearOne(alert.id)}
-                  className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
-                  aria-label="Dismiss alert"
+            {alerts.map(alert => {
+              const copy = formatOperationalAlertCopy(alert);
+              return (
+                <div
+                  key={alert.id}
+                  className={cn(
+                    "flex items-start gap-3 p-4",
+                    alert.type === "error" ? "border-l-2 border-l-status-error" : "border-l-2 border-l-status-warn",
+                  )}
                 >
-                  <X size={14} className="text-muted-foreground" />
-                </button>
-              </div>
-            ))}
+                  <AlertCircle
+                    size={16}
+                    className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground leading-snug">{copy.title}</p>
+                    <p className="text-sm text-foreground/90 leading-snug mt-0.5">{copy.body}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{copy.helper}</p>
+                  </div>
+                  <button
+                    onClick={() => clearOne(alert.id)}
+                    className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                    aria-label="Dismiss alert"
+                  >
+                    <X size={14} className="text-muted-foreground" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
