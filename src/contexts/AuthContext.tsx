@@ -11,6 +11,7 @@ interface TeamMemberProfile {
   role: string;
   location_ids: string[];
   permissions: Record<string, boolean>;
+  pin_reset_required?: boolean;
 }
 
 interface AuthContextValue {

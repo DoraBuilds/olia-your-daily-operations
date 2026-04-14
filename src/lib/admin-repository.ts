@@ -94,6 +94,7 @@ export interface TeamMember {
   initials: string;
   permissions: ManagerPermissions;
   pin?: string | null;
+  pin_reset_required?: boolean;
 }
 
 export interface AuditLogEntry {
@@ -110,6 +111,8 @@ export interface AuditLogEntry {
 export function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
+
+export const DEFAULT_ADMIN_PIN = "1234";
 
 export function getInitials(name: string): string {
   return name
