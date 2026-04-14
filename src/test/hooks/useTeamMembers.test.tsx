@@ -128,17 +128,46 @@ describe("useSaveTeamMember", () => {
         role: "Owner",
         location_ids: [],
         permissions: {},
-        rawPin: "1234",
+      rawPin: "1234",
       } as any);
     });
 
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         pin: expect.any(String),
+        pin_reset_required: false,
       }),
     );
     const payload = update.mock.calls[0][0];
     expect(payload.pin).toHaveLength(64);
+  });
+
+  it("marks a newly created owner PIN as needing a reset", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      update: vi.fn().mockReturnValue({ eq: vi.fn() }),
+      insert,
+      delete: vi.fn().mockReturnThis(),
+    });
+
+    const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({
+        name: "Test Owner",
+        email: "owner@example.com",
+        role: "Owner",
+        location_ids: [],
+        permissions: {},
+        rawPin: "1234",
+      } as any);
+    });
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      pin_reset_required: true,
+    }));
   });
 
   it("fails loudly when an existing team member update affects no rows", async () => {

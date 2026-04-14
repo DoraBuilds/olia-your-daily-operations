@@ -16,7 +16,7 @@ import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry, type AccountRole,
   type StaffDepartment,
-  DEFAULT_PERMISSIONS, DEFAULT_STAFF_DEPARTMENTS, flattenStaffDepartments, getRoleDepartment,
+  DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS, DEFAULT_STAFF_DEPARTMENTS, flattenStaffDepartments, getRoleDepartment,
   getInitials, daysAgo, daysAgoTooltip, staffDisplayName, formatTimestamp, generatePin,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
@@ -387,7 +387,12 @@ function TeamMemberModal({
   const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
-  const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
+  const [pin, setPin] = useState(() => member?.id ? "" : (role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin()));
+
+  useEffect(() => {
+    if (member?.id) return;
+    setPin(role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin());
+  }, [member?.id, role]);
 
   const toggleLocation = (id: string) => {
     setLocationIds(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
@@ -452,7 +457,9 @@ function TeamMemberModal({
             </p>
           ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              This PIN is used for kiosk/admin access. Generate one now so the account owner can log in from the kiosk.
+              {role === "Owner"
+                ? `New owner accounts start with PIN ${DEFAULT_ADMIN_PIN} and should change it immediately for security.`
+                : "This PIN is used for kiosk access. Generate one now so the staff member can log in."}
             </p>
           )}
           <div className="flex gap-2">
@@ -1163,6 +1170,7 @@ function AccountTab({
     permissions: DEFAULT_PERMISSIONS,
   } : null);
   const assignedLocationIds = currentAccount?.location_ids ?? [];
+  const needsDefaultPinChange = Boolean(currentAccount?.pin_reset_required);
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
@@ -1243,6 +1251,7 @@ function AccountTab({
         location_ids: currentAccount.location_ids,
         permissions: currentAccount.permissions,
         rawPin: pin,
+        pin_reset_required: false,
       });
       setPin("");
       toast.success("Admin PIN updated");
@@ -1410,6 +1419,13 @@ function AccountTab({
             Admin app sign-in uses email codes. Use a 4-digit PIN for kiosk-side admin access, or create a new PIN if the old one was forgotten.
           </p>
         </div>
+
+        {needsDefaultPinChange && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            New owner accounts start with PIN <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>.
+            Change it right away for security before using kiosk mode.
+          </div>
+        )}
 
         <div className="space-y-3">
           <label className="space-y-1 block">
@@ -2220,6 +2236,7 @@ export default function Admin() {
                 initials: getInitials(authMember.name),
                 location_ids: authMember.location_ids,
                 permissions: authMember.permissions,
+                pin_reset_required: authMember.pin_reset_required ?? false,
               } : null}
               authMemberId={authMember?.id}
               authUserEmail={user?.email}

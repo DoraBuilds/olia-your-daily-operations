@@ -12,17 +12,18 @@ export function useTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, location_ids, permissions")
+        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required")
         .order("name");
       if (error) throw error;
       return ((data ?? []) as any[])
         .filter((member) => member.organization_id === teamMember?.organization_id)
         .map((m) => ({
-        ...m,
-        initials: getInitials(m.name),
-        permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
-        location_ids: m.location_ids ?? [],
-      })) as TeamMember[];
+          ...m,
+          initials: getInitials(m.name),
+          permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
+          location_ids: m.location_ids ?? [],
+          pin_reset_required: m.pin_reset_required ?? false,
+        })) as TeamMember[];
     },
     enabled: !!teamMember?.organization_id,
   });
@@ -47,6 +48,9 @@ export function useSaveTeamMember() {
         };
         if (tm.rawPin) {
           updatePayload.pin = await hashPin(tm.rawPin);
+          updatePayload.pin_reset_required = false;
+        } else if (tm.pin_reset_required !== undefined) {
+          updatePayload.pin_reset_required = tm.pin_reset_required;
         }
 
         const { data: updated, error } = await supabase
@@ -72,6 +76,7 @@ export function useSaveTeamMember() {
       if (tm.rawPin) {
         insertPayload.pin = await hashPin(tm.rawPin);
       }
+      insertPayload.pin_reset_required = tm.pin_reset_required ?? (tm.role === "Owner");
 
       const { error } = await supabase.from("team_members").insert(insertPayload);
       if (error) throw error;
