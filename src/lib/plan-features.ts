@@ -3,11 +3,16 @@
  * Single source of truth for what each plan can access.
  * Edit this file to change tier limits — nothing else needs changing.
  *
- * Tier prices and Stripe Price IDs are configured in .env.local:
+ * Stripe Price IDs are optional env vars read by src/lib/runtime-config.ts.
+ * Set them in .env.local (see .env.example for all required keys):
+ *   VITE_STRIPE_PRICE_STARTER_MONTHLY
+ *   VITE_STRIPE_PRICE_STARTER_ANNUAL
  *   VITE_STRIPE_PRICE_GROWTH_MONTHLY
  *   VITE_STRIPE_PRICE_GROWTH_ANNUAL
- *   VITE_STRIPE_PRICE_ENT_MONTHLY
- *   VITE_STRIPE_PRICE_ENT_ANNUAL
+ *
+ * Enterprise is sales-led — no Stripe checkout, no price ID needed.
+ * Server-side secrets (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) must be
+ * set in Supabase Edge Function secrets, not in .env files.
  */
 
 export type Plan = "starter" | "growth" | "enterprise";

@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Billing from "@/pages/Billing";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { renderWithProviders } from "../test-utils";
@@ -47,6 +47,7 @@ beforeEach(() => {
   mockInvoke.mockResolvedValue({ data: null, error: null });
   mockUsePlan.mockReturnValue({
     plan: "starter",
+    resolvedPlan: "starter",
     planStatus: "active",
     org: null,
     isLoading: false,
@@ -54,6 +55,7 @@ beforeEach(() => {
     can: vi.fn().mockReturnValue(false),
     withinLimit: vi.fn().mockReturnValue(true),
     hasStripeSubscription: false,
+    billingUnavailable: false,
     features: {
       maxLocations: 1,
       maxStaff: 15,
@@ -158,6 +160,7 @@ describe("Billing page", () => {
   it("renders growth plan when current plan is growth and shows Stripe link", () => {
     mockUsePlan.mockReturnValue({
       plan: "growth",
+      resolvedPlan: "growth",
       planStatus: "active",
       org: { id: "org-1", plan: "growth", plan_status: "active", stripe_subscription_id: "sub_123" },
       isLoading: false,
@@ -165,6 +168,7 @@ describe("Billing page", () => {
       can: vi.fn().mockReturnValue(true),
       withinLimit: vi.fn().mockReturnValue(true),
       hasStripeSubscription: true,
+      billingUnavailable: false,
       features: {
         maxLocations: 5,
         maxStaff: 100,
@@ -184,5 +188,52 @@ describe("Billing page", () => {
     expect(growthElements.length).toBeGreaterThanOrEqual(1);
     // Should show manage subscription link
     expect(screen.getByText("Manage subscription on Stripe")).toBeInTheDocument();
+  });
+
+  it("shows billingUnavailable state when plan data cannot be loaded", () => {
+    mockUsePlan.mockReturnValue({
+      plan: "starter",
+      resolvedPlan: null,
+      planStatus: null,
+      org: null,
+      isLoading: false,
+      isActive: false,
+      can: vi.fn().mockReturnValue(false),
+      withinLimit: vi.fn().mockReturnValue(true),
+      hasStripeSubscription: false,
+      billingUnavailable: true,
+      features: {
+        maxLocations: 1,
+        maxStaff: 15,
+        maxChecklists: 10,
+        aiBuilder: false,
+        fileConvert: false,
+        advancedReporting: false,
+        exportPdf: true,
+        exportCsv: false,
+        multiLocation: false,
+        prioritySupport: false,
+      },
+    });
+    renderWithProviders(<Billing />);
+    expect(screen.getByText("Billing unavailable")).toBeInTheDocument();
+    expect(screen.getByText("We couldn't verify your billing plan just now.")).toBeInTheDocument();
+  });
+
+  it("shows a friendly error when Stripe price IDs are not configured", async () => {
+    // In the test environment no VITE_STRIPE_PRICE_* vars are set, so
+    // runtimeConfig.stripe.priceIds.growth.monthly resolves to "".
+    // Clicking "Upgrade to Growth" should show the contact-us message,
+    // not a raw config error.
+    renderWithProviders(<Billing />);
+    const upgradeBtn = screen.getByRole("button", { name: /Upgrade to Growth/i });
+    fireEvent.click(upgradeBtn);
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Online upgrades are not configured for this deployment yet/i),
+      ).toBeInTheDocument();
+    });
+    // The edge function should NOT have been called
+    expect(mockInvoke).not.toHaveBeenCalledWith("create-checkout-session", expect.anything());
   });
 });
