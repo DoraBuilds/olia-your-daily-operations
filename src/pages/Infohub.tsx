@@ -751,7 +751,7 @@ function LibraryDocDetail({ doc, folders, onBack, onSave }: {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-[1120px] xl:max-w-[1040px] mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
           <button onClick={isEditing ? () => setIsEditing(false) : onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -901,7 +901,7 @@ function TrainingDocDetail({ doc, onBack, onToggleComplete }: {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
+    <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-[1120px] xl:max-w-[1040px] mx-auto">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-5 py-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -989,7 +989,7 @@ function SearchOverlay({ libraryDocs, trainingDocs, onClose, onSelectLibDoc, onS
   ) : [];
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col w-full min-[900px]:max-w-[1120px] xl:max-w-[1040px] mx-auto">
       <header className="border-b border-border px-4 py-3 flex items-center gap-3">
         <Search size={16} className="text-muted-foreground shrink-0" />
         <input

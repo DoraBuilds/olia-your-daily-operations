@@ -19,8 +19,8 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
-  const shellWidthClass = "mx-auto w-full max-w-[1320px]";
-  const contentWidthClass = "w-full max-w-[960px] xl:max-w-[920px]";
+  const shellWidthClass = "mx-auto w-full max-w-[1240px]";
+  const contentWidthClass = "w-full min-w-0 max-w-[920px] xl:max-w-[900px]";
 
   const handleLogout = async () => {
     await signOut();
@@ -73,9 +73,9 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       {/* Content */}
       <main ref={mainRef} className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
         <div className={cn(shellWidthClass, "px-4 sm:px-6 lg:px-8 xl:px-10")}>
-          <div className="flex items-start gap-6 lg:gap-8">
+          <div className="flex min-w-0 items-start gap-6 lg:gap-8">
             <SidebarNav />
-            <div className={cn(contentWidthClass, "space-y-4")}>
+            <div className={cn(contentWidthClass, "min-w-0 space-y-4")}>
               {children}
             </div>
           </div>
