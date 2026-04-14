@@ -70,7 +70,7 @@ export function ChecklistsTab() {
   }));
 
   // PDF download helper
-  const downloadChecklistPdf = (cl: typeof dbChecklists[0]) =>
+  const downloadChecklistPdf = async (cl: typeof dbChecklists[0]) =>
     exportChecklistTemplatePdf({
       title: cl.title,
       schedule: getScheduleLabel(cl.schedule ? String(cl.schedule) : null),
@@ -149,7 +149,7 @@ export function ChecklistsTab() {
     });
   };
 
-  const handleContextAction = (action: string) => {
+  const handleContextAction = async (action: string) => {
     if (!contextMenu) return;
     if (action === "edit" && contextMenu.type === "checklist") {
       const cl = checklists.find(c => c.id === contextMenu.id);
@@ -175,7 +175,7 @@ export function ChecklistsTab() {
       if (orig) saveChecklistMut.mutate({ ...orig, id: "", title: `${orig.title} (copy)` });
     } else if (action === "download" && contextMenu.type === "checklist") {
       const orig = dbChecklists.find(c => c.id === contextMenu.id);
-      if (orig) downloadChecklistPdf(orig);
+      if (orig) await downloadChecklistPdf(orig);
     }
   };
 

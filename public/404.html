@@ -19,7 +19,7 @@
           return;
         }
 
-        if (searchParams.get("p")) {
+        if (searchParams.get("p") !== null) {
           window.location.replace(basePath + "/" + search + hash);
           return;
         }

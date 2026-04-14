@@ -36,6 +36,23 @@ describe("github-pages-routing", () => {
     ).toBe("/olia-your-daily-operations/admin/location");
   });
 
+  it("strips a residual empty ?p= sentinel so it is never re-encoded on the next refresh", () => {
+    // ?p=%2Fadmin%3Fp%3D decodes to /admin?p= — the inner ?p= is empty and
+    // must be stripped from the restored URL, otherwise the next page refresh
+    // would re-encode it and the sentinel would grow.
+    expect(
+      buildGitHubPagesRoute("?p=%2Fadmin%3Fp%3D", "/olia-your-daily-operations/"),
+    ).toBe("/olia-your-daily-operations/admin");
+  });
+
+  it("preserves non-sentinel query params while stripping ?p= from the restored route", () => {
+    // ?p=%2Fadmin%3Ftab%3Dreporting — the inner route has a real query param
+    // (tab=reporting) that must survive while any ?p= is stripped.
+    expect(
+      buildGitHubPagesRoute("?p=%2Fadmin%3Ftab%3Dreporting", "/olia-your-daily-operations/"),
+    ).toBe("/olia-your-daily-operations/admin?tab=reporting");
+  });
+
   it("builds a GitHub Pages-safe auth redirect URL", () => {
     expect(buildPublicAuthRedirectUrl("https://dorabuilds.github.io/olia-your-daily-operations", "/auth/callback")).toBe(
       "https://dorabuilds.github.io/olia-your-daily-operations?p=%2Fauth%2Fcallback",

@@ -2218,7 +2218,6 @@ export default function Kiosk() {
   useEffect(() => {
     if (!locationId) return;
     drainQueue(async (payload) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { location_id: _stripped, ...safePayload } = payload as any;
       const { error } = await supabase.from("checklist_logs").insert(safePayload);
       if (error) throw new Error(error.message);

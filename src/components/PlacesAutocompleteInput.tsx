@@ -104,7 +104,6 @@ export function PlacesAutocompleteInput({
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svcRef = useRef<any>(null);
 
   // Close dropdown when clicking outside
@@ -119,7 +118,6 @@ export function PlacesAutocompleteInput({
   }, []);
 
   const getAutocompleteService = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const g = (window as any).google;
     if (!ready || !g?.maps?.places) return null;
     if (!svcRef.current) {
@@ -140,7 +138,6 @@ export function PlacesAutocompleteInput({
       { input: input.trim() },
       (results: Prediction[] | null, status: string) => {
         setLoading(false);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const OK = (window as any).google.maps.places.PlacesServiceStatus.OK;
         if (status === OK && results?.length) {
           setPredictions(results);
@@ -166,13 +163,11 @@ export function PlacesAutocompleteInput({
     onChange(p.description);
 
     // Fetch place details to get lat/lng
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const g = (window as any).google;
     const helperDiv = document.createElement("div");
     const placeSvc = new g.maps.places.PlacesService(helperDiv);
     placeSvc.getDetails(
       { placeId: p.place_id, fields: ["geometry", "formatted_address", "place_id", "opening_hours"] },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (place: any, status: string) => {
         if (status === g.maps.places.PlacesServiceStatus.OK && place?.geometry) {
           onPlaceSelect({
