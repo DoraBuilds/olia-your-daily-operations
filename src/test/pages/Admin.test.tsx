@@ -1,5 +1,5 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import Admin from "@/pages/Admin";
+import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 
 vi.mock("@/lib/runtime-config", () => ({
@@ -154,6 +154,12 @@ vi.mock("@/hooks/useChecklists", () => ({
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Admin page", () => {
+  afterEach(() => {
+    document.getElementById("olia-gmaps")?.remove();
+    // @ts-expect-error test cleanup shim
+    delete window.google;
+  });
+
   // 1. Renders without crashing
   it("renders the Admin page without crashing", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
@@ -195,6 +201,17 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getByText("Location details")).toBeInTheDocument();
+    });
+  });
+
+  it("prompts that Google Maps can autofill address details and opening hours", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+    fireEvent.click(screen.getByRole("button", { name: /add location/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Pick a real place from Google Maps to autofill the official address, map preview, and opening hours when available\./i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -471,6 +488,23 @@ describe("Admin page", () => {
       expect(screen.getByAltText("Location map preview")).toBeInTheDocument();
       expect(screen.getByText("Official place selected from maps")).toBeInTheDocument();
     });
+  });
+
+  it("parses Google Maps opening hours into weekly hours", () => {
+    const parsed = parseGoogleOpeningHours([
+      "Monday: 9:00 AM – 6:00 PM",
+      "Tuesday: 9:00 AM – 6:00 PM",
+      "Wednesday: 9:00 AM – 6:00 PM",
+      "Thursday: 9:00 AM – 6:00 PM",
+      "Friday: 9:00 AM – 6:00 PM",
+      "Saturday: Closed",
+      "Sunday: Closed",
+    ]);
+
+    expect(parsed?.mon.open).toBe(true);
+    expect(parsed?.mon.windows[0]).toEqual({ start: "09:00", end: "18:00" });
+    expect(parsed?.sat.open).toBe(false);
+    expect(parsed?.sun.open).toBe(false);
   });
 
   // 28. Location form does not show email for new locations

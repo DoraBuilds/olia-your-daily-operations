@@ -143,6 +143,85 @@ function formatHoursText(hours: WeeklyHours): string {
     .join(" · ");
 }
 
+const GOOGLE_DAY_LABELS: Record<string, DayKey> = {
+  Sunday: "sun",
+  Monday: "mon",
+  Tuesday: "tue",
+  Wednesday: "wed",
+  Thursday: "thu",
+  Friday: "fri",
+  Saturday: "sat",
+};
+
+function parseGoogleTimeTo24Hour(raw: string): string | null {
+  const match = raw.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AP]M)?$/i);
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = match[2] ?? "00";
+  const meridiem = match[3]?.toUpperCase();
+
+  if (Number.isNaN(hours) || hours < 0 || hours > 23) return null;
+  if (Number.isNaN(Number(minutes)) || Number(minutes) < 0 || Number(minutes) > 59) return null;
+
+  if (meridiem === "AM") {
+    if (hours === 12) hours = 0;
+  } else if (meridiem === "PM" && hours !== 12) {
+    hours += 12;
+  }
+
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+}
+
+function parseGoogleOpeningWindow(rawWindow: string): TimeWindow | null {
+  const match = rawWindow.trim().match(/^(.+?)\s*[–-]\s*(.+)$/);
+  if (!match) return null;
+
+  const start = parseGoogleTimeTo24Hour(match[1]);
+  const end = parseGoogleTimeTo24Hour(match[2]);
+  if (!start || !end) return null;
+
+  return { start, end };
+}
+
+export function parseGoogleOpeningHours(weekdayText: string[] | null | undefined): WeeklyHours | null {
+  if (!weekdayText?.length) return null;
+
+  const parsed = cloneWeeklyHours(DEFAULT_HOURS);
+  let matchedAnyDay = false;
+
+  for (const entry of weekdayText) {
+    const match = entry.match(/^([^:]+):\s*(.+)$/);
+    const label = match?.[1]?.trim() ?? "";
+    const schedule = match?.[2]?.trim() ?? "";
+    const day = GOOGLE_DAY_LABELS[label];
+    if (!day || !schedule) continue;
+
+    matchedAnyDay = true;
+    const trimmedSchedule = schedule.trim();
+    if (/^closed$/i.test(trimmedSchedule)) {
+      parsed[day] = { open: false, windows: [] };
+      continue;
+    }
+
+    if (/open 24 hours/i.test(trimmedSchedule)) {
+      parsed[day] = { open: true, windows: [{ start: "00:00", end: "23:59" }] };
+      continue;
+    }
+
+    const windows = trimmedSchedule
+      .split(/\s*,\s*/)
+      .map(segment => parseGoogleOpeningWindow(segment))
+      .filter((window): window is TimeWindow => window !== null);
+
+    if (windows.length > 0) {
+      parsed[day] = { open: true, windows: windows.slice(0, 2) };
+    }
+  }
+
+  return matchedAnyDay ? parsed : null;
+}
+
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 
 function BottomSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
@@ -547,6 +626,10 @@ function LocationModal({
     setLat(place.lat);
     setLng(place.lng);
     setPlaceId(place.placeId);
+    const autoHours = parseGoogleOpeningHours(place.openingHoursText ?? null);
+    if (autoHours) {
+      setHours(autoHours);
+    }
   };
 
   const setDayOpen = (day: DayKey, open: boolean) => {
@@ -660,6 +743,9 @@ function LocationModal({
             className={inputCls}
             placeholder="e.g. 14 Rue de la Paix, Lyon"
           />
+          <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+            Pick a real place from Google Maps to autofill the official address, map preview, and opening hours when available.
+          </p>
           {lat !== null && lng !== null && (
             <div className="mt-2 space-y-2">
               <StaticMapPreview lat={lat} lng={lng} />
