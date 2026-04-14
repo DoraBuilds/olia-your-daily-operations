@@ -439,11 +439,9 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
 
   const handlePinRecovery = async () => {
     onClose();
-    if (teamMember) {
-      navigate("/admin/account?from=kiosk&focus=pin");
-      return;
-    }
-
+    // Always sign out before redirecting to login — even if an admin session is
+    // active on this device. Allowing direct navigation to /admin via the kiosk
+    // recovery link would let any kiosk user bypass the PIN gate entirely.
     await supabase.auth.signOut();
     navigate("/login?reason=reset-pin");
   };
@@ -499,7 +497,7 @@ function AdminLoginModal({ onClose }: { onClose: () => void }) {
             onClick={() => { void handlePinRecovery(); }}
             className="text-sage font-medium hover:underline"
           >
-            {teamMember ? "Reset it in Admin" : "Log out and sign in again"}
+            Log out and sign in again
           </button>
         </p>
       </div>
@@ -1540,10 +1538,7 @@ export function ChecklistRunner({
           const isCurrent = qi === currentQuestionIndex;
           const isPast = qi < currentQuestionIndex;
 
-          const isAnswered = Array.isArray(answers[q.id])
-            ? answers[q.id].length > 0
-            : answers[q.id] !== undefined && answers[q.id] !== "" &&
-               answers[q.id] !== null && answers[q.id] !== false;
+          const isAnswered = !isBlankAnswer(answers[q.id]);
           const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
 
           // Inject a centered section divider when section changes

@@ -205,8 +205,9 @@ describe("Admin page", () => {
   });
 
   it("prompts that Google Maps can autofill address details and opening hours", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    fireEvent.click(screen.getByRole("button", { name: /add location/i }));
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    const addBtn = await screen.findByRole("button", { name: /add location/i });
+    fireEvent.click(addBtn);
 
     await waitFor(() => {
       expect(

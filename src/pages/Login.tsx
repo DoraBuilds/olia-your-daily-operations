@@ -129,7 +129,7 @@ export default function Login() {
     setResending(false);
 
     if (authError) {
-      setError(authError.message);
+      setError(getFriendlyAuthError(authError.message));
       return;
     }
 

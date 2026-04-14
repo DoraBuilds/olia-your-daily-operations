@@ -3,6 +3,9 @@ import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { renderWithProviders } from "../test-utils";
 
 const mockNavigate = vi.fn();
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+}));
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
@@ -12,8 +15,16 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
 const checklistLogsInsert = vi.fn().mockResolvedValue({ error: null });
 const alertsInsert = vi.fn().mockResolvedValue({ error: null });
+const mockLocations = [
+  { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
+  { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
+];
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 // The KioskSetupScreen calls:
@@ -68,11 +79,6 @@ vi.mock("@/lib/supabase", () => ({
         return chain;
       }
 
-      const locations = [
-        { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
-        { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
-      ];
-
       const chain: any = {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -82,7 +88,7 @@ vi.mock("@/lib/supabase", () => ({
         }),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
         maybeSingle: vi.fn().mockImplementation(() => Promise.resolve({
-          data: table === "locations" ? locations.find((location) => location.id === eqValue) ?? null : null,
+          data: table === "locations" ? mockLocations.find((location) => location.id === eqValue) ?? null : null,
           error: null,
         })),
         insert: vi.fn().mockResolvedValue({ error: null }),
@@ -91,7 +97,7 @@ vi.mock("@/lib/supabase", () => ({
         delete: vi.fn().mockReturnThis(),
         then: vi.fn().mockImplementation((cb) =>
           Promise.resolve(cb({
-            data: locations,
+            data: mockLocations,
             error: null,
           }))
         ),
@@ -132,10 +138,7 @@ vi.mock("@/lib/supabase", () => ({
 
 vi.mock("@/hooks/useLocations", () => ({
   useLocations: () => ({
-    allLocations: [
-      { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
-      { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
-    ],
+    allLocations: mockLocations,
     isFetched: true,
   }),
 }));
@@ -149,8 +152,12 @@ function renderSetup() {
   return renderWithProviders(<Kiosk />);
 }
 
-/** Render the Kiosk starting at the grid screen (Terrace location pre-stored). */
-async function renderGridScreen() {
+/** Render the Kiosk starting at the grid screen (Terrace location pre-stored).
+ *  Pass authOverride to use a different auth state (e.g. null user for unauthenticated tests). */
+async function renderGridScreen(authOverride?: { user: any; teamMember: any; session: any; loading: boolean; signOut: any }) {
+  mockUseAuth.mockReturnValue(
+    authOverride ?? { user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() }
+  );
   localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
   localStorage.setItem("kiosk_location_name", "Terrace");
   localStorage.setItem("kiosk_owner_user_id", "u1");
@@ -238,9 +245,17 @@ async function openRunnerWithQuestions(questions: any[]) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   localStorage.clear();
   checklistLogsInsert.mockClear();
   alertsInsert.mockClear();
+  mockUseAuth.mockReturnValue({
+    teamMember: null,
+    user: null,
+    session: null,
+    loading: false,
+    signOut: vi.fn(),
+  });
 });
 
 afterEach(() => {
@@ -503,13 +518,53 @@ describe("Kiosk — Grid Screen", () => {
 
   it("offers a logout-and-login recovery path instead of a signup bypass", async () => {
     const { supabase } = await import("@/lib/supabase");
-    await renderGridScreen();
+    // No teamMember → kiosk shows "Log out and sign in again" recovery path.
+    // Use loading:true so the cleanup effect is suppressed while the grid renders
+    // from the localStorage values set in the outer beforeEach.
+    await renderGridScreen({ user: null, teamMember: null, session: null, loading: true, signOut: vi.fn() });
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/Forgot your PIN/i)).toBeInTheDocument();
       expect(screen.queryByText(/Create an account/i)).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Log out and sign in again/i }));
+
+    await waitFor(() => {
+      expect(supabase.auth.signOut).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/login?reason=reset-pin");
+    });
+  });
+
+  it("always signs out before redirecting to login for PIN recovery, even for authenticated admins", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    mockUseAuth.mockReturnValue({
+      teamMember: {
+        id: "tm-1",
+        organization_id: "org-1",
+        name: "Sarah Owner",
+        email: "sarah@example.com",
+        role: "Owner",
+        location_ids: [],
+        permissions: {},
+      },
+      user: { id: "u1" },
+      session: { user: { id: "u1" } },
+      loading: false,
+      signOut: vi.fn(),
+    });
+
+    await renderGridScreen();
+    const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
+    fireEvent.click(adminBtn);
+
+    await waitFor(() => {
+      // "Log out and sign in again" is shown regardless of auth state — the
+      // direct-to-admin bypass was removed to close the kiosk PIN security hole.
+      expect(screen.getByRole("button", { name: /Log out and sign in again/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Reset it in Admin/i })).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Log out and sign in again/i }));
@@ -781,6 +836,7 @@ describe("Kiosk — PIN Entry Modal", () => {
 
 describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
   beforeEach(() => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000010");
     localStorage.setItem("kiosk_location_name", "Grand Ballroom");
     localStorage.setItem("kiosk_owner_user_id", "u1");
@@ -819,6 +875,7 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
 
 describe("Kiosk — Completion Screen", () => {
   it("returns to the grid after closing the PIN modal", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
     localStorage.setItem("kiosk_location_name", "Terrace");
     localStorage.setItem("kiosk_owner_user_id", "u1");
@@ -1413,7 +1470,6 @@ describe("Kiosk — Checklist Runner", () => {
       { id: "q-required-text", text: "Required note", responseType: "text", required: true },
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: /open the linked document before you continue/i }));
     fireEvent.click(screen.getByRole("button", { name: /open linked document/i }));
 
     await waitFor(() => {
@@ -1495,6 +1551,7 @@ describe("Kiosk — Checklist Runner", () => {
 
 describe("Kiosk — URL param locationId", () => {
   it("reading locationId from URL params jumps directly to grid screen", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.clear();
     renderWithProviders(<Kiosk />, {
       initialEntries: ["/kiosk?locationId=00000000-0000-0000-0000-000000000011"],

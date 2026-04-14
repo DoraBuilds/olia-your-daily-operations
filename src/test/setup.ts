@@ -28,6 +28,9 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// jsdom doesn't implement window.scrollTo — silence the "Not implemented" warnings.
+window.scrollTo = () => {};
+
 // Polyfill ResizeObserver — required by Radix UI components (Switch, etc.)
 if (!global.ResizeObserver) {
   global.ResizeObserver = class ResizeObserver {
