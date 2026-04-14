@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { exportChecklistTemplatePdf } from "@/lib/export-utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
@@ -11,12 +10,14 @@ import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { FolderBreadcrumb } from "./FolderBreadcrumb";
 import { CreateMenuSheet } from "./CreateMenuSheet";
-import { ConvertFileModal } from "./ConvertFileModal";
-import { BuildWithAIModal } from "./BuildWithAIModal";
-import { ChecklistBuilderModal } from "./ChecklistBuilderModal";
-import { ChecklistPreviewModal } from "./ChecklistPreviewModal";
 import { ItemContextMenu } from "./ItemContextMenu";
 import { MoveToFolderSheet } from "./MoveToFolderSheet";
+
+// Lazy-load heavy modals — only fetched when the user opens them
+const ConvertFileModal = lazy(() => import("./ConvertFileModal").then(m => ({ default: m.ConvertFileModal })));
+const BuildWithAIModal = lazy(() => import("./BuildWithAIModal").then(m => ({ default: m.BuildWithAIModal })));
+const ChecklistBuilderModal = lazy(() => import("./ChecklistBuilderModal").then(m => ({ default: m.ChecklistBuilderModal })));
+const ChecklistPreviewModal = lazy(() => import("./ChecklistPreviewModal").then(m => ({ default: m.ChecklistPreviewModal })));
 
 function checklistAppliesToLocation(
   checklist: { location_id: string | null; location_ids?: string[] | null },
@@ -69,8 +70,9 @@ export function ChecklistsTab() {
     visibility_until: c.visibility_until ?? null,
   }));
 
-  // PDF download helper
-  const downloadChecklistPdf = async (cl: typeof dbChecklists[0]) =>
+  // PDF download helper — dynamically imports export-utils (pulls in jsPDF) only on demand
+  const downloadChecklistPdf = async (cl: typeof dbChecklists[0]) => {
+    const { exportChecklistTemplatePdf } = await import("@/lib/export-utils");
     exportChecklistTemplatePdf({
       title: cl.title,
       schedule: getScheduleLabel(cl.schedule ? String(cl.schedule) : null),
@@ -83,6 +85,7 @@ export function ChecklistsTab() {
         })),
       })),
     });
+  };
 
   // Local drag-drop order state (visual only — no DB ordering column yet)
   const [folderOrder, setFolderOrder] = useState<string[]>([]);
@@ -149,7 +152,7 @@ export function ChecklistsTab() {
     });
   };
 
-  const handleContextAction = async (action: string) => {
+  const handleContextAction = (action: string) => {
     if (!contextMenu) return;
     if (action === "edit" && contextMenu.type === "checklist") {
       const cl = checklists.find(c => c.id === contextMenu.id);
@@ -175,13 +178,14 @@ export function ChecklistsTab() {
       if (orig) saveChecklistMut.mutate({ ...orig, id: "", title: `${orig.title} (copy)` });
     } else if (action === "download" && contextMenu.type === "checklist") {
       const orig = dbChecklists.find(c => c.id === contextMenu.id);
-      if (orig) await downloadChecklistPdf(orig);
+      if (orig) downloadChecklistPdf(orig);
     }
   };
 
   // ── Page-mode builder: takes over the whole content area ──────────────────
   if (showBuilder) {
     return (
+      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 rounded-xl bg-sage animate-pulse" /></div>}>
       <ChecklistBuilderModal
         asPage
         onClose={() => {
@@ -233,6 +237,7 @@ export function ChecklistsTab() {
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
         editId={editingChecklistId || undefined}
       />
+      </Suspense>
     );
   }
 
@@ -382,28 +387,29 @@ export function ChecklistsTab() {
         />
       )}
 
-      {showConvertFile && <ConvertFileModal onClose={() => setShowConvertFile(false)} onConvert={(sections) => {
-        setPrefillTitle("Converted checklist");
-        setPrefillSections(sections);
-        setShowBuilder(true);
-      }} />}
-      {showBuildAI && <BuildWithAIModal onClose={() => setShowBuildAI(false)} onGenerate={(title, sections) => {
-        setPrefillTitle(title);
-        setPrefillSections(sections);
-        setShowBuilder(true);
-      }} />}
-
-      {previewChecklist && (
-        <ChecklistPreviewModal checklist={previewChecklist} onClose={() => setPreviewChecklist(null)}
-          onEdit={() => {
-            setEditingChecklistId(previewChecklist.id);
-            setPrefillTitle(previewChecklist.title);
-            setPrefillSections(previewChecklist.sections);
-            setPreviewChecklist(null);
-            setShowBuilder(true);
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showConvertFile && <ConvertFileModal onClose={() => setShowConvertFile(false)} onConvert={(sections) => {
+          setPrefillTitle("Converted checklist");
+          setPrefillSections(sections);
+          setShowBuilder(true);
+        }} />}
+        {showBuildAI && <BuildWithAIModal onClose={() => setShowBuildAI(false)} onGenerate={(title, sections) => {
+          setPrefillTitle(title);
+          setPrefillSections(sections);
+          setShowBuilder(true);
+        }} />}
+        {previewChecklist && (
+          <ChecklistPreviewModal checklist={previewChecklist} onClose={() => setPreviewChecklist(null)}
+            onEdit={() => {
+              setEditingChecklistId(previewChecklist.id);
+              setPrefillTitle(previewChecklist.title);
+              setPrefillSections(previewChecklist.sections);
+              setPreviewChecklist(null);
+              setShowBuilder(true);
+            }}
+          />
+        )}
+      </Suspense>
 
       {showNewFolder && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
