@@ -1,0 +1,84 @@
+name: Post-Deploy Smoke Tests
+
+# Runs automatically after every successful GitHub Pages deploy.
+# Can also be triggered manually (workflow_dispatch) to test the live URL
+# at any time, or with a custom SMOKE_BASE_URL override.
+on:
+  workflow_run:
+    workflows:
+      - "GitHub Pages Deploy"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      smoke_base_url:
+        description: "Override the live URL to smoke-test (leave blank to use the default GitHub Pages URL)"
+        required: false
+        default: ""
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke
+    # Skip the job if the triggering deploy workflow failed
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright + Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve smoke base URL
+        id: resolve-url
+        run: |
+          # Priority: manual override → VITE_PUBLIC_SITE_URL repo var → derived from GITHUB_REPOSITORY
+          MANUAL="${{ github.event.inputs.smoke_base_url }}"
+          REPO_VAR="${{ vars.VITE_PUBLIC_SITE_URL }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          DERIVED="https://${OWNER}.github.io/${REPO}"
+
+          if [ -n "$MANUAL" ]; then
+            SMOKE_URL="$MANUAL"
+          elif [ -n "$REPO_VAR" ]; then
+            SMOKE_URL="$REPO_VAR"
+          else
+            SMOKE_URL="$DERIVED"
+          fi
+
+          # Strip trailing slash for consistency
+          SMOKE_URL="${SMOKE_URL%/}"
+          echo "smoke_url=$SMOKE_URL" >> "$GITHUB_OUTPUT"
+          echo "Smoke base URL: $SMOKE_URL"
+
+      - name: Run smoke tests
+        env:
+          SMOKE_BASE_URL: ${{ steps.resolve-url.outputs.smoke_url }}
+        run: |
+          npx playwright test \
+            --config e2e/playwright.smoke.config.ts \
+            --reporter=list
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: |
+            e2e/playwright-report/smoke/
+            e2e/test-results/smoke/
+          retention-days: 14

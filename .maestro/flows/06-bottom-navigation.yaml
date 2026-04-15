@@ -1,7 +1,8 @@
 ---
 # Flow 06 — Bottom Navigation
-# Verifies all 4 bottom nav tabs work once authenticated.
+# Verifies all 5 bottom nav tabs work once authenticated.
 # Skips gracefully if not logged in (all tapOn are optional on kiosk screen).
+# Nav tabs (left to right): Dashboard, Checklists, Reporting, Infohub, Admin
 appId: com.olia.operations
 name: "Navigation — Bottom Tab Bar"
 
@@ -17,6 +18,12 @@ name: "Navigation — Bottom Tab Bar"
     optional: true
 - waitForAnimationToEnd
 - takeScreenshot: "06-nav-checklists"
+
+- tapOn:
+    text: "Reporting"
+    optional: true
+- waitForAnimationToEnd
+- takeScreenshot: "06-nav-reporting"
 
 - tapOn:
     text: "Infohub"
