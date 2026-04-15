@@ -166,6 +166,7 @@ export function StaffProfileModal({
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
   const [locationId, setLocationId] = useState(profile?.location_id ?? locations[0]?.id ?? "");
   const [role, setRole] = useState(getRoleDepartment(profile?.role ?? departments[0]?.name ?? ""));
+  const [email, setEmail] = useState(profile?.email ?? "");
   // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
   const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
 
@@ -180,6 +181,7 @@ export function StaffProfileModal({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       role,
+      email: email.trim() || null,
       status: profile?.status ?? "active",
       // rawPin triggers SHA-256 hashing in useSaveStaffProfile;
       // omit for edits where the manager didn't enter a new PIN (existing PIN preserved)
@@ -226,6 +228,16 @@ export function StaffProfileModal({
             onChange={e => setLastName(e.target.value)}
             placeholder="e.g. Garcia" className={inputCls}
           />
+        </FormField>
+        <FormField label="Email (optional)">
+          <input
+            type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="e.g. maria@yourplace.com" className={inputCls}
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Used to send this staff member email alerts from checklist logic rules.
+          </p>
         </FormField>
         <FormField label="Role">
           <DepartmentRolePicker departments={departments} value={role} onChange={setRole} />
