@@ -175,7 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   // fetchTeamMember uses only supabase (module-level) and stable state setters.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const retrySetup = () => {
