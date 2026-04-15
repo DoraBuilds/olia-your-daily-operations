@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResponseType } from "./types";
@@ -36,25 +37,20 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
   onClose: () => void;
   anchorRect?: ResponseTypePickerAnchorRect | null;
 }) {
-  const isAnchored = Boolean(anchorRect);
+  // Always render into document.body via a portal so CSS transforms or
+  // backdrop-filter on any ancestor (e.g. animate-fade-in uses translateY,
+  // which creates a new containing block for position:fixed children) cannot
+  // displace this overlay from its intended viewport-fixed position.
   const panelStyle = anchorRect ? getAnchoredStyle(anchorRect) : undefined;
 
-  return (
+  return createPortal(
     <div
-      className={cn(
-        "fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm animate-fade-in",
-        isAnchored ? "" : "flex items-end justify-center pb-16 sm:items-center sm:pb-0 sm:px-4 sm:py-8",
-      )}
+      className="fixed inset-0 z-[200] bg-foreground/20 backdrop-blur-sm flex items-center justify-center px-4 py-8"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className={cn(
-          "bg-card flex flex-col",
-          isAnchored
-            ? "fixed rounded-2xl shadow-2xl"
-            : "w-full max-w-lg rounded-t-2xl max-h-[85vh] animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]",
-        )}
+        className="bg-card flex flex-col w-full max-w-lg rounded-2xl shadow-2xl max-h-[85vh]"
         style={panelStyle}
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -66,7 +62,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 pb-20">
+        <div className="overflow-y-auto flex-1 pb-6">
           <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Responses</p>
           {RESPONSE_TYPES.map(rt => (
             <button key={rt.key} onClick={() => { onSelect(rt.key); onClose(); }}
@@ -88,6 +84,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
