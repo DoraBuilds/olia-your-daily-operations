@@ -21,6 +21,7 @@ import { AdminLoginModal, PinEntryModal } from "./kiosk/PinEntryModal";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
 import { useLiveClock } from "./kiosk/hooks";
+import { collectNotifyAlerts } from "./kiosk/logic-rules";
 
 // Re-export ChecklistRunner for backward compatibility (tests import from @/pages/Kiosk)
 export { ChecklistRunner };
@@ -329,6 +330,59 @@ export default function Kiosk() {
     }, 90000);
   };
 
+  /**
+   * After a checklist is completed, evaluate all logic rules and fire an
+   * `alerts` row for each matching "notify" trigger. The DB trigger
+   * (`trg_send_alert_email`) picks up each insert and sends the email via
+   * the Resend edge function.
+   *
+   * Uses a defensive try-with-recipient / retry-without pattern identical to
+   * the location_id guard above: if the `recipient_email` column isn't yet in
+   * the PostgREST schema cache (migration not applied), the second attempt
+   * still creates the alert row so it appears on the dashboard.
+   */
+  const fireNotifyAlerts = async (
+    questions: KioskChecklist["questions"],
+    answers: Record<string, any>,
+    orgId: string,
+    checklistTitle: string,
+  ) => {
+    const notifyAlerts = collectNotifyAlerts(questions, answers);
+    if (notifyAlerts.length === 0) return;
+
+    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+    for (const alert of notifyAlerts) {
+      const baseAlert = {
+        organization_id: orgId,
+        type: "info" as const,
+        message: alert.message,
+        area: checklistTitle,
+        time: timeLabel,
+        source: "checklist_rule",
+      };
+
+      // Try with recipient_email first (requires migration 20260415000001)
+      const { error: alertErr } = await supabase.from("alerts").insert({
+        ...baseAlert,
+        recipient_email: alert.recipientEmail,
+      });
+
+      if (alertErr && alertErr.message?.includes("recipient_email")) {
+        // Schema cache hasn't refreshed yet — insert without it so the alert
+        // still appears in the dashboard (email will go to location contact_email)
+        console.warn(
+          "fireNotifyAlerts: recipient_email column not in schema cache — " +
+          "retrying without it. Apply migration 20260415000001 and run: " +
+          "NOTIFY pgrst, 'reload schema';",
+        );
+        await supabase.from("alerts").insert(baseAlert);
+      } else if (alertErr) {
+        console.error("fireNotifyAlerts: alert insert failed:", alertErr.message);
+      }
+    }
+  };
+
   // ── Real checklists from Supabase ──────────────────────────────────────────
   const [kioskChecklists, setKioskChecklists] = useState<KioskChecklist[]>([]);
   const [checklistsLoading, setChecklistsLoading] = useState(false);
@@ -556,6 +610,14 @@ export default function Kiosk() {
         enqueueLog(logPayload);
       }
 
+      // Evaluate checklist logic rules and send notify-trigger emails.
+      // Runs even if the log insert failed so alerts are never silently dropped.
+      await fireNotifyAlerts(
+        selectedChecklist.questions,
+        answers,
+        selectedOrgId,
+        selectedChecklist.title,
+      );
     }
   };
 
