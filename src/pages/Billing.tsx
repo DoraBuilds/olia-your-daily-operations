@@ -247,7 +247,7 @@ export default function Billing() {
     ? "We couldn't verify your billing plan just now."
     : `${PLAN_LABELS[plan]} is active${planStatus === "trialing" ? " on trial" : ""}.`;
   const currentPlanAllowance = billingUnavailable
-    ? "Refresh in a moment and we’ll pull the latest billing state."
+    ? "Refresh in a moment and we'll pull the latest billing state."
     : plan === "enterprise"
       ? "Unlimited locations included."
       : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included.`;
@@ -381,145 +381,138 @@ export default function Billing() {
           </div>
         )}
 
-        {/* ── Plan cards ──────────────────────────────────────────────────── */}
-        <div className="pt-5 pb-3">
-        <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
-        {plans.map((p) => {
-          const isCurrent  = p === plan;
-          const price      = PLAN_PRICES[p];
-          const priceVal   = billing === "monthly" ? price.monthly : price.annual;
-          const isLoadingP = loading === p;
-          const isEnterprise = p === "enterprise";
-          const isRecommended = p === "growth";
+        {/* ── Plan cards — compact side-by-side on sm+, single col on mobile ── */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-stretch">
+          {plans.map((p) => {
+            const isCurrent    = p === plan;
+            const price        = PLAN_PRICES[p];
+            const priceVal     = billing === "monthly" ? price.monthly : price.annual;
+            const isLoadingP   = loading === p;
+            const isEnterprise = p === "enterprise";
+            const isRecommended = p === "growth";
 
-          return (
-            <div
-              key={p}
-              className={cn(
-                "h-full",
-                isRecommended && "lg:scale-[1.02] lg:z-10",
-              )}
-            >
-              <div className={cn(
-                "relative rounded-3xl border bg-card border-border px-4 pb-4 pt-7 space-y-4 h-full flex flex-col",
-                isCurrent && "ring-1 ring-sage/60",
-                isRecommended && "ring-2 ring-sage shadow-[0_18px_48px_rgba(91,125,97,0.12)]",
-              )}>
+            return (
+              <div
+                key={p}
+                className={cn(
+                  "relative rounded-2xl border bg-card flex flex-col overflow-hidden",
+                  isRecommended
+                    ? "border-2 border-sage shadow-md"
+                    : "border-border",
+                  isCurrent && !isRecommended && "ring-1 ring-sage/40",
+                )}
+              >
+                {/* Badge — top-right corner, flush inside card border */}
+                {isRecommended && !isCurrent && (
+                  <span className="absolute top-0 right-0 z-10 rounded-bl-xl rounded-tr-2xl bg-sage px-2.5 py-1 text-[10px] font-semibold text-primary-foreground tracking-wide">
+                    Recommended
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="absolute top-0 right-0 z-10 rounded-bl-xl rounded-tr-2xl bg-muted border-l border-b border-border px-2.5 py-1 text-[10px] font-semibold text-sage tracking-wide">
+                    Current plan
+                  </span>
+                )}
 
-                {/* Badges row */}
-                <div className="absolute left-1/2 top-0 z-10 flex min-h-5 -translate-x-1/2 -translate-y-[62%] items-center justify-center gap-2">
-                  {isCurrent && (
-                    <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
-                    )}>
-                      Current plan
-                    </span>
-                  )}
-                  {isRecommended && !isCurrent && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm border border-sage">
-                      Recommended
-                    </span>
-                  )}
-                </div>
-
-                {/* Plan name + price */}
-                <div className="flex min-h-[7.75rem] items-start justify-between gap-4">
-                  <div className="max-w-[15rem]">
-                    <p className="font-semibold text-lg text-foreground">
+                {/* Card header — plan name + price */}
+                <div className={cn(
+                  "px-4 pt-4 pb-3",
+                  isRecommended && "bg-sage/[0.04]",
+                )}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-muted-foreground">{PLAN_ICONS[p]}</span>
+                    <p className="font-semibold text-base text-foreground leading-tight">
                       {PLAN_LABELS[p]}
                     </p>
-                    <p className="text-xs mt-0.5 leading-relaxed text-muted-foreground">
-                      {PLAN_DESCRIPTIONS[p]}
-                    </p>
                   </div>
-                  <div className="text-right shrink-0 min-h-[4.75rem] flex flex-col items-end">
-                    {isEnterprise ? (
-                      <>
-                        <p className="text-sm font-semibold text-foreground">Custom pricing</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
-                        <div className="mt-auto h-[2.25rem]" aria-hidden="true" />
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[1.75rem] font-bold leading-none text-foreground">
-                          {price.currency}{priceVal}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          / location / {billing === "monthly" ? "month" : "year"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                          {PLAN_LOCATION_HINT[p]}
-                        </p>
+                  {isEnterprise ? (
+                    <div>
+                      <p className="text-xl font-bold text-foreground">Custom</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-2xl font-bold text-foreground">{price.currency}{priceVal}</span>
+                        <span className="text-[10px] text-muted-foreground ml-0.5">
+                          / loc / {billing === "monthly" ? "mo" : "yr"}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                        {PLAN_LOCATION_HINT[p]}
                         {PLAN_EXAMPLE_LOCATIONS[p] != null && (() => {
-                          const n    = PLAN_EXAMPLE_LOCATIONS[p]!;
+                          const n     = PLAN_EXAMPLE_LOCATIONS[p]!;
                           const total = (priceVal * n).toLocaleString("en-IE");
-                          const period = billing === "monthly" ? "month" : "year";
+                          const period = billing === "monthly" ? "mo" : "yr";
                           return (
-                            <p className="text-[10px] text-muted-foreground/50 mt-1.5 italic">
-                              e.g. {n} {n === 1 ? "location" : "locations"} = {price.currency}{total} / {period}
-                            </p>
+                            <span className="ml-1 italic opacity-70">
+                              · e.g. {price.currency}{total}/{period}
+                            </span>
                           );
                         })()}
-                      </>
-                    )}
-                  </div>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
+                {/* Divider */}
+                <div className="border-t border-border/60 mx-4" />
+
                 {/* Feature list */}
-                <ul className="space-y-1.5">
+                <ul className="px-4 py-3 space-y-1.5 flex-1">
                   {PLAN_HIGHLIGHTS[p].map(feature => (
                     <li key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Check size={12} className="text-status-ok shrink-0" />
+                      <Check size={11} className="text-status-ok shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
-                {/* Divider */}
-                <div className="border-t border-border mt-auto" />
-
                 {/* CTA */}
-                <div className="space-y-3">
-                {isEnterprise && !isCurrent && (
-                  <p className="text-[10px] text-muted-foreground/70 text-center">
-                    Pricing tailored to your operation
-                  </p>
-                )}
-                {isEnterprise ? (
-                  isCurrent ? (
-                    <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
+                <div className="px-4 pb-4 pt-1 space-y-1.5">
+                  {isEnterprise && !isCurrent && (
+                    <p className="text-[10px] text-muted-foreground/60 text-center">
+                      Pricing tailored to your operation
+                    </p>
+                  )}
+                  {isEnterprise ? (
+                    isCurrent ? (
+                      <div className="w-full py-2 rounded-xl text-xs font-medium text-center bg-muted text-muted-foreground">
+                        Current plan
+                      </div>
+                    ) : (
+                      <a
+                        href={`mailto:${ENTERPRISE_SALES_EMAIL}`}
+                        className="w-full py-2 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
+                      >
+                        Book a demo
+                      </a>
+                    )
+                  ) : isCurrent ? (
+                    // Always show "Current plan" as a non-clickable label for the active plan,
+                    // regardless of whether there's a Stripe subscription (Starter is free).
+                    <div className="w-full py-2 rounded-xl text-xs font-medium text-center bg-muted text-muted-foreground">
                       Current plan
                     </div>
                   ) : (
-                    <a
-                      href={`mailto:${ENTERPRISE_SALES_EMAIL}`}
-                      className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
+                    <button
+                      disabled={isLoadingP}
+                      onClick={() => handleUpgrade(p as "starter" | "growth")}
+                      className={cn(
+                        "w-full py-2 rounded-xl text-xs font-medium transition-colors flex items-center justify-center gap-2",
+                        isRecommended
+                          ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                          : "border border-sage text-sage hover:bg-sage/5",
+                      )}
                     >
-                      Book a demo
-                    </a>
-                  )
-                ) : isCurrent ? (
-                  // Always show "Current plan" as a non-clickable label for the active plan,
-                  // regardless of whether there's a Stripe subscription (Starter is free).
-                  <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
-                    Current plan
-                  </div>
-                ) : (
-                  <button
-                    disabled={isLoadingP}
-                    onClick={() => handleUpgrade(p as "starter" | "growth")}
-                    className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
-                  >
-                    {isLoadingP && <Loader2 size={14} className="animate-spin" />}
-                    {ctaLabel(p)}
-                  </button>
-                )}
+                      {isLoadingP && <Loader2 size={13} className="animate-spin" />}
+                      {ctaLabel(p)}
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-          );
-        })}
-        </div>
+            );
+          })}
         </div>
 
         {/* ── Plan comparison ──────────────────────────────────────────────── */}

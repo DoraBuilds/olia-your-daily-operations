@@ -51,7 +51,7 @@ describe("Training page", () => {
 
   it("shows the page title 'Training'", () => {
     renderWithProviders(<Training />);
-    expect(screen.getByText("Training")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Training" })).toBeInTheDocument();
   });
 
   it("shows 'Onboarding' tab button", () => {
@@ -232,7 +232,7 @@ describe("Training page", () => {
       if (backBtn) {
         fireEvent.click(backBtn);
         // Should be back to the module list
-        expect(screen.getByText("Training")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Training" })).toBeInTheDocument();
       }
     }
   });
