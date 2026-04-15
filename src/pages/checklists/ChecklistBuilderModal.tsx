@@ -12,6 +12,7 @@ import { useCreateAlert } from "@/hooks/useAlerts";
 import { useLocations } from "@/hooks/useLocations";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useAuth } from "@/contexts/AuthContext";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
@@ -58,6 +59,7 @@ export function ChecklistBuilderModal({
   initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
+  const { user, teamMember: authTeamMember } = useAuth();
   const { data: dbLocations = [] } = useLocations();
   const { data: staffProfiles = [] } = useStaffProfiles();
   const { data: teamMembers = [] } = useTeamMembers();
@@ -158,8 +160,31 @@ export function ChecklistBuilderModal({
     (locationMode === "all" || selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id))
   );
 
-  // Team members with emails — real notification recipients
-  const notifyRecipients = teamMembers.filter(m => m.email && m.email.trim().length > 0);
+  // Team members with emails — real notification recipients.
+  // Always include the authenticated owner as a fallback so the owner's own
+  // email appears even if the team_members query hasn't loaded yet or the
+  // owner's row email is missing (PostgREST schema cache issue).
+  const notifyRecipients = (() => {
+    const fromTeam = teamMembers.filter(m => m.email && m.email.trim().length > 0);
+    const ownerEmail = authTeamMember?.email ?? user?.email ?? "";
+    const ownerAlreadyIncluded = fromTeam.some(m => m.id === (authTeamMember?.id ?? user?.id));
+    if (ownerEmail && !ownerAlreadyIncluded) {
+      return [
+        {
+          id: authTeamMember?.id ?? user?.id ?? "owner",
+          name: authTeamMember?.name ?? user?.email ?? "Owner",
+          email: ownerEmail,
+          role: "Owner",
+          organization_id: authTeamMember?.organization_id ?? "",
+          location_ids: [] as string[],
+          permissions: {} as Record<string, boolean>,
+          pin_reset_required: false,
+        },
+        ...fromTeam,
+      ];
+    }
+    return fromTeam;
+  })();
 
   const formatTime12h = (time24: string) => {
     const [h, m] = time24.split(":").map(Number);
