@@ -160,30 +160,43 @@ export function ChecklistBuilderModal({
     (locationMode === "all" || selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id))
   );
 
-  // Team members with emails — real notification recipients.
-  // Always include the authenticated owner as a fallback so the owner's own
-  // email appears even if the team_members query hasn't loaded yet or the
-  // owner's row email is missing (PostgREST schema cache issue).
+  // Notification recipients — team members (admins) + staff profiles with emails.
+  // Always include the authenticated owner as a fallback so their email
+  // appears even if the team_members query hasn't loaded yet.
   const notifyRecipients = (() => {
+    // Admin / team member emails
     const fromTeam = teamMembers.filter(m => m.email && m.email.trim().length > 0);
     const ownerEmail = authTeamMember?.email ?? user?.email ?? "";
     const ownerAlreadyIncluded = fromTeam.some(m => m.id === (authTeamMember?.id ?? user?.id));
-    if (ownerEmail && !ownerAlreadyIncluded) {
-      return [
-        {
-          id: authTeamMember?.id ?? user?.id ?? "owner",
-          name: authTeamMember?.name ?? user?.email ?? "Owner",
-          email: ownerEmail,
-          role: "Owner",
-          organization_id: authTeamMember?.organization_id ?? "",
-          location_ids: [] as string[],
-          permissions: {} as Record<string, boolean>,
-          pin_reset_required: false,
-        },
-        ...fromTeam,
-      ];
-    }
-    return fromTeam;
+    const teamList = ownerEmail && !ownerAlreadyIncluded
+      ? [
+          {
+            id: authTeamMember?.id ?? user?.id ?? "owner",
+            name: authTeamMember?.name ?? user?.email ?? "Owner",
+            email: ownerEmail,
+            role: "Owner",
+          },
+          ...fromTeam.map(m => ({ id: m.id, name: m.name, email: m.email, role: m.role })),
+        ]
+      : fromTeam.map(m => ({ id: m.id, name: m.name, email: m.email, role: m.role }));
+
+    // Kiosk staff members with an email set
+    const fromStaff = staffProfiles
+      .filter(s => s.email && s.email.trim().length > 0 && s.status === "active")
+      .map(s => ({
+        id: s.id,
+        name: [s.first_name, s.last_name].filter(Boolean).join(" "),
+        email: s.email as string,
+        role: s.role || "Staff",
+      }));
+
+    // Merge, de-duplicating by email address
+    const seen = new Set<string>();
+    return [...teamList, ...fromStaff].filter(r => {
+      if (seen.has(r.email)) return false;
+      seen.add(r.email);
+      return true;
+    });
   })();
 
   const formatTime12h = (time24: string) => {

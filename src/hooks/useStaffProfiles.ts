@@ -18,7 +18,7 @@ export function useStaffProfiles() {
       const { data, error } = await supabase
         .from("staff_profiles")
         // pin is intentionally excluded — managers must not see raw/hashed PINs after creation
-        .select("id, location_id, first_name, last_name, role, status, last_used_at, archived_at, created_at")
+        .select("id, location_id, first_name, last_name, role, status, email, last_used_at, archived_at, created_at")
         .order("first_name");
       if (error) throw error;
       return (data ?? []) as StaffProfile[];
@@ -54,6 +54,7 @@ export function useSaveStaffProfile() {
           last_name: sp.last_name,
           role: sp.role,
           status: sp.status ?? "active",
+          email: sp.email?.trim() || null,
         };
         // Only update pin when a new one was explicitly provided; otherwise
         // leave the existing hashed pin untouched.
@@ -81,6 +82,7 @@ export function useSaveStaffProfile() {
           last_name: sp.last_name,
           role: sp.role,
           status: sp.status ?? "active",
+          email: sp.email?.trim() || null,
           pin: await hashPin(sp.rawPin),
         };
         const { error } = await supabase.from("staff_profiles").insert(insertPayload);

@@ -80,6 +80,7 @@ export interface StaffProfile {
   role: string;
   status: StaffStatus;
   pin: string;
+  email?: string | null;
   last_used_at: string | null;
   archived_at: string | null;
   created_at: string;
