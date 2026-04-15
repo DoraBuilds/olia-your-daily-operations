@@ -891,14 +891,14 @@ export function ChecklistRunner({
 
         return (
           <div
-            className="fixed inset-0 z-[80] flex items-end justify-center bg-foreground/30 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm px-4 py-8"
             onClick={() => setLinkedResourceId(null)}
           >
             <div
-              className="bg-card w-full max-w-2xl rounded-t-2xl max-h-[80vh] overflow-hidden"
+              className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border">
+              <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{resource.section}</p>
                   <h3 className="text-base font-semibold text-foreground mt-1">{resource.title}</h3>
@@ -907,13 +907,13 @@ export function ChecklistRunner({
                 <button
                   type="button"
                   onClick={() => setLinkedResourceId(null)}
-                  className="p-2 rounded-full hover:bg-muted transition-colors"
+                  className="p-2 rounded-full hover:bg-muted transition-colors shrink-0"
                   aria-label="Close linked resource"
                 >
                   <X size={16} className="text-muted-foreground" />
                 </button>
               </div>
-              <div className="px-5 py-4 overflow-y-auto max-h-[60vh]">
+              <div className="px-5 py-5 overflow-y-auto flex-1">
                 <div className="whitespace-pre-line text-sm text-foreground leading-relaxed">
                   {resource.body}
                 </div>
