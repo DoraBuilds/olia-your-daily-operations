@@ -16,6 +16,7 @@ import {
   ROLE_COLOR_MAP,
   parseHours, formatHoursText,
 } from "./shared";
+import { StaticMapPreview } from "@/components/PlacesAutocompleteInput";
 
 export interface MyLocationTabProps {
   locations: Location[];
@@ -136,6 +137,9 @@ export function MyLocationTab({
               <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-sm text-foreground">{currentLocation.address}</p>
             </div>
+          )}
+          {currentLocation.lat != null && currentLocation.lng != null && (
+            <StaticMapPreview lat={currentLocation.lat} lng={currentLocation.lng} />
           )}
           {currentLocation.trading_hours && (() => {
             let display = currentLocation.trading_hours;
