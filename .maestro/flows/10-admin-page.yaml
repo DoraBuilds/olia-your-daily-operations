@@ -51,7 +51,7 @@ name: "Admin — Page"
 
 # ── Launch Kiosk button ────────────────────────────────────────────────────────
 - assertVisible:
-    text: "Launch Kiosk"
+    text: "Launch Kiosk Mode"
     optional: true
 
 - takeScreenshot: "10-admin-my-location-tab"

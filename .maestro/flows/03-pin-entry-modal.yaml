@@ -33,7 +33,7 @@ name: "Kiosk — PIN Entry Modal"
 - assertVisible:
     text: "Insert PIN"
 - assertVisible:
-    text: "Authorize personnel access"
+    text: "You're doing great — let's get started."
 - assertVisible:
     text: "START"
 
