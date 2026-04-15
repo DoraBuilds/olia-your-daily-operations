@@ -18,6 +18,7 @@ import {
 import { usePlan } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { type ChecklistItem } from "@/hooks/useChecklists";
+import { useSaveAdminPin } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, roleUsesDepartment } from "./shared";
 
 export interface AccountTabProps {
@@ -62,6 +63,7 @@ export function AccountTab({
 }: AccountTabProps) {
   const navigate = useNavigate();
   const { plan, planStatus, isActive } = usePlan();
+  const saveAdminPin = useSaveAdminPin();
   // Team member expand/collapse
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [pendingPerms, setPendingPerms] = useState<Record<string, ManagerPermissions>>({});
@@ -148,16 +150,7 @@ export function AccountTab({
     if (!currentAccount || pin.length !== 4) return;
     setPinSaving(true);
     try {
-      await onSaveAccount({
-        id: currentAccount.id,
-        name: currentAccount.name,
-        email: currentAccount.email,
-        role: currentAccount.role,
-        location_ids: currentAccount.location_ids,
-        permissions: currentAccount.permissions,
-        rawPin: pin,
-        pin_reset_required: false,
-      });
+      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin: pin });
       setPin("");
       toast.success("Admin PIN updated");
     } catch (err) {

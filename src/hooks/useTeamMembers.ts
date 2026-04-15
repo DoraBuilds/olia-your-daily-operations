@@ -85,6 +85,30 @@ export function useSaveTeamMember() {
   });
 }
 
+/**
+ * Dedicated PIN-only update hook.
+ * Sends only `pin` + `pin_reset_required` so unrelated fields (email, role, etc.)
+ * are never touched — avoids false unique-index conflicts and makes error messages
+ * actionable by surfacing the actual Supabase error text.
+ */
+export function useSaveAdminPin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ memberId, rawPin }: { memberId: string; rawPin: string }) => {
+      const hashed = await hashPin(rawPin);
+      const { error } = await supabase
+        .from("team_members")
+        .update({ pin: hashed, pin_reset_required: false })
+        .eq("id", memberId);
+      if (error) {
+        // Surface the real Supabase message (e.g. RLS violation details)
+        throw new Error(error.message ?? "Could not update admin PIN");
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
+  });
+}
+
 export function useDeleteTeamMember() {
   const qc = useQueryClient();
   return useMutation({
