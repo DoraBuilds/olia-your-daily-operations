@@ -149,10 +149,15 @@ export function MyLocationTab({
               </div>
             );
           })()}
-          {currentLocation.contact_email && (
+          {currentLocation.contact_email ? (
             <div className="flex items-start gap-2">
               <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-sm text-foreground">{currentLocation.contact_email}</p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 rounded-xl border border-status-warn/40 bg-status-warn/10 px-3 py-2">
+              <Mail size={13} className="text-status-warn mt-0.5 shrink-0" />
+              <p className="text-xs text-status-warn font-medium">No alert email set — tap Edit to add one so out-of-range and notification alerts can be delivered.</p>
             </div>
           )}
           {currentLocation.contact_phone && (

@@ -636,15 +636,17 @@ export function LocationModal({
             ))}
           </div>
         </FormField>
-        {location && (
-          <FormField label="Location email">
-            <input
-              type="email" value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="e.g. main@olia.app" className={inputCls}
-            />
-          </FormField>
-        )}
+        <FormField label="Alert email (required)">
+          <input
+            type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="e.g. main@olia.app" className={inputCls}
+            required
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Out-of-range alerts and operational notifications are sent here.
+          </p>
+        </FormField>
         <FormField label="Location phone (optional)">
           <input
             type="tel" value={phone}
@@ -652,7 +654,7 @@ export function LocationModal({
             placeholder="e.g. +33 4 78 00 11 22" className={inputCls}
           />
         </FormField>
-        <SaveButton disabled={!name.trim()} label={location ? "Save changes" : "Add location"} />
+        <SaveButton disabled={!name.trim() || !email.trim()} label={location ? "Save changes" : "Add location"} />
       </form>
     </BottomSheet>
   );
