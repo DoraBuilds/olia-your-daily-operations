@@ -81,51 +81,61 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
     navigate("/login?reason=reset-pin");
   };
 
+  const handleDigit = (d: string) => {
+    if (pin.length >= 4 || loading) return;
+    const next = pin + d;
+    setPin(next);
+    if (next.length === 4) {
+      // Auto-submit once all 4 digits entered
+      void (async () => {
+        setError("");
+        setLoading(true);
+        const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
+        if (!locationId) { setLoading(false); setError("Select a kiosk location first."); setPin(""); return; }
+        if (teamMember?.organization_id && locationsFetched) {
+          if (!allLocations.some(l => l.id === locationId)) {
+            clearKioskLocationSelectionForModal();
+            setLoading(false);
+            setError("Location no longer accessible. Select again.");
+            setPin("");
+            return;
+          }
+        }
+        const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
+        setLoading(false);
+        if (rpcError) { setError("Could not verify PIN. Please try again."); setPin(""); return; }
+        if (!data || data.length === 0) { setError("Invalid PIN."); setPin(""); return; }
+        navigate(`/admin?from=kiosk&userId=${data[0].id}`);
+      })();
+    }
+  };
+
+  const handleBackspace = () => {
+    if (loading) return;
+    setPin(p => p.slice(0, -1));
+    setError("");
+  };
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      >
-      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-4 animate-fade-in">
+    >
+      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Admin PIN</h2>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
-        <form onSubmit={handleLogin} className="space-y-3">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">PIN</label>
-            <input
-              id="admin-pin-input"
-              autoFocus
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={pin}
-              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="4-digit PIN"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Use the admin PIN from your team-member profile to unlock the admin area.
-          </p>
-          {error && <p className="text-xs text-status-error">{error}</p>}
-          <button
-            id="admin-pin-signin-btn"
-            type="submit"
-            disabled={pin.length !== 4 || loading}
-            className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              pin.length === 4 && !loading
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                : "bg-muted text-muted-foreground cursor-not-allowed",
-            )}
-          >
-            {loading ? "Checking…" : "Continue"}
-          </button>
-        </form>
+
+        <PinDots count={pin.length} />
+
+        {error && <p className="text-center text-xs text-status-error">{error}</p>}
+        {loading && <p className="text-center text-xs text-muted-foreground">Checking…</p>}
+
+        <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
+
         <p className="text-center text-xs text-muted-foreground pt-1">
           Forgot your PIN?{" "}
           <button
