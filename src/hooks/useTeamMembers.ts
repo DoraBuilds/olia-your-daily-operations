@@ -98,7 +98,7 @@ export function useSaveAdminPin() {
       const hashed = await hashPin(rawPin);
       const { error } = await supabase
         .from("team_members")
-        .update({ pin: hashed, pin_reset_required: false })
+        .update({ pin: hashed })
         .eq("id", memberId);
       if (error) {
         // Surface the real Supabase message (e.g. RLS violation details)
