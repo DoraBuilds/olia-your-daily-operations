@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp,
+  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -81,6 +81,11 @@ export function AccountTab({
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [justSavedPin, setJustSavedPin] = useState<string | null>(null);
+  const [revealCurrentPin, setRevealCurrentPin] = useState(false);
+  const [revealCountdown, setRevealCountdown] = useState(0);
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
@@ -150,8 +155,10 @@ export function AccountTab({
     if (!currentAccount || pin.length !== 4) return;
     setPinSaving(true);
     try {
-      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin: pin });
+      const rawPin = pin;
+      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin });
       setPin("");
+      setJustSavedPin(rawPin);
       toast.success("Admin PIN updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
@@ -159,6 +166,19 @@ export function AccountTab({
       setPinSaving(false);
     }
   };
+
+  // Reveal current PIN for 30s after saving
+  useEffect(() => {
+    if (!revealCurrentPin) return;
+    setRevealCountdown(30);
+    const interval = setInterval(() => {
+      setRevealCountdown(prev => {
+        if (prev <= 1) { clearInterval(interval); setRevealCurrentPin(false); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [revealCurrentPin]);
 
   // Department management
   const [renamingDepartment, setRenamingDepartment] = useState<{ index: number; value: string } | null>(null);
@@ -310,61 +330,72 @@ export function AccountTab({
         </div>
       </section>
 
-      <section className="card-surface p-4 space-y-4">
-        <div>
-          <p className="section-label">Security</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Admin app sign-in uses email codes. Use a 4-digit PIN for kiosk-side admin access, or create a new PIN if the old one was forgotten.
-          </p>
-        </div>
-
+      <section className="card-surface p-4 space-y-3">
+        <p className="section-label">Security</p>
         {needsDefaultPinChange && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-            New owner accounts start with PIN <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>.
-            Change it right away for security before using kiosk mode.
+            Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
           </div>
         )}
-
-        <div className="space-y-3">
-          <label className="space-y-1 block">
-            <span className="text-xs text-muted-foreground font-medium">Create a new Admin PIN</span>
+        {/* Current PIN — revealed for 30s after saving */}
+        <div className="space-y-1">
+          <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
+          <div className="relative">
             <input
-              type="text"
+              readOnly
+              type={revealCurrentPin ? "text" : "password"}
+              value={justSavedPin ?? "0000"}
+              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!justSavedPin) { toast("Set a new PIN first — it will be visible here for 30 seconds after saving."); return; }
+                setRevealCurrentPin(v => !v);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+          {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
+        </div>
+        {/* New PIN */}
+        <div className="space-y-1">
+          <span className="text-xs text-muted-foreground font-medium">New PIN</span>
+          <div className="relative">
+            <input
+              type={showNewPin ? "text" : "password"}
               inputMode="numeric"
               maxLength={4}
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="Enter a new 4-digit PIN"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.4em]"
+              placeholder="4 digits"
+              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
             />
-          </label>
-          <button
-            type="button"
-            onClick={savePin}
-            disabled={pinSaving || pin.length !== 4}
-            className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              pinSaving || pin.length !== 4
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "bg-sage text-primary-foreground hover:bg-sage-deep",
-            )}
-          >
-            {pinSaving ? "Saving new PIN…" : "Create or reset PIN"}
-          </button>
+            <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+              {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={savePin}
+          disabled={pinSaving || pin.length !== 4}
+          className={cn(
+            "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+            pinSaving || pin.length !== 4 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-sage text-white hover:bg-sage-deep",
+          )}
+        >
+          {pinSaving ? "Saving…" : "Create new PIN"}
+        </button>
       </section>
 
       {/* All Locations */}
       <section>
-        {/* Header row: title + button */}
+        {/* Header row: title */}
         <div className="flex items-center justify-between mb-1">
           <p className="section-label">All locations</p>
-          <button
-            onClick={handleAddLocationClick}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> Add location
-          </button>
         </div>
         {/* Usage + plan line */}
         <div className="flex items-center gap-2 mb-3">
@@ -509,18 +540,18 @@ export function AccountTab({
             </div>
           ))}
         </div>
+        <button
+          onClick={handleAddLocationClick}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add location
+        </button>
       </section>
 
       {/* Team Members */}
       <section>
         <div className="flex items-center justify-between mb-1">
-          <p className="section-label">Team members</p>
-          <button
-            onClick={onInviteMember}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> Add
-          </button>
+          <p className="section-label">Team members ({teamMembers.length + staffProfiles.filter(s => s.status === "active").length})</p>
         </div>
         <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
           Owners and managers only. For shift staff, use Staff Profiles.
@@ -604,7 +635,24 @@ export function AccountTab({
               </div>
             );
           })}
+          {/* Active staff profiles */}
+          {staffProfiles.filter(s => s.status === "active").map(sp => (
+            <div key={sp.id} className="flex items-center gap-3 py-3">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                {(sp.first_name[0] ?? "") + (sp.last_name[0] ?? "")}
+              </div>
+              <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{sp.first_name} {sp.last_name}</p>
+              <span className="w-24 text-xs text-muted-foreground truncate">{sp.role}</span>
+              <div className="w-16" />
+            </div>
+          ))}
         </div>
+        <button
+          onClick={onInviteMember}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add a team member
+        </button>
       </section>
 
       <div className="card-surface p-4">
@@ -631,30 +679,6 @@ export function AccountTab({
           </div>
         )}
       </div>
-
-      {/* Audit Log */}
-      <section>
-        <p className="section-label mb-3">Audit log</p>
-        <div className="card-surface divide-y divide-border max-h-64 overflow-y-auto">
-          {auditLog.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground text-center">No activity yet.</p>
-          ) : auditLog.map(entry => (
-            <div key={entry.id} className="px-4 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm text-foreground leading-snug">
-                  <strong>{entry.user}</strong>{" "}{entry.action}
-                </p>
-                {entry.location_name && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep whitespace-nowrap shrink-0">
-                    {entry.location_name}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{formatTimestamp(entry.timestamp)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Department Management */}
       <section>
@@ -726,31 +750,39 @@ export function AccountTab({
               </div>
             );
           })}
-          <div className="card-surface p-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newDepartmentName}
-                onChange={e => setNewDepartmentName(e.target.value)}
-                placeholder="Add department…"
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDepartment(); } }}
-                className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button
-                onClick={addDepartment}
-                disabled={!newDepartmentName.trim()}
-                className={cn(
-                  "p-1.5 rounded-lg transition-colors",
-                  newDepartmentName.trim()
-                    ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                    : "bg-muted text-muted-foreground cursor-not-allowed",
-                )}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          </div>
         </div>
+        {showAddDepartment && (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              autoFocus
+              type="text"
+              value={newDepartmentName}
+              onChange={e => setNewDepartmentName(e.target.value)}
+              placeholder="Department name…"
+              onKeyDown={e => {
+                if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
+                if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
+              }}
+              className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              onClick={() => { addDepartment(); setShowAddDepartment(false); }}
+              disabled={!newDepartmentName.trim()}
+              className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+            >
+              <Check size={14} />
+            </button>
+            <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
+              <X size={14} className="text-muted-foreground" />
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setShowAddDepartment(true)}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add department
+        </button>
       </section>
 
       {/* Billing — dark midnight blue card */}
