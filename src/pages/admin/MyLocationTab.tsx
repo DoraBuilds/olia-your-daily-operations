@@ -379,22 +379,28 @@ export function MyLocationTab({
 
       {/* Assigned Checklists */}
       <div className="card-surface p-4">
-        <p className="section-label mb-3">Assigned checklists</p>
         {(() => {
           const locationChecklists = checklists.filter(c => c.location_id === currentLocation.id);
-          return locationChecklists.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No checklists assigned to this location yet.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {locationChecklists.map(c => (
-                <div key={c.id} className="flex items-center gap-2 py-0.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sage shrink-0" />
-                  <p className="text-sm text-foreground">{c.title}</p>
+          return (
+            <>
+              <p className="section-label mb-3">
+                Assigned checklists{locationChecklists.length > 0 ? ` (${locationChecklists.length})` : ""}
+              </p>
+              {locationChecklists.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No checklists assigned to this location yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {locationChecklists.map((c, i) => (
+                    <div key={c.id} className="flex items-center gap-2 py-0.5">
+                      <span className="text-xs font-medium text-muted-foreground w-5 shrink-0">{i + 1}.</span>
+                      <p className="text-sm text-foreground">{c.title}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           );
         })()}
       </div>
