@@ -528,10 +528,17 @@ export function AccountTab({
           <p className="section-label">Team members ({teamMembers.length + staffProfiles.filter(s => s.status === "active").length})</p>
         </div>
         <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          Owners and managers only. For shift staff, use Staff Profiles.
+          All team members across all locations in the organisation.
         </p>
         <div className="card-surface divide-y divide-border">
-          {teamMembers.map(member => {
+          {/* Column headers */}
+          <div className="flex items-center gap-3 px-4 py-2">
+            <div className="w-9 shrink-0" />
+            <p className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
+            <p className="w-20 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Role</p>
+            <div className="w-20 shrink-0" />
+          </div>
+          {[...teamMembers].sort((a, b) => a.role === "Owner" ? -1 : b.role === "Owner" ? 1 : 0).map(member => {
             const isExpanded = expandedMemberId === member.id;
             const mp = pendingPerms[member.id] ?? member.permissions;
             return (
@@ -611,13 +618,13 @@ export function AccountTab({
           })}
           {/* Active staff profiles */}
           {staffProfiles.filter(s => s.status === "active").map(sp => (
-            <div key={sp.id} className="flex items-center gap-3 py-3">
+            <div key={sp.id} className="flex items-center gap-3 px-4 py-3">
               <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
                 {(sp.first_name[0] ?? "") + (sp.last_name[0] ?? "")}
               </div>
               <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{sp.first_name} {sp.last_name}</p>
-              <span className="w-24 text-xs text-muted-foreground truncate">{sp.role}</span>
-              <div className="w-16" />
+              <span className="w-20 text-xs text-muted-foreground truncate">{sp.role}</span>
+              <div className="w-20 shrink-0" />
             </div>
           ))}
           <div className="flex justify-end px-4 py-3 border-t border-border">
@@ -637,135 +644,138 @@ export function AccountTab({
         <p className="text-xs text-muted-foreground mb-3">
           Staff roles are managed at the department level only.
         </p>
-        <div className="space-y-3">
+        <div className="card-surface divide-y divide-border">
           {departments.map((department, departmentIndex) => {
             const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
             const isRenaming = renamingDepartment?.index === departmentIndex;
             return (
-              <div key={department.name} className="card-surface p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  {isRenaming ? (
-                    <>
-                      <input
-                        autoFocus
-                        type="text"
-                        value={renamingDepartment.value}
-                        onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            renameDepartment(departmentIndex, renamingDepartment.value);
-                          }
-                        }}
-                        className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                      />
-                      <button
-                        onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <Check size={14} className="text-sage" />
-                      </button>
-                      <button
-                        onClick={() => setRenamingDepartment(null)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <X size={14} className="text-muted-foreground" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{department.name}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
-                      </div>
-                      <button
-                        onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <Pencil size={14} className="text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => deleteDepartment(departmentIndex)}
-                        disabled={departmentInUse}
-                        title={departmentInUse ? "Department is in use" : "Delete department"}
-                        className={cn(
-                          "p-1.5 rounded-lg transition-colors",
-                          departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
-                        )}
-                      >
-                        <Trash2 size={14} className="text-status-error" />
-                      </button>
-                    </>
-                  )}
-                </div>
+              <div key={department.name} className="flex items-center gap-2 px-4 py-4">
+                {isRenaming ? (
+                  <>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={renamingDepartment.value}
+                      onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          renameDepartment(departmentIndex, renamingDepartment.value);
+                        }
+                      }}
+                      className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <button
+                      onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Check size={14} className="text-sage" />
+                    </button>
+                    <button
+                      onClick={() => setRenamingDepartment(null)}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <X size={14} className="text-muted-foreground" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{department.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
+                    </div>
+                    <button
+                      onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Pencil size={14} className="text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => deleteDepartment(departmentIndex)}
+                      disabled={departmentInUse}
+                      title={departmentInUse ? "Department is in use" : "Delete department"}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors",
+                        departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                      )}
+                    >
+                      <Trash2 size={14} className="text-status-error" />
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}
-        </div>
-        <div className="card-surface mt-3 px-4 py-3 flex items-center justify-end gap-2">
-          {showAddDepartment && (
-            <>
-              <input
-                autoFocus
-                type="text"
-                value={newDepartmentName}
-                onChange={e => setNewDepartmentName(e.target.value)}
-                placeholder="Department name…"
-                onKeyDown={e => {
-                  if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
-                  if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
-                }}
-                className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+          <div className="flex items-center justify-end gap-2 px-4 py-3">
+            {showAddDepartment && (
+              <>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newDepartmentName}
+                  onChange={e => setNewDepartmentName(e.target.value)}
+                  placeholder="Department name…"
+                  onKeyDown={e => {
+                    if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
+                    if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
+                  }}
+                  className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <button
+                  onClick={() => { addDepartment(); setShowAddDepartment(false); }}
+                  disabled={!newDepartmentName.trim()}
+                  className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+                >
+                  <Check size={14} />
+                </button>
+                <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              </>
+            )}
+            {!showAddDepartment && (
               <button
-                onClick={() => { addDepartment(); setShowAddDepartment(false); }}
-                disabled={!newDepartmentName.trim()}
-                className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+                onClick={() => setShowAddDepartment(true)}
+                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
               >
-                <Check size={14} />
+                <Plus size={14} /> Add department
               </button>
-              <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
-                <X size={14} className="text-muted-foreground" />
-              </button>
-            </>
-          )}
-          {!showAddDepartment && (
-            <button
-              onClick={() => setShowAddDepartment(true)}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
-            >
-              <Plus size={14} /> Add department
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Billing — dark midnight blue card */}
-      <div className="rounded-2xl p-5 space-y-3 bg-sage">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">Current Plan</p>
-            <p className="font-display text-2xl text-white leading-tight">Olia {PLAN_LABELS[plan]}</p>
+      {/* Billing */}
+      <section>
+        <p className="section-label mb-3">Billing</p>
+        <div className="card-surface divide-y divide-border">
+          <div className="flex items-start justify-between gap-2 px-4 py-4">
+            <div>
+              <p className="text-xs text-muted-foreground font-medium mb-0.5">Current plan</p>
+              <p className="font-display text-xl text-foreground leading-tight">Olia {PLAN_LABELS[plan]}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {PLAN_PRICES[plan].monthly === 0
+                  ? "Free · No billing required"
+                  : `${PLAN_PRICES[plan].currency}${PLAN_PRICES[plan].monthly}/month`}
+              </p>
+            </div>
+            <span className={cn(
+              "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
+              isActive ? "border-sage/20 text-sage bg-sage/10" : "border-status-warn/30 text-status-warn bg-status-warn/10"
+            )}>
+              {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}
+            </span>
           </div>
-          <span className={cn(
-            "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border",
-            isActive ? "border-white/30 text-white bg-white/10" : "border-yellow-300/40 text-yellow-200 bg-yellow-300/10"
-          )}>
-            {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}
-          </span>
+          <div className="flex justify-end px-4 py-3">
+            <button
+              onClick={() => navigate("/billing")}
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
+            >
+              Manage Billing
+            </button>
+          </div>
         </div>
-        <p className="text-sm text-white/70">
-          {PLAN_PRICES[plan].monthly === 0
-            ? "Free plan · No billing required"
-            : `${PLAN_PRICES[plan].currency}${PLAN_PRICES[plan].monthly}/month`}
-        </p>
-        <button
-          onClick={() => navigate("/billing")}
-          className="w-full py-2.5 rounded-xl border border-white/30 text-white text-xs font-semibold tracking-wide hover:bg-white/10 transition-colors"
-        >
-          Manage Billing
-        </button>
-      </div>
+      </section>
     </div>
   );
 }
