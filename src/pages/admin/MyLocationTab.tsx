@@ -175,7 +175,7 @@ export function MyLocationTab({
         </div>
 
         {/* Right — map thumbnail + kiosk CTA */}
-        <div className="flex flex-col gap-2 w-[35%] shrink-0">
+        <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2">
           {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY ? (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
