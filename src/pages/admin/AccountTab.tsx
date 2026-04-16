@@ -511,13 +511,15 @@ export function AccountTab({
               </button>
             </div>
           ))}
+          <div className="flex justify-end px-4 py-3 border-t border-border">
+            <button
+              onClick={handleAddLocationClick}
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
+            >
+              <Plus size={14} /> Add location
+            </button>
+          </div>
         </div>
-        <button
-          onClick={handleAddLocationClick}
-          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
-        >
-          <Plus size={14} /> Add location
-        </button>
       </section>
 
       {/* Team Members */}
@@ -618,39 +620,16 @@ export function AccountTab({
               <div className="w-16" />
             </div>
           ))}
-        </div>
-        <button
-          onClick={onInviteMember}
-          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
-        >
-          <Plus size={14} /> Add a team member
-        </button>
-      </section>
-
-      <div className="card-surface p-4">
-        <div className="mb-3 space-y-1">
-          <p className="section-label">Checklist coverage</p>
-          <p className="text-xs text-muted-foreground">
-            Checklists currently inherit their location coverage from the builder. This view gives a quick read on what is already assigned to the current location.
-          </p>
-        </div>
-        {checklists.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No checklists created yet.</p>
-        ) : (
-          <div className="card-surface divide-y divide-border">
-            {checklists.map(c => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{c.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Assigned to {locations.find(l => l.id === c.location_id)?.name ?? "all locations"}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="flex justify-end px-4 py-3 border-t border-border">
+            <button
+              onClick={onInviteMember}
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
+            >
+              <Plus size={14} /> Add a team member
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
 
       {/* Department Management */}
       <section>
@@ -723,38 +702,42 @@ export function AccountTab({
             );
           })}
         </div>
-        {showAddDepartment && (
-          <div className="flex items-center gap-2 mt-3">
-            <input
-              autoFocus
-              type="text"
-              value={newDepartmentName}
-              onChange={e => setNewDepartmentName(e.target.value)}
-              placeholder="Department name…"
-              onKeyDown={e => {
-                if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
-                if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
-              }}
-              className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+        <div className="card-surface mt-3 px-4 py-3 flex items-center justify-end gap-2">
+          {showAddDepartment && (
+            <>
+              <input
+                autoFocus
+                type="text"
+                value={newDepartmentName}
+                onChange={e => setNewDepartmentName(e.target.value)}
+                placeholder="Department name…"
+                onKeyDown={e => {
+                  if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
+                  if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
+                }}
+                className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <button
+                onClick={() => { addDepartment(); setShowAddDepartment(false); }}
+                disabled={!newDepartmentName.trim()}
+                className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+              >
+                <Check size={14} />
+              </button>
+              <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
+                <X size={14} className="text-muted-foreground" />
+              </button>
+            </>
+          )}
+          {!showAddDepartment && (
             <button
-              onClick={() => { addDepartment(); setShowAddDepartment(false); }}
-              disabled={!newDepartmentName.trim()}
-              className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+              onClick={() => setShowAddDepartment(true)}
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-2"
             >
-              <Check size={14} />
+              <Plus size={14} /> Add department
             </button>
-            <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
-              <X size={14} className="text-muted-foreground" />
-            </button>
-          </div>
-        )}
-        <button
-          onClick={() => setShowAddDepartment(true)}
-          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
-        >
-          <Plus size={14} /> Add department
-        </button>
+          )}
+        </div>
       </section>
 
       {/* Billing — dark midnight blue card */}
