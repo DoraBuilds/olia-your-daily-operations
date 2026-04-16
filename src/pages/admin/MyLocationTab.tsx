@@ -175,20 +175,19 @@ export function MyLocationTab({
         </div>
 
         {/* Right — map thumbnail + kiosk CTA */}
-        <div className="flex flex-col gap-2" style={{ width: 100 }}>
+        <div className="flex flex-col gap-2 w-[35%] shrink-0">
           {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY ? (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block"
-              style={{ height: 100 }}
+              className="flex-1 rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block min-h-[100px]"
               title="Open in Google Maps"
             >
               <img
                 src={
                   `https://maps.googleapis.com/maps/api/staticmap` +
-                  `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=200x200&scale=2` +
+                  `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=300x300&scale=2` +
                   `&markers=color:0x1A2A47%7C${currentLocation.lat},${currentLocation.lng}` +
                   `&key=${MAPS_API_KEY}`
                 }
@@ -198,7 +197,7 @@ export function MyLocationTab({
               />
             </a>
           ) : (
-            <div className="rounded-2xl border border-border bg-muted flex items-center justify-center" style={{ height: 100 }}>
+            <div className="flex-1 rounded-2xl border border-border bg-muted flex items-center justify-center min-h-[100px]">
               <MapPin size={18} className="text-muted-foreground" />
             </div>
           )}
