@@ -81,7 +81,11 @@ export function AccountTab({
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
-  const [showPin, setShowPin] = useState(false);
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [justSavedPin, setJustSavedPin] = useState<string | null>(null);
+  const [revealCurrentPin, setRevealCurrentPin] = useState(false);
+  const [revealCountdown, setRevealCountdown] = useState(0);
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
@@ -151,8 +155,10 @@ export function AccountTab({
     if (!currentAccount || pin.length !== 4) return;
     setPinSaving(true);
     try {
-      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin: pin });
+      const rawPin = pin;
+      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin });
       setPin("");
+      setJustSavedPin(rawPin);
       toast.success("Admin PIN updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
@@ -160,6 +166,19 @@ export function AccountTab({
       setPinSaving(false);
     }
   };
+
+  // Reveal current PIN for 30s after saving
+  useEffect(() => {
+    if (!revealCurrentPin) return;
+    setRevealCountdown(30);
+    const interval = setInterval(() => {
+      setRevealCountdown(prev => {
+        if (prev <= 1) { clearInterval(interval); setRevealCurrentPin(false); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [revealCurrentPin]);
 
   // Department management
   const [renamingDepartment, setRenamingDepartment] = useState<{ index: number; value: string } | null>(null);
@@ -238,126 +257,169 @@ export function AccountTab({
 
   return (
     <div className="space-y-4">
-
-      {/* 1. My Account + Security — two equal columns side by side */}
-      <section className="card-surface p-4">
-        <div className="flex gap-4">
-          {/* Left column: My Account */}
-          <div className="flex-1 min-w-0 space-y-3">
-            <p className="section-label">My Account</p>
-            <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Full name</span>
-              <input
-                type="text"
-                value={profileName}
-                onChange={e => setProfileName(e.target.value)}
-                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </label>
-            <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Email</span>
-              <input
-                type="email"
-                value={profileEmail}
-                onChange={e => setProfileEmail(e.target.value)}
-                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={saveProfile}
-              disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
-              className={cn(
-                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
-                profileSaving || !profileName.trim() || !profileEmail.trim()
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-sage text-white hover:bg-sage-deep",
-              )}
-            >
-              {profileSaving ? "Saving…" : "Save"}
-            </button>
+      {/* My account */}
+      <section className="card-surface p-4 space-y-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="section-label">My account</p>
+            <p className="text-xs text-muted-foreground mt-1">Manage the admin profile, email, password, and kiosk PIN.</p>
           </div>
+          <span className="text-[10px] px-2 py-1 rounded-full bg-sage-light text-sage-deep font-semibold uppercase tracking-wide">
+            Admin
+          </span>
+        </div>
 
-          {/* Vertical divider */}
-          <div className="w-px bg-border self-stretch" />
-
-          {/* Right column: Security */}
-          <div className="flex-1 min-w-0 space-y-3">
-            <p className="section-label">Security</p>
-            {needsDefaultPinChange && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
-              </div>
+        <div className="grid gap-3">
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">Full name</span>
+            <input
+              type="text"
+              value={profileName}
+              onChange={e => setProfileName(e.target.value)}
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs text-muted-foreground font-medium">Email</span>
+            <input
+              type="email"
+              value={profileEmail}
+              onChange={e => setProfileEmail(e.target.value)}
+              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={saveProfile}
+            disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
+            className={cn(
+              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+              profileSaving || !profileName.trim() || !profileEmail.trim()
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-sage text-primary-foreground hover:bg-sage-deep",
             )}
-            <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Admin PIN</span>
-              <div className="relative">
-                <input
-                  type={showPin ? "text" : "password"}
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={pin}
-                  onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  placeholder="4-digit PIN"
-                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPin(v => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
-                >
-                  {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+          >
+            {profileSaving ? "Saving profile…" : "Save profile"}
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned locations</p>
+            {assignedLocationIds.length ? (
+              <div className="flex flex-wrap gap-2">
+                {locations.filter(loc => assignedLocationIds.includes(loc.id)).map(loc => (
+                  <span key={loc.id} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
+                    {loc.name}
+                  </span>
+                ))}
               </div>
-            </label>
-            <button
-              type="button"
-              onClick={savePin}
-              disabled={pinSaving || pin.length !== 4}
-              className={cn(
-                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
-                pinSaving || pin.length !== 4
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-sage text-white hover:bg-sage-deep",
-              )}
-            >
-              {pinSaving ? "Saving…" : "Create new PIN"}
-            </button>
+            ) : (
+              <p className="text-sm text-muted-foreground">All locations</p>
+            )}
+          </div>
+          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role and permissions</p>
+            <p className="text-sm font-medium text-foreground">{currentAccount?.role ?? "Owner"}</p>
+            {currentAccount?.role === "Owner" ? (
+              <p className="text-xs text-muted-foreground">Full access to all admin settings.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Permissions inherited from the current manager profile.</p>
+            )}
           </div>
         </div>
       </section>
 
-      {/* 2. All Locations */}
-      <section className="card-surface p-4">
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-2">
-          <p className="section-label">All locations</p>
-          <div className="flex items-center gap-2">
-            <span className={cn(
-              "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
-              billingUnavailable
-                ? "bg-muted text-muted-foreground"
-                : "bg-sage/10 text-sage",
-            )}>
-              {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
-            </span>
-            <span className={cn(
-              "text-xs",
-              billingUnavailable
-                ? "text-status-warn font-medium"
-                : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
-            )}>
-              {billingUnavailable
-                ? "Plan status could not be verified."
-                : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations}`}
-            </span>
+      <section className="card-surface p-4 space-y-3">
+        <p className="section-label">Security</p>
+        {needsDefaultPinChange && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
+          </div>
+        )}
+        {/* Current PIN — revealed for 30s after saving */}
+        <div className="space-y-1">
+          <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
+          <div className="relative">
+            <input
+              readOnly
+              type={revealCurrentPin ? "text" : "password"}
+              value={justSavedPin ?? "0000"}
+              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!justSavedPin) { toast("Set a new PIN first — it will be visible here for 30 seconds after saving."); return; }
+                setRevealCurrentPin(v => !v);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+          {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
+        </div>
+        {/* New PIN */}
+        <div className="space-y-1">
+          <span className="text-xs text-muted-foreground font-medium">New PIN</span>
+          <div className="relative">
+            <input
+              type={showNewPin ? "text" : "password"}
+              inputMode="numeric"
+              maxLength={4}
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="4 digits"
+              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
+            />
+            <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+              {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={savePin}
+          disabled={pinSaving || pin.length !== 4}
+          className={cn(
+            "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+            pinSaving || pin.length !== 4 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-sage text-white hover:bg-sage-deep",
+          )}
+        >
+          {pinSaving ? "Saving…" : "Create new PIN"}
+        </button>
+      </section>
 
-        {/* Grace period warning */}
+      {/* All Locations */}
+      <section>
+        {/* Header row: title */}
+        <div className="flex items-center justify-between mb-1">
+          <p className="section-label">All locations</p>
+        </div>
+        {/* Usage + plan line */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className={cn(
+            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
+            billingUnavailable
+              ? "bg-muted text-muted-foreground"
+              : "bg-sage/10 text-sage",
+          )}>
+            {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
+          </span>
+          <span className={cn(
+            "text-xs",
+            billingUnavailable
+              ? "text-status-warn font-medium"
+              : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
+          )}>
+            {billingUnavailable
+              ? "Plan status could not be verified."
+              : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations} locations used`}
+          </span>
+        </div>
         {isLocationOverLimit && (
-          <div className="rounded-xl border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
+          <div className="card-surface border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-semibold text-foreground">Location limit grace period</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -413,7 +475,7 @@ export function AccountTab({
                     "rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
                     savingActiveLocations || selectedActiveLocationIds.length !== maxLocations
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-sage text-white hover:bg-sage-deep",
+                      : "bg-sage text-primary-foreground hover:bg-sage-deep",
                   )}
                 >
                   {savingActiveLocations ? "Saving…" : "Save active locations"}
@@ -422,15 +484,13 @@ export function AccountTab({
             </div>
           </div>
         )}
-
-        {/* Location list */}
-        <div className="divide-y divide-border">
+        <div className="card-surface divide-y divide-border">
           {locations.map(loc => (
             <div
               key={loc.id}
               className={cn(
-                "flex items-center gap-3 py-3 transition-colors",
-                inactiveLocationSet.has(loc.id) && "opacity-65",
+                "flex items-center gap-3 px-4 py-4 transition-colors",
+                inactiveLocationSet.has(loc.id) && "bg-muted/35 opacity-65",
               )}
             >
               <MapPin
@@ -447,7 +507,7 @@ export function AccountTab({
                   </p>
                 )}
                 {isLocationOverLimit && (
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {activeLocationSet.has(loc.id) ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
                         {isGraceExpired ? "Active" : "Grace window"}
@@ -480,52 +540,38 @@ export function AccountTab({
             </div>
           ))}
         </div>
-
-        {/* Add location */}
-        <div className="flex justify-end mt-3">
-          <button
-            onClick={handleAddLocationClick}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> Add location
-          </button>
-        </div>
+        <button
+          onClick={handleAddLocationClick}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add location
+        </button>
       </section>
 
-      {/* 3. Team Members */}
-      <section className="card-surface p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <p className="section-label">Team members ({teamMembers.length})</p>
+      {/* Team Members */}
+      <section>
+        <div className="flex items-center justify-between mb-1">
+          <p className="section-label">Team members ({teamMembers.length + staffProfiles.filter(s => s.status === "active").length})</p>
         </div>
-
-        {/* Sub-header row */}
-        <div className="flex items-center gap-3 px-0 mb-1">
-          <div className="w-9 shrink-0" />
-          <p className="flex-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Name</p>
-          <p className="w-20 text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-right">Role</p>
-          {/* space for action icons */}
-          <div className="flex gap-1">
-            <div className="w-7" />
-            <div className="w-7" />
-            <div className="w-7" />
-          </div>
-        </div>
-
-        {/* Member rows */}
-        <div className="divide-y divide-border">
+        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+          Owners and managers only. For shift staff, use Staff Profiles.
+        </p>
+        <div className="card-surface divide-y divide-border">
           {teamMembers.map(member => {
             const isExpanded = expandedMemberId === member.id;
             const mp = pendingPerms[member.id] ?? member.permissions;
             return (
               <div key={member.id}>
-                <div className="flex items-center gap-3 py-3">
+                <div className="flex items-center gap-3 px-4 py-3">
                   <div className="w-9 h-9 rounded-full bg-sage-light flex items-center justify-center text-xs font-semibold text-sage-deep shrink-0">
                     {member.initials}
                   </div>
-                  <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{member.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                  </div>
                   <span className={cn(
-                    "w-20 text-right text-xs px-2 py-0.5 rounded-full font-medium",
+                    "text-xs px-2 py-0.5 rounded-full font-medium",
                     member.role === "Owner" ? "bg-lavender-light text-lavender-deep" : "status-ok",
                   )}>
                     {member.role}
@@ -545,7 +591,7 @@ export function AccountTab({
                       ? <ChevronUp size={14} className="text-muted-foreground" />
                       : <ChevronDown size={14} className="text-muted-foreground" />}
                   </button>
-                  {member.id !== authMemberId ? (
+                  {member.id !== authMemberId && (
                     <button
                       onClick={() => onDeleteMember(member)}
                       aria-label={`Delete ${member.name}`}
@@ -553,8 +599,6 @@ export function AccountTab({
                     >
                       <Trash2 size={14} className="text-status-error" />
                     </button>
-                  ) : (
-                    <div className="w-7" />
                   )}
                 </div>
                 {isExpanded && (
@@ -580,7 +624,7 @@ export function AccountTab({
                         </div>
                         <button
                           onClick={() => savePerms(member.id)}
-                          className="w-full py-2.5 rounded-xl text-xs font-medium bg-sage text-white hover:bg-sage-deep transition-colors"
+                          className="w-full py-2.5 rounded-xl text-xs font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
                         >
                           Save permissions
                         </button>
@@ -591,110 +635,157 @@ export function AccountTab({
               </div>
             );
           })}
+          {/* Active staff profiles */}
+          {staffProfiles.filter(s => s.status === "active").map(sp => (
+            <div key={sp.id} className="flex items-center gap-3 py-3">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                {(sp.first_name[0] ?? "") + (sp.last_name[0] ?? "")}
+              </div>
+              <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{sp.first_name} {sp.last_name}</p>
+              <span className="w-24 text-xs text-muted-foreground truncate">{sp.role}</span>
+              <div className="w-16" />
+            </div>
+          ))}
         </div>
-
-        {/* Add team member */}
-        <div className="flex justify-end mt-3">
-          <button
-            onClick={onInviteMember}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> Add a team member
-          </button>
-        </div>
+        <button
+          onClick={onInviteMember}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add a team member
+        </button>
       </section>
 
-      {/* 4. Departments */}
-      <section className="card-surface p-4">
-        <p className="section-label mb-3">Departments</p>
+      <div className="card-surface p-4">
+        <div className="mb-3 space-y-1">
+          <p className="section-label">Checklist coverage</p>
+          <p className="text-xs text-muted-foreground">
+            Checklists currently inherit their location coverage from the builder. This view gives a quick read on what is already assigned to the current location.
+          </p>
+        </div>
+        {checklists.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No checklists created yet.</p>
+        ) : (
+          <div className="card-surface divide-y divide-border">
+            {checklists.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">{c.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Assigned to {locations.find(l => l.id === c.location_id)?.name ?? "all locations"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        <div className="divide-y divide-border">
+      {/* Department Management */}
+      <section>
+        <p className="section-label mb-3">Department management</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          Staff roles are managed at the department level only.
+        </p>
+        <div className="space-y-3">
           {departments.map((department, departmentIndex) => {
             const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
             const isRenaming = renamingDepartment?.index === departmentIndex;
             return (
-              <div key={department.name} className="flex items-center gap-2 py-3">
-                {isRenaming ? (
-                  <>
-                    <input
-                      autoFocus
-                      type="text"
-                      value={renamingDepartment.value}
-                      onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          renameDepartment(departmentIndex, renamingDepartment.value);
-                        }
-                      }}
-                      className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
-                    <button
-                      onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Check size={14} className="text-sage" />
-                    </button>
-                    <button
-                      onClick={() => setRenamingDepartment(null)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <X size={14} className="text-muted-foreground" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex-1 text-sm font-medium text-foreground">{department.name}</p>
-                    <button
-                      onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Pencil size={14} className="text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => deleteDepartment(departmentIndex)}
-                      disabled={departmentInUse}
-                      title={departmentInUse ? "Department is in use" : "Delete department"}
-                      className={cn(
-                        "p-1.5 rounded-lg transition-colors",
-                        departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
-                      )}
-                    >
-                      <Trash2 size={14} className="text-status-error" />
-                    </button>
-                  </>
-                )}
+              <div key={department.name} className="card-surface p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  {isRenaming ? (
+                    <>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={renamingDepartment.value}
+                        onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            renameDepartment(departmentIndex, renamingDepartment.value);
+                          }
+                        }}
+                        className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <button
+                        onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Check size={14} className="text-sage" />
+                      </button>
+                      <button
+                        onClick={() => setRenamingDepartment(null)}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <X size={14} className="text-muted-foreground" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{department.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
+                      </div>
+                      <button
+                        onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Pencil size={14} className="text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => deleteDepartment(departmentIndex)}
+                        disabled={departmentInUse}
+                        title={departmentInUse ? "Department is in use" : "Delete department"}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-colors",
+                          departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                        )}
+                      >
+                        <Trash2 size={14} className="text-status-error" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
-
-        {/* Inline add department */}
-        <div className="flex items-center gap-2 mt-3">
-          <input
-            type="text"
-            value={newDepartmentName}
-            onChange={e => setNewDepartmentName(e.target.value)}
-            placeholder="New department name…"
-            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDepartment(); } }}
-            className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <button
-            onClick={addDepartment}
-            disabled={!newDepartmentName.trim()}
-            className={cn(
-              "border border-border rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-              newDepartmentName.trim()
-                ? "text-sage hover:bg-muted"
-                : "text-muted-foreground cursor-not-allowed",
-            )}
-          >
-            + Add
-          </button>
-        </div>
+        {showAddDepartment && (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              autoFocus
+              type="text"
+              value={newDepartmentName}
+              onChange={e => setNewDepartmentName(e.target.value)}
+              placeholder="Department name…"
+              onKeyDown={e => {
+                if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
+                if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
+              }}
+              className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              onClick={() => { addDepartment(); setShowAddDepartment(false); }}
+              disabled={!newDepartmentName.trim()}
+              className={cn("p-2 rounded-xl transition-colors", newDepartmentName.trim() ? "bg-sage text-white hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed")}
+            >
+              <Check size={14} />
+            </button>
+            <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-2 rounded-xl hover:bg-muted transition-colors">
+              <X size={14} className="text-muted-foreground" />
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setShowAddDepartment(true)}
+          className="w-full mt-4 py-2.5 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={14} /> Add department
+        </button>
       </section>
 
-      {/* 5. Billing — dark midnight blue card */}
+      {/* Billing — dark midnight blue card */}
       <div className="rounded-2xl p-5 space-y-3 bg-sage">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -717,34 +808,9 @@ export function AccountTab({
           onClick={() => navigate("/billing")}
           className="w-full py-2.5 rounded-xl border border-white/30 text-white text-xs font-semibold tracking-wide hover:bg-white/10 transition-colors"
         >
-          Upgrade plan
+          Manage Billing
         </button>
       </div>
-
-      {/* 6. Audit Log */}
-      <section>
-        <p className="section-label mb-3">Audit log</p>
-        <div className="card-surface divide-y divide-border max-h-64 overflow-y-auto">
-          {auditLog.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground text-center">No activity yet.</p>
-          ) : auditLog.map(entry => (
-            <div key={entry.id} className="px-4 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm text-foreground leading-snug">
-                  <strong>{entry.user}</strong>{" "}{entry.action}
-                </p>
-                {entry.location_name && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep whitespace-nowrap shrink-0">
-                    {entry.location_name}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{formatTimestamp(entry.timestamp)}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
     </div>
   );
 }
