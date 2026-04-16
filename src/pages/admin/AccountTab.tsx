@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp,
+  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -81,6 +81,7 @@ export function AccountTab({
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
@@ -237,158 +238,126 @@ export function AccountTab({
 
   return (
     <div className="space-y-4">
-      {/* My account */}
-      <section className="card-surface p-4 space-y-4">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="section-label">My account</p>
-            <p className="text-xs text-muted-foreground mt-1">Manage the admin profile, email, password, and kiosk PIN.</p>
+
+      {/* 1. My Account + Security — two equal columns side by side */}
+      <section className="card-surface p-4">
+        <div className="flex gap-4">
+          {/* Left column: My Account */}
+          <div className="flex-1 min-w-0 space-y-3">
+            <p className="section-label">My Account</p>
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Full name</span>
+              <input
+                type="text"
+                value={profileName}
+                onChange={e => setProfileName(e.target.value)}
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Email</span>
+              <input
+                type="email"
+                value={profileEmail}
+                onChange={e => setProfileEmail(e.target.value)}
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={saveProfile}
+              disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
+              className={cn(
+                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                profileSaving || !profileName.trim() || !profileEmail.trim()
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-sage text-white hover:bg-sage-deep",
+              )}
+            >
+              {profileSaving ? "Saving…" : "Save"}
+            </button>
           </div>
-          <span className="text-[10px] px-2 py-1 rounded-full bg-sage-light text-sage-deep font-semibold uppercase tracking-wide">
-            Admin
-          </span>
-        </div>
 
-        <div className="grid gap-3">
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">Full name</span>
-            <input
-              type="text"
-              value={profileName}
-              onChange={e => setProfileName(e.target.value)}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">Email</span>
-            <input
-              type="email"
-              value={profileEmail}
-              onChange={e => setProfileEmail(e.target.value)}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
-            className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              profileSaving || !profileName.trim() || !profileEmail.trim()
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "bg-sage text-primary-foreground hover:bg-sage-deep",
-            )}
-          >
-            {profileSaving ? "Saving profile…" : "Save profile"}
-          </button>
-        </div>
+          {/* Vertical divider */}
+          <div className="w-px bg-border self-stretch" />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned locations</p>
-            {assignedLocationIds.length ? (
-              <div className="flex flex-wrap gap-2">
-                {locations.filter(loc => assignedLocationIds.includes(loc.id)).map(loc => (
-                  <span key={loc.id} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
-                    {loc.name}
-                  </span>
-                ))}
+          {/* Right column: Security */}
+          <div className="flex-1 min-w-0 space-y-3">
+            <p className="section-label">Security</p>
+            {needsDefaultPinChange && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">All locations</p>
             )}
-          </div>
-          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role and permissions</p>
-            <p className="text-sm font-medium text-foreground">{currentAccount?.role ?? "Owner"}</p>
-            {currentAccount?.role === "Owner" ? (
-              <p className="text-xs text-muted-foreground">Full access to all admin settings.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Permissions inherited from the current manager profile.</p>
-            )}
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Admin PIN</span>
+              <div className="relative">
+                <input
+                  type={showPin ? "text" : "password"}
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={pin}
+                  onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="4-digit PIN"
+                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
+                >
+                  {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </label>
+            <button
+              type="button"
+              onClick={savePin}
+              disabled={pinSaving || pin.length !== 4}
+              className={cn(
+                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                pinSaving || pin.length !== 4
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-sage text-white hover:bg-sage-deep",
+              )}
+            >
+              {pinSaving ? "Saving…" : "Create new PIN"}
+            </button>
           </div>
         </div>
       </section>
 
-      <section className="card-surface p-4 space-y-4">
-        <div>
-          <p className="section-label">Security</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Admin app sign-in uses email codes. Use a 4-digit PIN for kiosk-side admin access, or create a new PIN if the old one was forgotten.
-          </p>
-        </div>
-
-        {needsDefaultPinChange && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-            New owner accounts start with PIN <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>.
-            Change it right away for security before using kiosk mode.
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <label className="space-y-1 block">
-            <span className="text-xs text-muted-foreground font-medium">Create a new Admin PIN</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={4}
-              value={pin}
-              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="Enter a new 4-digit PIN"
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.4em]"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={savePin}
-            disabled={pinSaving || pin.length !== 4}
-            className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              pinSaving || pin.length !== 4
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "bg-sage text-primary-foreground hover:bg-sage-deep",
-            )}
-          >
-            {pinSaving ? "Saving new PIN…" : "Create or reset PIN"}
-          </button>
-        </div>
-      </section>
-
-      {/* All Locations */}
-      <section>
-        {/* Header row: title + button */}
-        <div className="flex items-center justify-between mb-1">
+      {/* 2. All Locations */}
+      <section className="card-surface p-4">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-2">
           <p className="section-label">All locations</p>
-          <button
-            onClick={handleAddLocationClick}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> Add location
-          </button>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
+              billingUnavailable
+                ? "bg-muted text-muted-foreground"
+                : "bg-sage/10 text-sage",
+            )}>
+              {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
+            </span>
+            <span className={cn(
+              "text-xs",
+              billingUnavailable
+                ? "text-status-warn font-medium"
+                : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
+            )}>
+              {billingUnavailable
+                ? "Plan status could not be verified."
+                : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations}`}
+            </span>
+          </div>
         </div>
-        {/* Usage + plan line */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
-            billingUnavailable
-              ? "bg-muted text-muted-foreground"
-              : "bg-sage/10 text-sage",
-          )}>
-            {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
-          </span>
-          <span className={cn(
-            "text-xs",
-            billingUnavailable
-              ? "text-status-warn font-medium"
-              : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
-          )}>
-            {billingUnavailable
-              ? "Plan status could not be verified."
-              : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations} locations used`}
-          </span>
-        </div>
+
+        {/* Grace period warning */}
         {isLocationOverLimit && (
-          <div className="card-surface border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
+          <div className="rounded-xl border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-semibold text-foreground">Location limit grace period</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -444,7 +413,7 @@ export function AccountTab({
                     "rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
                     savingActiveLocations || selectedActiveLocationIds.length !== maxLocations
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-sage text-primary-foreground hover:bg-sage-deep",
+                      : "bg-sage text-white hover:bg-sage-deep",
                   )}
                 >
                   {savingActiveLocations ? "Saving…" : "Save active locations"}
@@ -453,13 +422,15 @@ export function AccountTab({
             </div>
           </div>
         )}
-        <div className="card-surface divide-y divide-border">
+
+        {/* Location list */}
+        <div className="divide-y divide-border">
           {locations.map(loc => (
             <div
               key={loc.id}
               className={cn(
-                "flex items-center gap-3 px-4 py-4 transition-colors",
-                inactiveLocationSet.has(loc.id) && "bg-muted/35 opacity-65",
+                "flex items-center gap-3 py-3 transition-colors",
+                inactiveLocationSet.has(loc.id) && "opacity-65",
               )}
             >
               <MapPin
@@ -476,7 +447,7 @@ export function AccountTab({
                   </p>
                 )}
                 {isLocationOverLimit && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-1">
                     {activeLocationSet.has(loc.id) ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
                         {isGraceExpired ? "Active" : "Grace window"}
@@ -509,38 +480,52 @@ export function AccountTab({
             </div>
           ))}
         </div>
-      </section>
 
-      {/* Team Members */}
-      <section>
-        <div className="flex items-center justify-between mb-1">
-          <p className="section-label">Team members</p>
+        {/* Add location */}
+        <div className="flex justify-end mt-3">
           <button
-            onClick={onInviteMember}
+            onClick={handleAddLocationClick}
             className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
           >
-            <Plus size={12} /> Add
+            <Plus size={12} /> Add location
           </button>
         </div>
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          Owners and managers only. For shift staff, use Staff Profiles.
-        </p>
-        <div className="card-surface divide-y divide-border">
+      </section>
+
+      {/* 3. Team Members */}
+      <section className="card-surface p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <p className="section-label">Team members ({teamMembers.length})</p>
+        </div>
+
+        {/* Sub-header row */}
+        <div className="flex items-center gap-3 px-0 mb-1">
+          <div className="w-9 shrink-0" />
+          <p className="flex-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Name</p>
+          <p className="w-20 text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-right">Role</p>
+          {/* space for action icons */}
+          <div className="flex gap-1">
+            <div className="w-7" />
+            <div className="w-7" />
+            <div className="w-7" />
+          </div>
+        </div>
+
+        {/* Member rows */}
+        <div className="divide-y divide-border">
           {teamMembers.map(member => {
             const isExpanded = expandedMemberId === member.id;
             const mp = pendingPerms[member.id] ?? member.permissions;
             return (
               <div key={member.id}>
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex items-center gap-3 py-3">
                   <div className="w-9 h-9 rounded-full bg-sage-light flex items-center justify-center text-xs font-semibold text-sage-deep shrink-0">
                     {member.initials}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
-                  </div>
+                  <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{member.name}</p>
                   <span className={cn(
-                    "text-xs px-2 py-0.5 rounded-full font-medium",
+                    "w-20 text-right text-xs px-2 py-0.5 rounded-full font-medium",
                     member.role === "Owner" ? "bg-lavender-light text-lavender-deep" : "status-ok",
                   )}>
                     {member.role}
@@ -560,7 +545,7 @@ export function AccountTab({
                       ? <ChevronUp size={14} className="text-muted-foreground" />
                       : <ChevronDown size={14} className="text-muted-foreground" />}
                   </button>
-                  {member.id !== authMemberId && (
+                  {member.id !== authMemberId ? (
                     <button
                       onClick={() => onDeleteMember(member)}
                       aria-label={`Delete ${member.name}`}
@@ -568,6 +553,8 @@ export function AccountTab({
                     >
                       <Trash2 size={14} className="text-status-error" />
                     </button>
+                  ) : (
+                    <div className="w-7" />
                   )}
                 </div>
                 {isExpanded && (
@@ -593,7 +580,7 @@ export function AccountTab({
                         </div>
                         <button
                           onClick={() => savePerms(member.id)}
-                          className="w-full py-2.5 rounded-xl text-xs font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
+                          className="w-full py-2.5 rounded-xl text-xs font-medium bg-sage text-white hover:bg-sage-deep transition-colors"
                         >
                           Save permissions
                         </button>
@@ -605,34 +592,136 @@ export function AccountTab({
             );
           })}
         </div>
+
+        {/* Add team member */}
+        <div className="flex justify-end mt-3">
+          <button
+            onClick={onInviteMember}
+            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
+          >
+            <Plus size={12} /> Add a team member
+          </button>
+        </div>
       </section>
 
-      <div className="card-surface p-4">
-        <div className="mb-3 space-y-1">
-          <p className="section-label">Checklist coverage</p>
-          <p className="text-xs text-muted-foreground">
-            Checklists currently inherit their location coverage from the builder. This view gives a quick read on what is already assigned to the current location.
-          </p>
-        </div>
-        {checklists.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No checklists created yet.</p>
-        ) : (
-          <div className="card-surface divide-y divide-border">
-            {checklists.map(c => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{c.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Assigned to {locations.find(l => l.id === c.location_id)?.name ?? "all locations"}
-                  </p>
-                </div>
+      {/* 4. Departments */}
+      <section className="card-surface p-4">
+        <p className="section-label mb-3">Departments</p>
+
+        <div className="divide-y divide-border">
+          {departments.map((department, departmentIndex) => {
+            const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
+            const isRenaming = renamingDepartment?.index === departmentIndex;
+            return (
+              <div key={department.name} className="flex items-center gap-2 py-3">
+                {isRenaming ? (
+                  <>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={renamingDepartment.value}
+                      onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          renameDepartment(departmentIndex, renamingDepartment.value);
+                        }
+                      }}
+                      className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <button
+                      onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Check size={14} className="text-sage" />
+                    </button>
+                    <button
+                      onClick={() => setRenamingDepartment(null)}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <X size={14} className="text-muted-foreground" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="flex-1 text-sm font-medium text-foreground">{department.name}</p>
+                    <button
+                      onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Pencil size={14} className="text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => deleteDepartment(departmentIndex)}
+                      disabled={departmentInUse}
+                      title={departmentInUse ? "Department is in use" : "Delete department"}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors",
+                        departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                      )}
+                    >
+                      <Trash2 size={14} className="text-status-error" />
+                    </button>
+                  </>
+                )}
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Inline add department */}
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            type="text"
+            value={newDepartmentName}
+            onChange={e => setNewDepartmentName(e.target.value)}
+            placeholder="New department name…"
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDepartment(); } }}
+            className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <button
+            onClick={addDepartment}
+            disabled={!newDepartmentName.trim()}
+            className={cn(
+              "border border-border rounded-xl px-3 py-2 text-xs font-medium transition-colors",
+              newDepartmentName.trim()
+                ? "text-sage hover:bg-muted"
+                : "text-muted-foreground cursor-not-allowed",
+            )}
+          >
+            + Add
+          </button>
+        </div>
+      </section>
+
+      {/* 5. Billing — dark midnight blue card */}
+      <div className="rounded-2xl p-5 space-y-3 bg-sage">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">Current Plan</p>
+            <p className="font-display text-2xl text-white leading-tight">Olia {PLAN_LABELS[plan]}</p>
           </div>
-        )}
+          <span className={cn(
+            "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border",
+            isActive ? "border-white/30 text-white bg-white/10" : "border-yellow-300/40 text-yellow-200 bg-yellow-300/10"
+          )}>
+            {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}
+          </span>
+        </div>
+        <p className="text-sm text-white/70">
+          {PLAN_PRICES[plan].monthly === 0
+            ? "Free plan · No billing required"
+            : `${PLAN_PRICES[plan].currency}${PLAN_PRICES[plan].monthly}/month`}
+        </p>
+        <button
+          onClick={() => navigate("/billing")}
+          className="w-full py-2.5 rounded-xl border border-white/30 text-white text-xs font-semibold tracking-wide hover:bg-white/10 transition-colors"
+        >
+          Upgrade plan
+        </button>
       </div>
 
-      {/* Audit Log */}
+      {/* 6. Audit Log */}
       <section>
         <p className="section-label mb-3">Audit log</p>
         <div className="card-surface divide-y divide-border max-h-64 overflow-y-auto">
@@ -656,129 +745,6 @@ export function AccountTab({
         </div>
       </section>
 
-      {/* Department Management */}
-      <section>
-        <p className="section-label mb-3">Department management</p>
-        <p className="text-xs text-muted-foreground mb-3">
-          Staff roles are managed at the department level only.
-        </p>
-        <div className="space-y-3">
-          {departments.map((department, departmentIndex) => {
-            const departmentInUse = staffProfiles.some(sp => roleUsesDepartment(sp.role, department.name));
-            const isRenaming = renamingDepartment?.index === departmentIndex;
-            return (
-              <div key={department.name} className="card-surface p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  {isRenaming ? (
-                    <>
-                      <input
-                        autoFocus
-                        type="text"
-                        value={renamingDepartment.value}
-                        onChange={e => setRenamingDepartment({ index: departmentIndex, value: e.target.value })}
-                        onKeyDown={e => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            renameDepartment(departmentIndex, renamingDepartment.value);
-                          }
-                        }}
-                        className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                      />
-                      <button
-                        onClick={() => renameDepartment(departmentIndex, renamingDepartment.value)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <Check size={14} className="text-sage" />
-                      </button>
-                      <button
-                        onClick={() => setRenamingDepartment(null)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <X size={14} className="text-muted-foreground" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{department.name}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
-                      </div>
-                      <button
-                        onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <Pencil size={14} className="text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => deleteDepartment(departmentIndex)}
-                        disabled={departmentInUse}
-                        title={departmentInUse ? "Department is in use" : "Delete department"}
-                        className={cn(
-                          "p-1.5 rounded-lg transition-colors",
-                          departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
-                        )}
-                      >
-                        <Trash2 size={14} className="text-status-error" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          <div className="card-surface p-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newDepartmentName}
-                onChange={e => setNewDepartmentName(e.target.value)}
-                placeholder="Add department…"
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addDepartment(); } }}
-                className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-              <button
-                onClick={addDepartment}
-                disabled={!newDepartmentName.trim()}
-                className={cn(
-                  "p-1.5 rounded-lg transition-colors",
-                  newDepartmentName.trim()
-                    ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                    : "bg-muted text-muted-foreground cursor-not-allowed",
-                )}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Billing — dark midnight blue card */}
-      <div className="rounded-2xl p-5 space-y-3 bg-sage">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">Current Plan</p>
-            <p className="font-display text-2xl text-white leading-tight">Olia {PLAN_LABELS[plan]}</p>
-          </div>
-          <span className={cn(
-            "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border",
-            isActive ? "border-white/30 text-white bg-white/10" : "border-yellow-300/40 text-yellow-200 bg-yellow-300/10"
-          )}>
-            {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}
-          </span>
-        </div>
-        <p className="text-sm text-white/70">
-          {PLAN_PRICES[plan].monthly === 0
-            ? "Free plan · No billing required"
-            : `${PLAN_PRICES[plan].currency}${PLAN_PRICES[plan].monthly}/month`}
-        </p>
-        <button
-          onClick={() => navigate("/billing")}
-          className="w-full py-2.5 rounded-xl border border-white/30 text-white text-xs font-semibold tracking-wide hover:bg-white/10 transition-colors"
-        >
-          Manage Billing
-        </button>
-      </div>
     </div>
   );
 }
