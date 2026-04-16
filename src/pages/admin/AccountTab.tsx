@@ -257,138 +257,110 @@ export function AccountTab({
 
   return (
     <div className="space-y-4">
-      {/* My account */}
-      <section className="card-surface p-4 space-y-4">
-        <div className="flex items-start justify-between gap-2">
-          <div>
+      {/* My Account + Security — side by side */}
+      <section className="card-surface p-4">
+        <div className="flex gap-4">
+          {/* Left: My Account */}
+          <div className="flex-1 min-w-0 space-y-3">
             <p className="section-label">My account</p>
-            <p className="text-xs text-muted-foreground mt-1">Manage the admin profile, email, password, and kiosk PIN.</p>
-          </div>
-          <span className="text-[10px] px-2 py-1 rounded-full bg-sage-light text-sage-deep font-semibold uppercase tracking-wide">
-            Admin
-          </span>
-        </div>
-
-        <div className="grid gap-3">
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">Full name</span>
-            <input
-              type="text"
-              value={profileName}
-              onChange={e => setProfileName(e.target.value)}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-xs text-muted-foreground font-medium">Email</span>
-            <input
-              type="email"
-              value={profileEmail}
-              onChange={e => setProfileEmail(e.target.value)}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
-            className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
-              profileSaving || !profileName.trim() || !profileEmail.trim()
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "bg-sage text-primary-foreground hover:bg-sage-deep",
-            )}
-          >
-            {profileSaving ? "Saving profile…" : "Save profile"}
-          </button>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned locations</p>
-            {assignedLocationIds.length ? (
-              <div className="flex flex-wrap gap-2">
-                {locations.filter(loc => assignedLocationIds.includes(loc.id)).map(loc => (
-                  <span key={loc.id} className="text-xs px-2 py-1 rounded-full bg-muted text-foreground">
-                    {loc.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">All locations</p>
-            )}
-          </div>
-          <div className="rounded-xl border border-border bg-background p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Role and permissions</p>
-            <p className="text-sm font-medium text-foreground">{currentAccount?.role ?? "Owner"}</p>
-            {currentAccount?.role === "Owner" ? (
-              <p className="text-xs text-muted-foreground">Full access to all admin settings.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Permissions inherited from the current manager profile.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="card-surface p-4 space-y-3">
-        <p className="section-label">Security</p>
-        {needsDefaultPinChange && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-            Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
-          </div>
-        )}
-        {/* Current PIN — revealed for 30s after saving */}
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
-          <div className="relative">
-            <input
-              readOnly
-              type={revealCurrentPin ? "text" : "password"}
-              value={justSavedPin ?? "0000"}
-              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
-            />
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Full name</span>
+              <input
+                type="text"
+                value={profileName}
+                onChange={e => setProfileName(e.target.value)}
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Email</span>
+              <input
+                type="email"
+                value={profileEmail}
+                onChange={e => setProfileEmail(e.target.value)}
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </label>
             <button
               type="button"
-              onClick={() => {
-                if (!justSavedPin) { toast("Set a new PIN first — it will be visible here for 30 seconds after saving."); return; }
-                setRevealCurrentPin(v => !v);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={saveProfile}
+              disabled={profileSaving || !profileName.trim() || !profileEmail.trim()}
+              className={cn(
+                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                profileSaving || !profileName.trim() || !profileEmail.trim()
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-sage text-primary-foreground hover:bg-sage-deep",
+              )}
             >
-              {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
+              {profileSaving ? "Saving…" : "Save"}
             </button>
           </div>
-          {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
-        </div>
-        {/* New PIN */}
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground font-medium">New PIN</span>
-          <div className="relative">
-            <input
-              type={showNewPin ? "text" : "password"}
-              inputMode="numeric"
-              maxLength={4}
-              value={pin}
-              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder="4 digits"
-              className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
-            />
-            <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-              {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
+
+          {/* Divider */}
+          <div className="w-px bg-border self-stretch" />
+
+          {/* Right: Security */}
+          <div className="flex-1 min-w-0 space-y-3">
+            <p className="section-label">Security</p>
+            {needsDefaultPinChange && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+                Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
+              </div>
+            )}
+            {/* Current PIN — revealed for 30s after saving */}
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
+              <div className="relative">
+                <input
+                  readOnly
+                  type={revealCurrentPin ? "text" : "password"}
+                  value={justSavedPin ?? "0000"}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!justSavedPin) { toast("Set a new PIN first — it will be visible here for 30 seconds after saving."); return; }
+                    setRevealCurrentPin(v => !v);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
+            </div>
+            {/* New PIN */}
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground font-medium">New PIN</span>
+              <div className="relative">
+                <input
+                  type={showNewPin ? "text" : "password"}
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={pin}
+                  onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="4 digits"
+                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
+                />
+                <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={savePin}
+              disabled={pinSaving || pin.length !== 4}
+              className={cn(
+                "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                pinSaving || pin.length !== 4 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-sage text-white hover:bg-sage-deep",
+              )}
+            >
+              {pinSaving ? "Saving…" : "Create new PIN"}
             </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={savePin}
-          disabled={pinSaving || pin.length !== 4}
-          className={cn(
-            "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors",
-            pinSaving || pin.length !== 4 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-sage text-white hover:bg-sage-deep",
-          )}
-        >
-          {pinSaving ? "Saving…" : "Create new PIN"}
-        </button>
       </section>
 
       {/* All Locations */}
