@@ -16,7 +16,7 @@ import {
   ROLE_COLOR_MAP,
   parseHours, formatHoursText,
 } from "./shared";
-import { StaticMapPreview } from "@/components/PlacesAutocompleteInput";
+const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
 export interface MyLocationTabProps {
   locations: Location[];
@@ -133,13 +133,34 @@ export function MyLocationTab({
         </div>
         <div className="space-y-2">
           {currentLocation.address && (
-            <div className="flex items-start gap-2">
-              <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-sm text-foreground">{currentLocation.address}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0">
+                <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-foreground">{currentLocation.address}</p>
+              </div>
+              {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-lg overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity"
+                  style={{ width: 72, height: 72 }}
+                  title="Open in Google Maps"
+                >
+                  <img
+                    src={
+                      `https://maps.googleapis.com/maps/api/staticmap` +
+                      `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=144x144&scale=2` +
+                      `&markers=color:0x1A2A47%7C${currentLocation.lat},${currentLocation.lng}` +
+                      `&key=${MAPS_API_KEY}`
+                    }
+                    alt="Open in Google Maps"
+                    className="w-full h-full object-cover block"
+                    loading="lazy"
+                  />
+                </a>
+              )}
             </div>
-          )}
-          {currentLocation.lat != null && currentLocation.lng != null && (
-            <StaticMapPreview lat={currentLocation.lat} lng={currentLocation.lng} />
           )}
           {currentLocation.trading_hours && (() => {
             let display = currentLocation.trading_hours;
