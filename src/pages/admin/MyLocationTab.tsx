@@ -120,7 +120,7 @@ export function MyLocationTab({
       )}
 
       {/* Location details card + map + kiosk CTA */}
-      <div className="flex gap-3 items-stretch">
+      <div className="flex gap-3 items-start">
 
         {/* Left — location details */}
         <div className="card-surface p-4 flex-1 space-y-3 min-w-0">
@@ -181,7 +181,8 @@ export function MyLocationTab({
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block min-h-[100px]"
+              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block"
+              style={{ height: 120 }}
               title="Open in Google Maps"
             >
               <img
@@ -197,13 +198,13 @@ export function MyLocationTab({
               />
             </a>
           ) : (
-            <div className="flex-1 rounded-2xl border border-border bg-muted flex items-center justify-center min-h-[100px]">
+            <div className="rounded-2xl border border-border bg-muted flex items-center justify-center" style={{ height: 120 }}>
               <MapPin size={18} className="text-muted-foreground" />
             </div>
           )}
           <button
             onClick={onLaunchKiosk}
-            className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-col items-center justify-center gap-1 shadow-md px-2 py-3"
+            className="w-full rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-col items-center justify-center gap-1 shadow-md px-2 py-3"
           >
             <Tablet size={14} />
             <span>Kiosk</span>
