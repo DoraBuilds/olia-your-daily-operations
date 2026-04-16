@@ -514,7 +514,7 @@ export function AccountTab({
           <div className="flex justify-end px-4 py-3 border-t border-border">
             <button
               onClick={handleAddLocationClick}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 min-w-[168px]"
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
             >
               <Plus size={14} /> Add location
             </button>
@@ -630,7 +630,7 @@ export function AccountTab({
           <div className="flex justify-end px-4 py-3 border-t border-border">
             <button
               onClick={onInviteMember}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 min-w-[168px]"
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
             >
               <Plus size={14} /> Add a team member
             </button>
@@ -736,7 +736,7 @@ export function AccountTab({
             {!showAddDepartment && (
               <button
                 onClick={() => setShowAddDepartment(true)}
-                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 min-w-[168px]"
+                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
               >
                 <Plus size={14} /> Add department
               </button>
@@ -769,7 +769,7 @@ export function AccountTab({
           <div className="flex justify-end px-4 py-3">
             <button
               onClick={() => navigate("/billing")}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 min-w-[168px]"
+              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
             >
               Manage Billing
             </button>
