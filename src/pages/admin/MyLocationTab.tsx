@@ -120,7 +120,7 @@ export function MyLocationTab({
       )}
 
       {/* Location details card + map + kiosk CTA */}
-      <div className="flex gap-3 items-start">
+      <div className="flex gap-3 items-stretch">
 
         {/* Left — location details */}
         <div className="card-surface p-4 flex-1 space-y-3 min-w-0">
@@ -175,7 +175,7 @@ export function MyLocationTab({
         </div>
 
         {/* Right — map thumbnail + kiosk CTA */}
-        <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2">
+        <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2 h-full">
           {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY ? (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
@@ -204,10 +204,10 @@ export function MyLocationTab({
           )}
           <button
             onClick={onLaunchKiosk}
-            className="w-full rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-col items-center justify-center gap-1 shadow-md px-2 py-3"
+            className="w-full rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-row items-center justify-center gap-2 shadow-md px-2 py-3"
           >
-            <Tablet size={14} />
             <span>Kiosk</span>
+            <Tablet size={14} />
           </button>
         </div>
 
