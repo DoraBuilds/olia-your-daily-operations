@@ -16,6 +16,7 @@ import {
   ROLE_COLOR_MAP,
   parseHours, formatHoursText,
 } from "./shared";
+
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
 
 export interface MyLocationTabProps {
@@ -118,89 +119,99 @@ export function MyLocationTab({
         </div>
       )}
 
-      {/* Location details card */}
-      <div className="card-surface p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="section-label">Location details</p>
-          {canEditLocation && (
-            <button
-              onClick={() => onEditLocation(currentLocation)}
-              className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-            >
-              <Pencil size={12} /> Edit
-            </button>
-          )}
-        </div>
-        <div className="space-y-2">
-          {currentLocation.address && (
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2 min-w-0">
+      {/* Location details card + map + kiosk CTA */}
+      <div className="flex gap-3 items-stretch">
+
+        {/* Left — location details */}
+        <div className="card-surface p-4 flex-1 space-y-3 min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="section-label">Location details</p>
+            {canEditLocation && (
+              <button
+                onClick={() => onEditLocation(currentLocation)}
+                className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
+              >
+                <Pencil size={12} /> Edit
+              </button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {currentLocation.address && (
+              <div className="flex items-start gap-2">
                 <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
                 <p className="text-sm text-foreground">{currentLocation.address}</p>
               </div>
-              {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 rounded-lg overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity"
-                  style={{ width: 72, height: 72 }}
-                  title="Open in Google Maps"
-                >
-                  <img
-                    src={
-                      `https://maps.googleapis.com/maps/api/staticmap` +
-                      `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=144x144&scale=2` +
-                      `&markers=color:0x1A2A47%7C${currentLocation.lat},${currentLocation.lng}` +
-                      `&key=${MAPS_API_KEY}`
-                    }
-                    alt="Open in Google Maps"
-                    className="w-full h-full object-cover block"
-                    loading="lazy"
-                  />
-                </a>
-              )}
-            </div>
-          )}
-          {currentLocation.trading_hours && (() => {
-            let display = currentLocation.trading_hours;
-            try {
-              display = formatHoursText(parseHours(currentLocation.trading_hours));
-            } catch { /* plain-text fallback */ }
-            return (
+            )}
+            {currentLocation.trading_hours && (() => {
+              let display = currentLocation.trading_hours;
+              try {
+                display = formatHoursText(parseHours(currentLocation.trading_hours));
+              } catch { /* plain-text fallback */ }
+              return (
+                <div className="flex items-start gap-2">
+                  <Clock size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-sm text-foreground">{display}</p>
+                </div>
+              );
+            })()}
+            {currentLocation.contact_email ? (
               <div className="flex items-start gap-2">
-                <Clock size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-                <p className="text-sm text-foreground">{display}</p>
+                <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-foreground">{currentLocation.contact_email}</p>
               </div>
-            );
-          })()}
-          {currentLocation.contact_email ? (
-            <div className="flex items-start gap-2">
-              <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-sm text-foreground">{currentLocation.contact_email}</p>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2 rounded-xl border border-status-warn/40 bg-status-warn/10 px-3 py-2">
-              <Mail size={13} className="text-status-warn mt-0.5 shrink-0" />
-              <p className="text-xs text-status-warn font-medium">No alert email set — tap Edit to add one so out-of-range and notification alerts can be delivered.</p>
-            </div>
-          )}
-          {currentLocation.contact_phone && (
-            <div className="flex items-start gap-2">
-              <Phone size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-sm text-foreground">{currentLocation.contact_phone}</p>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-start gap-2 rounded-xl border border-status-warn/40 bg-status-warn/10 px-3 py-2">
+                <Mail size={13} className="text-status-warn mt-0.5 shrink-0" />
+                <p className="text-xs text-status-warn font-medium">No alert email — tap Edit to add one.</p>
+              </div>
+            )}
+            {currentLocation.contact_phone && (
+              <div className="flex items-start gap-2">
+                <Phone size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-foreground">{currentLocation.contact_phone}</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Launch Kiosk Mode */}
-      <button
-        onClick={onLaunchKiosk}
-        className="w-full py-4 rounded-2xl text-sm font-bold tracking-widest uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 shadow-md"
-      >
-        <Tablet size={16} /> Launch Kiosk Mode
-      </button>
+        {/* Right — map thumbnail + kiosk CTA */}
+        <div className="flex flex-col gap-2" style={{ width: 100 }}>
+          {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY ? (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block"
+              style={{ height: 100 }}
+              title="Open in Google Maps"
+            >
+              <img
+                src={
+                  `https://maps.googleapis.com/maps/api/staticmap` +
+                  `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=200x200&scale=2` +
+                  `&markers=color:0x1A2A47%7C${currentLocation.lat},${currentLocation.lng}` +
+                  `&key=${MAPS_API_KEY}`
+                }
+                alt="Open in Google Maps"
+                className="w-full h-full object-cover block"
+                loading="lazy"
+              />
+            </a>
+          ) : (
+            <div className="rounded-2xl border border-border bg-muted flex items-center justify-center" style={{ height: 100 }}>
+              <MapPin size={18} className="text-muted-foreground" />
+            </div>
+          )}
+          <button
+            onClick={onLaunchKiosk}
+            className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-col items-center justify-center gap-1 shadow-md px-2 py-3"
+          >
+            <Tablet size={14} />
+            <span>Kiosk</span>
+          </button>
+        </div>
+
+      </div>
 
       {/* Staff Profiles */}
       <section>
