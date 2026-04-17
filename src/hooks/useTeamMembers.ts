@@ -3,7 +3,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TeamMember, ManagerPermissions } from "@/lib/admin-repository";
 import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
-import { hashPin } from "@/hooks/useStaffProfiles";
 
 export function useTeamMembers() {
   const { teamMember } = useAuth();
@@ -12,7 +11,7 @@ export function useTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required")
+        .select("id, organization_id, name, email, role, location_ids, permissions, pin, pin_reset_required")
         .order("name");
       if (error) throw error;
       return ((data ?? []) as any[])
@@ -47,7 +46,7 @@ export function useSaveTeamMember() {
           permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
         };
         if (tm.rawPin) {
-          updatePayload.pin = await hashPin(tm.rawPin);
+          updatePayload.pin = tm.rawPin;
           updatePayload.pin_reset_required = false;
         } else if (tm.pin_reset_required !== undefined) {
           updatePayload.pin_reset_required = tm.pin_reset_required;
@@ -74,7 +73,7 @@ export function useSaveTeamMember() {
         permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
       };
       if (tm.rawPin) {
-        insertPayload.pin = await hashPin(tm.rawPin);
+        insertPayload.pin = tm.rawPin;
       }
       insertPayload.pin_reset_required = tm.pin_reset_required ?? (tm.role === "Owner");
 
@@ -95,10 +94,9 @@ export function useSaveAdminPin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ memberId, rawPin }: { memberId: string; rawPin: string }) => {
-      const hashed = await hashPin(rawPin);
       const { error } = await supabase
         .from("team_members")
-        .update({ pin: hashed })
+        .update({ pin: rawPin, pin_reset_required: false })
         .eq("id", memberId);
       if (error) {
         // Surface the real Supabase message (e.g. RLS violation details)
