@@ -83,6 +83,7 @@ export function AccountTab({
   const [pin, setPin] = useState("");
   const [showNewPin, setShowNewPin] = useState(false);
   const [revealCurrentPin, setRevealCurrentPin] = useState(false);
+  const [revealCountdown, setRevealCountdown] = useState(0);
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
@@ -148,6 +149,19 @@ export function AccountTab({
       setProfileSaving(false);
     }
   };
+
+  // Auto-hide PIN after 30s
+  useEffect(() => {
+    if (!revealCurrentPin) return;
+    setRevealCountdown(30);
+    const interval = setInterval(() => {
+      setRevealCountdown(prev => {
+        if (prev <= 1) { clearInterval(interval); setRevealCurrentPin(false); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [revealCurrentPin]);
 
   const savePin = async () => {
     if (!currentAccount || pin.length !== 4) return;
@@ -309,6 +323,7 @@ export function AccountTab({
                   {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
+              {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
             </div>
             {/* New PIN */}
             <div className="space-y-1">
