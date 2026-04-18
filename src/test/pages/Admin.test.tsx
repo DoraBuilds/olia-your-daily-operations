@@ -61,6 +61,12 @@ vi.mock("@/contexts/AuthContext", () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// ─── useIsNativeApp mock (default: web) ──────────────────────────────────────
+const mockUseIsNativeApp = vi.fn().mockReturnValue(false);
+vi.mock("@/hooks/useIsNativeApp", () => ({
+  useIsNativeApp: () => mockUseIsNativeApp(),
+}));
+
 // ─── usePlan mock ─────────────────────────────────────────────────────────────
 vi.mock("@/hooks/usePlan", () => ({
   usePlan: () => ({
@@ -137,6 +143,7 @@ vi.mock("@/hooks/useTeamMembers", () => ({
   useTeamMembers: () => ({ data: mockTeam, isLoading: false }),
   useSaveTeamMember: () => mockSaveTeamMember,
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
+  useSaveAdminPin: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
 }));
 
 const mockChecklists = [
@@ -674,11 +681,22 @@ describe("Admin page", () => {
     });
   });
 
-  // 38. Manage Billing button is visible
-  it("'Manage Billing' button is visible in Account tab", async () => {
+  // 38. Manage Billing button is visible on web
+  it("'Manage Billing' button is visible in Account tab on web", async () => {
+    mockUseIsNativeApp.mockReturnValue(false);
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => {
       expect(screen.getByText("Manage Billing")).toBeInTheDocument();
+    });
+  });
+
+  // 38b. On native, 'Manage Billing' is replaced with external link
+  it("shows 'Manage at olia.app' link instead of 'Manage Billing' on native", async () => {
+    mockUseIsNativeApp.mockReturnValue(true);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => {
+      expect(screen.getByText("Manage at olia.app")).toBeInTheDocument();
+      expect(screen.queryByText("Manage Billing")).not.toBeInTheDocument();
     });
   });
 
