@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, ExternalLink } from "lucide-react";
 import { PLAN_LABELS, type Plan } from "@/lib/plan-features";
+import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 interface UpgradePromptProps {
   feature: string;          // Human-readable feature name, e.g. "AI checklist builder"
@@ -14,6 +15,7 @@ export function UpgradePrompt({
   onClose,
 }: UpgradePromptProps) {
   const navigate = useNavigate();
+  const isNative = useIsNativeApp();
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8">
@@ -49,12 +51,24 @@ export function UpgradePrompt({
           >
             Not now
           </button>
-          <button
-            onClick={() => { onClose(); navigate("/billing"); }}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
-          >
-            See plans
-          </button>
+          {isNative ? (
+            <a
+              href="https://olia.app/billing"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors flex items-center justify-center gap-1.5"
+            >
+              Upgrade at olia.app <ExternalLink size={12} />
+            </a>
+          ) : (
+            <button
+              onClick={() => { onClose(); navigate("/billing"); }}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
+            >
+              See plans
+            </button>
+          )}
         </div>
       </div>
     </div>
