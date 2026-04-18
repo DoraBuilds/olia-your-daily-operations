@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { usePlan } from "@/hooks/usePlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { runtimeConfig } from "@/lib/runtime-config";
+import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import {
   PLAN_FEATURES,
   PLAN_LABELS,
@@ -122,6 +123,7 @@ export default function Billing() {
   const { teamMember } = useAuth();
   const qc = useQueryClient();
   const { plan, resolvedPlan, planStatus, hasStripeSubscription, billingUnavailable } = usePlan();
+  const isNative = useIsNativeApp();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -312,6 +314,42 @@ export default function Billing() {
     : plan === "enterprise"
       ? "Unlimited locations included."
       : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included.`;
+
+  if (isNative) {
+    return (
+      <Layout
+        title="Billing"
+        subtitle="Manage your plan"
+        headerLeft={
+          <button
+            onClick={() => navigate("/admin")}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+            aria-label="Back"
+          >
+            <ArrowLeft size={18} className="text-muted-foreground" />
+          </button>
+        }
+      >
+        <section className="space-y-4 pb-6">
+          <div className="card-surface p-5 space-y-3">
+            <p className="text-sm font-medium text-foreground">Current plan</p>
+            <p className="text-xl font-display font-semibold text-foreground capitalize">{plan}</p>
+            <p className="text-sm text-muted-foreground">
+              To view plans, upgrade, or manage your subscription, visit us on the web.
+            </p>
+            <a
+              href="https://olia.app/billing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-sage underline underline-offset-2"
+            >
+              Manage at olia.app <ExternalLink size={13} />
+            </a>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
   return (
     <Layout

@@ -37,14 +37,20 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 const mockUsePlan = vi.fn();
+const mockUseIsNativeApp = vi.fn().mockReturnValue(false);
 
 vi.mock("@/hooks/usePlan", () => ({
   usePlan: () => mockUsePlan(),
 }));
 
+vi.mock("@/hooks/useIsNativeApp", () => ({
+  useIsNativeApp: () => mockUseIsNativeApp(),
+}));
+
 beforeEach(() => {
   mockInvoke.mockReset();
   mockInvoke.mockResolvedValue({ data: null, error: null });
+  mockUseIsNativeApp.mockReturnValue(false);
   mockUsePlan.mockReturnValue({
     plan: "starter",
     planStatus: "active",
@@ -209,10 +215,38 @@ describe("Billing page", () => {
       },
     });
     renderWithProviders(<Billing />);
-    // Multiple "Growth" elements exist - use getAllByText
     const growthElements = screen.getAllByText(PLAN_LABELS["growth"]);
     expect(growthElements.length).toBeGreaterThanOrEqual(1);
-    // Should show manage subscription link
     expect(screen.getByText("Manage subscription on Stripe")).toBeInTheDocument();
+  });
+
+  describe("native (iOS/Android)", () => {
+    beforeEach(() => { mockUseIsNativeApp.mockReturnValue(true); });
+
+    it("shows current plan name instead of pricing page", () => {
+      renderWithProviders(<Billing />);
+      expect(screen.getByText("starter")).toBeInTheDocument();
+    });
+
+    it("shows 'Manage at olia.app' link", () => {
+      renderWithProviders(<Billing />);
+      expect(screen.getByText(/Manage at olia\.app/i)).toBeInTheDocument();
+    });
+
+    it("does not show any plan prices", () => {
+      renderWithProviders(<Billing />);
+      expect(screen.queryByText(/€49/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/€99/)).not.toBeInTheDocument();
+    });
+
+    it("does not show plan comparison table", () => {
+      renderWithProviders(<Billing />);
+      expect(screen.queryByText("Recommended")).not.toBeInTheDocument();
+    });
+
+    it("does not show Monthly / Annual toggle", () => {
+      renderWithProviders(<Billing />);
+      expect(screen.queryByText("Monthly")).not.toBeInTheDocument();
+    });
   });
 });
