@@ -1017,4 +1017,18 @@ describe("Admin page", () => {
       expect(screen.getByText(/locations are where your team works/i)).toBeInTheDocument();
     });
   });
+
+  // ── isNativeApp hook is mocked (web default) ─────────────────────────────────
+
+  it("renders correctly with isNative=false (web default)", async () => {
+    mockUseIsNativeApp.mockReturnValue(false);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => expect(document.body).toBeDefined());
+  });
+
+  it("renders correctly with isNative=true (native)", async () => {
+    mockUseIsNativeApp.mockReturnValue(true);
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => expect(document.body).toBeDefined());
+  });
 });

@@ -20,6 +20,7 @@ import {
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
+import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 import { cloneDepartments } from "./admin/shared";
@@ -42,6 +43,7 @@ export default function Admin() {
   const userId = searchParams.get("userId");
   const { user, teamMember: authMember, setupError, retrySetup } = useAuth();
   const { plan, billingUnavailable } = usePlan();
+  const isNative = useIsNativeApp();
 
   // Data — from Supabase
   const {
@@ -154,7 +156,7 @@ export default function Admin() {
             const max = PLAN_FEATURES[plan].maxLocations;
             toast.error(
               `Starter includes ${max} location. Upgrade to Growth to add more locations.`,
-              { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
+              isNative ? undefined : { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
             );
           }
         } else {
@@ -466,24 +468,40 @@ export default function Admin() {
                     Starter includes 1 location. Growth supports up to 10 locations so
                     you can manage multiple venues and teams from one account.
                   </p>
-                  <p className="text-xs font-medium text-foreground/70">
-                    Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
-                  </p>
+                  {!isNative && (
+                    <p className="text-xs font-medium text-foreground/70">
+                      Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
-                  <button
-                    onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                    className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
-                  >
-                    View plans
-                  </button>
+                  {!isNative && (
+                    <button
+                      onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                      className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
+                    >
+                      View plans
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-2 pt-1">
-                  <button
-                    onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                    className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
-                  >
-                    Upgrade to Growth
-                  </button>
+                  {isNative ? (
+                    <a
+                      href="https://olia.app/billing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setShowLocationLimitModal(false)}
+                      className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
+                    >
+                      Upgrade at olia.app
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                      className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+                    >
+                      Upgrade to Growth
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowLocationLimitModal(false)}
                     className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
