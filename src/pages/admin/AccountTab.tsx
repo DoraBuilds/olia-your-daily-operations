@@ -17,6 +17,7 @@ import {
 } from "@/lib/admin-repository";
 import { usePlan } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
+import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useSaveAdminPin } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, roleUsesDepartment } from "./shared";
@@ -63,6 +64,7 @@ export function AccountTab({
 }: AccountTabProps) {
   const navigate = useNavigate();
   const { plan, planStatus, isActive } = usePlan();
+  const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
   // Team member expand/collapse
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
@@ -762,12 +764,23 @@ export function AccountTab({
             </span>
           </div>
           <div className="flex justify-end px-4 py-3">
-            <button
-              onClick={() => navigate("/billing")}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
-            >
-              Manage Billing
-            </button>
+            {isNative ? (
+              <a
+                href="https://olia.app/billing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
+              >
+                Manage at olia.app
+              </a>
+            ) : (
+              <button
+                onClick={() => navigate("/billing")}
+                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
+              >
+                Manage Billing
+              </button>
+            )}
           </div>
         </div>
       </section>
