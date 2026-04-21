@@ -234,6 +234,79 @@ describe("useSaveChecklist", () => {
       start_date: "2026-04-08",
     }));
   });
+
+  it("persists location_ids when saving a checklist", async () => {
+    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-2" }], error: null });
+    // Differentiate locations select (returns the IDs so validation passes) from checklists upsert
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "locations") {
+        return {
+          select: vi.fn().mockReturnValue({
+            then: vi.fn().mockImplementation((cb) =>
+              Promise.resolve(cb({ data: [{ id: "loc-1" }, { id: "loc-2" }], error: null }))
+            ),
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        eq: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
+        update: vi.fn().mockReturnThis(),
+        upsert,
+        delete: vi.fn().mockReturnThis(),
+        then: vi.fn().mockImplementation((cb) =>
+          Promise.resolve(cb({ data: [], error: null }))
+        ),
+      };
+    });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({
+      id: "cl-2",
+      title: "Closing Checklist",
+      location_ids: ["loc-1", "loc-2"],
+      sections: [],
+    } as any);
+
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+      location_ids: ["loc-1", "loc-2"],
+    }));
+  });
+
+  it("saves location_ids as null when not provided", async () => {
+    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-3" }], error: null });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      eq: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
+      update: vi.fn().mockReturnThis(),
+      upsert,
+      delete: vi.fn().mockReturnThis(),
+      then: vi.fn().mockImplementation((cb) =>
+        Promise.resolve(cb({ data: [], error: null }))
+      ),
+    });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({
+      id: "cl-3",
+      title: "Opening Checklist",
+      sections: [],
+    } as any);
+
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+      location_ids: null,
+    }));
+  });
 });
 
 describe("useDeleteChecklist", () => {
