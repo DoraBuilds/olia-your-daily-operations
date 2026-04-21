@@ -123,6 +123,7 @@ export function useSaveChecklist() {
         title: checklist.title,
         folder_id: checklist.folder_id ?? null,
         location_id: checklist.location_id ?? null,
+        location_ids: checklist.location_ids ?? null,
         start_date: checklist.start_date ?? null,
         schedule: checklist.schedule ?? null,
         sections: checklist.sections ?? [],
