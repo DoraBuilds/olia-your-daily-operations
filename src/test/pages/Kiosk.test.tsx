@@ -19,7 +19,7 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-const checklistLogsInsert = vi.fn().mockResolvedValue({ error: null });
+const mockSubmitKioskLog = vi.fn().mockResolvedValue({ data: "log-uuid-1", error: null });
 const alertsInsert = vi.fn().mockResolvedValue({ error: null });
 const mockInsertKioskAlert = vi.fn().mockResolvedValue({ data: null, error: null });
 const mockLocations = [
@@ -53,25 +53,6 @@ vi.mock("@/lib/supabase", () => ({
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           insert: alertsInsert,
-          update: vi.fn().mockReturnThis(),
-          upsert: vi.fn().mockResolvedValue({ error: null }),
-          delete: vi.fn().mockReturnThis(),
-          then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
-        };
-        return chain;
-      }
-
-      if (table === "checklist_logs") {
-        const chain: any = {
-          select: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockImplementation((_: string, value: string) => {
-            eqValue = value;
-            return chain;
-          }),
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-          insert: checklistLogsInsert,
           update: vi.fn().mockReturnThis(),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           delete: vi.fn().mockReturnThis(),
@@ -134,6 +115,10 @@ vi.mock("@/lib/supabase", () => ({
 
       if (fn === "insert_kiosk_alert") {
         return mockInsertKioskAlert(params);
+      }
+
+      if (fn === "submit_kiosk_log") {
+        return mockSubmitKioskLog(params);
       }
 
       return Promise.resolve({ data: [], error: null });
@@ -229,6 +214,10 @@ async function openRunnerWithQuestions(questions: any[]) {
       return mockInsertKioskAlert(params);
     }
 
+    if (fn === "submit_kiosk_log") {
+      return mockSubmitKioskLog(params);
+    }
+
     return Promise.resolve({ data: [], error: null });
   });
 
@@ -256,7 +245,7 @@ async function openRunnerWithQuestions(questions: any[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  checklistLogsInsert.mockClear();
+  mockSubmitKioskLog.mockClear();
   alertsInsert.mockClear();
   mockInsertKioskAlert.mockClear();
   mockUseAuth.mockReturnValue({

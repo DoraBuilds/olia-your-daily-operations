@@ -420,9 +420,11 @@ export default function Kiosk() {
   useEffect(() => {
     if (!locationId) return;
     drainQueue(async (payload) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { location_id: _stripped, ...safePayload } = payload as any;
-      const { error } = await supabase.from("checklist_logs").insert(safePayload);
+      // Queued payloads use the RPC parameter shape (p_* keys) written by handleComplete.
+      // Legacy queue entries with the old direct-insert shape are discarded gracefully —
+      // the RPC will raise an exception which drainQueue catches and keeps in the queue
+      // until MAX_ATTEMPTS is reached.
+      const { error } = await supabase.rpc("submit_kiosk_log", payload as any);
       if (error) throw new Error(error.message);
     }).then(n => {
       if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
@@ -546,44 +548,26 @@ export default function Kiosk() {
         comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
       }));
 
-      // Base payload — columns that exist in the initial schema (20260304000001).
-      // location_id is added separately below only when the column is confirmed to
-      // exist (migration 20260312000001 / 20260323000001 applied + schema cache refreshed).
-      // Without this guard every insert fails with "column not found in schema cache".
-      const basePayload = {
-        organization_id: selectedOrgId,
-        checklist_id: selectedChecklist.id,
-        checklist_title: selectedChecklist.title,
-        completed_by: selectedStaffName,
-        staff_profile_id: selectedStaffId ?? null,
-        score,
-        answers: answerPayload,
+      // Submit via SECURITY DEFINER RPC — organization_id is resolved server-side
+      // from p_location_id so the client can never spoof a different org (SEQ-003).
+      const rpcPayload = {
+        p_location_id: locationId ?? null,
+        p_checklist_id: selectedChecklist.id,
+        p_staff_profile_id: selectedStaffId ?? null,
+        p_score: score,
+        p_answers: answerPayload,
+        p_checklist_title: selectedChecklist.title,
+        p_completed_by: selectedStaffName,
+        p_started_at: startedAt ? startedAt.toISOString() : null,
       };
+      const { error: dbInsertError } = await supabase.rpc("submit_kiosk_log", rpcPayload);
 
-      // Attempt with location_id first (works once migration is applied + schema reloaded).
-      // If it fails with a schema-cache error, retry without it so the submission is never lost.
-      const logPayload = {
-        ...basePayload,
-        location_id: locationId ?? null,
-        started_at: startedAt ? startedAt.toISOString() : null,  // persisted for PDF export
-      };
-      let { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
-
-      if (dbInsertError && (dbInsertError.message?.includes("location_id") || dbInsertError.message?.includes("started_at"))) {
-        // One or more added columns not yet in the PostgREST schema cache.
-        // Retry with only the original columns so the completion is never lost.
-        console.warn(
-          "Column(s) not found in schema cache — retrying with base payload. " +
-          "Apply migrations 20260312000001 + 20260326000001 and run: NOTIFY pgrst, 'reload schema';"
-        );
-        ({ error: dbInsertError } = await supabase.from("checklist_logs").insert(basePayload));
-      }
       if (dbInsertError) {
         // Queue for retry — the submission will be retried on next kiosk load
         const msg = dbInsertError.message ?? "Unknown error";
         console.error("Checklist log insert failed, queuing for retry:", msg);
         setInsertError(`Submission queued (offline/error): ${msg}`);
-        enqueueLog(logPayload);
+        enqueueLog(rpcPayload);
       }
 
       // Evaluate checklist logic rules and send notify-trigger emails.
