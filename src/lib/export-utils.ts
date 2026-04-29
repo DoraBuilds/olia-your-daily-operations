@@ -309,8 +309,13 @@ export async function exportLogDetailPdf(log: LogDetailData) {
     } else if ((ans.type === "numeric" || ans.type === "number") && ans.answer) {
       response = ans.answer;
     } else if (ans.type === "photo" || ans.type === "media") {
-      // Store base64 data URL in DB — never print it; just show a human-readable label
-      const hasPhoto = ans.hasPhoto || (typeof ans.answer === "string" && ans.answer.startsWith("data:image"));
+      // Photos are stored either as a short storage path (new format, SEQ-008)
+      // or as a base64 data URI (legacy rows).  In both cases we render a
+      // human-readable label in the PDF — we never embed the raw image data.
+      // TODO: fetch a signed URL and embed the image thumbnail if needed.
+      const isBase64 = typeof ans.answer === "string" && ans.answer.startsWith("data:image");
+      const isStoragePath = typeof ans.answer === "string" && !isBase64 && !ans.answer.startsWith("http") && ans.answer.length > 0;
+      const hasPhoto = ans.hasPhoto || isBase64 || isStoragePath;
       response = hasPhoto ? "📷 Photo attached" : "No photo";
     } else if (ans.answer) {
       response = String(ans.answer);

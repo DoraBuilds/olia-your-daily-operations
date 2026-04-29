@@ -615,6 +615,8 @@ export default function Kiosk() {
         staffName={selectedStaffName}
         onComplete={handleComplete}
         onCancel={handleDone}
+        organizationId={selectedOrgId || teamMember?.organization_id}
+        locationId={locationId ?? undefined}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {
           if (question.type !== "number") return;
           scheduleOutOfRangeAlert(question, value);

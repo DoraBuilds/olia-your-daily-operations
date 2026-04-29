@@ -40,6 +40,12 @@ vi.mock("@/lib/supabase", () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ data: { path: "org-1/loc-1/123456_q1.jpg" }, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://example.com/signed-photo.jpg" }, error: null }),
+      }),
+    },
     from: vi.fn((table: string) => {
       let eqValue: string | null = null;
       if (table === "alerts") {
@@ -1485,6 +1491,7 @@ describe("Kiosk — Checklist Runner", () => {
     const originalMediaDevices = navigator.mediaDevices;
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
     const originalPlay = HTMLMediaElement.prototype.play;
     const mockStream = {
       getTracks: () => [{ stop: vi.fn() }],
@@ -1499,7 +1506,12 @@ describe("Kiosk — Checklist Runner", () => {
     // @ts-expect-error test shim
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() });
     // @ts-expect-error test shim
-    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,test-image");
+    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/jpeg;base64,test-image");
+    // Mock toBlob used by compressToJpeg — resolves with a small JPEG blob
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.toBlob = vi.fn().mockImplementation((cb: BlobCallback) => {
+      cb(new Blob(["fake-jpeg"], { type: "image/jpeg" }));
+    });
     // @ts-expect-error test shim
     HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
 
@@ -1539,6 +1551,7 @@ describe("Kiosk — Checklist Runner", () => {
       });
       HTMLCanvasElement.prototype.getContext = originalGetContext;
       HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+      HTMLCanvasElement.prototype.toBlob = originalToBlob;
       HTMLMediaElement.prototype.play = originalPlay;
     }
   });
