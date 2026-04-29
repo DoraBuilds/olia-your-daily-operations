@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 import type { KioskChecklist, Question } from "./types";
 import {
   INSTRUCTION_ACKNOWLEDGED,
@@ -184,18 +185,19 @@ function InstructionBlock({
   onImageClick?: (url: string) => void;
   onLinkedResourceOpen?: () => void;
 }) {
+  const safeImageUrl = sanitizeImageUrl(imageUrl);
   return (
     <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
       {text && <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>}
-      {imageUrl && (
+      {safeImageUrl && (
         <button
           type="button"
-          onClick={() => onImageClick?.(imageUrl)}
+          onClick={() => onImageClick?.(safeImageUrl)}
           className="w-full relative group overflow-hidden rounded-lg focus:outline-none"
           aria-label="Tap to enlarge image"
         >
           <img
-            src={imageUrl}
+            src={safeImageUrl}
             alt="Instruction"
             className="w-full max-h-48 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
           />
@@ -864,7 +866,7 @@ export function ChecklistRunner({
         </div>
 
       {/* ── Image lightbox ── */}
-        {lightboxImage && (
+        {lightboxImage && sanitizeImageUrl(lightboxImage) && (
           <div
             className="fixed inset-0 z-[90] bg-foreground/95 flex items-center justify-center p-4"
             onClick={() => setLightboxImage(null)}
@@ -877,7 +879,7 @@ export function ChecklistRunner({
               <X size={20} className="text-background" />
             </button>
             <img
-              src={lightboxImage}
+              src={sanitizeImageUrl(lightboxImage)}
               alt="Full view"
               className="max-w-full max-h-full object-contain rounded-xl"
               onClick={e => e.stopPropagation()}

@@ -780,16 +780,32 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
 // ─── InstructionBlock — image lightbox ───────────────────────────────────────
 
 describe("Kiosk — InstructionBlock image lightbox", () => {
-  it("renders an instruction question with imageUrl", () => {
+  // Use an allowlisted Supabase storage URL so sanitizeImageUrl accepts it.
+  const SAFE_IMAGE_URL = "https://project.supabase.co/storage/v1/object/public/instructions/img.png";
+  const BLOCKED_IMAGE_URL = "https://example.com/img.png";
+
+  it("renders an instruction question with imageUrl from allowed origin", () => {
     renderRunner(makeChecklist([{
       id: "q-inst-img",
       text: "Read this",
       type: "instruction",
       instructionText: "Follow these steps",
-      imageUrl: "https://example.com/img.png",
+      imageUrl: SAFE_IMAGE_URL,
     }]));
     expect(screen.getByText("Follow these steps")).toBeInTheDocument();
     expect(screen.getByAltText("Instruction")).toBeInTheDocument();
+  });
+
+  it("does not render image when imageUrl is from a blocked origin (SEQ-007)", () => {
+    renderRunner(makeChecklist([{
+      id: "q-inst-img",
+      text: "Read this",
+      type: "instruction",
+      instructionText: "Follow these steps",
+      imageUrl: BLOCKED_IMAGE_URL,
+    }]));
+    expect(screen.getByText("Follow these steps")).toBeInTheDocument();
+    expect(screen.queryByAltText("Instruction")).toBeNull();
   });
 
   it("clicking instruction image opens lightbox", async () => {
@@ -798,7 +814,7 @@ describe("Kiosk — InstructionBlock image lightbox", () => {
       text: "Read this",
       type: "instruction",
       instructionText: "Follow these steps",
-      imageUrl: "https://example.com/img.png",
+      imageUrl: SAFE_IMAGE_URL,
     }]));
     fireEvent.click(screen.getByRole("button", { name: /tap to enlarge image/i }));
     await waitFor(() => {
