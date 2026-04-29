@@ -40,8 +40,31 @@ export default function Admin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
-  const userId = searchParams.get("userId");
   const { user, teamMember: authMember, setupError, retrySetup } = useAuth();
+
+  // Resolve the kiosk-authenticated userId from sessionStorage (one-time use token).
+  // If from=kiosk is in the URL but the token is missing or expired, redirect back to kiosk.
+  const [userId] = useState<string | null>(() => {
+    if (!fromKiosk) return null;
+    const raw = sessionStorage.getItem("kiosk_admin_session");
+    if (!raw) return null;
+    try {
+      const session = JSON.parse(raw) as { userId: string; locationId: string; expiresAt: number };
+      sessionStorage.removeItem("kiosk_admin_session");
+      if (!session.userId || Date.now() >= session.expiresAt) return null;
+      return session.userId;
+    } catch {
+      sessionStorage.removeItem("kiosk_admin_session");
+      return null;
+    }
+  });
+
+  // Redirect back to kiosk if session token was invalid or expired
+  useEffect(() => {
+    if (fromKiosk && userId === null) {
+      navigate("/kiosk", { replace: true });
+    }
+  }, [fromKiosk, userId, navigate]);
   const { plan, billingUnavailable } = usePlan();
   const isNative = useIsNativeApp();
 

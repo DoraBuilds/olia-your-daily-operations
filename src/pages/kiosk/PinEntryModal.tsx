@@ -73,7 +73,12 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       return;
     }
 
-    navigate(`/admin?from=kiosk&userId=${data[0].id}`);
+    sessionStorage.setItem("kiosk_admin_session", JSON.stringify({
+      userId: data[0].id,
+      locationId: locationId,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    }));
+    navigate("/admin?from=kiosk");
   };
 
   const handlePinRecovery = async () => {
@@ -109,7 +114,12 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         setLoading(false);
         if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? "Too many failed attempts. Please wait 5 minutes before trying again." : "Could not verify PIN. Please try again."); setPin(""); return; }
         if (!data || data.length === 0) { setError("Invalid PIN."); setPin(""); return; }
-        navigate(`/admin?from=kiosk&userId=${data[0].id}`);
+        sessionStorage.setItem("kiosk_admin_session", JSON.stringify({
+          userId: data[0].id,
+          locationId,
+          expiresAt: Date.now() + 5 * 60 * 1000,
+        }));
+        navigate("/admin?from=kiosk");
       })();
     }
   };
