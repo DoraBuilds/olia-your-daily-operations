@@ -60,7 +60,11 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
     setLoading(false);
 
     if (rpcError) {
-      setError("Could not verify the admin PIN. Please try again.");
+      if (rpcError.message?.includes("Too many PIN attempts")) {
+        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+      } else {
+        setError("Could not verify the admin PIN. Please try again.");
+      }
       return;
     }
 
@@ -103,7 +107,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         }
         const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
         setLoading(false);
-        if (rpcError) { setError("Could not verify PIN. Please try again."); setPin(""); return; }
+        if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? "Too many failed attempts. Please wait 5 minutes before trying again." : "Could not verify PIN. Please try again."); setPin(""); return; }
         if (!data || data.length === 0) { setError("Invalid PIN."); setPin(""); return; }
         navigate(`/admin?from=kiosk&userId=${data[0].id}`);
       })();
@@ -247,7 +251,15 @@ export function PinEntryModal({
 
     if (adminRpcError) {
       setPin("");
-      setError("Connection error. Check your network and try again.");
+      if (adminRpcError.message?.includes("Too many PIN attempts")) {
+        // Server-side rate limit hit — enforce a 5-minute lockout in the UI
+        const until = Date.now() + 5 * 60 * 1000;
+        setLockedUntil(until);
+        setLockSecondsLeft(5 * 60);
+        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+      } else {
+        setError("Connection error. Check your network and try again.");
+      }
       return;
     }
 
