@@ -21,6 +21,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 const checklistLogsInsert = vi.fn().mockResolvedValue({ error: null });
 const alertsInsert = vi.fn().mockResolvedValue({ error: null });
+const mockInsertKioskAlert = vi.fn().mockResolvedValue({ data: null, error: null });
 const mockLocations = [
   { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
   { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
@@ -104,7 +105,7 @@ vi.mock("@/lib/supabase", () => ({
       };
       return chain;
     }),
-    rpc: vi.fn().mockImplementation((fn: string) => {
+    rpc: vi.fn().mockImplementation((fn: string, params?: Record<string, unknown>) => {
       if (fn === "get_kiosk_checklists") {
         return Promise.resolve({
           data: [
@@ -129,6 +130,10 @@ vi.mock("@/lib/supabase", () => ({
           ],
           error: null,
         });
+      }
+
+      if (fn === "insert_kiosk_alert") {
+        return mockInsertKioskAlert(params);
       }
 
       return Promise.resolve({ data: [], error: null });
@@ -181,7 +186,7 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
 
 async function openRunnerWithQuestions(questions: any[]) {
   const { supabase } = await import("@/lib/supabase");
-  supabase.rpc.mockImplementation((fn: string) => {
+  supabase.rpc.mockImplementation((fn: string, params?: Record<string, unknown>) => {
     if (fn === "get_kiosk_checklists") {
       return Promise.resolve({
         data: [
@@ -220,6 +225,10 @@ async function openRunnerWithQuestions(questions: any[]) {
       });
     }
 
+    if (fn === "insert_kiosk_alert") {
+      return mockInsertKioskAlert(params);
+    }
+
     return Promise.resolve({ data: [], error: null });
   });
 
@@ -249,6 +258,7 @@ beforeEach(() => {
   localStorage.clear();
   checklistLogsInsert.mockClear();
   alertsInsert.mockClear();
+  mockInsertKioskAlert.mockClear();
   mockUseAuth.mockReturnValue({
     teamMember: null,
     user: null,
@@ -1411,20 +1421,18 @@ describe("Kiosk — Checklist Runner", () => {
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
 
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
 
     await act(async () => { vi.advanceTimersByTime(89_999); });
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
 
     await act(async () => { vi.advanceTimersByTime(1); });
 
-    expect(alertsInsert).toHaveBeenCalledTimes(1);
-    expect(alertsInsert).toHaveBeenCalledWith(expect.objectContaining({
-      organization_id: "org-1",
-      type: "warn",
-      message: expect.stringContaining("Fridge temperature: recorded 9"),
-      area: "Runner Test Checklist",
-      source: "kiosk",
+    expect(mockInsertKioskAlert).toHaveBeenCalledTimes(1);
+    expect(mockInsertKioskAlert).toHaveBeenCalledWith(expect.objectContaining({
+      p_type: "warn",
+      p_message: expect.stringContaining("Fridge temperature: recorded 9"),
+      p_area: "Runner Test Checklist",
     }));
   });
 
@@ -1451,7 +1459,7 @@ describe("Kiosk — Checklist Runner", () => {
 
     await act(async () => { vi.advanceTimersByTime(60_000); });
 
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
   });
 
   it("opens linked Infohub content from an instruction and lets the user close it", async () => {

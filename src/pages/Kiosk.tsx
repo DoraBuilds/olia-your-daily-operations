@@ -288,25 +288,19 @@ export default function Kiosk() {
   };
 
   const sendOutOfRangeAlert = async (question: KioskChecklist["questions"][number], rawValue: any) => {
-    if (!selectedChecklist || !selectedOrgId) return;
+    if (!selectedChecklist || !locationId) return;
     const numericValue = Number(rawValue);
     if (Number.isNaN(numericValue)) return;
     const rangeStr = [question.min != null ? `min ${question.min}` : null, question.max != null ? `max ${question.max}` : null]
       .filter(Boolean).join(", ");
-    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    const { error: alertErr } = await supabase.from("alerts").insert({
-      organization_id: selectedOrgId,
-      type: "warn",
-      message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
-      area: selectedChecklist.title,
-      time: timeLabel,
-      source: "kiosk",
+    const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
+      p_location_id: locationId,
+      p_type: "warn",
+      p_message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
+      p_area: selectedChecklist.title.slice(0, 100),
     });
     if (alertErr) {
-      const hint = alertErr.code === "42501"
-        ? " (RLS policy missing — apply migration 20260323000002)"
-        : ` (${alertErr.message})`;
-      setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}"${hint}. Apply migration 20260323000002_kiosk_anon_insert_alerts.sql in Supabase SQL Editor.`);
+      setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
       console.error("Alert insert failed for question:", question.text, alertErr);
     }
   };
@@ -344,40 +338,22 @@ export default function Kiosk() {
   const fireNotifyAlerts = async (
     questions: KioskChecklist["questions"],
     answers: Record<string, any>,
-    orgId: string,
+    locationIdParam: string,
     checklistTitle: string,
   ) => {
     const notifyAlerts = collectNotifyAlerts(questions, answers);
     if (notifyAlerts.length === 0) return;
 
-    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
     for (const alert of notifyAlerts) {
-      const baseAlert = {
-        organization_id: orgId,
-        type: "info" as const,
-        message: alert.message,
-        area: checklistTitle,
-        time: timeLabel,
-        source: "checklist_rule",
-      };
-
-      // Try with recipient_email first (requires migration 20260415000001)
-      const { error: alertErr } = await supabase.from("alerts").insert({
-        ...baseAlert,
-        recipient_email: alert.recipientEmail,
+      const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
+        p_location_id: locationIdParam,
+        p_type: "info",
+        p_message: alert.message.slice(0, 500),
+        p_area: checklistTitle.slice(0, 100),
+        p_recipient_email: alert.recipientEmail || null,
       });
 
-      if (alertErr && alertErr.message?.includes("recipient_email")) {
-        // Schema cache hasn't refreshed yet — insert without it so the alert
-        // still appears in the dashboard (email will go to location contact_email)
-        console.warn(
-          "fireNotifyAlerts: recipient_email column not in schema cache — " +
-          "retrying without it. Apply migration 20260415000001 and run: " +
-          "NOTIFY pgrst, 'reload schema';",
-        );
-        await supabase.from("alerts").insert(baseAlert);
-      } else if (alertErr) {
+      if (alertErr) {
         console.error("fireNotifyAlerts: alert insert failed:", alertErr.message);
       }
     }
@@ -612,12 +588,14 @@ export default function Kiosk() {
 
       // Evaluate checklist logic rules and send notify-trigger emails.
       // Runs even if the log insert failed so alerts are never silently dropped.
-      await fireNotifyAlerts(
-        selectedChecklist.questions,
-        answers,
-        selectedOrgId,
-        selectedChecklist.title,
-      );
+      if (locationId) {
+        await fireNotifyAlerts(
+          selectedChecklist.questions,
+          answers,
+          locationId,
+          selectedChecklist.title,
+        );
+      }
     }
   };
 
