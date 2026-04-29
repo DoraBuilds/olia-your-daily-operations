@@ -94,7 +94,8 @@ export interface TeamMember {
   location_ids: string[];
   initials: string;
   permissions: ManagerPermissions;
-  pin?: string | null;
+  /** PIN is never returned from the server — only used transiently when saving. */
+  pin?: undefined;
   pin_reset_required?: boolean;
 }
 

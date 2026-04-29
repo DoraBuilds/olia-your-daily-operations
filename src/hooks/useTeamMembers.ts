@@ -11,7 +11,7 @@ export function useTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, location_ids, permissions, pin, pin_reset_required")
+        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required")
         .order("name");
       if (error) throw error;
       return ((data ?? []) as any[])
@@ -22,6 +22,7 @@ export function useTeamMembers() {
           permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
           location_ids: m.location_ids ?? [],
           pin_reset_required: m.pin_reset_required ?? false,
+          pin: undefined,   // never send hashed PIN to the browser
         })) as TeamMember[];
     },
     enabled: !!teamMember?.organization_id,
