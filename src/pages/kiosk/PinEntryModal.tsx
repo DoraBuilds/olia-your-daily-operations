@@ -22,6 +22,20 @@ export async function validateKioskAdminPin(pin: string, locationId: string) {
 export function clearKioskLocationSelectionForModal() {
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
+  localStorage.removeItem("kiosk_token");
+}
+
+// ─── verifyKioskToken ─────────────────────────────────────────────────────────
+// Returns true if the stored kiosk_token matches the server record for the
+// given locationId. Returns false if the token is missing or mismatched.
+// A mismatch indicates the kiosk_location_id may have been tampered with.
+export async function verifyKioskToken(locationId: string, kioskToken: string | null): Promise<boolean> {
+  if (!kioskToken) return false;
+  const { data } = await supabase.rpc("verify_kiosk_token", {
+    p_location_id: locationId,
+    p_kiosk_token: kioskToken,
+  });
+  return Boolean(data);
 }
 
 // ─── AdminLoginModal (centered) ───────────────────────────────────────────────
@@ -53,6 +67,16 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         setError("This kiosk location is no longer linked to your account. Select a location again.");
         return;
       }
+    }
+
+    // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
+    const storedToken = localStorage.getItem("kiosk_token");
+    const tokenValid = await verifyKioskToken(locationId, storedToken);
+    if (!tokenValid) {
+      clearKioskLocationSelectionForModal();
+      setLoading(false);
+      setError("Kiosk setup required. Please contact your administrator.");
+      return;
     }
 
     const { data, error: rpcError } = await validateKioskAdminPin(pin, locationId);
@@ -109,6 +133,16 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
             setPin("");
             return;
           }
+        }
+        // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
+        const storedToken = localStorage.getItem("kiosk_token");
+        const tokenValid = await verifyKioskToken(locationId, storedToken);
+        if (!tokenValid) {
+          clearKioskLocationSelectionForModal();
+          setLoading(false);
+          setError("Kiosk setup required. Please contact your administrator.");
+          setPin("");
+          return;
         }
         const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
         setLoading(false);
@@ -250,6 +284,23 @@ export function PinEntryModal({
 
   const validate = async (enteredPin: string) => {
     setValidating(true);
+
+    // Verify the stored kiosk_token matches the server record before PIN
+    // validation. This prevents an attacker who modifies kiosk_location_id in
+    // localStorage from being able to brute-force PINs for another location
+    // (SEQ-009).
+    const storedToken = localStorage.getItem("kiosk_token");
+    const tokenValid = await verifyKioskToken(locationId, storedToken);
+    if (!tokenValid) {
+      setValidating(false);
+      setPin("");
+      localStorage.removeItem("kiosk_location_id");
+      localStorage.removeItem("kiosk_location_name");
+      localStorage.removeItem("kiosk_token");
+      setError("Kiosk setup required. Please contact your administrator.");
+      return;
+    }
+
     const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
     setValidating(false);
 

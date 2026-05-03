@@ -102,6 +102,11 @@ vi.mock("@/lib/supabase", () => ({
         });
       }
 
+      if (fn === "verify_kiosk_token") {
+        // Return true when the token matches the stored test token.
+        return Promise.resolve({ data: true, error: null });
+      }
+
       if (fn === "validate_admin_pin") {
         return Promise.resolve({
           data: [
@@ -158,6 +163,8 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
   localStorage.setItem("kiosk_location_name", "Terrace");
   localStorage.setItem("kiosk_owner_user_id", "u1");
   localStorage.setItem("kiosk_owner_org_id", "org-1");
+  // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+  localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
   renderWithProviders(<Kiosk />);
 
   if (!screen.queryByText(/What's on the agenda/i)) {
@@ -197,6 +204,10 @@ async function openRunnerWithQuestions(questions: any[]) {
         ],
         error: null,
       });
+    }
+
+    if (fn === "verify_kiosk_token") {
+      return Promise.resolve({ data: true, error: null });
     }
 
     if (fn === "validate_admin_pin") {
@@ -631,6 +642,10 @@ describe("Kiosk — Grid Screen", () => {
         });
       }
 
+      if (fn === "verify_kiosk_token") {
+        return Promise.resolve({ data: true, error: null });
+      }
+
       if (fn === "validate_admin_pin") {
         return Promise.resolve({
           data: [
@@ -691,6 +706,10 @@ describe("Kiosk — Grid Screen", () => {
           ],
           error: null,
         });
+      }
+
+      if (fn === "verify_kiosk_token") {
+        return Promise.resolve({ data: true, error: null });
       }
 
       if (fn === "validate_admin_pin") {
@@ -846,6 +865,8 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
     localStorage.setItem("kiosk_location_name", "Grand Ballroom");
     localStorage.setItem("kiosk_owner_user_id", "u1");
     localStorage.setItem("kiosk_owner_org_id", "org-1");
+    // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
   });
 
   async function renderGrandBallroomGrid() {
@@ -885,6 +906,8 @@ describe("Kiosk — Completion Screen", () => {
     localStorage.setItem("kiosk_location_name", "Terrace");
     localStorage.setItem("kiosk_owner_user_id", "u1");
     localStorage.setItem("kiosk_owner_org_id", "org-1");
+    // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
     renderWithProviders(<Kiosk />);
     await screen.findByText(/What's on the agenda/i);
 

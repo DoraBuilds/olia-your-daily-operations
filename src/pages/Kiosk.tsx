@@ -38,6 +38,7 @@ function clearKioskLocationSelection() {
   _kioskLocationName = null;
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
+  localStorage.removeItem("kiosk_token");
 }
 
 function clearKioskOwnership() {
@@ -198,6 +199,22 @@ export default function Kiosk() {
       localStorage.setItem("kiosk_location_name", matchedUrlLocation.name);
       localStorage.setItem("kiosk_owner_user_id", user.id);
       localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
+
+      // Fetch and store the server-issued kiosk_token for the URL-param setup path (SEQ-009).
+      void supabase
+        .from("locations")
+        .select("kiosk_token")
+        .eq("id", matchedUrlLocation.id)
+        .single()
+        .then(({ data: urlLocationData }) => {
+          if (urlLocationData?.kiosk_token) {
+            localStorage.setItem("kiosk_token", urlLocationData.kiosk_token);
+          }
+        })
+        .catch(() => {
+          // Non-fatal: PIN validation will fail gracefully if token is missing.
+        });
+
       setLocationId(matchedUrlLocation.id);
       setLocationName(matchedUrlLocation.name);
       return;
@@ -481,7 +498,7 @@ export default function Kiosk() {
     };
   }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id]);
 
-  const handleSetup = (id: string, name: string) => {
+  const handleSetup = async (id: string, name: string) => {
     _kioskLocationId = id;
     _kioskLocationName = name;
     localStorage.setItem("kiosk_location_id", id);
@@ -492,6 +509,22 @@ export default function Kiosk() {
     if (teamMember?.organization_id) {
       localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
     }
+
+    // Fetch and store the server-issued kiosk_token so PIN validation can
+    // verify the location hasn't been tampered with in localStorage (SEQ-009).
+    try {
+      const { data: locationData } = await supabase
+        .from("locations")
+        .select("kiosk_token")
+        .eq("id", id)
+        .single();
+      if (locationData?.kiosk_token) {
+        localStorage.setItem("kiosk_token", locationData.kiosk_token);
+      }
+    } catch {
+      // Non-fatal: PIN validation will fail gracefully if token is missing.
+    }
+
     setLocationId(id);
     setLocationName(name);
   };
