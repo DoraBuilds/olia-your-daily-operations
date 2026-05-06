@@ -3,7 +3,7 @@
  *  - retrySetup() re-invokes fetchTeamMember after a previous failure
  *  - retrySetup() is a no-op when user is null
  *  - TOKEN_REFRESHED event skips fetchTeamMember (but sets user/session)
- *  - RPC throws → sets setupError with the migration message
+ *  - RPC throws → sets setupError with a user-friendly message
  *  - Missing businessName AND missing ownerName branches in fetchTeamMember
  *  - Malformed JSON in localStorage does not crash (falls back to metadata)
  *  - After RPC success, localStorage key is removed
@@ -186,7 +186,7 @@ describe("AuthContext extended — RPC error path", () => {
     localStorage.clear();
   });
 
-  it("sets setupError with the migration message when setup_new_organization RPC throws", async () => {
+  it("sets setupError when setup_new_organization RPC throws", async () => {
     mockRpc.mockRejectedValueOnce(new Error("RPC function not found"));
 
     localStorage.setItem(
@@ -207,10 +207,37 @@ describe("AuthContext extended — RPC error path", () => {
     });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.setupError).toMatch(/migration/i);
+    expect(result.current.setupError).toMatch(/not complete/i);
     expect(result.current.teamMember).toBeNull();
     // localStorage should be cleared on failure too
     expect(localStorage.getItem("olia_pending_onboarding")).toBeNull();
+  });
+
+  it("sets setupError when setup_new_organization RPC returns an error object (non-throwing)", async () => {
+    // Supabase JS v2 returns { data: null, error: {...} } for PostgreSQL RAISE EXCEPTION — it does NOT throw.
+    // Before this fix, the error was silently ignored and the re-fetch returned null with no setupError set.
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: "duplicate key value violates unique constraint" } });
+
+    localStorage.setItem(
+      "olia_pending_onboarding",
+      JSON.stringify({ businessName: "Dupe Corp", ownerName: "Dupe User" }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", {
+        user: {
+          id: "user-dupe",
+          user_metadata: { business_name: "Dupe Corp", full_name: "Dupe User" },
+        },
+      });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.setupError).toMatch(/not complete/i);
+    expect(result.current.teamMember).toBeNull();
   });
 
   it("removes localStorage onboarding key after successful RPC call", async () => {

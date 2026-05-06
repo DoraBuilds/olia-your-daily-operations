@@ -311,9 +311,7 @@ export default function Admin() {
           <div className="space-y-2">
             <h2 className="font-display text-xl text-foreground">Account setup incomplete</h2>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-              Your account was created but the database setup did not complete.
-              Run migration <span className="font-mono text-xs bg-muted px-1 rounded">20260316000001</span> in
-              your Supabase SQL Editor, then tap <strong>Try again</strong>.
+              Your account setup is not complete. Please refresh the page and try again, or contact support if the problem persists.
             </p>
           </div>
           <button
@@ -402,6 +400,7 @@ export default function Admin() {
                 location_ids: authMember.location_ids,
                 permissions: authMember.permissions,
                 pin_reset_required: authMember.pin_reset_required ?? false,
+                default_pin: authMember.default_pin ?? null,
               } : null}
               authMemberId={authMember?.id}
               authUserEmail={user?.email}

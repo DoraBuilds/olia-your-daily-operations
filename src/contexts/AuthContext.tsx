@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   //   1. localStorage "olia_pending_onboarding" — written by Signup.tsx on this device
   //   2. auth user metadata "business_name" — written during signUp(), cross-device safe
   const fetchTeamMember = async (userId: string, userMeta?: Record<string, string>) => {
+    setLoading(true);
     setSetupError(null);
 
     // Step 1: Check if team_member row already exists (returning user or idempotent re-run)
@@ -109,28 +110,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Step 3: Create org + team_member
     try {
-      await supabase.rpc("setup_new_organization", {
+      const { error: rpcError } = await supabase.rpc("setup_new_organization", {
         p_business_name: businessName.trim(),
         p_owner_name: safeOwnerName,
       });
 
+      if (rpcError) {
+        throw rpcError;
+      }
+
       localStorage.removeItem("olia_pending_onboarding");
 
       // Re-fetch the newly created team_member row
-      const { data: newData } = await supabase
+      const { data: newData, error: refetchError } = await supabase
         .from("team_members")
         .select("*")
         .eq("id", userId)
         .single();
 
-      setTeamMember((newData ?? null) as TeamMemberProfile | null);
+      if (!newData) {
+        console.error("[AuthContext] team_member row missing after setup:", refetchError);
+        setSetupError(
+          "Your account setup is not complete. Please refresh the page and try again.",
+        );
+        setTeamMember(null);
+        setLoading(false);
+        return;
+      }
+
+      setTeamMember(newData as TeamMemberProfile);
       setLoading(false);
     } catch (err) {
       console.error("[AuthContext] setup_new_organization failed:", err);
       localStorage.removeItem("olia_pending_onboarding");
       setSetupError(
-        "Account setup is incomplete. Please run migration 20260316000001 " +
-        "in your Supabase SQL Editor, then refresh this page.",
+        "Your account setup is not complete. Please refresh the page and try again.",
       );
       setTeamMember(null);
       setLoading(false);
