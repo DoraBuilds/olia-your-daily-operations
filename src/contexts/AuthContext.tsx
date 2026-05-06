@@ -21,7 +21,6 @@ interface AuthContextValue {
   loading: boolean;
   setupError: string | null;   // set when setup_new_organization fails
   retrySetup: () => void;      // lets the UI offer a "Try again" button
-  completeSetup: (businessName: string) => Promise<void>; // recovery path when row is missing
   signOut: () => Promise<void>;
 }
 
@@ -32,7 +31,6 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   setupError: null,
   retrySetup: () => {},
-  completeSetup: async () => {},
   signOut: async () => {},
 });
 
@@ -206,54 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  // Recovery path: called from the UI when the team_member row is missing
-  // and the user provides their business name manually (e.g. after a data reset).
-  const completeSetup = async (businessName: string) => {
-    if (!user) return;
-    setLoading(true);
-    setSetupError(null);
-
-    const ownerName = (user.user_metadata?.full_name as string | undefined)?.trim()
-      || (user.email?.split("@")[0] ?? "Owner");
-
-    const { error: rpcError } = await supabase.rpc("setup_new_organization", {
-      p_business_name: businessName.trim(),
-      p_owner_name: ownerName,
-    });
-
-    if (rpcError) {
-      console.error("[AuthContext] completeSetup RPC failed:", rpcError);
-      setSetupError(rpcError.message ?? "Setup failed. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // Re-fetch the newly created row
-    const { data: newData, error: refetchError } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (!newData) {
-      console.error("[AuthContext] completeSetup re-fetch failed:", refetchError);
-      setSetupError("Your account setup is not complete. Please refresh the page and try again.");
-      setTeamMember(null);
-      setLoading(false);
-      return;
-    }
-
-    setTeamMember(newData as TeamMemberProfile);
-    setSetupError(null);
-    setLoading(false);
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, completeSetup, signOut }}>
+    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut }}>
       {children}
     </AuthContext.Provider>
   );

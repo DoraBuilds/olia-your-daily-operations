@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,8 @@ const DEFAULT_ADMIN_PIN_NOTICE_KEY = "olia_default_admin_pin_notice";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const accountReset = searchParams.get("reason") === "account-reset";
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [businessName, setBusinessName] = useState("");
@@ -231,6 +233,14 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
+        {/* Account-reset notice — shown when redirected from a broken auth state */}
+        {accountReset && (
+          <div className="rounded-xl bg-status-warn/10 border border-status-warn/20 px-4 py-3 text-sm text-foreground leading-relaxed">
+            <p className="font-medium mb-0.5">Your account data was not found.</p>
+            <p className="text-muted-foreground text-xs">Please create a new account to get started.</p>
+          </div>
+        )}
+
         {/* Logo */}
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl bg-sage flex items-center justify-center mx-auto mb-4">
