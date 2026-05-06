@@ -102,7 +102,6 @@ function SetupRecoveryScreen({
     </Layout>
   );
 }
-
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export default function Admin() {
