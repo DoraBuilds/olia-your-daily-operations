@@ -33,6 +33,79 @@ import {
   type ConfirmState,
 } from "./admin/SharedUI";
 
+// ─── SetupRecoveryScreen ──────────────────────────────────────────────────────
+
+function SetupRecoveryScreen({
+  onComplete,
+  onRetry,
+}: {
+  onComplete: (businessName: string) => Promise<void>;
+  onRetry: () => void;
+}) {
+  const [businessName, setBusinessName] = useState("");
+  const [completing, setCompleting] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!businessName.trim()) return;
+    setCompleting(true);
+    setCompletionError(null);
+    try {
+      await onComplete(businessName.trim());
+    } catch (err: any) {
+      setCompletionError(err?.message ?? "Setup failed. Please try again.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  return (
+    <Layout title="Admin" subtitle="Setup required">
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-status-error/10 flex items-center justify-center">
+          <X size={28} className="text-status-error" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-display text-xl text-foreground">Account setup incomplete</h2>
+          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+            Your account setup is not complete. Enter your business name below to finish setting up your account.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-3">
+          <input
+            type="text"
+            value={businessName}
+            onChange={e => setBusinessName(e.target.value)}
+            placeholder="Business name"
+            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sage/30"
+            disabled={completing}
+            autoFocus
+          />
+          {completionError && (
+            <p className="text-xs text-status-error text-left leading-relaxed">{completionError}</p>
+          )}
+          <button
+            type="submit"
+            disabled={completing || !businessName.trim()}
+            className="w-full px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors disabled:opacity-50"
+          >
+            {completing ? "Setting up…" : "Complete setup"}
+          </button>
+        </form>
+
+        <button
+          onClick={onRetry}
+          className="text-xs text-muted-foreground underline underline-offset-2"
+        >
+          Try refreshing instead
+        </button>
+      </div>
+    </Layout>
+  );
+}
+
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export default function Admin() {
@@ -40,7 +113,7 @@ export default function Admin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
-  const { user, teamMember: authMember, setupError, retrySetup } = useAuth();
+  const { user, teamMember: authMember, setupError, retrySetup, completeSetup } = useAuth();
 
   // Resolve the kiosk-authenticated userId from sessionStorage (one-time use token).
   // If from=kiosk is in the URL but the token is missing or expired, redirect back to kiosk.
@@ -302,27 +375,7 @@ export default function Admin() {
 
   // ── Setup error screen — shown when setup_new_organization failed ────────────
   if (setupError) {
-    return (
-      <Layout title="Admin" subtitle="Setup required">
-        <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-status-error/10 flex items-center justify-center">
-            <X size={28} className="text-status-error" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="font-display text-xl text-foreground">Account setup incomplete</h2>
-            <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-              Your account setup is not complete. Please refresh the page and try again, or contact support if the problem persists.
-            </p>
-          </div>
-          <button
-            onClick={retrySetup}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
-          >
-            Try again
-          </button>
-        </div>
-      </Layout>
-    );
+    return <SetupRecoveryScreen onComplete={completeSetup} onRetry={retrySetup} />;
   }
 
   return (
