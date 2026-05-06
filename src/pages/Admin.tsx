@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import { MapPin, X, ArrowLeft } from "lucide-react";
+import { MapPin, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
@@ -37,10 +37,10 @@ import {
 
 function SetupRecoveryScreen({
   onComplete,
-  onRetry,
+  onSignOut,
 }: {
   onComplete: (businessName: string) => Promise<void>;
-  onRetry: () => void;
+  onSignOut: () => Promise<void>;
 }) {
   const [businessName, setBusinessName] = useState("");
   const [completing, setCompleting] = useState(false);
@@ -61,15 +61,12 @@ function SetupRecoveryScreen({
   };
 
   return (
-    <Layout title="Admin" subtitle="Setup required">
+    <Layout title="Admin" subtitle="Account recovery">
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-6">
-        <div className="w-16 h-16 rounded-2xl bg-status-error/10 flex items-center justify-center">
-          <X size={28} className="text-status-error" />
-        </div>
         <div className="space-y-2">
-          <h2 className="font-display text-xl text-foreground">Account setup incomplete</h2>
+          <h2 className="font-display text-xl text-foreground">Re-create your account</h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Your account setup is not complete. Enter your business name below to finish setting up your account.
+            Your account data was reset. Enter your business name to restore access — your login stays the same.
           </p>
         </div>
 
@@ -91,15 +88,15 @@ function SetupRecoveryScreen({
             disabled={completing || !businessName.trim()}
             className="w-full px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors disabled:opacity-50"
           >
-            {completing ? "Setting up…" : "Complete setup"}
+            {completing ? "Restoring…" : "Restore my account"}
           </button>
         </form>
 
         <button
-          onClick={onRetry}
+          onClick={onSignOut}
           className="text-xs text-muted-foreground underline underline-offset-2"
         >
-          Try refreshing instead
+          Sign out instead
         </button>
       </div>
     </Layout>
@@ -113,7 +110,7 @@ export default function Admin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
-  const { user, teamMember: authMember, setupError, retrySetup, completeSetup } = useAuth();
+  const { user, teamMember: authMember, setupError, completeSetup, signOut } = useAuth();
 
   // Resolve the kiosk-authenticated userId from sessionStorage (one-time use token).
   // If from=kiosk is in the URL but the token is missing or expired, redirect back to kiosk.
@@ -375,7 +372,7 @@ export default function Admin() {
 
   // ── Setup error screen — shown when setup_new_organization failed ────────────
   if (setupError) {
-    return <SetupRecoveryScreen onComplete={completeSetup} onRetry={retrySetup} />;
+    return <SetupRecoveryScreen onComplete={completeSetup} onSignOut={signOut} />;
   }
 
   return (
