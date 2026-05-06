@@ -106,7 +106,7 @@ describe("useSaveTeamMember", () => {
     expect(result.current.isPending).toBe(false);
   });
 
-  it("hashes a raw PIN before saving team members", async () => {
+  it("sends the raw PIN to the server when saving team members (server bcrypt-hashes it)", async () => {
     const select = vi.fn().mockResolvedValue({ data: [{ id: "tm-2" }], error: null });
     const eq = vi.fn().mockReturnValue({ select });
     const update = vi.fn().mockReturnValue({ eq });
@@ -128,18 +128,18 @@ describe("useSaveTeamMember", () => {
         role: "Owner",
         location_ids: [],
         permissions: {},
-      rawPin: "1234",
+        rawPin: "1234",
       } as any);
     });
 
+    // The client sends the raw PIN; a Postgres BEFORE INSERT/UPDATE trigger
+    // (trg_hash_team_member_pin) bcrypt-hashes it before storage.
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        pin: expect.any(String),
+        pin: "1234",
         pin_reset_required: false,
       }),
     );
-    const payload = update.mock.calls[0][0];
-    expect(payload.pin).toHaveLength(64);
   });
 
   it("marks a newly created owner PIN as needing a reset", async () => {

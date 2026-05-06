@@ -84,8 +84,6 @@ export function AccountTab({
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
   const [showNewPin, setShowNewPin] = useState(false);
-  const [revealCurrentPin, setRevealCurrentPin] = useState(false);
-  const [revealCountdown, setRevealCountdown] = useState(0);
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
@@ -151,19 +149,6 @@ export function AccountTab({
       setProfileSaving(false);
     }
   };
-
-  // Auto-hide PIN after 30s
-  useEffect(() => {
-    if (!revealCurrentPin) return;
-    setRevealCountdown(30);
-    const interval = setInterval(() => {
-      setRevealCountdown(prev => {
-        if (prev <= 1) { clearInterval(interval); setRevealCurrentPin(false); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [revealCurrentPin]);
 
   const savePin = async () => {
     if (!currentAccount || pin.length !== 4) return;
@@ -306,26 +291,18 @@ export function AccountTab({
                 Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
               </div>
             )}
-            {/* Current PIN — revealed for 30s after saving */}
+            {/* Current PIN — shown as masked dots only; actual hash never sent to browser */}
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
               <div className="relative">
                 <input
                   readOnly
-                  type={revealCurrentPin ? "text" : "password"}
-                  value={currentAccount?.pin ?? ""}
-                  placeholder="••••"
-                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+                  type="text"
+                  value="••••"
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setRevealCurrentPin(v => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {revealCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
               </div>
-              {revealCurrentPin && <p className="text-[10px] text-muted-foreground">Hiding in {revealCountdown}s</p>}
+              <p className="text-[10px] text-muted-foreground">PIN is stored securely and cannot be displayed.</p>
             </div>
             {/* New PIN */}
             <div className="space-y-1">

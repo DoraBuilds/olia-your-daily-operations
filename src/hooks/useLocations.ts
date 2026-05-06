@@ -79,10 +79,23 @@ export function useLocations() {
 
 export function useSaveLocation() {
   const qc = useQueryClient();
-  const { teamMember } = useAuth();
+  const { teamMember, user } = useAuth();
   return useMutation({
     mutationFn: async (loc: Location) => {
-      if (!teamMember) {
+      // Prefer the cached teamMember from AuthContext. If it is somehow null
+      // despite the user being authenticated (transient state, race between
+      // auth events), fall back to a live DB lookup so the save is not
+      // blocked by a stale React state.
+      let member = teamMember;
+      if (!member && user?.id) {
+        const { data } = await supabase
+          .from("team_members")
+          .select("id, organization_id, role, permissions, location_ids")
+          .eq("id", user.id)
+          .single();
+        member = data as typeof teamMember;
+      }
+      if (!member) {
         throw new Error("Your account setup is not complete. Please refresh the page and try again.");
       }
       if (loc.id) {
@@ -121,7 +134,7 @@ export function useSaveLocation() {
       } else {
         // INSERT — organization_id is required for the plan-limit RLS policy.
         const insertPayload = {
-          organization_id: teamMember.organization_id,
+          organization_id: member.organization_id,
           name: loc.name,
           address: loc.address ?? null,
           contact_email: loc.contact_email ?? null,

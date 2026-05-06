@@ -19,8 +19,9 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-const checklistLogsInsert = vi.fn().mockResolvedValue({ error: null });
+const mockSubmitKioskLog = vi.fn().mockResolvedValue({ data: "log-uuid-1", error: null });
 const alertsInsert = vi.fn().mockResolvedValue({ error: null });
+const mockInsertKioskAlert = vi.fn().mockResolvedValue({ data: null, error: null });
 const mockLocations = [
   { id: "00000000-0000-0000-0000-000000000011", name: "Terrace" },
   { id: "00000000-0000-0000-0000-000000000010", name: "Grand Ballroom" },
@@ -39,6 +40,12 @@ vi.mock("@/lib/supabase", () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ data: { path: "org-1/loc-1/123456_q1.jpg" }, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://example.com/signed-photo.jpg" }, error: null }),
+      }),
+    },
     from: vi.fn((table: string) => {
       let eqValue: string | null = null;
       if (table === "alerts") {
@@ -52,25 +59,6 @@ vi.mock("@/lib/supabase", () => ({
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
           maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           insert: alertsInsert,
-          update: vi.fn().mockReturnThis(),
-          upsert: vi.fn().mockResolvedValue({ error: null }),
-          delete: vi.fn().mockReturnThis(),
-          then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
-        };
-        return chain;
-      }
-
-      if (table === "checklist_logs") {
-        const chain: any = {
-          select: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockImplementation((_: string, value: string) => {
-            eqValue = value;
-            return chain;
-          }),
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-          insert: checklistLogsInsert,
           update: vi.fn().mockReturnThis(),
           upsert: vi.fn().mockResolvedValue({ error: null }),
           delete: vi.fn().mockReturnThis(),
@@ -104,7 +92,7 @@ vi.mock("@/lib/supabase", () => ({
       };
       return chain;
     }),
-    rpc: vi.fn().mockImplementation((fn: string) => {
+    rpc: vi.fn().mockImplementation((fn: string, params?: Record<string, unknown>) => {
       if (fn === "get_kiosk_checklists") {
         return Promise.resolve({
           data: [
@@ -112,6 +100,11 @@ vi.mock("@/lib/supabase", () => ({
           ],
           error: null,
         });
+      }
+
+      if (fn === "verify_kiosk_token") {
+        // Return true when the token matches the stored test token.
+        return Promise.resolve({ data: true, error: null });
       }
 
       if (fn === "validate_admin_pin") {
@@ -129,6 +122,14 @@ vi.mock("@/lib/supabase", () => ({
           ],
           error: null,
         });
+      }
+
+      if (fn === "insert_kiosk_alert") {
+        return mockInsertKioskAlert(params);
+      }
+
+      if (fn === "submit_kiosk_log") {
+        return mockSubmitKioskLog(params);
       }
 
       return Promise.resolve({ data: [], error: null });
@@ -162,6 +163,8 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
   localStorage.setItem("kiosk_location_name", "Terrace");
   localStorage.setItem("kiosk_owner_user_id", "u1");
   localStorage.setItem("kiosk_owner_org_id", "org-1");
+  // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+  localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
   renderWithProviders(<Kiosk />);
 
   if (!screen.queryByText(/What's on the agenda/i)) {
@@ -181,7 +184,7 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
 
 async function openRunnerWithQuestions(questions: any[]) {
   const { supabase } = await import("@/lib/supabase");
-  supabase.rpc.mockImplementation((fn: string) => {
+  supabase.rpc.mockImplementation((fn: string, params?: Record<string, unknown>) => {
     if (fn === "get_kiosk_checklists") {
       return Promise.resolve({
         data: [
@@ -203,6 +206,10 @@ async function openRunnerWithQuestions(questions: any[]) {
       });
     }
 
+    if (fn === "verify_kiosk_token") {
+      return Promise.resolve({ data: true, error: null });
+    }
+
     if (fn === "validate_admin_pin") {
       return Promise.resolve({
         data: [
@@ -218,6 +225,14 @@ async function openRunnerWithQuestions(questions: any[]) {
         ],
         error: null,
       });
+    }
+
+    if (fn === "insert_kiosk_alert") {
+      return mockInsertKioskAlert(params);
+    }
+
+    if (fn === "submit_kiosk_log") {
+      return mockSubmitKioskLog(params);
     }
 
     return Promise.resolve({ data: [], error: null });
@@ -247,8 +262,9 @@ async function openRunnerWithQuestions(questions: any[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  checklistLogsInsert.mockClear();
+  mockSubmitKioskLog.mockClear();
   alertsInsert.mockClear();
+  mockInsertKioskAlert.mockClear();
   mockUseAuth.mockReturnValue({
     teamMember: null,
     user: null,
@@ -626,6 +642,10 @@ describe("Kiosk — Grid Screen", () => {
         });
       }
 
+      if (fn === "verify_kiosk_token") {
+        return Promise.resolve({ data: true, error: null });
+      }
+
       if (fn === "validate_admin_pin") {
         return Promise.resolve({
           data: [
@@ -686,6 +706,10 @@ describe("Kiosk — Grid Screen", () => {
           ],
           error: null,
         });
+      }
+
+      if (fn === "verify_kiosk_token") {
+        return Promise.resolve({ data: true, error: null });
       }
 
       if (fn === "validate_admin_pin") {
@@ -841,6 +865,8 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
     localStorage.setItem("kiosk_location_name", "Grand Ballroom");
     localStorage.setItem("kiosk_owner_user_id", "u1");
     localStorage.setItem("kiosk_owner_org_id", "org-1");
+    // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
   });
 
   async function renderGrandBallroomGrid() {
@@ -880,6 +906,8 @@ describe("Kiosk — Completion Screen", () => {
     localStorage.setItem("kiosk_location_name", "Terrace");
     localStorage.setItem("kiosk_owner_user_id", "u1");
     localStorage.setItem("kiosk_owner_org_id", "org-1");
+    // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
     renderWithProviders(<Kiosk />);
     await screen.findByText(/What's on the agenda/i);
 
@@ -1411,20 +1439,18 @@ describe("Kiosk — Checklist Runner", () => {
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "9" } });
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
 
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
 
     await act(async () => { vi.advanceTimersByTime(89_999); });
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
 
     await act(async () => { vi.advanceTimersByTime(1); });
 
-    expect(alertsInsert).toHaveBeenCalledTimes(1);
-    expect(alertsInsert).toHaveBeenCalledWith(expect.objectContaining({
-      organization_id: "org-1",
-      type: "warn",
-      message: expect.stringContaining("Fridge temperature: recorded 9"),
-      area: "Runner Test Checklist",
-      source: "kiosk",
+    expect(mockInsertKioskAlert).toHaveBeenCalledTimes(1);
+    expect(mockInsertKioskAlert).toHaveBeenCalledWith(expect.objectContaining({
+      p_type: "warn",
+      p_message: expect.stringContaining("Fridge temperature: recorded 9"),
+      p_area: "Runner Test Checklist",
     }));
   });
 
@@ -1451,7 +1477,7 @@ describe("Kiosk — Checklist Runner", () => {
 
     await act(async () => { vi.advanceTimersByTime(60_000); });
 
-    expect(alertsInsert).not.toHaveBeenCalled();
+    expect(mockInsertKioskAlert).not.toHaveBeenCalled();
   });
 
   it("opens linked Infohub content from an instruction and lets the user close it", async () => {
@@ -1488,6 +1514,7 @@ describe("Kiosk — Checklist Runner", () => {
     const originalMediaDevices = navigator.mediaDevices;
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
+    const originalToBlob = HTMLCanvasElement.prototype.toBlob;
     const originalPlay = HTMLMediaElement.prototype.play;
     const mockStream = {
       getTracks: () => [{ stop: vi.fn() }],
@@ -1502,7 +1529,12 @@ describe("Kiosk — Checklist Runner", () => {
     // @ts-expect-error test shim
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() });
     // @ts-expect-error test shim
-    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/png;base64,test-image");
+    HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue("data:image/jpeg;base64,test-image");
+    // Mock toBlob used by compressToJpeg — resolves with a small JPEG blob
+    // @ts-expect-error test shim
+    HTMLCanvasElement.prototype.toBlob = vi.fn().mockImplementation((cb: BlobCallback) => {
+      cb(new Blob(["fake-jpeg"], { type: "image/jpeg" }));
+    });
     // @ts-expect-error test shim
     HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
 
@@ -1542,6 +1574,7 @@ describe("Kiosk — Checklist Runner", () => {
       });
       HTMLCanvasElement.prototype.getContext = originalGetContext;
       HTMLCanvasElement.prototype.toDataURL = originalToDataURL;
+      HTMLCanvasElement.prototype.toBlob = originalToBlob;
       HTMLMediaElement.prototype.play = originalPlay;
     }
   });

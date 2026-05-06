@@ -6,6 +6,10 @@ import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLoc
 const mockFrom = vi.fn();
 const mockUsePlan = vi.fn();
 
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -19,11 +23,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({
-    teamMember: { id: "tm-1", organization_id: "org-1", name: "Test", email: "t@t.com", role: "Owner", location_ids: [], permissions: {} },
-    user: { id: "tm-1" },
-    loading: false,
-  }),
+  useAuth: () => mockUseAuth(),
 }));
 
 vi.mock("@/hooks/usePlan", () => ({
@@ -38,6 +38,11 @@ function makeWrapper() {
 }
 
 beforeEach(() => {
+  mockUseAuth.mockReturnValue({
+    teamMember: { id: "tm-1", organization_id: "org-1", name: "Test", email: "t@t.com", role: "Owner", location_ids: [], permissions: {} },
+    user: { id: "tm-1" },
+    loading: false,
+  });
   mockUsePlan.mockReturnValue({
     features: { maxLocations: 10, maxStaff: 200, maxChecklists: -1, aiBuilder: true, fileConvert: true, advancedReporting: true, exportPdf: true, exportCsv: true, multiLocation: true, prioritySupport: false },
     org: { location_grace_period_ends_at: null, active_location_ids: [] },
@@ -138,6 +143,49 @@ describe("useSaveLocation", () => {
   it("is not loading by default", () => {
     const { result } = renderHook(() => useSaveLocation(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+
+  it("falls back to a live DB lookup when teamMember is null in React state", async () => {
+    // Simulate the race condition: user is authenticated but teamMember has not
+    // yet been populated in context (transient null during auth events).
+    mockUseAuth.mockReturnValue({
+      teamMember: null,
+      user: { id: "tm-1" },
+      loading: false,
+    });
+
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    let callCount = 0;
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "team_members") {
+        // The fallback lookup — returns the row
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: "tm-1", organization_id: "org-1", role: "Owner", permissions: {}, location_ids: [] },
+            error: null,
+          }),
+        };
+      }
+      // locations INSERT
+      callCount += 1;
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        insert,
+      };
+    });
+
+    const { result } = renderHook(() => useSaveLocation(), { wrapper: makeWrapper() });
+
+    await result.current.mutateAsync({ name: "HQ", address: null, contact_email: null, contact_phone: null, trading_hours: null, archive_threshold_days: 90, lat: null, lng: null, place_id: null } as any);
+
+    // The fallback correctly resolved the org and the INSERT was called with it
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ organization_id: "org-1" }),
+    );
   });
 });
 

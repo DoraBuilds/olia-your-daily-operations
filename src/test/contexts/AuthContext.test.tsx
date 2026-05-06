@@ -91,6 +91,37 @@ describe("AuthContext", () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it("loading resets to true when SIGNED_IN fires after a null initial session (OTP signup race condition)", async () => {
+    // Regression test for the bug where INITIAL_SESSION(null) set loading=false,
+    // then SIGNED_IN fired but loading was never reset to true before fetchTeamMember
+    // completed — causing ProtectedRoute to render Admin with teamMember=null.
+
+    // Use a deferred promise so we can observe loading=true BEFORE the fetch resolves.
+    let resolveFetch!: () => void;
+    const fetchPending = new Promise<void>(res => { resolveFetch = res; });
+    mockTeamMemberSingle.mockImplementation(() => fetchPending.then(() => ({ data: null, error: null })));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    // Step 1: INITIAL_SESSION(null) → loading becomes false
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Step 2: User verifies OTP → SIGNED_IN fires
+    act(() => {
+      authStateCallback?.("SIGNED_IN", {
+        user: { id: "u1", user_metadata: { business_name: "Acme", full_name: "Sarah" } },
+      });
+    });
+
+    // Step 3: loading must be true again while fetchTeamMember is in flight —
+    // this is what prevents ProtectedRoute from rendering Admin prematurely.
+    await waitFor(() => expect(result.current.loading).toBe(true));
+
+    // Step 4: Let the fetch resolve
+    resolveFetch();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+
   it("useAuth returns a signOut function", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -150,6 +181,26 @@ describe("AuthContext", () => {
       JSON.stringify({ businessName: "Acme Café", ownerName: "Sarah Johnson" }),
     );
 
+    // First single() → null (no existing row, triggers setup).
+    // Second single() → the newly created row (re-fetch after RPC).
+    let fetchCount = 0;
+    mockTeamMemberSingle.mockImplementation(async () => {
+      fetchCount += 1;
+      if (fetchCount === 1) return { data: null, error: null };
+      return {
+        data: {
+          id: "user-1",
+          organization_id: "org-new-1",
+          name: "Sarah Johnson",
+          email: "sarah@acme.com",
+          role: "Owner",
+          location_ids: [],
+          permissions: {},
+        },
+        error: null,
+      };
+    });
+
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -169,6 +220,7 @@ describe("AuthContext", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(mockOnAuthStateChange).toHaveBeenCalled();
     expect(result.current.setupError).toBeNull();
+    expect(result.current.teamMember?.organization_id).toBe("org-new-1");
     expect(mockRpc).toHaveBeenCalledWith(
       "setup_new_organization",
       {

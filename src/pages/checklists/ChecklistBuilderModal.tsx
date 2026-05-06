@@ -4,6 +4,7 @@ import {
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
   GitBranch, Upload, Mail, ArrowLeft, BookOpen, GraduationCap, Link2,
 } from "lucide-react";
+import { sanitizeImageUrl } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -848,16 +849,33 @@ export function ChecklistBuilderModal({
                         className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring" />
 
                       {/* Uploaded image preview */}
-                      {cfg.instructionImageUrl && (
-                        <div className="relative group">
-                          <img src={cfg.instructionImageUrl} alt="Instruction" className="w-full max-h-40 object-cover rounded-lg border border-border" />
-                          <button
-                            onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
-                            className="absolute top-1 right-1 p-1 bg-background/90 rounded-full text-muted-foreground hover:text-status-error transition-colors opacity-0 group-hover:opacity-100">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      )}
+                      {cfg.instructionImageUrl && (() => {
+                        const safePreviewUrl = sanitizeImageUrl(cfg.instructionImageUrl);
+                        return safePreviewUrl ? (
+                          <div className="relative group">
+                            <img src={safePreviewUrl} alt="Instruction" className="w-full max-h-40 object-cover rounded-lg border border-border" />
+                            <button
+                              onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
+                              className="absolute top-1 right-1 p-1 bg-background/90 rounded-full text-muted-foreground hover:text-status-error transition-colors opacity-0 group-hover:opacity-100">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 flex items-start justify-between gap-3">
+                            <p className="text-xs text-status-error">
+                              Image URL is not allowed. Upload an image file or use a link from your Supabase storage.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
+                              className="p-0.5 text-status-error hover:text-status-error/70 transition-colors shrink-0"
+                              aria-label="Remove invalid image URL"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        );
+                      })()}
 
                       <div className="flex gap-2 flex-wrap">
                         {/* Working image upload via hidden file input */}

@@ -38,6 +38,7 @@ function clearKioskLocationSelection() {
   _kioskLocationName = null;
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
+  localStorage.removeItem("kiosk_token");
 }
 
 function clearKioskOwnership() {
@@ -198,6 +199,22 @@ export default function Kiosk() {
       localStorage.setItem("kiosk_location_name", matchedUrlLocation.name);
       localStorage.setItem("kiosk_owner_user_id", user.id);
       localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
+
+      // Fetch and store the server-issued kiosk_token for the URL-param setup path (SEQ-009).
+      void supabase
+        .from("locations")
+        .select("kiosk_token")
+        .eq("id", matchedUrlLocation.id)
+        .single()
+        .then(({ data: urlLocationData }) => {
+          if (urlLocationData?.kiosk_token) {
+            localStorage.setItem("kiosk_token", urlLocationData.kiosk_token);
+          }
+        })
+        .catch(() => {
+          // Non-fatal: PIN validation will fail gracefully if token is missing.
+        });
+
       setLocationId(matchedUrlLocation.id);
       setLocationName(matchedUrlLocation.name);
       return;
@@ -288,25 +305,19 @@ export default function Kiosk() {
   };
 
   const sendOutOfRangeAlert = async (question: KioskChecklist["questions"][number], rawValue: any) => {
-    if (!selectedChecklist || !selectedOrgId) return;
+    if (!selectedChecklist || !locationId) return;
     const numericValue = Number(rawValue);
     if (Number.isNaN(numericValue)) return;
     const rangeStr = [question.min != null ? `min ${question.min}` : null, question.max != null ? `max ${question.max}` : null]
       .filter(Boolean).join(", ");
-    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-    const { error: alertErr } = await supabase.from("alerts").insert({
-      organization_id: selectedOrgId,
-      type: "warn",
-      message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
-      area: selectedChecklist.title,
-      time: timeLabel,
-      source: "kiosk",
+    const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
+      p_location_id: locationId,
+      p_type: "warn",
+      p_message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
+      p_area: selectedChecklist.title.slice(0, 100),
     });
     if (alertErr) {
-      const hint = alertErr.code === "42501"
-        ? " (RLS policy missing — apply migration 20260323000002)"
-        : ` (${alertErr.message})`;
-      setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}"${hint}. Apply migration 20260323000002_kiosk_anon_insert_alerts.sql in Supabase SQL Editor.`);
+      setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
       console.error("Alert insert failed for question:", question.text, alertErr);
     }
   };
@@ -344,40 +355,22 @@ export default function Kiosk() {
   const fireNotifyAlerts = async (
     questions: KioskChecklist["questions"],
     answers: Record<string, any>,
-    orgId: string,
+    locationIdParam: string,
     checklistTitle: string,
   ) => {
     const notifyAlerts = collectNotifyAlerts(questions, answers);
     if (notifyAlerts.length === 0) return;
 
-    const timeLabel = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
     for (const alert of notifyAlerts) {
-      const baseAlert = {
-        organization_id: orgId,
-        type: "info" as const,
-        message: alert.message,
-        area: checklistTitle,
-        time: timeLabel,
-        source: "checklist_rule",
-      };
-
-      // Try with recipient_email first (requires migration 20260415000001)
-      const { error: alertErr } = await supabase.from("alerts").insert({
-        ...baseAlert,
-        recipient_email: alert.recipientEmail,
+      const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
+        p_location_id: locationIdParam,
+        p_type: "info",
+        p_message: alert.message.slice(0, 500),
+        p_area: checklistTitle.slice(0, 100),
+        p_recipient_email: alert.recipientEmail || null,
       });
 
-      if (alertErr && alertErr.message?.includes("recipient_email")) {
-        // Schema cache hasn't refreshed yet — insert without it so the alert
-        // still appears in the dashboard (email will go to location contact_email)
-        console.warn(
-          "fireNotifyAlerts: recipient_email column not in schema cache — " +
-          "retrying without it. Apply migration 20260415000001 and run: " +
-          "NOTIFY pgrst, 'reload schema';",
-        );
-        await supabase.from("alerts").insert(baseAlert);
-      } else if (alertErr) {
+      if (alertErr) {
         console.error("fireNotifyAlerts: alert insert failed:", alertErr.message);
       }
     }
@@ -444,9 +437,11 @@ export default function Kiosk() {
   useEffect(() => {
     if (!locationId) return;
     drainQueue(async (payload) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { location_id: _stripped, ...safePayload } = payload as any;
-      const { error } = await supabase.from("checklist_logs").insert(safePayload);
+      // Queued payloads use the RPC parameter shape (p_* keys) written by handleComplete.
+      // Legacy queue entries with the old direct-insert shape are discarded gracefully —
+      // the RPC will raise an exception which drainQueue catches and keeps in the queue
+      // until MAX_ATTEMPTS is reached.
+      const { error } = await supabase.rpc("submit_kiosk_log", payload as any);
       if (error) throw new Error(error.message);
     }).then(n => {
       if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
@@ -503,7 +498,7 @@ export default function Kiosk() {
     };
   }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id]);
 
-  const handleSetup = (id: string, name: string) => {
+  const handleSetup = async (id: string, name: string) => {
     _kioskLocationId = id;
     _kioskLocationName = name;
     localStorage.setItem("kiosk_location_id", id);
@@ -514,6 +509,22 @@ export default function Kiosk() {
     if (teamMember?.organization_id) {
       localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
     }
+
+    // Fetch and store the server-issued kiosk_token so PIN validation can
+    // verify the location hasn't been tampered with in localStorage (SEQ-009).
+    try {
+      const { data: locationData } = await supabase
+        .from("locations")
+        .select("kiosk_token")
+        .eq("id", id)
+        .single();
+      if (locationData?.kiosk_token) {
+        localStorage.setItem("kiosk_token", locationData.kiosk_token);
+      }
+    } catch {
+      // Non-fatal: PIN validation will fail gracefully if token is missing.
+    }
+
     setLocationId(id);
     setLocationName(name);
   };
@@ -570,54 +581,38 @@ export default function Kiosk() {
         comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
       }));
 
-      // Base payload — columns that exist in the initial schema (20260304000001).
-      // location_id is added separately below only when the column is confirmed to
-      // exist (migration 20260312000001 / 20260323000001 applied + schema cache refreshed).
-      // Without this guard every insert fails with "column not found in schema cache".
-      const basePayload = {
-        organization_id: selectedOrgId,
-        checklist_id: selectedChecklist.id,
-        checklist_title: selectedChecklist.title,
-        completed_by: selectedStaffName,
-        staff_profile_id: selectedStaffId ?? null,
-        score,
-        answers: answerPayload,
+      // Submit via SECURITY DEFINER RPC — organization_id is resolved server-side
+      // from p_location_id so the client can never spoof a different org (SEQ-003).
+      const rpcPayload = {
+        p_location_id: locationId ?? null,
+        p_checklist_id: selectedChecklist.id,
+        p_staff_profile_id: selectedStaffId ?? null,
+        p_score: score,
+        p_answers: answerPayload,
+        p_checklist_title: selectedChecklist.title,
+        p_completed_by: selectedStaffName,
+        p_started_at: startedAt ? startedAt.toISOString() : null,
       };
+      const { error: dbInsertError } = await supabase.rpc("submit_kiosk_log", rpcPayload);
 
-      // Attempt with location_id first (works once migration is applied + schema reloaded).
-      // If it fails with a schema-cache error, retry without it so the submission is never lost.
-      const logPayload = {
-        ...basePayload,
-        location_id: locationId ?? null,
-        started_at: startedAt ? startedAt.toISOString() : null,  // persisted for PDF export
-      };
-      let { error: dbInsertError } = await supabase.from("checklist_logs").insert(logPayload);
-
-      if (dbInsertError && (dbInsertError.message?.includes("location_id") || dbInsertError.message?.includes("started_at"))) {
-        // One or more added columns not yet in the PostgREST schema cache.
-        // Retry with only the original columns so the completion is never lost.
-        console.warn(
-          "Column(s) not found in schema cache — retrying with base payload. " +
-          "Apply migrations 20260312000001 + 20260326000001 and run: NOTIFY pgrst, 'reload schema';"
-        );
-        ({ error: dbInsertError } = await supabase.from("checklist_logs").insert(basePayload));
-      }
       if (dbInsertError) {
         // Queue for retry — the submission will be retried on next kiosk load
         const msg = dbInsertError.message ?? "Unknown error";
         console.error("Checklist log insert failed, queuing for retry:", msg);
         setInsertError(`Submission queued (offline/error): ${msg}`);
-        enqueueLog(logPayload);
+        enqueueLog(rpcPayload);
       }
 
       // Evaluate checklist logic rules and send notify-trigger emails.
       // Runs even if the log insert failed so alerts are never silently dropped.
-      await fireNotifyAlerts(
-        selectedChecklist.questions,
-        answers,
-        selectedOrgId,
-        selectedChecklist.title,
-      );
+      if (locationId) {
+        await fireNotifyAlerts(
+          selectedChecklist.questions,
+          answers,
+          locationId,
+          selectedChecklist.title,
+        );
+      }
     }
   };
 
@@ -653,6 +648,8 @@ export default function Kiosk() {
         staffName={selectedStaffName}
         onComplete={handleComplete}
         onCancel={handleDone}
+        organizationId={selectedOrgId || teamMember?.organization_id}
+        locationId={locationId ?? undefined}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {
           if (question.type !== "number") return;
           scheduleOutOfRangeAlert(question, value);

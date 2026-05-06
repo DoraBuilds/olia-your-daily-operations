@@ -313,6 +313,71 @@ describe("AuthContext bootstrap integration", () => {
     expect(result.current.setupError).toBeNull();
   });
 
+  // ── First-time user — org created → teamMember populated ──────────────────
+
+  it("populates teamMember.organization_id after setup_new_organization, so location saves cannot hit the !teamMember guard", async () => {
+    // First single() call returns null (no existing row).
+    // After RPC, the second single() call returns the newly created row.
+    let fetchCount = 0;
+    mockTeamMemberSingle.mockImplementation(async () => {
+      fetchCount += 1;
+      if (fetchCount === 1) return { data: null, error: null };
+      return {
+        data: {
+          id: "user-new-3",
+          organization_id: "org-new-3",
+          name: "Brand New Owner",
+          email: "new@cafe.com",
+          role: "Owner",
+          location_ids: [],
+          permissions: {},
+        },
+        error: null,
+      };
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      capturedAuthCallback?.("SIGNED_IN", {
+        user: {
+          id: "user-new-3",
+          user_metadata: { business_name: "New Café", full_name: "Brand New Owner" },
+        },
+      });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // teamMember must be populated — !teamMember guard in useSaveLocation/useSaveTeamMember cannot fire
+    expect(result.current.teamMember).not.toBeNull();
+    expect(result.current.teamMember?.organization_id).toBe("org-new-3");
+    expect(result.current.setupError).toBeNull();
+  });
+
+  it("sets setupError when team_member row is missing after setup_new_organization succeeds", async () => {
+    // Both single() calls return null — RPC ran but row is not visible yet (RLS race)
+    mockTeamMemberSingle.mockResolvedValue({ data: null, error: { message: "no rows" } });
+
+    const { result } = renderHook(() => useAuth(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      capturedAuthCallback?.("SIGNED_IN", {
+        user: {
+          id: "user-rls-race-1",
+          user_metadata: { business_name: "Race Hotel", full_name: "Race Owner" },
+        },
+      });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.teamMember).toBeNull();
+    expect(result.current.setupError).toMatch(/not complete/i);
+  });
+
   // ── retrySetup ─────────────────────────────────────────────────────────
 
   it("retrySetup re-invokes fetchTeamMember for the currently logged-in user", async () => {

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
+import { sanitizeImageUrl } from "@/lib/sanitize";
+import { supabase } from "@/lib/supabase";
 import type { KioskChecklist, Question } from "./types";
 import {
   INSTRUCTION_ACKNOWLEDGED,
@@ -184,18 +186,19 @@ function InstructionBlock({
   onImageClick?: (url: string) => void;
   onLinkedResourceOpen?: () => void;
 }) {
+  const safeImageUrl = sanitizeImageUrl(imageUrl);
   return (
     <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
       {text && <p className="text-sm text-lavender-deep leading-relaxed">{text}</p>}
-      {imageUrl && (
+      {safeImageUrl && (
         <button
           type="button"
-          onClick={() => onImageClick?.(imageUrl)}
+          onClick={() => onImageClick?.(safeImageUrl)}
           className="w-full relative group overflow-hidden rounded-lg focus:outline-none"
           aria-label="Tap to enlarge image"
         >
           <img
-            src={imageUrl}
+            src={safeImageUrl}
             alt="Instruction"
             className="w-full max-h-48 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
           />
@@ -222,17 +225,98 @@ function InstructionBlock({
   );
 }
 
+// ─── Image helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Compress a canvas frame to a JPEG Blob at the given quality (0–1).
+ * Using JPEG instead of PNG reduces photo sizes by ~5-10x.
+ */
+function compressToJpeg(canvas: HTMLCanvasElement, quality = 0.7): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => blob ? resolve(blob) : reject(new Error("Canvas toBlob failed")),
+      "image/jpeg",
+      quality,
+    );
+  });
+}
+
+/**
+ * Detect the storage format of a photo answer.
+ * - Legacy rows: full base64 data URI  → isBase64 = true
+ * - New rows: short storage path       → isStoragePath = true
+ */
+export function detectPhotoFormat(answer: string) {
+  const isBase64 = typeof answer === "string" && answer.startsWith("data:image/");
+  const isStoragePath = typeof answer === "string" && !isBase64 && !answer.startsWith("http") && answer.length > 0;
+  return { isBase64, isStoragePath };
+}
+
+/**
+ * Generate a 1-hour signed URL for a kiosk-photos storage path.
+ * Returns null if the storage call fails (e.g. bucket not yet created).
+ */
+async function getSignedUrl(storagePath: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.storage
+      .from("kiosk-photos")
+      .createSignedUrl(storagePath, 3600);
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── MediaInput ───────────────────────────────────────────────────────────────
 // Live camera capture only. No file picker or library access is exposed.
-function MediaInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// Photos are compressed to JPEG and uploaded to Supabase Storage (kiosk-photos
+// bucket); only the short storage path is stored in the answer, not the raw
+// base64 data — prevents DB bloat and bulk data exposure (SEQ-008).
+function MediaInput({
+  value,
+  onChange,
+  organizationId,
+  locationId,
+  questionId,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  organizationId?: string;
+  locationId?: string;
+  questionId?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [captured, setCaptured] = useState<string | null>(null);
+  const [captured, setCaptured] = useState<string | null>(null); // temporary preview only
+  const [capturedCanvas, setCapturedCanvas] = useState<HTMLCanvasElement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Resolve display URL from the stored answer (storage path or legacy base64)
+  useEffect(() => {
+    if (!value) {
+      setDisplayUrl(null);
+      return;
+    }
+    const { isBase64, isStoragePath } = detectPhotoFormat(value);
+    if (isBase64) {
+      setDisplayUrl(value);
+      return;
+    }
+    if (isStoragePath) {
+      let cancelled = false;
+      getSignedUrl(value).then(url => {
+        if (!cancelled) setDisplayUrl(url);
+      });
+      return () => { cancelled = true; };
+    }
+    setDisplayUrl(null);
+  }, [value]);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -244,6 +328,7 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
     if (!isOpen) {
       stopStream();
       setCaptured(null);
+      setCapturedCanvas(null);
       setError("");
       return;
     }
@@ -289,6 +374,7 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
 
   const openCamera = () => {
     setCaptured(null);
+    setCapturedCanvas(null);
     setError("");
     setIsOpen(true);
   };
@@ -296,6 +382,7 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
   const closeCamera = () => {
     stopStream();
     setCaptured(null);
+    setCapturedCanvas(null);
     setIsOpen(false);
   };
 
@@ -308,13 +395,49 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setCaptured(canvas.toDataURL("image/png"));
+    // Keep a preview (base64) only for the camera modal — never stored in the answer
+    setCaptured(canvas.toDataURL("image/jpeg", 0.7));
+    setCapturedCanvas(canvas);
   };
 
-  const useCapturedPhoto = () => {
-    if (!captured) return;
-    onChange(captured);
-    closeCamera();
+  const useCapturedPhoto = async () => {
+    if (!capturedCanvas) return;
+    setIsUploading(true);
+    setError("");
+
+    try {
+      const blob = await compressToJpeg(capturedCanvas, 0.7);
+
+      // Build a storage path scoped to org/location/timestamp so photos from
+      // different organisations never collide and can be access-controlled.
+      const orgSegment = organizationId ?? "unknown-org";
+      const locSegment = locationId ?? "unknown-loc";
+      const qSegment = questionId ?? "photo";
+      const fileName = `${orgSegment}/${locSegment}/${Date.now()}_${qSegment}.jpg`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("kiosk-photos")
+        .upload(fileName, blob, {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        // Surface the error to the user — the answer is NOT stored as base64
+        // to prevent DB bloat; the staff member must retry.
+        setError(`Photo upload failed: ${uploadError.message}. Please try again.`);
+        setIsUploading(false);
+        return;
+      }
+
+      // Store only the short storage path — never the raw base64 (SEQ-008)
+      onChange(uploadData.path);
+      closeCamera();
+    } catch (err: any) {
+      setError(`Photo upload failed: ${err?.message ?? "Unknown error"}. Please try again.`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -322,7 +445,13 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
       {value ? (
         <div className="space-y-2">
           <div className="relative rounded-xl overflow-hidden border border-border">
-            <img src={value} alt="Captured" className="w-full max-h-52 object-cover" />
+            {displayUrl ? (
+              <img src={displayUrl} alt="Captured" className="w-full max-h-52 object-cover" />
+            ) : (
+              <div className="w-full h-32 flex items-center justify-center bg-muted text-xs text-muted-foreground">
+                Loading photo…
+              </div>
+            )}
             <button
               type="button"
               onClick={() => onChange("")}
@@ -388,17 +517,19 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setCaptured(null)}
-                      className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted"
+                      onClick={() => { setCaptured(null); setCapturedCanvas(null); }}
+                      disabled={isUploading}
+                      className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
                     >
                       Retake
                     </button>
                     <button
                       type="button"
                       onClick={useCapturedPhoto}
-                      className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage/90"
+                      disabled={isUploading}
+                      className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Use photo
+                      {isUploading ? "Uploading…" : "Use photo"}
                     </button>
                   </div>
                 </div>
@@ -440,18 +571,29 @@ function MediaInput({ value, onChange }: { value: string; onChange: (v: string) 
 
 function QuestionInput({
   question, value, onChange, onImageClick, onLinkedResourceOpen,
+  organizationId, locationId,
 }: {
   question: Question;
   value: any;
   onChange: (v: any) => void;
   onImageClick?: (url: string) => void;
   onLinkedResourceOpen?: () => void;
+  organizationId?: string;
+  locationId?: string;
 }) {
   switch (question.type) {
     case "checkbox":
       return <CheckboxInput value={!!value} onChange={onChange} />;
     case "media":
-      return <MediaInput value={value ?? ""} onChange={onChange} />;
+      return (
+        <MediaInput
+          value={value ?? ""}
+          onChange={onChange}
+          organizationId={organizationId}
+          locationId={locationId}
+          questionId={question.id}
+        />
+      );
     case "number":
       return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} unit={question.temperatureUnit} />;
     case "text":
@@ -489,12 +631,17 @@ function QuestionInput({
 // Answers are persisted to localStorage so progress survives interruptions.
 export function ChecklistRunner({
   checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
+  organizationId, locationId,
 }: {
   checklist: KioskChecklist;
   staffName: string;
   onComplete: (answers: Record<string, any>, startedAt: Date) => void;
   onCancel: () => void;
   onQuestionAnswerChange?: (question: Question, value: any) => void;
+  /** Organization ID — used to scope photo uploads to the correct storage path */
+  organizationId?: string;
+  /** Location ID — used to scope photo uploads to the correct storage path */
+  locationId?: string;
 }) {
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
   const [initialDraft] = useState(() => loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions));
@@ -735,6 +882,8 @@ export function ChecklistRunner({
                     <QuestionInput
                       question={q}
                       value={answers[q.id]}
+                      organizationId={organizationId}
+                      locationId={locationId}
                       onChange={v => {
                         const nextAnswers = { ...answers, [q.id]: v };
                         setAnswers(nextAnswers);
@@ -864,7 +1013,7 @@ export function ChecklistRunner({
         </div>
 
       {/* ── Image lightbox ── */}
-        {lightboxImage && (
+        {lightboxImage && sanitizeImageUrl(lightboxImage) && (
           <div
             className="fixed inset-0 z-[90] bg-foreground/95 flex items-center justify-center p-4"
             onClick={() => setLightboxImage(null)}
@@ -877,7 +1026,7 @@ export function ChecklistRunner({
               <X size={20} className="text-background" />
             </button>
             <img
-              src={lightboxImage}
+              src={sanitizeImageUrl(lightboxImage)}
               alt="Full view"
               className="max-w-full max-h-full object-contain rounded-xl"
               onClick={e => e.stopPropagation()}
