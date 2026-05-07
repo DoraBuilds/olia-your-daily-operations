@@ -207,34 +207,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const completeSetup = async (businessName: string) => {
-    if (!user) return;
-    setLoading(true);
-    setSetupError(null);
+    if (!user) throw new Error("Not signed in.");
     const ownerName = (user.user_metadata?.full_name as string | undefined)?.trim()
       || (user.email?.split("@")[0] ?? "Owner");
     const { error: rpcError } = await supabase.rpc("setup_new_organization", {
       p_business_name: businessName.trim(),
       p_owner_name: ownerName,
     });
-    if (rpcError) {
-      setSetupError(rpcError.message ?? "Setup failed.");
-      setLoading(false);
-      return;
-    }
+    if (rpcError) throw new Error(rpcError.message ?? "Setup failed.");
     const { data: newData } = await supabase
       .from("team_members")
       .select("*")
       .eq("id", user.id)
       .single();
-    if (!newData) {
-      setSetupError("Account could not be restored. Please try again.");
-      setTeamMember(null);
-      setLoading(false);
-      return;
-    }
+    if (!newData) throw new Error("Account could not be restored. Please try again.");
     setTeamMember(newData as TeamMemberProfile);
     setSetupError(null);
-    setLoading(false);
   };
 
   const signOut = async () => {
