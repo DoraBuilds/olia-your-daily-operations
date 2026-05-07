@@ -76,9 +76,12 @@ export default function Signup() {
     setLoading(false);
 
     if (authError) {
-      localStorage.removeItem("olia_pending_onboarding");
       if (isEmailRateLimited(authError.message)) {
+        // Rate limited but user may have a valid code from an earlier email — keep
+        // the pending onboarding data so setup completes if they verify successfully.
         setStep("code");
+      } else {
+        localStorage.removeItem("olia_pending_onboarding");
       }
       setError(authError.message);
       return;
