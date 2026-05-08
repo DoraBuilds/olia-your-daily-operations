@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
 
     const isDocumentMode = mode === "document";
     // Sonnet for document/vision; Haiku for plain text (cheaper + faster)
-    const model = isDocumentMode ? "claude-3-5-sonnet-20241022" : "claude-3-haiku-20240307";
+    const model = isDocumentMode ? "claude-sonnet-4-6" : "claude-haiku-4-5-20251001";
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
