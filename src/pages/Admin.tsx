@@ -33,75 +33,6 @@ import {
   type ConfirmState,
 } from "./admin/SharedUI";
 
-// ─── SetupRecoveryScreen ──────────────────────────────────────────────────────
-
-function SetupRecoveryScreen({
-  onComplete,
-  onSignOut,
-}: {
-  onComplete: (businessName: string) => Promise<void>;
-  onSignOut: () => Promise<void>;
-}) {
-  const [businessName, setBusinessName] = useState("");
-  const [completing, setCompleting] = useState(false);
-  const [completionError, setCompletionError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!businessName.trim()) return;
-    setCompleting(true);
-    setCompletionError(null);
-    try {
-      await onComplete(businessName.trim());
-    } catch (err: any) {
-      setCompletionError(err?.message ?? "Setup failed. Please try again.");
-    } finally {
-      setCompleting(false);
-    }
-  };
-
-  return (
-    <Layout title="Admin" subtitle="Account recovery">
-      <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-6">
-        <div className="space-y-2">
-          <h2 className="font-display text-xl text-foreground">Re-create your account</h2>
-          <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Your account data was reset. Enter your business name to restore access — your login stays the same.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-3">
-          <input
-            type="text"
-            value={businessName}
-            onChange={e => setBusinessName(e.target.value)}
-            placeholder="Business name"
-            className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sage/30"
-            disabled={completing}
-            autoFocus
-          />
-          {completionError && (
-            <p className="text-xs text-status-error text-left leading-relaxed">{completionError}</p>
-          )}
-          <button
-            type="submit"
-            disabled={completing || !businessName.trim()}
-            className="w-full px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors disabled:opacity-50"
-          >
-            {completing ? "Restoring…" : "Restore my account"}
-          </button>
-        </form>
-
-        <button
-          onClick={onSignOut}
-          className="text-xs text-muted-foreground underline underline-offset-2"
-        >
-          Sign out instead
-        </button>
-      </div>
-    </Layout>
-  );
-}
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export default function Admin() {
@@ -109,7 +40,7 @@ export default function Admin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fromKiosk = searchParams.get("from") === "kiosk";
-  const { user, teamMember: authMember, setupError, completeSetup, signOut } = useAuth();
+  const { user, teamMember: authMember, setupError, signOut } = useAuth();
 
   // Resolve the kiosk-authenticated userId from sessionStorage (one-time use token).
   // If from=kiosk is in the URL but the token is missing or expired, redirect back to kiosk.
@@ -369,10 +300,11 @@ export default function Admin() {
     ...(isOwner ? [{ key: "account" as const, label: "Account" }] : []),
   ];
 
-  // ── Setup error screen — shown when setup_new_organization failed ────────────
-  if (setupError) {
-    return <SetupRecoveryScreen onComplete={completeSetup} onSignOut={signOut} />;
-  }
+  // ── Setup error — sign out and redirect to signup so the user can start fresh ──
+  useEffect(() => {
+    if (!setupError) return;
+    signOut().then(() => navigate("/signup?reason=account-reset", { replace: true }));
+  }, [setupError, signOut, navigate]);
 
   return (
     <>
