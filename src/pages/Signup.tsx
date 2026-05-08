@@ -117,7 +117,9 @@ export default function Signup() {
     }
 
     localStorage.setItem(DEFAULT_ADMIN_PIN_NOTICE_KEY, "1");
-    navigate("/admin", { replace: true });
+    // Don't navigate here — let the useEffect below react to user being set
+    // in AuthContext. Navigating immediately races with ProtectedRoute which
+    // sees user=null before the SIGNED_IN event is processed and redirects to /login.
   };
 
   const handleResendCode = async () => {
