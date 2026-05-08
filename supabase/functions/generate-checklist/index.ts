@@ -104,8 +104,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use claude-3-5-sonnet-20241022 for all modes — confirmed available on this API key
-    const model = "claude-3-5-sonnet-20241022";
+    const model = "claude-sonnet-4-6";
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
