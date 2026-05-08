@@ -58,26 +58,7 @@ async function extractFileContent(file: File): Promise<
 }
 
 function humanizeConvertError(msg: string): string {
-  if (!msg) return "Something went wrong. Please try again.";
-  // Pass Anthropic errors through so we can see the actual message
-  if (msg.startsWith("Anthropic ")) return msg;
-  const l = msg.toLowerCase();
-  if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
-    return "AI service quota reached. Please try again later or contact support.";
-  }
-  if (l.includes("non-2xx") || l.includes("edge function") || l.includes("500") || l.includes("502") || l.includes("503") || l.includes("unavailable")) {
-    return "The AI service is temporarily unavailable. Please try again in a moment.";
-  }
-  if (l.includes("parse") || l.includes("corrupt") || l.includes("invalid file") || l.includes("unsupported")) {
-    return "Could not read this file. Try saving as .xlsx or .csv and uploading again.";
-  }
-  if (l.includes("unexpected response") || l.includes("invalid json") || l.includes("not an array")) {
-    return "The AI returned an unexpected response. Please try again.";
-  }
-  if (l.includes("network") || l.includes("fetch")) {
-    return "Network error. Check your connection and try again.";
-  }
-  return "Something went wrong. Please try again.";
+  return msg || "Something went wrong. Please try again.";
 }
 
 export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {
