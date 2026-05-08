@@ -181,14 +181,12 @@ describe("AuthContext", () => {
       JSON.stringify({ businessName: "Acme Café", ownerName: "Sarah Johnson" }),
     );
 
-    // First single() → null (no existing row, triggers setup).
-    // Second single() → the newly created row (re-fetch after RPC).
-    let fetchCount = 0;
-    mockTeamMemberSingle.mockImplementation(async () => {
-      fetchCount += 1;
-      if (fetchCount === 1) return { data: null, error: null };
-      return {
-        data: {
+    // No existing row — triggers setup.
+    mockTeamMemberSingle.mockResolvedValue({ data: null, error: null });
+    // RPC returns the team_member row directly (no re-fetch needed).
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        team_member: {
           id: "user-1",
           organization_id: "org-new-1",
           name: "Sarah Johnson",
@@ -196,9 +194,11 @@ describe("AuthContext", () => {
           role: "Owner",
           location_ids: [],
           permissions: {},
+          pin_reset_required: true,
         },
-        error: null,
-      };
+        existed: false,
+      },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
