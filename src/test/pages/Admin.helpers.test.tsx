@@ -252,17 +252,16 @@ describe("Admin — parseGoogleOpeningHours helper", () => {
 // ─── Location detail — formatHoursText / parseHours via UI rendering ──────────
 
 describe("Admin — location detail renders parsed JSON trading_hours", () => {
-  it("shows formatted opening hours for a location with JSON trading_hours", async () => {
+  it("does not show trading_hours in the location detail card", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    // Main Branch has structured JSON hours (Mon–Fri 09:00–17:00)
     await waitFor(() => {
       expect(screen.getByText("Location details")).toBeInTheDocument();
     });
-    // formatHoursText produces something like "Mon: 09:00–17:00 · ..."
+    // Opening hours display has been removed — hours should not appear in the card
     const hoursEl = Array.from(document.querySelectorAll("p")).find(el =>
       el.textContent?.includes("09:00") || el.textContent?.includes("Mon:")
     );
-    expect(hoursEl).toBeTruthy();
+    expect(hoursEl).toBeFalsy();
   });
 
   it("does not crash for a location with plain-text trading_hours (fallback path)", async () => {
@@ -430,7 +429,7 @@ describe("Admin — parseGoogleOpeningHours time parsing edge cases", () => {
 // ─── formatHoursText via location card ──────────────────────────────────────-
 
 describe("Admin — formatHoursText (via location detail card)", () => {
-  it("shows 'Closed all week' for a location with all days closed", async () => {
+  it("does not show trading_hours in the card even when all days are closed", async () => {
     const closedHours = JSON.stringify({
       mon: { open: false, windows: [] },
       tue: { open: false, windows: [] },
@@ -454,13 +453,13 @@ describe("Admin — formatHoursText (via location detail card)", () => {
       isLoading: false,
     };
 
-    // Use mockReturnValue (persistent) for this test, restore after
     mockUseLocations.mockReturnValue(closedLocationReturn);
 
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
 
-    expect(screen.getByText("Closed all week")).toBeInTheDocument();
+    // Opening hours display has been removed — should not appear
+    expect(screen.queryByText("Closed all week")).not.toBeInTheDocument();
 
     // Restore default mock
     mockUseLocations.mockReturnValue({

@@ -454,7 +454,7 @@ export function LocationModal({
       id: location?.id ?? "",
       name: name.trim(),
       address: address.trim(),
-      trading_hours: location?.trading_hours ?? null,
+      trading_hours: null,
       contact_email: email.trim(),
       contact_phone: phone.trim(),
       // preserve existing archive threshold (or default for new locations)

@@ -187,6 +187,7 @@ export function ChecklistsTab() {
   // ── Page-mode builder: takes over the whole content area ──────────────────
   if (showBuilder) {
     const discardAndClose = () => {
+      try { sessionStorage.removeItem("olia_checklist_draft"); } catch { /* ignore */ }
       setShowBuilder(false);
       setPrefillTitle("");
       setPrefillSections(undefined);

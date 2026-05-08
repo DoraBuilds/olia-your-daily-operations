@@ -854,7 +854,7 @@ describe("Admin page", () => {
 
   // ── Opening hours & checklists ─────────────────────────────────────────────
 
-  it("location detail shows formatted opening hours when trading_hours is structured JSON", async () => {
+  it("location detail does not show trading_hours even when structured JSON is present", async () => {
     const jsonHours = JSON.stringify({
       mon: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
       tue: { open: true, windows: [{ start: "09:00", end: "18:00" }] },
@@ -864,7 +864,6 @@ describe("Admin page", () => {
       sat: { open: true, windows: [{ start: "10:00", end: "16:00" }] },
       sun: { open: false, windows: [] },
     });
-    // use mockReturnValue (not Once) so all re-renders get the JSON data
     mockUseLocations.mockReturnValue({
       data: [{ ...mockLocations[0], trading_hours: jsonHours }, mockLocations[1]],
       allLocations: [{ ...mockLocations[0], trading_hours: jsonHours }, mockLocations[1]],
@@ -879,10 +878,12 @@ describe("Admin page", () => {
     });
     renderWithProviders(<Admin />);
     await waitFor(() => {
-      const locationDetails = screen.getByText("Location details").closest(".card-surface");
-      expect(locationDetails?.textContent).toContain("Mon:");
-      expect(locationDetails?.textContent).toContain("09:00");
+      expect(screen.getByText("Location details")).toBeInTheDocument();
     });
+    // Opening hours display has been removed — should not appear in the card
+    const locationDetails = screen.getByText("Location details").closest(".card-surface");
+    expect(locationDetails?.textContent).not.toContain("Mon:");
+    expect(locationDetails?.textContent).not.toContain("09:00");
     // Restore default mock for subsequent tests
     mockUseLocations.mockReturnValue({
       data: mockLocations,
