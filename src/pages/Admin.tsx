@@ -300,10 +300,16 @@ export default function Admin() {
     ...(isOwner ? [{ key: "account" as const, label: "Account" }] : []),
   ];
 
-  // ── Setup error — sign out and redirect to signup so the user can start fresh ──
+  // ── Setup error — navigate away first, then sign out in the background ─────
+  // We must navigate BEFORE calling signOut. If we sign out first, the SIGNED_OUT
+  // event fires synchronously, user becomes null, and ProtectedRoute renders
+  // <Navigate to="/login"> during the same React render — before our .then()
+  // callback can redirect to /signup. Navigating first takes us off the protected
+  // route so ProtectedRoute is no longer in the tree when user becomes null.
   useEffect(() => {
     if (!setupError) return;
-    signOut().then(() => navigate("/signup?reason=account-reset", { replace: true }));
+    navigate("/signup?reason=account-reset", { replace: true });
+    signOut(); // fire-and-forget — SIGNED_OUT fires after we've already left
   }, [setupError, signOut, navigate]);
 
   return (

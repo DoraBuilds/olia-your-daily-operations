@@ -3,10 +3,11 @@ import { MemoryRouter } from "react-router-dom";
 import Signup from "@/pages/Signup";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
-// ─── Supabase mock ────────────────────────────────────────────────────────────
-const { mockSignInWithOtp, mockVerifyOtp } = vi.hoisted(() => ({
+// ─── Hoisted mocks ────────────────────────────────────────────────────────────
+const { mockSignInWithOtp, mockVerifyOtp, mockNavigate } = vi.hoisted(() => ({
   mockSignInWithOtp: vi.fn(),
   mockVerifyOtp: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -28,11 +29,19 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-// AuthContext — unauthenticated
+// AuthContext — dynamic so tests can override the user
+const { mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(() => ({ user: null, session: null, teamMember: null, loading: false, signOut: vi.fn() })),
+}));
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ user: null, session: null, teamMember: null, loading: false, signOut: vi.fn() }),
+  useAuth: () => mockUseAuth(),
   AuthProvider: ({ children }: any) => children,
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 // ─── Router wrapper ────────────────────────────────────────────────────────────
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -276,7 +285,7 @@ describe("Signup page", () => {
     await waitFor(() => expect(mockVerifyOtp).toHaveBeenCalledWith({
       email: "sarah@acme.com",
       token: "12345678",
-      type: "signup",
+      type: "email",
     }));
   });
 
@@ -311,5 +320,34 @@ describe("Signup page", () => {
     render(<Signup />, { wrapper });
     const link = screen.getByRole("link", { name: /Sign in/i });
     expect(link).toHaveAttribute("href", "/login");
+  });
+});
+
+describe("Signup page — account-reset guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ user: null, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+  });
+
+  it("does not redirect to /admin when reason=account-reset even if user is set", () => {
+    // Admin navigates here before signing out — user is still set at this point.
+    // The guard prevents a redirect loop back to /admin.
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={["/signup?reason=account-reset"]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith("/admin", expect.anything());
+  });
+
+  it("still redirects to /admin when user is set and reason is not account-reset", () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={["/signup"]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
   });
 });
