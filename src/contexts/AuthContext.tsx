@@ -108,48 +108,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Step 3: Create org + team_member
+    // Step 3: Create org + team_member.
+    // The RPC is SECURITY DEFINER so it can read/write without RLS constraints.
+    // It returns the full team_member row directly — no second SELECT needed,
+    // which avoids the RLS re-fetch failure caused by search_path issues in
+    // current_org_id() on some Supabase connection pools.
     try {
-      const { error: rpcError } = await supabase.rpc("setup_new_organization", {
+      const { data: rpcData, error: rpcError } = await supabase.rpc("setup_new_organization", {
         p_business_name: businessName.trim(),
         p_owner_name: safeOwnerName,
       });
 
       localStorage.removeItem("olia_pending_onboarding");
 
-      // Always re-fetch after the RPC attempt. If the RPC returned an error
-      // (e.g. duplicate key — org already exists from a prior run), the row
-      // may already be there; re-fetching lets returning users recover without
-      // a setup error screen. Only surface setupError if both the RPC AND
-      // the re-fetch failed.
-      const { data: newData, error: refetchError } = await supabase
-        .from("team_members")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (!newData) {
-        if (rpcError) {
-          console.error("[AuthContext] setup_new_organization failed and row not found:", rpcError);
-        } else {
-          console.error("[AuthContext] team_member row missing after setup:", refetchError);
-        }
-        setSetupError(
-          "Your account setup is not complete. Please refresh the page and try again.",
-        );
+      if (rpcError) {
+        console.error("[AuthContext] setup_new_organization failed:", rpcError);
+        setSetupError("Your account setup is not complete. Please refresh the page and try again.");
         setTeamMember(null);
         setLoading(false);
         return;
       }
 
-      setTeamMember(newData as TeamMemberProfile);
+      const newData = rpcData?.team_member as TeamMemberProfile | null;
+      if (!newData) {
+        console.error("[AuthContext] setup_new_organization returned no team_member:", rpcData);
+        setSetupError("Your account setup is not complete. Please refresh the page and try again.");
+        setTeamMember(null);
+        setLoading(false);
+        return;
+      }
+
+      setTeamMember(newData);
       setLoading(false);
     } catch (err) {
-      console.error("[AuthContext] setup_new_organization failed:", err);
+      console.error("[AuthContext] setup_new_organization threw:", err);
       localStorage.removeItem("olia_pending_onboarding");
-      setSetupError(
-        "Your account setup is not complete. Please refresh the page and try again.",
-      );
+      setSetupError("Your account setup is not complete. Please refresh the page and try again.");
       setTeamMember(null);
       setLoading(false);
     }

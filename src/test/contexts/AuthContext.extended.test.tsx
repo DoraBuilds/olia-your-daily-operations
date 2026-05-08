@@ -246,13 +246,10 @@ describe("AuthContext extended — RPC error path", () => {
       JSON.stringify({ businessName: "Success Co", ownerName: "Happy User" }),
     );
 
-    // After RPC succeeds, a new team member row is returned
-    let callCount = 0;
-    mockTeamMemberSingle.mockImplementation(async () => {
-      callCount++;
-      if (callCount === 1) return { data: null, error: null }; // first check: no row
-      return {
-        data: {
+    // RPC now returns the team_member row directly — no re-fetch needed.
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        team_member: {
           id: "user-ok",
           organization_id: "org-ok",
           name: "Happy User",
@@ -260,9 +257,11 @@ describe("AuthContext extended — RPC error path", () => {
           role: "Owner",
           location_ids: [],
           permissions: {},
+          pin_reset_required: false,
         },
-        error: null,
-      };
+        existed: false,
+      },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
