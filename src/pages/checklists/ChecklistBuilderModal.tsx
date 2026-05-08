@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
@@ -24,6 +24,19 @@ import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
+
+const DRAFT_KEY = "olia_checklist_draft";
+
+function loadDraft(): { title: string; sections: SectionDef[] } | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function clearChecklistDraft() {
+  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
 
 const responseTypeLabel = (type: ResponseType) => RESPONSE_TYPES.find(r => r.key === type)?.label || "Multiple choice";
 const getQuestionChoices = (q: QuestionDef) => q.choices?.length
@@ -66,7 +79,11 @@ export function ChecklistBuilderModal({
   const { data: teamMembers = [] } = useTeamMembers();
   const imgInputRef = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const [title, setTitle] = useState(initialTitle || "");
+  // For new checklists with no pre-filled content, restore from sessionStorage draft (survives tab switches / page reloads)
+  const isNewChecklist = !editId && !initialTitle && (!initialSections || initialSections.length === 0);
+  const draft = isNewChecklist ? loadDraft() : null;
+
+  const [title, setTitle] = useState(draft?.title ?? initialTitle ?? "");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(
     initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
@@ -87,9 +104,17 @@ export function ChecklistBuilderModal({
     initialLocationIds?.length ? initialLocationIds : [],
   );
   const [locationSearch, setLocationSearch] = useState("");
-  const [sections, setSections] = useState<SectionDef[]>(initialSections || [{
-    id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
-  }]);
+  const [sections, setSections] = useState<SectionDef[]>(
+    draft?.sections ?? initialSections ?? [{
+      id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
+    }]
+  );
+
+  // Autosave draft to sessionStorage while editing a new checklist
+  useEffect(() => {
+    if (!isNewChecklist) return;
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title, sections })); } catch { /* ignore */ }
+  }, [title, sections, isNewChecklist]);
   const [showResponsePicker, setShowResponsePicker] = useState<
     | { scope: "main"; sectionIdx: number; questionIdx: number }
     | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
@@ -266,6 +291,7 @@ export function ChecklistBuilderModal({
         createdAt: new Date().toISOString().slice(0, 10),
       } as any);
     }
+    clearChecklistDraft();
     onClose();
   };
 
