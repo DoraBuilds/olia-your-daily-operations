@@ -104,9 +104,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const isDocumentMode = mode === "document";
-    // Sonnet for document/vision; Haiku for plain text (cheaper + faster)
-    const model = isDocumentMode ? "claude-sonnet-4-6" : "claude-haiku-4-5-20251001";
+    // Use claude-3-5-sonnet-20241022 for all modes — confirmed available on this API key
+    const model = "claude-3-5-sonnet-20241022";
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -156,9 +155,10 @@ Deno.serve(async (req) => {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
+    // Return 200 so Supabase puts the body in data (not fnError), letting the real error reach the frontend
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+      { headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
     );
   }
 });
