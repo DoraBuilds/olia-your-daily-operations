@@ -21,7 +21,6 @@ interface AuthContextValue {
   loading: boolean;
   setupError: string | null;   // set when setup_new_organization fails
   retrySetup: () => void;      // lets the UI offer a "Try again" button
-  completeSetup: (businessName: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -32,7 +31,6 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   setupError: null,
   retrySetup: () => {},
-  completeSetup: async () => {},
   signOut: async () => {},
 });
 
@@ -206,31 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const completeSetup = async (businessName: string) => {
-    if (!user) throw new Error("Not signed in.");
-    const ownerName = (user.user_metadata?.full_name as string | undefined)?.trim()
-      || (user.email?.split("@")[0] ?? "Owner");
-    const { error: rpcError } = await supabase.rpc("setup_new_organization", {
-      p_business_name: businessName.trim(),
-      p_owner_name: ownerName,
-    });
-    if (rpcError) throw new Error(rpcError.message ?? "Setup failed.");
-    const { data: newData } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    if (!newData) throw new Error("Account could not be restored. Please try again.");
-    setTeamMember(newData as TeamMemberProfile);
-    setSetupError(null);
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, completeSetup, signOut }}>
+    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut }}>
       {children}
     </AuthContext.Provider>
   );
