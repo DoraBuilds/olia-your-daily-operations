@@ -4,8 +4,20 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
 
-/** Extracts readable text from CSV/Excel files using SheetJS. For PDF/images, returns the filename as context. */
-async function extractFileContent(file: File): Promise<string> {
+/** Reads a file as a base64-encoded string. */
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+/** Extracts readable text from CSV/Excel files. For PDFs and images, returns base64 for Claude's vision API. */
+async function extractFileContent(file: File): Promise<
+  | { type: "text"; content: string }
+  | { type: "document"; base64: string; mediaType: string }
+> {
   if (/\.(csv|xlsx|xls)$/i.test(file.name)) {
     const XLSX = await import("xlsx");
     const buffer = await file.arrayBuffer();
@@ -15,10 +27,15 @@ async function extractFileContent(file: File): Promise<string> {
       content += `Sheet: ${sheet}\n`;
       content += XLSX.utils.sheet_to_csv(workbook.Sheets[sheet]) + "\n\n";
     });
-    return content.trim() || `File: ${file.name}`;
+    return { type: "text", content: content.trim() || `File: ${file.name}` };
   }
-  // PDF / images: send filename + type as context — Claude can still generate a relevant checklist
-  return `Document: "${file.name}" (${file.type || "unknown type"}) — generate a practical hospitality operations checklist based on this document's name and type.`;
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+    const base64 = await fileToBase64(file);
+    return { type: "document", base64, mediaType: "application/pdf" };
+  }
+  // Images — send as vision document
+  const base64 = await fileToBase64(file);
+  return { type: "document", base64, mediaType: file.type || "image/jpeg" };
 }
 
 function humanizeConvertError(msg: string): string {
@@ -64,10 +81,13 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
     setConverting(true);
     setError(null);
     try {
-      const content = await extractFileContent(file);
+      const extracted = await extractFileContent(file);
+      const body = extracted.type === "text"
+        ? { mode: "file", content: extracted.content }
+        : { mode: "document", fileBase64: extracted.base64, fileType: extracted.mediaType };
       const { data, error: fnError } = await supabase.functions.invoke(
         "generate-checklist",
-        { body: { mode: "file", content } }
+        { body }
       );
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);

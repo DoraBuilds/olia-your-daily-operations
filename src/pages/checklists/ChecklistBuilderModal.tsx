@@ -605,6 +605,13 @@ export function ChecklistBuilderModal({
                     )}
                   </div>
 
+                  {q.uncertain && (
+                    <div className="flex items-center gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
+                      <AlertTriangle size={13} className="shrink-0" />
+                      <span>Response type uncertain — please choose the correct one below.</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => setShowResponsePicker({
@@ -1362,6 +1369,7 @@ export function ChecklistBuilderModal({
                 choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                 choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                 selectionMode: type === "multiple_choice" ? "single" : undefined,
+                uncertain: undefined,
               });
             } else {
               const { sectionIdx, questionIdx, ruleIdx, triggerIdx } = showResponsePicker;

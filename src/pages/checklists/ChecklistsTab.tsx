@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useBlocker } from "react-router-dom";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
@@ -131,6 +131,8 @@ export function ChecklistsTab() {
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
+  const blocker = useBlocker(showBuilder);
+
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
     saveFolderMut.mutate({ name: newFolderName.trim(), parent_id: currentFolder });
@@ -184,17 +186,20 @@ export function ChecklistsTab() {
 
   // ── Page-mode builder: takes over the whole content area ──────────────────
   if (showBuilder) {
+    const discardAndClose = () => {
+      setShowBuilder(false);
+      setPrefillTitle("");
+      setPrefillSections(undefined);
+      setPrefillLocationIds(undefined);
+      setEditingChecklistId(null);
+    };
+
     return (
+      <>
       <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 rounded-xl bg-sage animate-pulse" /></div>}>
       <ChecklistBuilderModal
         asPage
-        onClose={() => {
-          setShowBuilder(false);
-          setPrefillTitle("");
-          setPrefillSections(undefined);
-          setPrefillLocationIds(undefined);
-          setEditingChecklistId(null);
-        }}
+        onClose={discardAndClose}
         onAdd={item => {
           const locationIds = item.location_ids ?? null;
           saveChecklistMut.mutate({
@@ -238,6 +243,29 @@ export function ChecklistsTab() {
         editId={editingChecklistId || undefined}
       />
       </Suspense>
+      {blocker.state === "blocked" && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
+          <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
+            <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
+            <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you leave this page.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => blocker.reset()}
+                className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={() => { discardAndClose(); blocker.proceed(); }}
+                className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                Discard changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 

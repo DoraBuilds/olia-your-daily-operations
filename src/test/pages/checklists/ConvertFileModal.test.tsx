@@ -130,6 +130,7 @@ describe("ConvertFileModal", () => {
     render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     const dropZone = screen.getByText("Tap to select a file").closest("div")!;
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
+    file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
     await waitFor(() => expect(screen.getByText("Something went wrong. Please try again.")).toBeInTheDocument());
@@ -140,6 +141,7 @@ describe("ConvertFileModal", () => {
     render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     const dropZone = screen.getByText("Tap to select a file").closest("div")!;
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
+    file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
     await waitFor(() => expect(screen.getByText(/quota reached/)).toBeInTheDocument());
@@ -150,6 +152,7 @@ describe("ConvertFileModal", () => {
     render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     const dropZone = screen.getByText("Tap to select a file").closest("div")!;
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
+    file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
     await waitFor(() => expect(screen.getByText(/temporarily unavailable/)).toBeInTheDocument());

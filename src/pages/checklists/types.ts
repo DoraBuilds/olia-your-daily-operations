@@ -95,6 +95,8 @@ export interface QuestionDef {
   selectionMode?: "single" | "multiple";
   config?: QuestionConfig;
   mcSetId?: string;
+  /** Set by AI conversion when the question type couldn't be determined confidently. */
+  uncertain?: boolean;
 }
 
 export interface SectionDef {

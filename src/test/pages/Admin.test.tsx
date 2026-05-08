@@ -211,14 +211,14 @@ describe("Admin page", () => {
     });
   });
 
-  it("prompts that Google Maps can autofill address details and opening hours", async () => {
+  it("prompts that Google Maps can autofill address details", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Pick a real place from Google Maps to autofill the official address, map preview, and opening hours when available\./i),
+        screen.getByText(/Pick a real place from Google Maps to autofill the official address and map preview\./i),
       ).toBeInTheDocument();
     });
   });
@@ -898,49 +898,12 @@ describe("Admin page", () => {
     });
   });
 
-  it("location form shows Opening hours with time inputs for open days and 'Closed' for closed days", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
-    await waitFor(() => expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1));
-    // click the pencil/edit button on the first location
-    const allLocationsSection = screen.getAllByText("All locations").find(el => el.classList.contains("section-label"))?.closest("section");
-    if (allLocationsSection) {
-      const pencilBtns = Array.from(allLocationsSection.querySelectorAll("button")).filter(btn => !btn.textContent?.trim());
-      if (pencilBtns.length > 0) {
-        fireEvent.click(pencilBtns[0] as HTMLElement);
-        await waitFor(() => {
-          expect(screen.getByText("Opening hours")).toBeInTheDocument();
-          // Sun is closed by default in parseHours
-          expect(screen.getByText("Closed")).toBeInTheDocument();
-        });
-      }
-    }
-  });
-
-  it("location form supports split-day hours and copying them to later days", async () => {
+  it("location form does not show Opening hours section", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
-
-    await waitFor(() => expect(screen.getByText("Opening hours")).toBeInTheDocument());
-
-    fireEvent.change(screen.getByLabelText("Mon start time window 1"), { target: { value: "09:00" } });
-    fireEvent.change(screen.getByLabelText("Mon end time window 1"), { target: { value: "14:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add split hours for Mon" }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Mon start time window 2")).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText("Mon start time window 2"), { target: { value: "17:00" } });
-    fireEvent.change(screen.getByLabelText("Mon end time window 2"), { target: { value: "22:00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Copy Mon to later days" }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Tue start time window 1")).toHaveValue("09:00");
-      expect(screen.getByLabelText("Tue end time window 1")).toHaveValue("14:00");
-      expect(screen.getByLabelText("Tue start time window 2")).toHaveValue("17:00");
-      expect(screen.getByLabelText("Tue end time window 2")).toHaveValue("22:00");
-    });
+    await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
+    expect(screen.queryByText("Opening hours")).not.toBeInTheDocument();
   });
 
   it("My Location tab shows assigned checklist names for current location", async () => {
