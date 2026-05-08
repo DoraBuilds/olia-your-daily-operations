@@ -87,8 +87,10 @@ describe("Login page", () => {
     expect(screen.getByPlaceholderText(/Enter the code from your email/i)).toBeInTheDocument();
   });
 
-  it("verifies the emailed code and navigates to admin", async () => {
-    renderPage();
+  it("verifies the emailed code and navigates to admin via the user effect", async () => {
+    // Navigation now happens through useEffect(user → navigate) to avoid racing
+    // ProtectedRoute. Simulate: OTP succeeds → useAuth returns a user → effect fires.
+    const { rerender } = renderPage();
     fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
       target: { value: "owner@olia.app" },
     });
@@ -109,7 +111,11 @@ describe("Login page", () => {
       });
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
+    // Simulate AuthContext setting user after SIGNED_IN — triggers the useEffect
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, loading: false });
+    rerender(<MemoryRouter><Login /></MemoryRouter>);
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true }));
   });
 
   it("shows a create-account link", () => {
