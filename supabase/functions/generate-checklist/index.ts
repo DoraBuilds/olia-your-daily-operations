@@ -104,16 +104,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // document mode sends PDF/image base64 — requires a vision-capable model with PDF support.
+    // claude-3-5-haiku does not support pdfs-2024-09-25 beta; use Sonnet for document mode.
+    const model = mode === "document"
+      ? "claude-sonnet-4-5"
+      : "claude-haiku-4-5-20251001";
+
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
-        "anthropic-beta": "pdfs-2024-09-25",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model,
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
         messages,
