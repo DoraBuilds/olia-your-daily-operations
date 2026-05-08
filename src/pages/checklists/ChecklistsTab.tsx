@@ -96,7 +96,17 @@ export function ChecklistsTab() {
   const [selectedLocation, setSelectedLocation] = useState("All locations");
   const [showLocationDrop, setShowLocationDrop] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
-  const [showBuilder, setShowBuilder] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(() => {
+    // Auto-reopen builder if a meaningful draft was saved (e.g. after a tab switch that reloaded the page)
+    try {
+      const raw = sessionStorage.getItem("olia_checklist_draft");
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      return !!(d.title?.trim() || d.sections?.some((s: any) =>
+        s.name?.trim() || s.questions?.some((q: any) => q.text?.trim())
+      ));
+    } catch { return false; }
+  });
   const [showConvertFile, setShowConvertFile] = useState(false);
   const [showBuildAI, setShowBuildAI] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
@@ -132,6 +142,14 @@ export function ChecklistsTab() {
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
   const blocker = useBlocker(showBuilder);
+
+  // Warn the browser when the user tries to leave the tab/app entirely while the builder is open
+  useEffect(() => {
+    if (!showBuilder) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [showBuilder]);
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;

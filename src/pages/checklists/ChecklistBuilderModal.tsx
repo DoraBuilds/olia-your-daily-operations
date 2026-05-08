@@ -110,6 +110,19 @@ export function ChecklistBuilderModal({
     }]
   );
 
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
+
+  // Intercept Back/X when there's unsaved content — show a confirmation first
+  const handleRequestClose = () => {
+    if (isNewChecklist && hasContent) {
+      setShowDiscardConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
   // Autosave draft to sessionStorage while editing a new checklist
   useEffect(() => {
     if (!isNewChecklist) return;
@@ -302,7 +315,7 @@ export function ChecklistBuilderModal({
       {/* Header bar */}
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
         {asPage ? (
-          <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
         ) : (
@@ -314,7 +327,7 @@ export function ChecklistBuilderModal({
         {asPage ? (
           <div className="w-16" />
         ) : (
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={handleRequestClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <X size={18} className="text-muted-foreground" />
           </button>
         )}
@@ -1441,6 +1454,29 @@ export function ChecklistBuilderModal({
     </>
   );
 
+  const discardConfirmDialog = showDiscardConfirm && (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
+      <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
+        <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
+        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you go back.</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowDiscardConfirm(false)}
+            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={() => { clearChecklistDraft(); onClose(); }}
+            className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (asPage) {
     return (
       <>
@@ -1448,6 +1484,7 @@ export function ChecklistBuilderModal({
           {formContent}
         </div>
         {subModals}
+        {discardConfirmDialog}
       </>
     );
   }
@@ -1463,6 +1500,7 @@ export function ChecklistBuilderModal({
         </div>
       </div>
       {subModals}
+      {discardConfirmDialog}
     </>
   );
 }
