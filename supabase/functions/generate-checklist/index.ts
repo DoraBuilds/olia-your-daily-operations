@@ -104,16 +104,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Sonnet 4.6 supports vision + documents; Haiku 4.5 for cheaper text-only mode
-    const model = mode === "document" ? "claude-sonnet-4-6" : "claude-haiku-4-5-20251001";
+    // claude-3-5-sonnet-20241022 is the documented model for the pdfs-2024-09-25 beta.
+    // Haiku does not support document/vision mode; use it only for plain-text input.
+    const isDocumentMode = mode === "document";
+    const model = isDocumentMode ? "claude-3-5-sonnet-20241022" : "claude-3-5-haiku-20241022";
+    const anthropicHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    };
+    if (isDocumentMode) {
+      anthropicHeaders["anthropic-beta"] = "pdfs-2024-09-25";
+    }
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders,
       body: JSON.stringify({
         model,
         max_tokens: 2048,
