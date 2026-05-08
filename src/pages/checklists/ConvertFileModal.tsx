@@ -3,6 +3,7 @@ import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
+import pdfjsWorkerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 /** Reads a file as a base64-encoded string. */
 async function fileToBase64(file: File): Promise<string> {
@@ -13,7 +14,25 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
-/** Extracts readable text from CSV/Excel files. For PDFs and images, returns base64 for Claude's vision API. */
+/** Extracts text from a PDF using pdfjs-dist (client-side, no API required). */
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items
+      .filter((item: any) => "str" in item)
+      .map((item: any) => item.str)
+      .join(" ") + "\n";
+  }
+  return text.trim();
+}
+
+/** Extracts readable text from CSV/Excel/PDF files. For images, returns base64 for Claude's vision API. */
 async function extractFileContent(file: File): Promise<
   | { type: "text"; content: string }
   | { type: "document"; base64: string; mediaType: string }
@@ -30,8 +49,8 @@ async function extractFileContent(file: File): Promise<
     return { type: "text", content: content.trim() || `File: ${file.name}` };
   }
   if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
-    const base64 = await fileToBase64(file);
-    return { type: "document", base64, mediaType: "application/pdf" };
+    const text = await extractPdfText(file);
+    return { type: "text", content: text || `File: ${file.name}` };
   }
   // Images — send as vision document
   const base64 = await fileToBase64(file);

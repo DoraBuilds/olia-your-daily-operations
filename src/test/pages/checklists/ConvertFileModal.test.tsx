@@ -30,6 +30,22 @@ vi.mock("xlsx", () => ({
   utils: { sheet_to_csv: vi.fn().mockReturnValue("") },
 }));
 
+// Mock pdfjs-dist so PDF text extraction works in tests without a real worker
+vi.mock("pdfjs-dist/build/pdf.worker.mjs?url", () => ({ default: "/mock-pdf-worker.js" }));
+vi.mock("pdfjs-dist", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: vi.fn().mockReturnValue({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: vi.fn().mockResolvedValue({
+        getTextContent: vi.fn().mockResolvedValue({
+          items: [{ str: "Sample checklist content" }],
+        }),
+      }),
+    }),
+  }),
+}));
+
 describe("ConvertFileModal", () => {
   const onClose = vi.fn();
   const onConvert = vi.fn();
