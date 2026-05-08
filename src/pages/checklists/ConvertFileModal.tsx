@@ -40,6 +40,8 @@ async function extractFileContent(file: File): Promise<
 
 function humanizeConvertError(msg: string): string {
   if (!msg) return "Something went wrong. Please try again.";
+  // Pass Anthropic errors through so we can see the actual message
+  if (msg.startsWith("Anthropic ")) return msg;
   const l = msg.toLowerCase();
   if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
     return "AI service quota reached. Please try again later or contact support.";

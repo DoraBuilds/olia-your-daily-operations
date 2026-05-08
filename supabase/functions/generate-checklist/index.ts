@@ -104,22 +104,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // claude-3-5-sonnet-20241022 is the documented model for the pdfs-2024-09-25 beta.
-    // Haiku does not support document/vision mode; use it only for plain-text input.
     const isDocumentMode = mode === "document";
+    // Sonnet for document/vision; Haiku for plain text (cheaper + faster)
     const model = isDocumentMode ? "claude-3-5-sonnet-20241022" : "claude-3-5-haiku-20241022";
-    const anthropicHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    };
-    if (isDocumentMode) {
-      anthropicHeaders["anthropic-beta"] = "pdfs-2024-09-25";
-    }
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: anthropicHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
       body: JSON.stringify({
         model,
         max_tokens: 2048,
@@ -130,9 +125,12 @@ Deno.serve(async (req) => {
 
     if (!anthropicRes.ok) {
       const err = await anthropicRes.text();
+      console.error(`Anthropic error ${anthropicRes.status}:`, err);
+      // Return 200 so Supabase client puts the body in data (not fnError),
+      // letting the actual Anthropic error reach the frontend.
       return new Response(
-        JSON.stringify({ error: `Anthropic API error (${anthropicRes.status}): ${err}` }),
-        { status: 502, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+        JSON.stringify({ error: `Anthropic ${anthropicRes.status}: ${err}` }),
+        { headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
       );
     }
 
