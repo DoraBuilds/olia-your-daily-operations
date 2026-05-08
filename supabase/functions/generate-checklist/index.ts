@@ -1,6 +1,6 @@
 // Supabase Edge Function — generate-checklist
 // Proxies requests to Anthropic Claude to keep the API key server-side.
-// Called by BuildWithAIModal (mode: "text") and ConvertFileModal (mode: "file").
+// Called by BuildWithAIModal (mode: "text") and ConvertFileModal (mode: "file" | "document").
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
@@ -34,10 +34,16 @@ Return ONLY valid JSON with this exact structure — no explanation, no markdown
 }
 
 Rules:
-- Valid responseType values: text, number, checkbox, datetime, media, signature, person, instruction, multiple_choice
+- Valid responseType values: text, number, checkbox, datetime, media, instruction, multiple_choice
 - Create 2–4 sections with 3–6 questions each
 - Questions must be practical, specific and actionable for hospitality operations
-- Use "number" for temperature/quantity readings, "checkbox" for yes/no compliance checks, "media" for photo evidence, "text" for open notes
+- PRESERVE the source language of the document — if the content is in Spanish, write all question text and choices in Spanish; never translate
+- Use "number" for temperature or quantity readings
+- Use "checkbox" ONLY for simple yes/no to-do-style tasks where the user ticks it off as done (e.g. "Is the equipment clean?", "Has the area been sanitised?")
+- Use "multiple_choice" when the question has specific named answer options (e.g. Sí/No, Bueno/Regular/Malo, Pass/Fail, Good/Fair/Poor). For multiple_choice questions you MUST add "selectionMode": "single" and "choices": ["Option 1", "Option 2"] to the question object
+- Use "media" for photo evidence requirements
+- Use "text" for open-ended written answers
+- If you are not confident about the responseType for a question, add "uncertain": true to that question object so the user can review it
 - If converting a file, extract the actual items/checks from the content and organise them into logical sections`;
 
 Deno.serve(async (req) => {
@@ -55,20 +61,45 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prompt, mode, content } = body as {
+    const { prompt, mode, content, fileBase64, fileType } = body as {
       prompt?: string;
-      mode?: "text" | "file";
+      mode?: "text" | "file" | "document";
       content?: string;
+      fileBase64?: string;
+      fileType?: string;
     };
 
-    let userMessage: string;
-    if (mode === "file" && content) {
-      userMessage = `Convert this document content into a hospitality operations checklist. Extract the tasks and checks and organise them into logical sections:\n\n${content}`;
+    let messages: unknown[];
+
+    if (mode === "document" && fileBase64 && fileType) {
+      // PDF or image — send as vision/document content block
+      const isPdf = fileType === "application/pdf";
+      const contentBlock = isPdf
+        ? { type: "document", source: { type: "base64", media_type: fileType, data: fileBase64 } }
+        : { type: "image", source: { type: "base64", media_type: fileType, data: fileBase64 } };
+      messages = [{
+        role: "user",
+        content: [
+          contentBlock,
+          {
+            type: "text",
+            text: "Convert this document into a hospitality operations checklist. Preserve the source language. Extract all tasks, checks and questions from the document and organise them into logical sections. Return only the JSON.",
+          },
+        ],
+      }];
+    } else if (mode === "file" && content) {
+      messages = [{
+        role: "user",
+        content: `Convert this document content into a hospitality operations checklist. Preserve the source language. Extract the tasks and checks and organise them into logical sections:\n\n${content}`,
+      }];
     } else if (prompt) {
-      userMessage = `Create a hospitality operations checklist for: ${prompt}`;
+      messages = [{
+        role: "user",
+        content: `Create a hospitality operations checklist for: ${prompt}`,
+      }];
     } else {
       return new Response(
-        JSON.stringify({ error: "Provide either prompt (text mode) or content (file mode)" }),
+        JSON.stringify({ error: "Provide either prompt (text mode) or content/fileBase64 (file/document mode)" }),
         { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
       );
     }
@@ -79,12 +110,13 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta": "pdfs-2024-09-25",
       },
       body: JSON.stringify({
         model: "claude-3-5-haiku-20241022",
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userMessage }],
+        messages,
       }),
     });
 
