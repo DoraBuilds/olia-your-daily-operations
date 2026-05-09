@@ -58,7 +58,21 @@ async function extractFileContent(file: File): Promise<
 }
 
 function humanizeConvertError(msg: string): string {
-  return msg || "Something went wrong. Please try again.";
+  if (!msg) return "Something went wrong. Please try again.";
+  const l = msg.toLowerCase();
+  if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
+    return "AI service quota reached. Please try again later or contact support.";
+  }
+  if (l.includes("non-2xx") || l.includes("edge function") || l.includes("502") || l.includes("503")) {
+    return "The AI service is temporarily unavailable. Please try again in a moment.";
+  }
+  if (l.includes("not an array") || l.includes("unexpected response")) {
+    return "The AI returned an unexpected response. Please try again.";
+  }
+  if (l.includes("network") || l.includes("failed to fetch")) {
+    return "Network error. Check your connection and try again.";
+  }
+  return msg;
 }
 
 export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {

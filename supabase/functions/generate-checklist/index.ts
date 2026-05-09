@@ -33,18 +33,39 @@ Return ONLY valid JSON with this exact structure — no explanation, no markdown
   ]
 }
 
-Rules:
-- Valid responseType values: text, number, checkbox, datetime, media, instruction, multiple_choice
-- Create 2–4 sections with 3–6 questions each
-- Questions must be practical, specific and actionable for hospitality operations
-- PRESERVE the source language of the document — if the content is in Spanish, write all question text and choices in Spanish; never translate
-- Use "number" for temperature or quantity readings
-- Use "checkbox" ONLY for simple yes/no to-do-style tasks where the user ticks it off as done (e.g. "Is the equipment clean?", "Has the area been sanitised?")
-- Use "multiple_choice" when the question has specific named answer options (e.g. Sí/No, Bueno/Regular/Malo, Pass/Fail, Good/Fair/Poor). For multiple_choice questions you MUST add "selectionMode": "single" and "choices": ["Option 1", "Option 2"] to the question object
-- Use "media" for photo evidence requirements
-- Use "text" for open-ended written answers
-- If you are not confident about the responseType for a question, add "uncertain": true to that question object so the user can review it
-- If converting a file, extract the actual items/checks from the content and organise them into logical sections`;
+== RESPONSE TYPE RULES (apply in order) ==
+
+1. INSTRUCTION — use when the item is a staff instruction or action step (imperative: "Clean the X", "Place the Y", "Check that Z"), not a question asking for a response. config: {}
+
+2. DATETIME — use when asking for a date or time (e.g. "When was X last done?", "Date of last cleaning", "Record the time"). config: {}
+
+3. NUMBER (plain) — use for numeric quantities (counts, amounts). config: {}
+
+4. NUMBER (temperature) — use when measuring temperature. You MUST add "config": { "mode": "temperature" } to the question object.
+
+5. CHECKBOX — use ONLY for simple yes/no to-do tasks the user ticks off (e.g. "Is the equipment clean?"). config: {}
+
+6. MULTIPLE_CHOICE — use when the question has specific named options (Sí/No, Pass/Fail, Good/Fair/Poor, Bueno/Regular/Malo). You MUST add "selectionMode": "single" and "choices": ["Option 1", "Option 2"]. Do NOT use multiple_choice for open date questions.
+
+7. MEDIA — use when asking for a photo as evidence of a completed task.
+
+8. TEXT — use for open-ended written answers only when no other type fits.
+
+== WARNING RULES (non-negotiable) ==
+
+Add "uncertain": true AND "warning": "<reason>" to any question where:
+- The source had an image or photo attached to an instruction → warning: "The source document had an image attached to this item that could not be transferred. Please add the image manually."
+- The source had conditional logic or triggers (e.g. "if temperature < X, then…") → warning: "The source had conditional logic that could not be converted. Please set up the logic manually using 'Add logic'."
+- The response type is genuinely ambiguous → warning: "Response type uncertain — please review and choose the correct one."
+- A question from the source could not be clearly categorised → warning: "This item could not be fully converted. Please review."
+
+== GENERAL RULES ==
+
+- PRESERVE the source language exactly — if the content is in Spanish, write all text and choices in Spanish; never translate
+- Do NOT duplicate questions — each check appears exactly once
+- When converting a file, extract every item from the source; do not invent new ones
+- For new checklists (not file conversion): create 2–4 sections with 3–6 questions each, practical and specific
+- Omit any field that is empty or not applicable (e.g. omit "config" if it would be {}, omit "choices" if not multiple_choice)`;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight

@@ -97,6 +97,8 @@ export interface QuestionDef {
   mcSetId?: string;
   /** Set by AI conversion when the question type couldn't be determined confidently. */
   uncertain?: boolean;
+  /** Human-readable explanation of what couldn't be converted (shown as a warning in the builder). */
+  warning?: string;
 }
 
 export interface SectionDef {
