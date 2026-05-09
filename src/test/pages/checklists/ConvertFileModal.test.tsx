@@ -149,10 +149,10 @@ describe("ConvertFileModal", () => {
     file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
-    await waitFor(() => expect(screen.getByText("Conversion failed")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Conversion failed/)).toBeInTheDocument());
   });
 
-  it("shows raw error message for rate-limit failures", async () => {
+  it("shows quota error for rate-limit failures", async () => {
     mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: "rate limit exceeded 429" } });
     render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     const dropZone = screen.getByText("Tap to select a file").closest("div")!;
@@ -160,10 +160,10 @@ describe("ConvertFileModal", () => {
     file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
-    await waitFor(() => expect(screen.getByText(/rate limit exceeded/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/quota reached/)).toBeInTheDocument());
   });
 
-  it("shows raw error message for edge function failures", async () => {
+  it("shows unavailable error for edge function failures", async () => {
     mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: "Edge Function returned a non-2xx status code" } });
     render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     const dropZone = screen.getByText("Tap to select a file").closest("div")!;
@@ -171,6 +171,6 @@ describe("ConvertFileModal", () => {
     file.arrayBuffer = () => Promise.resolve(new ArrayBuffer(0));
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
-    await waitFor(() => expect(screen.getByText(/Edge Function/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/temporarily unavailable/)).toBeInTheDocument());
   });
 });

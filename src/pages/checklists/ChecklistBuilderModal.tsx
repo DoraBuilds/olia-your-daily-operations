@@ -644,10 +644,10 @@ export function ChecklistBuilderModal({
                     )}
                   </div>
 
-                  {q.uncertain && (
+                  {(q.uncertain || q.warning) && (
                     <div className="flex items-center gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
                       <AlertTriangle size={13} className="shrink-0" />
-                      <span>Response type uncertain — please choose the correct one below.</span>
+                      <span>{q.warning ?? "Response type uncertain — please review and choose the correct one below."}</span>
                     </div>
                   )}
 
