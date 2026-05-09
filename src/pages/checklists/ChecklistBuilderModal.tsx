@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
@@ -1455,9 +1456,10 @@ export function ChecklistBuilderModal({
     </>
   );
 
-  const discardConfirmDialog = showDiscardConfirm && (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
+  // Rendered via portal so it always appears at viewport centre, even inside scrollable/transformed containers
+  const discardConfirmDialog = showDiscardConfirm ? createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
         <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
         <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you go back.</p>
         <div className="flex gap-3">
@@ -1475,8 +1477,9 @@ export function ChecklistBuilderModal({
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 
   if (asPage) {
     return (
