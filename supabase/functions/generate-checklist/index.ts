@@ -33,10 +33,11 @@ RESPONSE TYPE — pick the FIRST that matches:
 • "datetime" — item asks for a date or time ("When was X last done?", "Date of last cleaning", "¿Cuándo se limpió por última vez?").
 • "number" — item asks for a plain count or quantity.
 • "number" with "config":{"mode":"temperature"} — item asks for a temperature reading. Include the config field.
-• "checkbox" — simple yes/no task to tick off ("Is X clean?", "Has X been done?").
+• "multiple_choice" with choices ["Sí","No"] — use when the source has a YES/NO verification question (e.g. "¿Se ha limpiado X?", "¿Está Y en orden?", "¿Se ha completado Z?") where staff must explicitly record Sí or No. Use the source language for the choices (["Yes","No"] in English, ["Sí","No"] in Spanish). Always add "selectionMode":"single".
+• "multiple_choice" with other choices — ONLY when the source explicitly lists 3+ specific named options (e.g. "Bueno / Regular / Malo", "Pass / Fail / N/A"). Add "selectionMode":"single" and "choices":[…]. DO NOT invent choices.
+• "checkbox" — ONLY for a simple task to tick off with no answer options in the source (e.g. "Limpiar el suelo" as a to-do item, not a question).
 • "media" — item asks for a photo or image as evidence.
 • "text" — open-ended written answer, nothing else fits.
-• "multiple_choice" — ONLY when the source explicitly lists specific named options (e.g. "Good / Fair / Poor", "Sí / No / N/A"). Add "selectionMode":"single" and "choices":["Option 1","Option 2"]. DO NOT use this as a default or fallback.
 
 WARNINGS — add "uncertain":true AND "warning":"<reason>" when:
 • Source had an image/photo attached to this item → "The source document had an image attached to this item that could not be transferred. Please add the image manually."
