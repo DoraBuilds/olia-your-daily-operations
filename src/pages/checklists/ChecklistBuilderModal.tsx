@@ -116,7 +116,8 @@ export function ChecklistBuilderModal({
 
   // Intercept Back/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
-    if (isNewChecklist && hasContent) {
+    // Warn on any unsaved content — new checklists and converted checklists (both have no editId)
+    if (!editId && hasContent) {
       setShowDiscardConfirm(true);
     } else {
       onClose();

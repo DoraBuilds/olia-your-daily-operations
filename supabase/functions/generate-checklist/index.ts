@@ -10,9 +10,9 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SYSTEM_PROMPT = `You are a hospitality operations expert. Generate a practical checklist as a JSON object.
+const SYSTEM_PROMPT = `You are a hospitality operations expert. Generate a checklist as a JSON object.
 
-Return ONLY valid JSON with this exact structure — no explanation, no markdown code fences:
+Return ONLY valid JSON — no explanation, no markdown fences:
 
 {
   "title": "checklist title",
@@ -21,51 +21,33 @@ Return ONLY valid JSON with this exact structure — no explanation, no markdown
       "id": "sec-1",
       "name": "Section Name",
       "questions": [
-        {
-          "id": "q-1",
-          "text": "Question text",
-          "responseType": "checkbox",
-          "required": true,
-          "config": {}
-        }
+        { "id": "q-1", "text": "Question text", "responseType": "checkbox", "required": true }
       ]
     }
   ]
 }
 
-== RESPONSE TYPE RULES (apply in order) ==
+RESPONSE TYPE — pick the FIRST that matches:
 
-1. INSTRUCTION — use when the item is a staff instruction or action step (imperative: "Clean the X", "Place the Y", "Check that Z"), not a question asking for a response. config: {}
+• "instruction" — item tells staff to DO something (imperative: "Clean the X", "Take the Y to Z", "Limpia los carros"). The item is an action, not a question.
+• "datetime" — item asks for a date or time ("When was X last done?", "Date of last cleaning", "¿Cuándo se limpió por última vez?").
+• "number" — item asks for a plain count or quantity.
+• "number" with "config":{"mode":"temperature"} — item asks for a temperature reading. Include the config field.
+• "checkbox" — simple yes/no task to tick off ("Is X clean?", "Has X been done?").
+• "media" — item asks for a photo or image as evidence.
+• "text" — open-ended written answer, nothing else fits.
+• "multiple_choice" — ONLY when the source explicitly lists specific named options (e.g. "Good / Fair / Poor", "Sí / No / N/A"). Add "selectionMode":"single" and "choices":["Option 1","Option 2"]. DO NOT use this as a default or fallback.
 
-2. DATETIME — use when asking for a date or time (e.g. "When was X last done?", "Date of last cleaning", "Record the time"). config: {}
+WARNINGS — add "uncertain":true AND "warning":"<reason>" when:
+• Source had an image/photo attached to this item → "The source document had an image attached to this item that could not be transferred. Please add the image manually."
+• Source had conditional logic or triggers → "The source had conditional logic that could not be converted. Please set up the logic manually using 'Add logic'."
+• Type is genuinely ambiguous → "Response type uncertain — please review."
 
-3. NUMBER (plain) — use for numeric quantities (counts, amounts). config: {}
-
-4. NUMBER (temperature) — use when measuring temperature. You MUST add "config": { "mode": "temperature" } to the question object.
-
-5. CHECKBOX — use ONLY for simple yes/no to-do tasks the user ticks off (e.g. "Is the equipment clean?"). config: {}
-
-6. MULTIPLE_CHOICE — use when the question has specific named options (Sí/No, Pass/Fail, Good/Fair/Poor, Bueno/Regular/Malo). You MUST add "selectionMode": "single" and "choices": ["Option 1", "Option 2"]. Do NOT use multiple_choice for open date questions.
-
-7. MEDIA — use when asking for a photo as evidence of a completed task.
-
-8. TEXT — use for open-ended written answers only when no other type fits.
-
-== WARNING RULES (non-negotiable) ==
-
-Add "uncertain": true AND "warning": "<reason>" to any question where:
-- The source had an image or photo attached to an instruction → warning: "The source document had an image attached to this item that could not be transferred. Please add the image manually."
-- The source had conditional logic or triggers (e.g. "if temperature < X, then…") → warning: "The source had conditional logic that could not be converted. Please set up the logic manually using 'Add logic'."
-- The response type is genuinely ambiguous → warning: "Response type uncertain — please review and choose the correct one."
-- A question from the source could not be clearly categorised → warning: "This item could not be fully converted. Please review."
-
-== GENERAL RULES ==
-
-- PRESERVE the source language exactly — if the content is in Spanish, write all text and choices in Spanish; never translate
-- Do NOT duplicate questions — each check appears exactly once
-- When converting a file, extract every item from the source; do not invent new ones
-- For new checklists (not file conversion): create 2–4 sections with 3–6 questions each, practical and specific
-- Omit any field that is empty or not applicable (e.g. omit "config" if it would be {}, omit "choices" if not multiple_choice)`;
+GENERAL:
+• Preserve the source language exactly. Never translate.
+• Never duplicate questions.
+• When converting a file, extract every item from the source; do not invent new ones.
+• Omit fields that are not needed (no "config" unless temperature, no "choices" unless multiple_choice).`;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
