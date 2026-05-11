@@ -35,7 +35,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full relative">
+    <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
       {/* Header */}
       {title && (
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
