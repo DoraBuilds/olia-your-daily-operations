@@ -279,7 +279,7 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
 
 describe("Admin — LocationModal add-new-location path", () => {
   it("opening 'Add location' form does not show opening hours", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
@@ -287,7 +287,7 @@ describe("Admin — LocationModal add-new-location path", () => {
   });
 
   it("submitting without a name keeps the form open (disabled save button)", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
@@ -300,7 +300,7 @@ describe("Admin — LocationModal add-new-location path", () => {
   });
 
   it("entering a location name enables the save button", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
@@ -345,7 +345,7 @@ describe("Admin — StaffProfileModal DepartmentRolePicker", () => {
 
 describe("Admin — ConfirmModal (delete location)", () => {
   it("clicking location delete button opens a confirm modal", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     // "All locations" appears in both the section label and a plan description. Use getAllByText.
     await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
 
@@ -368,7 +368,7 @@ describe("Admin — ConfirmModal (delete location)", () => {
   });
 
   it("confirm modal Cancel button closes the modal", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
 
     const trashBtns = document.querySelectorAll("button svg.lucide-trash-2");

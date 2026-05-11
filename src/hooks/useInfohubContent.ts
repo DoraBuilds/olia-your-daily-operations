@@ -638,6 +638,25 @@ export function useInfohubContent() {
     onSettled: () => qc.invalidateQueries({ queryKey }),
   });
 
+  const deleteArchivedDocument = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("infohub_documents").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      const previous = qc.getQueryData<InfohubContentData>(queryKey) ?? getDefaultContent();
+      qc.setQueryData<InfohubContentData>(queryKey, (current) => {
+        const data = current ?? previous;
+        return { ...data, archivedLibraryDocs: data.archivedLibraryDocs.filter((doc) => doc.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) qc.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey }),
+  });
+
   const reorderFolders = useMutation({
     mutationFn: async ({ section, orderedIds }: { section: InfohubSection; orderedIds: string[] }) => {
       await Promise.all(
@@ -683,6 +702,7 @@ export function useInfohubContent() {
     deleteFolder,
     archiveDocument,
     restoreDocument,
+    deleteArchivedDocument,
     reorderFolders,
   };
 }
