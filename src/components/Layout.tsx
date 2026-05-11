@@ -73,7 +73,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       {/* Content */}
       <main ref={mainRef} className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
         <div className={cn(shellWidthClass, "px-4 sm:px-6 lg:px-8 xl:px-10")}>
-          <div className="flex min-w-0 items-start gap-6 lg:gap-8">
+          <div className="flex min-w-0 gap-6 lg:gap-8">
             <SidebarNav />
             <div className={cn(contentWidthClass, "min-w-0 space-y-4")}>
               {children}
