@@ -335,7 +335,7 @@ export default function Admin() {
       >
         <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
           {/* Sub-tab pill toggle */}
-          <div className="flex gap-1 bg-muted rounded-2xl p-1 md:hidden">
+          <div className="flex gap-1 bg-muted rounded-2xl p-1">
             {TABS.map(({ key, label }) => (
               <button
                 key={key}
