@@ -10,7 +10,7 @@ export function SidebarNav() {
 
   return (
     <aside className="hidden md:flex md:w-[224px] md:shrink-0">
-      <div className="sticky top-[88px] w-full rounded-[28px] border border-border bg-card/92 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+      <div className="sticky top-4 w-full rounded-[28px] border border-border bg-card/92 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
           Navigate
         </p>
