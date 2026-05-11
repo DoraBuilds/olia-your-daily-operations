@@ -25,7 +25,6 @@ import {
   MoreVertical,
   GripVertical,
   FileText,
-  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
@@ -52,7 +51,6 @@ export default function Infohub() {
     deleteFolder,
     archiveDocument,
     restoreDocument,
-    deleteArchivedDocument,
     reorderFolders,
   } = useInfohubContent();
   const { data: trainingProgress = [], saveProgress } = useTrainingProgress();
@@ -211,9 +209,6 @@ export default function Infohub() {
   const handleRestoreDoc = (id: string) => {
     restoreDocument.mutate(id);
   };
-  const handleDeleteArchivedDoc = (id: string) => {
-    deleteArchivedDocument.mutate(id);
-  };
   const handleSaveAccess = (target: AccessTarget, access: InfohubAccessControl) => {
     if (target.type === "folder") {
       updateFolder.mutate({ id: target.id, access });
@@ -329,7 +324,7 @@ export default function Infohub() {
   };
 
   return (
-    <Layout title="Infohub" subtitle={subtitle}
+    <Layout title="Olia" subtitle={subtitle}
     >
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -526,13 +521,6 @@ export default function Infohub() {
                         className="text-xs text-sage font-medium px-2.5 py-1 rounded-lg hover:bg-sage-light transition-colors shrink-0"
                       >
                         Restore
-                      </button>
-                      <button
-                        onClick={() => handleDeleteArchivedDoc(doc.id)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
-                        title="Delete permanently"
-                      >
-                        <Trash2 size={14} className="text-status-error" />
                       </button>
                     </div>
                   ))}

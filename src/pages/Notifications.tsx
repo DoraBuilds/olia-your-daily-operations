@@ -16,7 +16,7 @@ export default function Notifications() {
 
   return (
     <Layout
-      title="Notifications"
+      title="Olia"
       subtitle="Active operational alerts"
       headerLeft={
         <button
