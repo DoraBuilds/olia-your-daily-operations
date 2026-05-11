@@ -14,6 +14,7 @@ export interface AppNavItem {
   children?: Array<{
     to: string;
     label: string;
+    ownerOnly?: boolean;
   }>;
 }
 
@@ -35,8 +36,10 @@ export const appNavItems: AppNavItem[] = [
     label: "Admin",
     icon: ShieldCheck,
     children: [
-      { to: "/admin/location", label: "My Location" },
-      { to: "/admin/account", label: "Account" },
+      { to: "/admin/location", label: "Locations" },
+      { to: "/admin/users", label: "Users", ownerOnly: true },
+      { to: "/admin/account", label: "Account", ownerOnly: true },
+      { to: "/admin/billing", label: "Billing", ownerOnly: true },
     ],
   },
 ];

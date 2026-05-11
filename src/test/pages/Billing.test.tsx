@@ -78,7 +78,7 @@ beforeEach(() => {
 describe("Billing page", () => {
   it("renders page title 'Billing'", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText("Billing")).toBeInTheDocument();
+    expect(screen.getAllByText("Billing").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders current plan name (Starter)", () => {
