@@ -99,8 +99,11 @@ export default function Admin() {
   const auditLog: AuditLogEntry[] = [];
 
   // UI state
-  const routeTab: "location" | "account" = location.pathname.startsWith("/admin/account") ? "account" : "location";
-  const [activeTab, setActiveTab] = useState<"location" | "account">(routeTab);
+  const routeTab: "location" | "users" | "account" | "billing" =
+    location.pathname.startsWith("/admin/users") ? "users" :
+    location.pathname.startsWith("/admin/account") ? "account" :
+    location.pathname.startsWith("/admin/billing") ? "billing" : "location";
+  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing">(routeTab);
   const [currentLocationId, setCurrentLocationId] = useState("");
 
   // Set default location once data loads
@@ -296,8 +299,12 @@ export default function Admin() {
     : "Admin";
 
   const TABS = [
-    { key: "location" as const, label: "My Location" },
-    ...(isOwner ? [{ key: "account" as const, label: "Account" }] : []),
+    { key: "location" as const, label: "Locations" },
+    ...(isOwner ? [
+      { key: "users" as const, label: "Users" },
+      { key: "account" as const, label: "Account" },
+      { key: "billing" as const, label: "Billing" },
+    ] : []),
   ];
 
   // ── Setup error — navigate away first, then sign out in the background ─────
@@ -332,7 +339,7 @@ export default function Admin() {
             {TABS.map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => navigate(key === "location" ? "/admin/location" : "/admin/account")}
+                onClick={() => navigate(`/admin/${key === "location" ? "location" : key}`)}
                 className={cn(
                   "flex-1 py-2.5 text-xs font-semibold rounded-xl transition-colors tracking-wide",
                   activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
@@ -343,42 +350,21 @@ export default function Admin() {
             ))}
           </div>
 
-          {activeTab === "location" && (
-            <MyLocationTab
-              locations={locations}
-              staffProfiles={staffProfiles}
-              checklists={checklists}
-              roles={staffRoleOptions}
-              currentLocationId={currentLocationId}
-              setCurrentLocationId={setCurrentLocationId}
-              isOwner={isOwner}
-              permissions={permissions}
-              onAddLocation={() => setLocationModal("new")}
-              onEditLocation={loc => setLocationModal(loc)}
-              onUpdateLocation={saveLocation}
-              onAddStaff={() => setStaffModal("new")}
-              onEditStaff={sp => setStaffModal(sp)}
-              onArchiveStaff={archiveStaff}
-              onRestoreStaff={restoreStaff}
-              onDeleteStaff={deleteStaff}
-              onLaunchKiosk={() => navigate(`/kiosk?locationId=${currentLocationId}`)}
-            />
-          )}
-
-          {activeTab === "account" && isOwner && (
-            <AccountTab
-              locations={allLocations}
-              activeLocationIds={effectiveActiveLocationIds}
-              inactiveLocationIds={inactiveLocations.map((location) => location.id)}
-              staffProfiles={staffProfiles}
-              teamMembers={teamMembers}
-              checklists={checklists}
-              onSavePerms={savePerms}
-              onSaveAccount={payload => saveMemberMut.mutateAsync(payload)}
-              departments={departments}
-              setDepartments={setDepartments}
-              auditLog={auditLog}
-              authAccount={authMember ? {
+          {/* Shared AccountTab props */}
+          {(() => {
+            const accountTabProps = isOwner ? {
+              locations: allLocations,
+              activeLocationIds: effectiveActiveLocationIds,
+              inactiveLocationIds: inactiveLocations.map((location) => location.id),
+              staffProfiles,
+              teamMembers,
+              checklists,
+              onSavePerms: savePerms,
+              onSaveAccount: (payload: any) => saveMemberMut.mutateAsync(payload),
+              departments,
+              setDepartments,
+              auditLog,
+              authAccount: authMember ? {
                 id: authMember.id,
                 name: authMember.name,
                 email: user?.email ?? authMember.email,
@@ -388,27 +374,59 @@ export default function Admin() {
                 permissions: authMember.permissions,
                 pin_reset_required: authMember.pin_reset_required ?? false,
                 default_pin: authMember.default_pin ?? null,
-              } : null}
-              authMemberId={authMember?.id}
-              authUserEmail={user?.email}
-              authUserName={authMember?.name}
-              billingUnavailable={billingUnavailable}
-              locationLimit={maxLocations}
-              isLocationOverLimit={isOverLimit}
-              locationGraceEndsAt={graceEndsAt}
-              isGraceActive={isGraceActive}
-              isGraceExpired={isGraceExpired}
-              onAddLocation={() => setLocationModal("new")}
-              onLocationLimitReached={() => setShowLocationLimitModal(true)}
-              onEditLocation={loc => setLocationModal(loc)}
-              onDeleteLocation={deleteLocation}
-              onSaveActiveLocations={locationIds => saveActiveLocationsMut.mutateAsync(locationIds)}
-              savingActiveLocations={saveActiveLocationsMut.isPending}
-              onInviteMember={() => setMemberModal("new")}
-              onEditMember={m => setMemberModal(m)}
-              onDeleteMember={deleteMember}
-            />
-          )}
+              } : null,
+              authMemberId: authMember?.id,
+              authUserEmail: user?.email,
+              authUserName: authMember?.name,
+              billingUnavailable,
+              locationLimit: maxLocations,
+              isLocationOverLimit: isOverLimit,
+              locationGraceEndsAt: graceEndsAt,
+              isGraceActive,
+              isGraceExpired,
+              onAddLocation: () => setLocationModal("new"),
+              onLocationLimitReached: () => setShowLocationLimitModal(true),
+              onEditLocation: (loc: any) => setLocationModal(loc),
+              onDeleteLocation: deleteLocation,
+              onSaveActiveLocations: (locationIds: any) => saveActiveLocationsMut.mutateAsync(locationIds),
+              savingActiveLocations: saveActiveLocationsMut.isPending,
+              onInviteMember: () => setMemberModal("new"),
+              onEditMember: (m: any) => setMemberModal(m),
+              onDeleteMember: deleteMember,
+            } : null;
+
+            return (
+              <>
+                {activeTab === "location" && (
+                  <div className="space-y-4">
+                    <MyLocationTab
+                      locations={locations}
+                      staffProfiles={staffProfiles}
+                      checklists={checklists}
+                      roles={staffRoleOptions}
+                      currentLocationId={currentLocationId}
+                      setCurrentLocationId={setCurrentLocationId}
+                      isOwner={isOwner}
+                      permissions={permissions}
+                      onAddLocation={() => setLocationModal("new")}
+                      onEditLocation={loc => setLocationModal(loc)}
+                      onUpdateLocation={saveLocation}
+                      onAddStaff={() => setStaffModal("new")}
+                      onEditStaff={sp => setStaffModal(sp)}
+                      onArchiveStaff={archiveStaff}
+                      onRestoreStaff={restoreStaff}
+                      onDeleteStaff={deleteStaff}
+                      onLaunchKiosk={() => navigate(`/kiosk?locationId=${currentLocationId}`)}
+                    />
+                    {isOwner && accountTabProps && <AccountTab {...accountTabProps} section="locations" />}
+                  </div>
+                )}
+                {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}
+                {activeTab === "account" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="account" />}
+                {activeTab === "billing" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="billing" />}
+              </>
+            );
+          })()}
         </div>
       </Layout>
 

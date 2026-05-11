@@ -53,6 +53,8 @@ export interface AccountTabProps {
   onInviteMember: () => void;
   onEditMember: (m: TeamMember) => void;
   onDeleteMember: (m: TeamMember) => void;
+  /** Which section to display. Defaults to showing all (legacy). */
+  section?: "account" | "locations" | "users" | "billing";
 }
 
 export function AccountTab({
@@ -60,7 +62,7 @@ export function AccountTab({
   onSaveAccount, departments, setDepartments, auditLog, authAccount, authMemberId, authUserEmail, authUserName,
   billingUnavailable, locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
-  onInviteMember, onEditMember, onDeleteMember,
+  onInviteMember, onEditMember, onDeleteMember, section,
 }: AccountTabProps) {
   const navigate = useNavigate();
   const { plan, planStatus, isActive } = usePlan();
@@ -239,10 +241,12 @@ export function AccountTab({
     }
   };
 
+  const show = (s: "account" | "locations" | "users" | "billing") => !section || section === s;
+
   return (
     <div className="space-y-4">
       {/* My Account + Security — side by side */}
-      <section className="card-surface p-4">
+      {show("account") && <section className="card-surface p-4">
         <div className="flex gap-4">
           {/* Left: My Account */}
           <div className="flex-1 min-w-0 space-y-3">
@@ -335,10 +339,10 @@ export function AccountTab({
             </button>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* All Locations */}
-      <section>
+      {show("locations") && <section>
         {/* Header row: title */}
         <div className="flex items-center justify-between mb-1">
           <p className="section-label">All locations</p>
@@ -494,10 +498,10 @@ export function AccountTab({
             </button>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* Team Members */}
-      <section>
+      {show("users") && <section>
         <div className="flex items-center justify-between mb-1">
           <p className="section-label">Team members ({teamMembers.length + staffProfiles.filter(s => s.status === "active").length})</p>
         </div>
@@ -610,10 +614,10 @@ export function AccountTab({
             </button>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* Department Management */}
-      <section>
+      {show("users") && <section>
         <p className="section-label mb-3">Department management</p>
         <p className="text-xs text-muted-foreground mb-3">
           Staff roles are managed at the department level only.
@@ -717,10 +721,10 @@ export function AccountTab({
             )}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* Billing */}
-      <section>
+      {show("billing") && <section>
         <p className="section-label mb-3">Billing</p>
         <div className="card-surface divide-y divide-border">
           <div className="flex items-start justify-between gap-2 px-4 py-4">
@@ -760,7 +764,7 @@ export function AccountTab({
             )}
           </div>
         </div>
-      </section>
+      </section>}
     </div>
   );
 }
