@@ -7,7 +7,7 @@ export default function Reporting() {
   const initialLocationId = searchParams.get("location") || undefined;
 
   return (
-    <Layout title="Reporting" subtitle="Logs & compliance overview">
+    <Layout title="Olia" subtitle="Logs & compliance overview">
       <ReportingTab initialLocationId={initialLocationId} />
     </Layout>
   );

@@ -125,7 +125,7 @@ describe("Notifications page", () => {
 
   it("renders Notifications page title", () => {
     renderWithProviders(<Notifications />);
-    expect(screen.getByText("Notifications")).toBeInTheDocument();
+    expect(screen.getByText("Olia")).toBeInTheDocument();
   });
 
   it("renders subtitle 'Active operational alerts'", () => {

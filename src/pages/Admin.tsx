@@ -322,7 +322,7 @@ export default function Admin() {
   return (
     <>
       <Layout
-        title="Admin"
+        title="Olia"
         subtitle={userLabel}
         headerLeft={fromKiosk ? (
           <button
