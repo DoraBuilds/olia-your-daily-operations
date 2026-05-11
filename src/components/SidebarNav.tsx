@@ -18,9 +18,7 @@ export function SidebarNav() {
           {appNavItems.map(({ to, label, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);
             const visibleChildren = children?.filter((child) => {
-              if (to === "/admin" && child.to === "/admin/account" && !isOwner) {
-                return false;
-              }
+              if (child.ownerOnly && !isOwner) return false;
               return true;
             }) ?? [];
 

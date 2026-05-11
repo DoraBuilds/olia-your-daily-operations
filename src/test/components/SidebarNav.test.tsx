@@ -34,21 +34,25 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "Training" })).toBeInTheDocument();
   });
 
-  it("always shows Admin child links for owners regardless of active route", () => {
+  it("always shows all Admin child links for owners regardless of active route", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Locations" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Billing" })).toBeInTheDocument();
   });
 
   it("shows Admin child links for owners when Admin is active", () => {
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Locations" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Billing" })).toBeInTheDocument();
   });
 
-  it("hides the Account child link for non-owners", () => {
+  it("hides owner-only child links for non-owners", () => {
     mockUseAuth.mockReturnValue({
       teamMember: {
         id: "tm-2",
@@ -58,11 +62,13 @@ describe("SidebarNav", () => {
 
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Locations" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Billing" })).toBeNull();
   });
 
-  it("hides the Account child link for non-owners even when not on admin route", () => {
+  it("hides owner-only child links for non-owners even when not on admin route", () => {
     mockUseAuth.mockReturnValue({
       teamMember: {
         id: "tm-2",
@@ -72,7 +78,9 @@ describe("SidebarNav", () => {
 
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Locations" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Billing" })).toBeNull();
   });
 });
