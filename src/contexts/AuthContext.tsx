@@ -59,6 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data) {
       setTeamMember(data as TeamMemberProfile);
       setLoading(false);
+      // Fire-and-forget: stamp last_seen_at for returning users.
+      supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("id", userId);
       return;
     }
 

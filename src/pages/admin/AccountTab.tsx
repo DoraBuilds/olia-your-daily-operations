@@ -13,7 +13,7 @@ import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry, type StaffDepartment,
   DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS,
-  getInitials,
+  getInitials, daysAgoTooltip,
 } from "@/lib/admin-repository";
 import { usePlan } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
@@ -524,6 +524,11 @@ export function AccountTab({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{member.name}</p>
                     <p className="text-xs text-muted-foreground">{member.email}</p>
+                    {member.last_seen_at && (
+                      <p className="text-xs text-muted-foreground/60" title={daysAgoTooltip(member.last_seen_at)}>
+                        Last seen {new Date(member.last_seen_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      </p>
+                    )}
                   </div>
                   <span className={cn(
                     "text-xs px-2 py-0.5 rounded-full font-medium",
