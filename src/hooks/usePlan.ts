@@ -13,6 +13,7 @@ interface OrgRecord {
   trial_ends_at: string | null;
   location_grace_period_ends_at: string | null;
   active_location_ids: string[] | null;
+  departments: { name: string }[] | null;
 }
 
 export function usePlan() {
@@ -42,7 +43,7 @@ export function usePlan() {
       const { data, error } = await supabase
         .from("organizations")
         .select(
-          "id, name, plan, plan_status, stripe_customer_id, stripe_subscription_id, trial_ends_at, location_grace_period_ends_at, active_location_ids"
+          "id, name, plan, plan_status, stripe_customer_id, stripe_subscription_id, trial_ends_at, location_grace_period_ends_at, active_location_ids, departments"
         )
         .eq("id", organizationId)
         .single();

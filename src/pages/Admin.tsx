@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type AuditLogEntry,
-  DEFAULT_STAFF_DEPARTMENTS,
   staffDisplayName, getInitials,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,12 +17,12 @@ import {
   useRestoreStaffProfile, useDeleteStaffProfile,
 } from "@/hooks/useStaffProfiles";
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
+import { useDepartments } from "@/hooks/useDepartments";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
-import { cloneDepartments } from "./admin/shared";
 // Re-export parseGoogleOpeningHours so existing import paths keep working
 export { parseGoogleOpeningHours } from "./admin/shared";
 import { MyLocationTab } from "./admin/MyLocationTab";
@@ -94,7 +93,7 @@ export default function Admin() {
   const deleteMemberMut = useDeleteTeamMember();
 
   // Local state (not persisted to DB yet)
-  const [departments, setDepartments] = useState(() => cloneDepartments(DEFAULT_STAFF_DEPARTMENTS));
+  const { departments, setDepartments } = useDepartments();
   const staffRoleOptions = departments.map(d => d.name);
   const auditLog: AuditLogEntry[] = [];
 
