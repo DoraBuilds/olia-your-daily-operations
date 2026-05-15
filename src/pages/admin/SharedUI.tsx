@@ -15,7 +15,7 @@ import {
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type StaffDepartment, type AccountRole,
-  DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS,
+  DEFAULT_PERMISSIONS,
   getRoleDepartment, getInitials, generatePin,
 } from "@/lib/admin-repository";
 import {
@@ -281,11 +281,11 @@ export function TeamMemberModal({
   const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
-  const [pin, setPin] = useState(() => member?.id ? "" : (role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin()));
+  const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
 
   useEffect(() => {
     if (member?.id) return;
-    setPin(role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin());
+    setPin(generatePin());
   }, [member?.id, role]);
 
   const toggleLocation = (id: string) => {
@@ -351,9 +351,7 @@ export function TeamMemberModal({
             </p>
           ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              {role === "Owner"
-                ? `New owner accounts start with PIN ${DEFAULT_ADMIN_PIN} and should change it immediately for security.`
-                : "This PIN is used for kiosk access. Generate one now so the staff member can log in."}
+              {"This PIN is used for kiosk access. Generate one now so the team member can log in."}
             </p>
           )}
           <div className="flex gap-2">

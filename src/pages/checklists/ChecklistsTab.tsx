@@ -4,7 +4,7 @@ import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, C
 import { cn } from "@/lib/utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
-import { useFolders, useSaveFolder, useDeleteFolder, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
+import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
@@ -42,6 +42,7 @@ export function ChecklistsTab() {
   const { data: dbChecklists = [] } = useChecklists();
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
+  const reorderFoldersMut = useReorderFolders();
   const saveChecklistMut = useSaveChecklist();
   const deleteChecklistMut = useDeleteChecklist();
 
@@ -159,17 +160,15 @@ export function ChecklistsTab() {
   };
 
   const moveFolderInList = (folderId: string, targetIdx: number) => {
-    // Visual-only reorder (no DB ordering column yet)
     const siblings = visibleFolders;
     const fromIdx = siblings.findIndex(f => f.id === folderId);
     if (fromIdx < 0 || fromIdx === targetIdx) return;
-    setFolderOrder(prev => {
-      const copy = [...prev];
-      const posA = copy.indexOf(folderId);
-      const posB = copy.indexOf(siblings[targetIdx].id);
-      [copy[posA], copy[posB]] = [copy[posB], copy[posA]];
-      return copy;
-    });
+    const newOrder = [...folderOrder];
+    const posA = newOrder.indexOf(folderId);
+    const posB = newOrder.indexOf(siblings[targetIdx].id);
+    [newOrder[posA], newOrder[posB]] = [newOrder[posB], newOrder[posA]];
+    setFolderOrder(newOrder);
+    reorderFoldersMut.mutate(newOrder.map((id, idx) => ({ id, sort_order: idx })));
   };
 
   const handleContextAction = (action: string) => {

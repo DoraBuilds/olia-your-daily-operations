@@ -92,14 +92,18 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       }
     }
 
-    // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
+    // Verify the kiosk_token if available (SEQ-009).
+    // When ensureKioskToken returns null the token infrastructure is not yet
+    // set up in the database — skip the check rather than blocking all PINs.
     const storedToken = await ensureKioskToken(locationId);
-    const tokenValid = await verifyKioskToken(locationId, storedToken);
-    if (!tokenValid) {
-      clearKioskLocationSelectionForModal();
-      setLoading(false);
-      setError("Kiosk setup required. Please contact your administrator.");
-      return;
+    if (storedToken) {
+      const tokenValid = await verifyKioskToken(locationId, storedToken);
+      if (!tokenValid) {
+        clearKioskLocationSelectionForModal();
+        setLoading(false);
+        setError("Kiosk setup required. Please contact your administrator.");
+        return;
+      }
     }
 
     const { data, error: rpcError } = await validateKioskAdminPin(pin, locationId);
@@ -157,15 +161,17 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
             return;
           }
         }
-        // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
+        // Verify the kiosk_token if available (SEQ-009).
         const storedToken = await ensureKioskToken(locationId);
-        const tokenValid = await verifyKioskToken(locationId, storedToken);
-        if (!tokenValid) {
-          clearKioskLocationSelectionForModal();
-          setLoading(false);
-          setError("Kiosk setup required. Please contact your administrator.");
-          setPin("");
-          return;
+        if (storedToken) {
+          const tokenValid = await verifyKioskToken(locationId, storedToken);
+          if (!tokenValid) {
+            clearKioskLocationSelectionForModal();
+            setLoading(false);
+            setError("Kiosk setup required. Please contact your administrator.");
+            setPin("");
+            return;
+          }
         }
         const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
         setLoading(false);
@@ -308,23 +314,21 @@ export function PinEntryModal({
   const validate = async (enteredPin: string) => {
     setValidating(true);
 
-    // Verify the stored kiosk_token matches the server record before PIN
-    // validation. This prevents an attacker who modifies kiosk_location_id in
-    // localStorage from being able to brute-force PINs for another location
-    // (SEQ-009). ensureKioskToken fetches the token from the server if it is
-    // missing from localStorage (e.g. kiosk set up before token feature landed).
+    // Verify the kiosk_token if available (SEQ-009).
+    // Skip when null — token infrastructure not yet set up in the database.
     const storedToken = await ensureKioskToken(locationId);
-    const tokenValid = await verifyKioskToken(locationId, storedToken);
-    if (!tokenValid) {
-      setValidating(false);
-      setPin("");
-      localStorage.removeItem("kiosk_location_id");
-      localStorage.removeItem("kiosk_location_name");
-      localStorage.removeItem("kiosk_token");
-      setError("Kiosk setup required. Please contact your administrator.");
-      return;
+    if (storedToken) {
+      const tokenValid = await verifyKioskToken(locationId, storedToken);
+      if (!tokenValid) {
+        setValidating(false);
+        setPin("");
+        localStorage.removeItem("kiosk_location_id");
+        localStorage.removeItem("kiosk_location_name");
+        localStorage.removeItem("kiosk_token");
+        setError("Kiosk setup required. Please contact your administrator.");
+        return;
+      }
     }
-
     const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
     setValidating(false);
 

@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Billing from "@/pages/Billing";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { renderWithProviders } from "../test-utils";
@@ -45,6 +45,35 @@ vi.mock("@/hooks/usePlan", () => ({
 
 vi.mock("@/hooks/useIsNativeApp", () => ({
   useIsNativeApp: () => mockUseIsNativeApp(),
+}));
+
+vi.mock("@/lib/runtime-config", () => ({
+  runtimeConfig: {
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "test-anon-key",
+    publicSiteUrl: "http://localhost:8080",
+    stripe: {
+      priceIds: {
+        starter: { monthly: "price_starter_monthly", annual: "price_starter_annual" },
+        growth: { monthly: "price_growth_monthly", annual: "price_growth_annual" },
+      },
+      customerPortalUrl: null,
+    },
+    googleMapsApiKey: "",
+  },
+  getRuntimeConfig: () => ({
+    supabaseUrl: "https://test.supabase.co",
+    supabaseAnonKey: "test-anon-key",
+    publicSiteUrl: "http://localhost:8080",
+    stripe: {
+      priceIds: {
+        starter: { monthly: "price_starter_monthly", annual: "price_starter_annual" },
+        growth: { monthly: "price_growth_monthly", annual: "price_growth_annual" },
+      },
+      customerPortalUrl: null,
+    },
+    googleMapsApiKey: "",
+  }),
 }));
 
 beforeEach(() => {
@@ -178,6 +207,29 @@ describe("Billing page", () => {
     expect(
       await screen.findByText(/activating your plan/i)
     ).toBeInTheDocument();
+  });
+
+  it("calls create-checkout-session when upgrade button is clicked", async () => {
+    mockInvoke.mockResolvedValueOnce({ data: { url: "https://checkout.stripe.com/pay/test" }, error: null });
+    renderWithProviders(<Billing />);
+    const upgradeBtn = screen.getByText("Upgrade to Growth");
+    fireEvent.click(upgradeBtn);
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("create-checkout-session", expect.objectContaining({
+        body: expect.objectContaining({ planName: "growth" }),
+      }));
+    });
+  });
+
+  it("shows an error when checkout session returns no URL", async () => {
+    // data returned but no url field — previously a silent no-op, now shows an error
+    mockInvoke.mockResolvedValueOnce({ data: {}, error: null });
+    renderWithProviders(<Billing />);
+    const upgradeBtn = screen.getByText("Upgrade to Growth");
+    fireEvent.click(upgradeBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/no checkout url returned/i)).toBeInTheDocument();
+    });
   });
 
   it("shows the activating banner immediately after checkout redirect", () => {

@@ -102,6 +102,7 @@ vi.mock("@/hooks/useChecklists", () => {
     useChecklists: () => ({ data: CHECKLISTS, isLoading: false }),
     useSaveFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteFolder: () => ({ mutate: vi.fn() }),
+    useReorderFolders: () => ({ mutate: vi.fn() }),
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
   };
