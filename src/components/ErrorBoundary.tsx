@@ -28,11 +28,25 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Log to console in development; swap for a real error tracker in prod
     console.error("[ErrorBoundary] Caught error:", error, info.componentStack);
+
+    // Lazy-loaded chunk fails when a new deploy changes the filename hashes
+    // while an old version of the app is still open in a browser tab.
+    // Detect this and do one hard reload to pick up the new asset manifest.
+    // A sessionStorage flag prevents an infinite reload loop.
+    const isChunkError =
+      error?.message?.includes("Failed to fetch dynamically imported module") ||
+      error?.message?.includes("Importing a module script failed") ||
+      error?.name === "ChunkLoadError";
+
+    if (isChunkError && !sessionStorage.getItem("chunk_reload_attempted")) {
+      sessionStorage.setItem("chunk_reload_attempted", "1");
+      window.location.reload();
+    }
   }
 
   handleReset = () => {
+    sessionStorage.removeItem("chunk_reload_attempted");
     this.setState({ hasError: false, errorMessage: "" });
   };
 
