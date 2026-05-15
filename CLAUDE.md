@@ -51,6 +51,16 @@ Excluded from coverage (generated/bootstrap — not our business logic):
 
 **Every new feature or bug fix must ship with tests that keep coverage at or above 95%.**
 
+#### What coverage does NOT guarantee
+
+95% line coverage means every line ran — it does not mean every *sequence of events* was tested. The most dangerous bugs in this codebase live in **state transitions**, not in individual lines. When writing tests for stateful code (auth, loading flags, mutations), always ask: "have I tested what happens if this state was already set to X before this event fired?"
+
+Two rules that catch the bugs coverage misses:
+
+1. **Loading state ownership** — any async function that should block the UI must set `loading = true` at its own entry point, regardless of what the caller already did. Never rely on an external caller having set it.
+
+2. **Sequence tests, not just end-state tests** — for auth and async flows, write at least one test that asserts the *intermediate* state (e.g. `loading = true` while the fetch is in flight), not only the final result. Use a deferred promise to pause the mock mid-flight and inspect state.
+
 ### E2E Tests — 100% passing
 
 Maestro flows in `.maestro/flows/` must all pass before a milestone is signed off.

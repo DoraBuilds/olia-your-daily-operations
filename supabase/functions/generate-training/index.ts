@@ -2,6 +2,7 @@
 // Proxies training-module requests to Anthropic Claude and returns a JSON module.
 
 import { buildTrainingPrompt, parseTrainingModule, type TrainingCategory } from "./training.ts";
+import { enforcePaidPlan } from "../_shared/plan-guard.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
@@ -40,6 +41,9 @@ Deno.serve(async (req) => {
       { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
     );
   }
+
+  const planBlock = await enforcePaidPlan(req.headers.get("authorization"));
+  if (planBlock) return planBlock;
 
   try {
     const body = await req.json();
