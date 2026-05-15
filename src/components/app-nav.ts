@@ -14,6 +14,7 @@ export interface AppNavItem {
   children?: Array<{
     to: string;
     label: string;
+    ownerOnly?: boolean;
   }>;
 }
 
@@ -21,22 +22,6 @@ export const appNavItems: AppNavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/checklists", label: "Checklists", icon: ClipboardList },
   { to: "/reporting", label: "Reporting", icon: BarChart3 },
-  {
-    to: "/infohub",
-    label: "Infohub",
-    icon: BookOpen,
-    children: [
-      { to: "/infohub/library", label: "Library" },
-      { to: "/infohub/training", label: "Training" },
-    ],
-  },
-  {
-    to: "/admin",
-    label: "Admin",
-    icon: ShieldCheck,
-    children: [
-      { to: "/admin/location", label: "My Location" },
-      { to: "/admin/account", label: "Account" },
-    ],
-  },
+  { to: "/infohub", label: "Infohub", icon: BookOpen },
+  { to: "/admin", label: "Admin", icon: ShieldCheck },
 ];

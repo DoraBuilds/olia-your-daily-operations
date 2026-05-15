@@ -9,8 +9,8 @@ export function SidebarNav() {
   const isOwner = teamMember?.role === "Owner";
 
   return (
-    <aside className="hidden md:flex md:w-[224px] md:shrink-0">
-      <div className="sticky top-[88px] w-full rounded-[28px] border border-border bg-card/92 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+    <aside className="hidden md:flex md:w-[224px] md:shrink-0 pt-5 pb-8">
+      <div className="w-full h-fit rounded-[28px] border border-border bg-card/92 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
           Navigate
         </p>
@@ -18,9 +18,7 @@ export function SidebarNav() {
           {appNavItems.map(({ to, label, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);
             const visibleChildren = children?.filter((child) => {
-              if (to === "/admin" && child.to === "/admin/account" && !isOwner) {
-                return false;
-              }
+              if (child.ownerOnly && !isOwner) return false;
               return true;
             }) ?? [];
 

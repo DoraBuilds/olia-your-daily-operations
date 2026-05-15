@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -35,44 +35,51 @@ function RouteLoadingFallback() {
   );
 }
 
+const router = createBrowserRouter(
+  [
+    { path: "/", element: <Landing /> },
+    { path: "/kiosk", element: <Kiosk /> },
+    { path: "/signup", element: <Signup /> },
+    { path: "/login", element: <Login /> },
+    { path: "/auth/callback", element: <AuthCallback /> },
+    { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+    { path: "/notifications", element: <ProtectedRoute><Notifications /></ProtectedRoute> },
+    { path: "/checklists/*", element: <ProtectedRoute><Checklists /></ProtectedRoute> },
+    { path: "/reporting", element: <ProtectedRoute><Reporting /></ProtectedRoute> },
+    { path: "/infohub", element: <Navigate to="/infohub/library" replace /> },
+    { path: "/infohub/library/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
+    { path: "/infohub/training/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
+    { path: "/training/*", element: <Navigate to="/infohub/training" replace /> },
+    { path: "/maintenance", element: <Navigate to="/dashboard" replace /> },
+    { path: "/admin", element: <Navigate to="/admin/location" replace /> },
+    { path: "/admin/location", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+    { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+    { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+    { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+    { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
+    { path: "*", element: <NotFound /> },
+  ],
+  {
+    basename: import.meta.env.BASE_URL,
+    future: routerFutureFlags,
+  }
+);
+
 const App = () => (
   <ErrorBoundary>
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL} future={routerFutureFlags}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <ErrorBoundary>
             <Suspense fallback={<RouteLoadingFallback />}>
-              <Routes>
-                {/* Public landing page — unauthenticated */}
-                <Route path="/" element={<Landing />} />
-                <Route path="/kiosk" element={<Kiosk />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/checklists/*" element={<ProtectedRoute><Checklists /></ProtectedRoute>} />
-                <Route path="/reporting" element={<ProtectedRoute><Reporting /></ProtectedRoute>} />
-                <Route path="/infohub" element={<Navigate to="/infohub/library" replace />} />
-                <Route path="/infohub/library/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
-                <Route path="/infohub/training/*" element={<ProtectedRoute><Infohub /></ProtectedRoute>} />
-                <Route path="/training/*" element={<Navigate to="/infohub/training" replace />} />
-                <Route path="/maintenance" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/admin" element={<Navigate to="/admin/location" replace />} />
-                <Route path="/admin/location" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                <Route path="/admin/account" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <RouterProvider router={router} />
             </Suspense>
           </ErrorBoundary>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 

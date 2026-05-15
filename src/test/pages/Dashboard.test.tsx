@@ -99,20 +99,18 @@ describe("Dashboard page", () => {
     vi.useRealTimers();
   });
 
-  it("renders a greeting (Good morning / Good afternoon / Good evening)", () => {
-    renderWithProviders(<Dashboard />);
-    const greeting =
-      screen.queryByText(/Good morning/i) ||
-      screen.queryByText(/Good afternoon/i) ||
-      screen.queryByText(/Good evening/i);
-    expect(greeting).not.toBeNull();
-  });
-
-  it("renders greeting with teamMember name in h1", () => {
+  it("renders the dashboard greeting", () => {
     renderWithProviders(<Dashboard />);
     const h1 = document.getElementById("dashboard-greeting");
     expect(h1).not.toBeNull();
-    expect(h1?.textContent).toMatch(/Sarah/);
+    expect(h1?.textContent).toContain("Here's what's happening today");
+  });
+
+  it("renders greeting h1 without user name", () => {
+    renderWithProviders(<Dashboard />);
+    const h1 = document.getElementById("dashboard-greeting");
+    expect(h1).not.toBeNull();
+    expect(h1?.textContent).toBe("Here's what's happening today");
   });
 
   it("renders stat strip with labels Checklists, Alerts, Overdue", () => {

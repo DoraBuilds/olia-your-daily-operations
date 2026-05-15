@@ -3,9 +3,40 @@ import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
+import pdfjsWorkerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 
-/** Extracts readable text from CSV/Excel files using SheetJS. For PDF/images, returns the filename as context. */
-async function extractFileContent(file: File): Promise<string> {
+/** Reads a file as a base64-encoded string. */
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+/** Extracts text from a PDF using pdfjs-dist (client-side, no API required). */
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items
+      .filter((item: any) => "str" in item)
+      .map((item: any) => item.str)
+      .join(" ") + "\n";
+  }
+  return text.trim();
+}
+
+/** Extracts readable text from CSV/Excel/PDF files. For images, returns base64 for Claude's vision API. */
+async function extractFileContent(file: File): Promise<
+  | { type: "text"; content: string }
+  | { type: "document"; base64: string; mediaType: string }
+> {
   if (/\.(csv|xlsx|xls)$/i.test(file.name)) {
     const XLSX = await import("xlsx");
     const buffer = await file.arrayBuffer();
@@ -15,10 +46,15 @@ async function extractFileContent(file: File): Promise<string> {
       content += `Sheet: ${sheet}\n`;
       content += XLSX.utils.sheet_to_csv(workbook.Sheets[sheet]) + "\n\n";
     });
-    return content.trim() || `File: ${file.name}`;
+    return { type: "text", content: content.trim() || `File: ${file.name}` };
   }
-  // PDF / images: send filename + type as context — Claude can still generate a relevant checklist
-  return `Document: "${file.name}" (${file.type || "unknown type"}) — generate a practical hospitality operations checklist based on this document's name and type.`;
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+    const text = await extractPdfText(file);
+    return { type: "text", content: text || `File: ${file.name}` };
+  }
+  // Images — send as vision document
+  const base64 = await fileToBase64(file);
+  return { type: "document", base64, mediaType: file.type || "image/jpeg" };
 }
 
 function humanizeConvertError(msg: string): string {
@@ -27,19 +63,16 @@ function humanizeConvertError(msg: string): string {
   if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
     return "AI service quota reached. Please try again later or contact support.";
   }
-  if (l.includes("non-2xx") || l.includes("edge function") || l.includes("500") || l.includes("502") || l.includes("503") || l.includes("unavailable")) {
+  if (l.includes("non-2xx") || l.includes("edge function") || l.includes("502") || l.includes("503")) {
     return "The AI service is temporarily unavailable. Please try again in a moment.";
   }
-  if (l.includes("parse") || l.includes("corrupt") || l.includes("invalid file") || l.includes("unsupported")) {
-    return "Could not read this file. Try saving as .xlsx or .csv and uploading again.";
-  }
-  if (l.includes("unexpected response") || l.includes("invalid json") || l.includes("not an array")) {
+  if (l.includes("not an array") || l.includes("unexpected response")) {
     return "The AI returned an unexpected response. Please try again.";
   }
-  if (l.includes("network") || l.includes("fetch")) {
+  if (l.includes("network") || l.includes("failed to fetch")) {
     return "Network error. Check your connection and try again.";
   }
-  return "Something went wrong. Please try again.";
+  return msg;
 }
 
 export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {
@@ -64,10 +97,13 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
     setConverting(true);
     setError(null);
     try {
-      const content = await extractFileContent(file);
+      const extracted = await extractFileContent(file);
+      const body = extracted.type === "text"
+        ? { mode: "file", content: extracted.content }
+        : { mode: "document", fileBase64: extracted.base64, fileType: extracted.mediaType };
       const { data, error: fnError } = await supabase.functions.invoke(
         "generate-checklist",
-        { body: { mode: "file", content } }
+        { body }
       );
       if (fnError) throw new Error(fnError.message);
       if (data?.error) throw new Error(data.error);

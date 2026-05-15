@@ -281,7 +281,11 @@ export default function Billing() {
 
       // Application-level errors are in data.error (Stripe not configured, etc.)
       if (data?.error) throw new Error(data.error);
-      if (data?.url)   window.location.href = data.url;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned. Please try again or contact support at hello@olia.app.");
+      }
     } catch (e: any) {
       const raw: string = e?.message ?? "Something went wrong. Please try again.";
       // Stripe not configured → friendly contact-us message
@@ -318,7 +322,7 @@ export default function Billing() {
   if (isNative) {
     return (
       <Layout
-        title="Billing"
+        title="Olia"
         subtitle="Manage your plan"
         headerLeft={
           <button
@@ -353,7 +357,7 @@ export default function Billing() {
 
   return (
     <Layout
-      title="Billing"
+      title="Olia"
       subtitle="Manage your plan"
       headerLeft={
         <button

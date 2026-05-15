@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
@@ -24,6 +25,19 @@ import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
+
+const DRAFT_KEY = "olia_checklist_draft";
+
+function loadDraft(): { title: string; sections: SectionDef[] } | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function clearChecklistDraft() {
+  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
 
 const responseTypeLabel = (type: ResponseType) => RESPONSE_TYPES.find(r => r.key === type)?.label || "Multiple choice";
 const getQuestionChoices = (q: QuestionDef) => q.choices?.length
@@ -66,7 +80,11 @@ export function ChecklistBuilderModal({
   const { data: teamMembers = [] } = useTeamMembers();
   const imgInputRef = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const [title, setTitle] = useState(initialTitle || "");
+  // For new checklists with no pre-filled content, restore from sessionStorage draft (survives tab switches / page reloads)
+  const isNewChecklist = !editId && !initialTitle && (!initialSections || initialSections.length === 0);
+  const draft = isNewChecklist ? loadDraft() : null;
+
+  const [title, setTitle] = useState(draft?.title ?? initialTitle ?? "");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(
     initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
@@ -87,9 +105,31 @@ export function ChecklistBuilderModal({
     initialLocationIds?.length ? initialLocationIds : [],
   );
   const [locationSearch, setLocationSearch] = useState("");
-  const [sections, setSections] = useState<SectionDef[]>(initialSections || [{
-    id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
-  }]);
+  const [sections, setSections] = useState<SectionDef[]>(
+    draft?.sections ?? initialSections ?? [{
+      id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
+    }]
+  );
+
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
+
+  // Intercept Back/X when there's unsaved content — show a confirmation first
+  const handleRequestClose = () => {
+    // Warn on any unsaved content — new checklists and converted checklists (both have no editId)
+    if (!editId && hasContent) {
+      setShowDiscardConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  // Autosave draft to sessionStorage while editing a new checklist
+  useEffect(() => {
+    if (!isNewChecklist) return;
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title, sections })); } catch { /* ignore */ }
+  }, [title, sections, isNewChecklist]);
   const [showResponsePicker, setShowResponsePicker] = useState<
     | { scope: "main"; sectionIdx: number; questionIdx: number }
     | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
@@ -266,6 +306,7 @@ export function ChecklistBuilderModal({
         createdAt: new Date().toISOString().slice(0, 10),
       } as any);
     }
+    clearChecklistDraft();
     onClose();
   };
 
@@ -276,7 +317,7 @@ export function ChecklistBuilderModal({
       {/* Header bar */}
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
         {asPage ? (
-          <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
         ) : (
@@ -288,7 +329,7 @@ export function ChecklistBuilderModal({
         {asPage ? (
           <div className="w-16" />
         ) : (
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={handleRequestClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
             <X size={18} className="text-muted-foreground" />
           </button>
         )}
@@ -604,6 +645,13 @@ export function ChecklistBuilderModal({
                       </button>
                     )}
                   </div>
+
+                  {(q.uncertain || q.warning) && (
+                    <div className="flex items-center gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
+                      <AlertTriangle size={13} className="shrink-0" />
+                      <span>{q.warning ?? "Response type uncertain — please review and choose the correct one below."}</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <button
@@ -1362,6 +1410,7 @@ export function ChecklistBuilderModal({
                 choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                 choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                 selectionMode: type === "multiple_choice" ? "single" : undefined,
+                uncertain: undefined,
               });
             } else {
               const { sectionIdx, questionIdx, ruleIdx, triggerIdx } = showResponsePicker;
@@ -1407,6 +1456,31 @@ export function ChecklistBuilderModal({
     </>
   );
 
+  // Rendered via portal so it always appears at viewport centre, even inside scrollable/transformed containers
+  const discardConfirmDialog = showDiscardConfirm ? createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+      <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
+        <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
+        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you go back.</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowDiscardConfirm(false)}
+            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={() => { clearChecklistDraft(); onClose(); }}
+            className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   if (asPage) {
     return (
       <>
@@ -1414,6 +1488,7 @@ export function ChecklistBuilderModal({
           {formContent}
         </div>
         {subModals}
+        {discardConfirmDialog}
       </>
     );
   }
@@ -1429,6 +1504,7 @@ export function ChecklistBuilderModal({
         </div>
       </div>
       {subModals}
+      {discardConfirmDialog}
     </>
   );
 }

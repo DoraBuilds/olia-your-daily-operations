@@ -103,7 +103,9 @@ export default function Login() {
       return;
     }
 
-    navigate("/admin", { replace: true });
+    // Let the useEffect(user → navigate) handle the redirect once AuthContext
+    // confirms the session — avoids racing ProtectedRoute which sees user=null
+    // before SIGNED_IN is processed and would redirect straight to /login.
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -30,10 +30,14 @@ export default function Signup() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Already authenticated → go to admin (new users add their first location there)
+  // Already authenticated → go to admin (new users add their first location there).
+  // Skip when reason=account-reset: we arrived here from Admin's setupError handler
+  // which navigated here before calling signOut. The user is still set at this
+  // moment — if we redirect back to /admin we'd create an infinite loop. The
+  // signOut call in Admin.tsx fires in the background and will clear the user.
   useEffect(() => {
-    if (user) navigate("/admin", { replace: true });
-  }, [user, navigate]);
+    if (user && !accountReset) navigate("/admin", { replace: true });
+  }, [user, navigate, accountReset]);
 
   const isFormValid =
     businessName.trim().length > 0 &&
@@ -117,7 +121,9 @@ export default function Signup() {
     }
 
     localStorage.setItem(DEFAULT_ADMIN_PIN_NOTICE_KEY, "1");
-    navigate("/admin", { replace: true });
+    // Don't navigate here — let the useEffect below react to user being set
+    // in AuthContext. Navigating immediately races with ProtectedRoute which
+    // sees user=null before the SIGNED_IN event is processed and redirects to /login.
   };
 
   const handleResendCode = async () => {

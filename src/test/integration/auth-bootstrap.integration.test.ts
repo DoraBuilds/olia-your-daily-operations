@@ -316,14 +316,10 @@ describe("AuthContext bootstrap integration", () => {
   // ── First-time user — org created → teamMember populated ──────────────────
 
   it("populates teamMember.organization_id after setup_new_organization, so location saves cannot hit the !teamMember guard", async () => {
-    // First single() call returns null (no existing row).
-    // After RPC, the second single() call returns the newly created row.
-    let fetchCount = 0;
-    mockTeamMemberSingle.mockImplementation(async () => {
-      fetchCount += 1;
-      if (fetchCount === 1) return { data: null, error: null };
-      return {
-        data: {
+    // The RPC now returns the team_member row directly — no re-fetch needed.
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        team_member: {
           id: "user-new-3",
           organization_id: "org-new-3",
           name: "Brand New Owner",
@@ -331,9 +327,11 @@ describe("AuthContext bootstrap integration", () => {
           role: "Owner",
           location_ids: [],
           permissions: {},
+          pin_reset_required: true,
         },
-        error: null,
-      };
+        existed: false,
+      },
+      error: null,
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper: makeWrapper() });
@@ -356,9 +354,10 @@ describe("AuthContext bootstrap integration", () => {
     expect(result.current.setupError).toBeNull();
   });
 
-  it("sets setupError when team_member row is missing after setup_new_organization succeeds", async () => {
-    // Both single() calls return null — RPC ran but row is not visible yet (RLS race)
-    mockTeamMemberSingle.mockResolvedValue({ data: null, error: { message: "no rows" } });
+  it("sets setupError when setup_new_organization returns no team_member data", async () => {
+    // RPC succeeded but returned no team_member key (should not happen in practice,
+    // but guards against a future schema mismatch).
+    mockRpc.mockResolvedValueOnce({ data: {}, error: null });
 
     const { result } = renderHook(() => useAuth(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));

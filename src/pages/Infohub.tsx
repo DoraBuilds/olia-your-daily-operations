@@ -324,7 +324,7 @@ export default function Infohub() {
   };
 
   return (
-    <Layout title="Infohub" subtitle={subtitle}
+    <Layout title="Olia" subtitle={subtitle}
     >
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -347,7 +347,7 @@ export default function Infohub() {
       </div>
 
       {/* Sub-tab toggle */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1 md:hidden">
+      <div className="flex gap-1 bg-muted rounded-xl p-1">
         {([
           { key: "library" as const, label: "Library", icon: BookOpen },
           { key: "training" as const, label: "Training", icon: GraduationCap },
