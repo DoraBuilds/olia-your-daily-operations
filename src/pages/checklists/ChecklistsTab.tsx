@@ -218,14 +218,12 @@ export function ChecklistsTab() {
       <ChecklistBuilderModal
         asPage
         onClose={discardAndClose}
-        onAdd={item => {
-          const locationIds = item.location_ids ?? null;
-          saveChecklistMut.mutate({
-            id: "",
+        onAdd={async item => {
+          await saveChecklistMut.mutateAsync({
             title: item.title,
             folder_id: currentFolder,
             location_id: item.location_id ?? null,
-            location_ids: locationIds,
+            location_ids: item.location_ids ?? null,
             start_date: item.start_date ?? null,
             sections: item.sections ?? [],
             schedule: item.schedule ?? null,

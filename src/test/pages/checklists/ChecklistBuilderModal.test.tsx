@@ -144,13 +144,14 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it("calls onAdd when title is filled and Create is clicked", () => {
+  it("calls onAdd when title is filled and Create is clicked", async () => {
+    onAdd.mockResolvedValue(undefined);
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const titleInput = screen.getByPlaceholderText(/Morning Opening Checklist/);
     fireEvent.change(titleInput, { target: { value: "New Checklist" } });
     fireEvent.click(screen.getByText("Create checklist"));
-    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: "New Checklist" }));
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: "New Checklist" })));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it("close button calls onClose", () => {

@@ -55,7 +55,7 @@ const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
 
 interface ChecklistBuilderModalProps {
   onClose: () => void;
-  onAdd: (item: ChecklistItem) => void;
+  onAdd: (item: ChecklistItem) => Promise<void>;
   onUpdate?: (id: string, item: Partial<ChecklistItem>) => Promise<void>;
   initialTitle?: string;
   initialSections?: SectionDef[];
@@ -319,28 +319,34 @@ export function ChecklistBuilderModal({
       location_ids: isAllLocations ? null : selectedIds,
     };
 
-    if (editId && onUpdate) {
-      setIsSaving(true);
-      try {
-        await onUpdate(editId, payload);
-        clearChecklistDraft();
-        onClose();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : (err as any)?.message;
+    const toastRlsError = (err: unknown) => {
+      const msg: string = err instanceof Error ? err.message : (err as any)?.message ?? "";
+      if (msg.toLowerCase().includes("row-level security") || msg.toLowerCase().includes("rls")) {
+        toast.error("Could not save — you may have reached your plan's checklist limit. Delete unused checklists to free up space.");
+      } else {
         toast.error(msg || "Could not save checklist — please try again.");
-      } finally {
-        setIsSaving(false);
       }
-    } else {
-      onAdd({
-        id: `cl-${Date.now()}`,
-        ...payload,
-        type: "checklist",
-        folderId: null,
-        createdAt: new Date().toISOString().slice(0, 10),
-      } as any);
+    };
+
+    setIsSaving(true);
+    try {
+      if (editId && onUpdate) {
+        await onUpdate(editId, payload);
+      } else {
+        await onAdd({
+          id: `cl-${Date.now()}`,
+          ...payload,
+          type: "checklist",
+          folderId: null,
+          createdAt: new Date().toISOString().slice(0, 10),
+        } as any);
+      }
       clearChecklistDraft();
       onClose();
+    } catch (err) {
+      toastRlsError(err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
