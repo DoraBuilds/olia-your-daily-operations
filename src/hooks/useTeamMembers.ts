@@ -11,7 +11,7 @@ export function useTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required, last_seen_at")
+        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required, last_seen_at, pin_plaintext")
         .order("name");
       if (error) throw error;
       return ((data ?? []) as any[])
