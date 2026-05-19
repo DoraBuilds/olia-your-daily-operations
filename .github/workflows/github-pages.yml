@@ -101,6 +101,7 @@ jobs:
           VITE_STRIPE_PRICE_GROWTH_ANNUAL: ${{ vars.VITE_STRIPE_PRICE_GROWTH_ANNUAL }}
           VITE_STRIPE_CUSTOMER_PORTAL_URL: ${{ vars.VITE_STRIPE_CUSTOMER_PORTAL_URL }}
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+          VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
         run: bun run build
 
       - name: Upload Pages artifact

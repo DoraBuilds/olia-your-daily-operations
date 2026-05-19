@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -9,6 +10,17 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 import { restoreGitHubPagesRoute as restoreGitHubPagesRoutePath } from "@/lib/github-pages-routing";
+
+// ── Sentry error monitoring ───────────────────────────────────────────────────
+// Only initialises when VITE_SENTRY_DSN is set (skipped in local dev).
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    integrations: [Sentry.browserTracingIntegration()],
+    tracesSampleRate: 0.1,
+  });
+}
 
 function restoreGitHubPagesRoute() {
   const targetRoute = restoreGitHubPagesRoutePath(
@@ -35,4 +47,8 @@ if (Capacitor.isNativePlatform()) {
   Keyboard.setAccessoryBarVisible({ isVisible: false });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <Sentry.ErrorBoundary fallback={<p style={{ padding: "2rem", fontFamily: "sans-serif" }}>Something went wrong. Please refresh the page.</p>}>
+    <App />
+  </Sentry.ErrorBoundary>,
+);
