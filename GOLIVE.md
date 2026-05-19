@@ -9,73 +9,18 @@ Items that must be completed before launching to real customers.
 - Checklist logic rule "Notify" triggers — working end-to-end
 - Stripe billing UI — connected to live Stripe account
 - Google Maps address autocomplete + map preview — working
+- Fix 5 pre-existing test failures — done
+- Infohub — Supabase-backed (folders, documents, training modules with full CRUD)
+- Team member invitations — full flow: `invite-team-member` edge function deployed, `team_member_invites` table, `/accept-invite` page, pending-invite badge in Admin UI
+- Sentry error monitoring — integrated in `src/main.tsx`, DSN via `VITE_SENTRY_DSN` secret
+- GDPR account deletion — `delete_my_account()` RPC + "Delete account" UI in Admin → Account tab
+- "Build with AI" / "Convert File" — `generate-checklist` edge function ACTIVE, `ANTHROPIC_API_KEY` confirmed set, both modals have error states
 
 ---
 
-## 🔲 Pending
+## 🔲 Pending (manual steps — no code needed)
 
-### 1. Fix 5 pre-existing test failures
-**Why:** Two test files have been broken since UI redesigns were made without updating the tests. Broken tests erode confidence in the suite and mask real regressions.
-
-- **4× Kiosk — Admin Login Modal:** Tests look for `id="admin-pin-input"` and `id="admin-pin-signin-btn"` (old text-input + button UI). The modal was redesigned to a numpad; those IDs no longer exist.
-- **1× Admin — LocationModal:** Test only fills in the location name, but the "Alert email" field was added as required later. `disabled={!name.trim() || !email.trim()}` keeps the save button disabled.
-
----
-
-### 2. Infohub — replace mock data with Supabase
-**Why:** All documents and training content is hardcoded `useState`. Nothing persists across refreshes, nothing is shared between team members. This is the most visible gap for a real user.
-
-**What to build:**
-1. Supabase tables: `infohub_folders`, `infohub_documents`, `infohub_training_modules`
-2. RLS policies (org-scoped, same pattern as checklists)
-3. React Query hooks: `useInfohubFolders`, `useInfohubDocuments`, `useTrainingModules`
-4. Wire `Infohub.tsx` to use hooks instead of local state
-
----
-
-### 3. Team member invitations — email delivery
-**Why:** The "Invite team member" button in Admin exists, but there is no email sent. Invited managers receive no notification and cannot create their account.
-
-**What to build:**
-1. Supabase edge function: `invite-team-member` — sends a magic-link-style email via Resend
-2. `team_member_invites` table to track pending invites
-3. `/accept-invite?token=` route to handle click-through
-4. UI: pending invite badge on the team member row
-
----
-
-### 4. "Build with AI" and "Convert File" — verify edge functions
-**Why:** Both buttons in the Checklist builder call Supabase edge functions. It is not confirmed whether those functions are deployed and returning correct responses.
-
-**What to do:**
-1. Test both buttons against the production Supabase project
-2. If functions are not deployed, deploy from `supabase/functions/`
-3. Add visible error states for when the functions fail (currently silent)
-
----
-
-### 5. Error monitoring — Sentry
-**Why:** Silent failures in production are invisible. If `setup_new_organization` breaks for a new user, or an edge function throws, there is currently no alert.
-
-**What to build:**
-1. `npm install @sentry/react`
-2. `Sentry.init(...)` in `src/main.tsx` with a DSN from sentry.io
-3. Wrap the app in `Sentry.ErrorBoundary`
-4. Add Sentry DSN as a GitHub secret (`VITE_SENTRY_DSN`)
-
----
-
-### 6. GDPR — account deletion
-**Why:** Required before launching to customers in the EU. Users must be able to delete their account and all associated data.
-
-**What to build:**
-1. Supabase RPC `delete_my_account()` — SECURITY DEFINER, deletes all org data, team_members, auth.users row
-2. "Delete account" button in Admin → Account tab with a confirmation modal
-3. Post-deletion: sign out and redirect to `/signup` with a "Your account has been deleted" message
-
----
-
-### 7. Verified sending domain for email alerts
+### 1. Verified sending domain for email alerts
 **Why:** Resend's `onboarding@resend.dev` sender can only deliver to your own email address.
 Staff members and other recipients will not receive alert emails until a real domain is verified.
 
@@ -84,22 +29,23 @@ Staff members and other recipients will not receive alert emails until a real do
 2. Go to resend.com → Domains → Add Domain → follow DNS setup
 3. Once verified, go to Supabase → Settings → Edge Functions → Secrets
 4. Update `ALERT_FROM_EMAIL` to `alerts@yourdomain.com` (or similar)
+5. Also update `INVITE_FROM_EMAIL` to a verified address so invitation emails are delivered
 
 ---
 
-### 8. Stripe — switch from sandbox to production
+### 2. Stripe — switch from sandbox to production
 **Status:** In progress — see instructions below.
 
 ---
 
-### 9. Google Maps — migrate to new Places API (non-urgent)
+### 3. Google Maps — migrate to new Places API (non-urgent)
 **Why:** Google deprecated `AutocompleteService` for new customers from March 2025.
 It still works and will continue to work with at least 12 months notice before removal.
 **What to do:** Migrate `PlacesAutocompleteInput.tsx` to use `google.maps.places.AutocompleteSuggestion` per the [migration guide](https://developers.google.com/maps/documentation/javascript/places-migration-overview).
 
 ---
 
-### 10. Google Maps API key
+### 4. Google Maps API key
 **Why:** Address autocomplete in the location editor does not work without a live key.
 
 **What to do:**
