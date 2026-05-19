@@ -531,8 +531,8 @@ function LogicRulesEditor({
       triggerConfig.actionTitle = `Action required: "${qLabel}" ${describeCondition(rule)}`;
     }
     if (triggerType === "ask_question") {
-      triggerConfig.questionText = `Follow-up: ${question.text || "Question"}`;
-      triggerConfig.followUpQuestion = createDefaultFollowUpQuestion(triggerConfig.questionText);
+      triggerConfig.questionText = "";
+      triggerConfig.followUpQuestion = createDefaultFollowUpQuestion("");
     }
     updateRule(ri, { triggers: [...rule.triggers, { type: triggerType, config: triggerConfig }] });
   };
@@ -636,7 +636,7 @@ function LogicRulesEditor({
                             <button
                               type="button"
                               onClick={() => updateTriggerConfig(ri, ti, {
-                                followUpQuestion: createDefaultFollowUpQuestion(trigger.config?.questionText || `Follow-up: ${question.text || "Question"}`),
+                                followUpQuestion: createDefaultFollowUpQuestion(trigger.config?.questionText || ""),
                               })}
                               className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                             >

@@ -115,10 +115,19 @@ export function ChecklistBuilderModal({
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
+  // Track whether the user has made any changes to an existing checklist after mount
+  const isDirtyRef = useRef(false);
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) { isMountedRef.current = true; return; }
+    if (editId) isDirtyRef.current = true;
+  }, [title, sections, editId]);
+
   // Intercept Back/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
-    // Warn on any unsaved content — new checklists and converted checklists (both have no editId)
-    if (!editId && hasContent) {
+    const warnForNew = !editId && hasContent;
+    const warnForEdit = !!editId && isDirtyRef.current;
+    if (warnForNew || warnForEdit) {
       setShowDiscardConfirm(true);
     } else {
       onClose();
@@ -647,9 +656,17 @@ export function ChecklistBuilderModal({
                   </div>
 
                   {(q.uncertain || q.warning) && (
-                    <div className="flex items-center gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
-                      <AlertTriangle size={13} className="shrink-0" />
-                      <span>{q.warning ?? "Response type uncertain — please review and choose the correct one below."}</span>
+                    <div className="flex items-start gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
+                      <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                      <span className="flex-1">{q.warning ?? "Response type uncertain — please review and choose the correct one below."}</span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuestion(si, qi, { uncertain: undefined, warning: undefined })}
+                        className="shrink-0 p-0.5 rounded hover:bg-status-warn/20 transition-colors"
+                        aria-label="Dismiss warning"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
                   )}
 
@@ -1125,9 +1142,8 @@ export function ChecklistBuilderModal({
                       if (rule.triggers.some(t => t.type === triggerType)) return;
                       const triggerConfig: LogicTrigger["config"] = {};
                       if (triggerType === "ask_question") {
-                        const followUpText = `Follow-up: ${q.text || `Question ${qi + 1}`}`;
-                        triggerConfig.questionText = followUpText;
-                        triggerConfig.followUpQuestion = createDefaultFollowUpQuestion(followUpText);
+                        triggerConfig.questionText = "";
+                        triggerConfig.followUpQuestion = createDefaultFollowUpQuestion("");
                       }
                       if (triggerType === "require_action") {
                         const qLabel = q.text || `Question ${qi + 1}`;
@@ -1411,6 +1427,7 @@ export function ChecklistBuilderModal({
                 choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                 selectionMode: type === "multiple_choice" ? "single" : undefined,
                 uncertain: undefined,
+                warning: undefined,
               });
             } else {
               const { sectionIdx, questionIdx, ruleIdx, triggerIdx } = showResponsePicker;
