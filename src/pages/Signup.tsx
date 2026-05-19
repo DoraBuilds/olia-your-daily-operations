@@ -19,6 +19,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const accountReset = searchParams.get("reason") === "account-reset";
+  const accountDeleted = searchParams.get("reason") === "account-deleted";
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [businessName, setBusinessName] = useState("");
@@ -31,13 +32,13 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
 
   // Already authenticated → go to admin (new users add their first location there).
-  // Skip when reason=account-reset: we arrived here from Admin's setupError handler
-  // which navigated here before calling signOut. The user is still set at this
-  // moment — if we redirect back to /admin we'd create an infinite loop. The
-  // signOut call in Admin.tsx fires in the background and will clear the user.
+  // Skip when reason=account-reset / account-deleted: we arrived here from Admin
+  // after navigating before signOut fires. The user is still set at this moment —
+  // if we redirect back to /admin we'd create an infinite loop.
+  const skipRedirect = accountReset || accountDeleted;
   useEffect(() => {
-    if (user && !accountReset) navigate("/admin", { replace: true });
-  }, [user, navigate, accountReset]);
+    if (user && !skipRedirect) navigate("/admin", { replace: true });
+  }, [user, navigate, skipRedirect]);
 
   const isFormValid =
     businessName.trim().length > 0 &&
@@ -247,6 +248,14 @@ export default function Signup() {
           <div className="rounded-xl bg-status-warn/10 border border-status-warn/20 px-4 py-3 text-sm text-foreground leading-relaxed">
             <p className="font-medium mb-0.5">Your account data was not found.</p>
             <p className="text-muted-foreground text-xs">Please create a new account to get started.</p>
+          </div>
+        )}
+
+        {/* Account-deleted notice */}
+        {accountDeleted && (
+          <div className="rounded-xl bg-muted border border-border px-4 py-3 text-sm text-foreground leading-relaxed">
+            <p className="font-medium mb-0.5">Your account has been deleted.</p>
+            <p className="text-muted-foreground text-xs">All data has been permanently removed. You can create a new account below.</p>
           </div>
         )}
 

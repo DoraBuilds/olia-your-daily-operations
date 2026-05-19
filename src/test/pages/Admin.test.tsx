@@ -2,6 +2,12 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock("@/lib/runtime-config", () => ({
   runtimeConfig: {
     googleMapsApiKey: "test-maps-key",
@@ -32,6 +38,7 @@ vi.mock("@/lib/supabase", () => ({
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
       updateUser: vi.fn().mockResolvedValue({ data: { user: { id: "u1" } }, error: null }),
     },
+    rpc: vi.fn().mockResolvedValue({ data: { success: true }, error: null }),
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
@@ -990,5 +997,32 @@ describe("Admin page", () => {
     mockUseIsNativeApp.mockReturnValue(true);
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     await waitFor(() => expect(document.body).toBeDefined());
+  });
+
+  // ── Delete account ────────────────────────────────────────────────────────────
+
+  it("shows 'Delete account' button in the Account tab for an Owner", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => expect(screen.getByRole("button", { name: /delete account/i })).toBeInTheDocument());
+  });
+
+  it("opens the delete confirmation modal when the button is clicked", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    await waitFor(() => expect(screen.getByText(/permanently delete your organisation/i)).toBeInTheDocument());
+  });
+
+  it("calls delete_my_account RPC when DELETE is typed and confirm is clicked", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => screen.getByRole("button", { name: /delete account/i }));
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+    await waitFor(() => screen.getByPlaceholderText(/Type DELETE/i));
+
+    fireEvent.change(screen.getByPlaceholderText(/Type DELETE/i), { target: { value: "DELETE" } });
+    fireEvent.click(screen.getByRole("button", { name: /yes, delete everything/i }));
+
+    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("delete_my_account"));
   });
 });
