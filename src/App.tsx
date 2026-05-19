@@ -23,6 +23,7 @@ const Signup = lazy(() => import("./pages/Signup"));
 const Login = lazy(() => import("./pages/Login"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 
 function RouteLoadingFallback() {
   return (
@@ -42,6 +43,7 @@ const router = createBrowserRouter(
     { path: "/signup", element: <Signup /> },
     { path: "/login", element: <Login /> },
     { path: "/auth/callback", element: <AuthCallback /> },
+    { path: "/accept-invite", element: <AcceptInvite /> },
     { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
     { path: "/notifications", element: <ProtectedRoute><Notifications /></ProtectedRoute> },
     { path: "/checklists/*", element: <ProtectedRoute><Checklists /></ProtectedRoute> },

@@ -158,6 +158,8 @@ vi.mock("@/hooks/useTeamMembers", () => ({
   useSaveTeamMember: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
   useSaveAdminPin: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
+  useTeamMemberInvites: () => ({ data: [], isLoading: false }),
+  useSendInvite: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
 }));
 
 vi.mock("@/hooks/useChecklists", () => ({

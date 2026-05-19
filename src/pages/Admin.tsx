@@ -16,7 +16,7 @@ import {
   useStaffProfiles, useSaveStaffProfile, useArchiveStaffProfile,
   useRestoreStaffProfile, useDeleteStaffProfile,
 } from "@/hooks/useStaffProfiles";
-import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
+import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, useTeamMemberInvites } from "@/hooks/useTeamMembers";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
@@ -91,6 +91,8 @@ export default function Admin() {
   const deleteStaffMut = useDeleteStaffProfile();
   const saveMemberMut = useSaveTeamMember();
   const deleteMemberMut = useDeleteTeamMember();
+  const sendInviteMut = useSendInvite();
+  const { data: pendingInvites = [] } = useTeamMemberInvites();
 
   // Local state (not persisted to DB yet)
   const { departments, setDepartments } = useDepartments();
@@ -258,7 +260,15 @@ export default function Admin() {
   };
 
   const saveMember = (m: TeamMember & { rawPin?: string }) => {
-    saveMemberMut.mutate(m);
+    const isNew = !m.id;
+    saveMemberMut.mutateAsync(m).then(newId => {
+      if (isNew && newId) {
+        sendInviteMut.mutate(newId, {
+          onSuccess: () => toast.success(`Invite sent to ${m.email}`),
+          onError: () => toast.error(`Team member saved, but invite email failed. Try re-sending from the member row.`),
+        });
+      }
+    }).catch(() => { /* error shown by mutation */ });
   };
 
   const savePerms = (memberId: string, perms: ManagerPermissions) => {
@@ -389,6 +399,7 @@ export default function Admin() {
               onDeleteLocation: deleteLocation,
               onSaveActiveLocations: (locationIds: any) => saveActiveLocationsMut.mutateAsync(locationIds),
               savingActiveLocations: saveActiveLocationsMut.isPending,
+              pendingInviteIds: new Set(pendingInvites.map(i => i.team_member_id)),
               onInviteMember: () => setMemberModal("new"),
               onEditMember: (m: any) => setMemberModal(m),
               onDeleteMember: deleteMember,

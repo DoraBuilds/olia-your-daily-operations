@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setSetupError(null);
 
-    // Step 1: Check if team_member row already exists (returning user or idempotent re-run)
+    // Step 1: Check by id (existing owners — id is set to auth.uid() by setup_new_organization)
     const { data } = await supabase
       .from("team_members")
       .select("*")
@@ -64,7 +64,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Step 2: Row does not exist — resolve setup data
+    // Step 2: Check by auth_user_id (returning invited managers who already accepted their invite)
+    const { data: byAuthId } = await supabase
+      .from("team_members")
+      .select("*")
+      .eq("auth_user_id", userId)
+      .single();
+
+    if (byAuthId) {
+      setTeamMember(byAuthId as TeamMemberProfile);
+      setLoading(false);
+      supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
+      return;
+    }
+
+    // Step 3: First-time invite acceptance — token stored in localStorage by AcceptInvite page
+    const pendingInviteToken = localStorage.getItem("olia_pending_invite_token");
+    if (pendingInviteToken) {
+      localStorage.removeItem("olia_pending_invite_token");
+      const { data: acceptResult } = await supabase.rpc("accept_invite", {
+        p_token: pendingInviteToken,
+      });
+      if (acceptResult?.success) {
+        const { data: linked } = await supabase
+          .from("team_members")
+          .select("*")
+          .eq("auth_user_id", userId)
+          .single();
+        if (linked) {
+          setTeamMember(linked as TeamMemberProfile);
+          setLoading(false);
+          supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
+          return;
+        }
+      }
+      // Token was invalid or email mismatch — fall through to show setupError below
+      setSetupError(
+        "Your invitation link is invalid or has already been used. Please ask your admin to send a new invitation.",
+      );
+      setTeamMember(null);
+      setLoading(false);
+      return;
+    }
+
+    // Step 4: Row does not exist — resolve setup data for new owner signup
     let businessName: string | undefined;
     let ownerName: string | undefined;
 

@@ -405,7 +405,7 @@ export function TeamMemberModal({
         )}
         {!member && (
           <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
-            This adds the staff profile and kiosk PIN now. Login invitations are not part of the live flow yet, so new team members cannot sign in to the admin app until email invites are built.
+            An invitation email will be sent to this address so the team member can sign in to the Olia admin app.
           </p>
         )}
         <SaveButton disabled={!name.trim() || (!member && !pin.trim())} label={member ? "Save changes" : "Add team member"} />
