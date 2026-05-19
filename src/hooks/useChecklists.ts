@@ -7,6 +7,7 @@ export interface FolderItem {
   name: string;
   parent_id: string | null;
   location_id: string | null;
+  sort_order: number;
 }
 
 export interface ChecklistItem {
@@ -34,8 +35,9 @@ export function useFolders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("folders")
-        .select("id, name, parent_id, location_id")
-        .order("name");
+        .select("id, name, parent_id, location_id, sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as FolderItem[];
     },
@@ -56,6 +58,20 @@ export function useSaveFolder() {
         location_id: folder.location_id ?? null,
       });
       if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["folders"] }),
+  });
+}
+
+export function useReorderFolders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: Array<{ id: string; sort_order: number }>) => {
+      await Promise.all(
+        items.map(({ id, sort_order }) =>
+          supabase.from("folders").update({ sort_order }).eq("id", id)
+        )
+      );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["folders"] }),
   });

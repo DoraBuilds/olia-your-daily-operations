@@ -5,6 +5,7 @@ import {
   useFolders,
   useSaveFolder,
   useDeleteFolder,
+  useReorderFolders,
   useChecklists,
   useSaveChecklist,
   useDeleteChecklist,
@@ -90,12 +91,18 @@ describe("useFolders", () => {
 
   it("returns folder data when supabase returns items", async () => {
     const mockFolders = [
-      { id: "f1", name: "Daily Operations", parent_id: null, location_id: null },
+      { id: "f1", name: "Daily Operations", parent_id: null, location_id: null, sort_order: 0 },
     ];
-    mockFrom.mockReturnValue({
+    // order() must be chainable (return this) because useFolders calls .order() twice.
+    // Resolve via the thenable `then` on the mock object.
+    const builder: any = {
       select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: mockFolders, error: null }),
-    });
+      order: vi.fn().mockReturnThis(),
+      then: vi.fn().mockImplementation((cb: any) =>
+        Promise.resolve(cb({ data: mockFolders, error: null }))
+      ),
+    };
+    mockFrom.mockReturnValue(builder);
     const { result } = renderHook(() => useFolders(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toHaveLength(1);
@@ -135,6 +142,30 @@ describe("useDeleteFolder", () => {
   it("is not pending by default", () => {
     const { result } = renderHook(() => useDeleteFolder(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+});
+
+describe("useReorderFolders", () => {
+  it("returns a mutate function", () => {
+    const { result } = renderHook(() => useReorderFolders(), { wrapper: makeWrapper() });
+    expect(typeof result.current.mutate).toBe("function");
+  });
+
+  it("calls update with correct sort_order for each folder", async () => {
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+    });
+    mockFrom.mockReturnValue({ update });
+
+    const { result } = renderHook(() => useReorderFolders(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync([
+      { id: "f1", sort_order: 0 },
+      { id: "f2", sort_order: 1 },
+    ]);
+
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledWith({ sort_order: 0 });
+    expect(update).toHaveBeenCalledWith({ sort_order: 1 });
   });
 });
 

@@ -17,7 +17,7 @@ import {
   dbToKioskChecklist,
 } from "./kiosk/utils";
 import { KioskSetupScreen } from "./kiosk/KioskSetupScreen";
-import { AdminLoginModal, PinEntryModal } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, PinEntryModal, ensureKioskToken } from "./kiosk/PinEntryModal";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
 import { useLiveClock } from "./kiosk/hooks";
@@ -497,6 +497,14 @@ export default function Kiosk() {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id]);
+
+  // Proactively refresh kiosk_token whenever the locationId is resolved.
+  // Covers the case where the kiosk was set up before the token feature was
+  // deployed (token never stored) or the token was cleared by a hard refresh.
+  useEffect(() => {
+    if (!locationId) return;
+    void ensureKioskToken(locationId);
+  }, [locationId]);
 
   const handleSetup = async (id: string, name: string) => {
     _kioskLocationId = id;

@@ -15,14 +15,11 @@ import {
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type StaffDepartment, type AccountRole,
-  DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS,
+  DEFAULT_PERMISSIONS,
   getRoleDepartment, getInitials, generatePin,
 } from "@/lib/admin-repository";
 import {
   PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP,
-  DAY_KEYS, DAY_LABELS,
-  type DayKey, type TimeWindow, type DayHours, type WeeklyHours,
-  cloneDayHours, parseHours, parseGoogleOpeningHours,
 } from "./shared";
 
 // Re-export so LocationModal callers can use this without importing from shared
@@ -284,11 +281,11 @@ export function TeamMemberModal({
   const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
-  const [pin, setPin] = useState(() => member?.id ? "" : (role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin()));
+  const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
 
   useEffect(() => {
     if (member?.id) return;
-    setPin(role === "Owner" ? DEFAULT_ADMIN_PIN : generatePin());
+    setPin(generatePin());
   }, [member?.id, role]);
 
   const toggleLocation = (id: string) => {
@@ -354,9 +351,7 @@ export function TeamMemberModal({
             </p>
           ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              {role === "Owner"
-                ? `New owner accounts start with PIN ${DEFAULT_ADMIN_PIN} and should change it immediately for security.`
-                : "This PIN is used for kiosk access. Generate one now so the staff member can log in."}
+              {"This PIN is used for kiosk access. Generate one now so the team member can log in."}
             </p>
           )}
           <div className="flex gap-2">
@@ -428,7 +423,6 @@ export function LocationModal({
 }) {
   const [name, setName] = useState(location?.name ?? "");
   const [address, setAddress] = useState(location?.address ?? "");
-  const [hours, setHours] = useState<WeeklyHours>(() => parseHours(location?.trading_hours));
   const [email, setEmail] = useState(location?.contact_email ?? "");
   const [phone, setPhone] = useState(location?.contact_phone ?? "");
   // Google Maps fields — set when user picks from autocomplete dropdown
@@ -436,83 +430,11 @@ export function LocationModal({
   const [lng, setLng] = useState<number | null>(location?.lng ?? null);
   const [placeId, setPlaceId] = useState<string | null>(location?.place_id ?? null);
 
-  const updateDay = (day: DayKey, patch: Partial<DayHours>) =>
-    setHours(prev => ({ ...prev, [day]: { ...prev[day], ...patch } }));
-
   const handlePlaceSelect = (place: PlaceResult) => {
     setAddress(place.address);
     setLat(place.lat);
     setLng(place.lng);
     setPlaceId(place.placeId);
-    const autoHours = parseGoogleOpeningHours(place.openingHoursText ?? null);
-    if (autoHours) {
-      setHours(autoHours);
-    }
-  };
-
-  const setDayOpen = (day: DayKey, open: boolean) => {
-    setHours(prev => {
-      const nextDay = cloneDayHours(prev[day]);
-      nextDay.open = open;
-      if (open && nextDay.windows.length === 0) {
-        nextDay.windows = [{ start: "08:00", end: "22:00" }];
-      }
-      return { ...prev, [day]: nextDay };
-    });
-  };
-
-  const updateWindow = (day: DayKey, index: number, patch: Partial<TimeWindow>) => {
-    setHours(prev => {
-      const nextDay = cloneDayHours(prev[day]);
-      nextDay.windows = nextDay.windows.map((window, windowIdx) =>
-        windowIdx === index ? { ...window, ...patch } : window
-      );
-      return { ...prev, [day]: nextDay };
-    });
-  };
-
-  const addSplitWindow = (day: DayKey) => {
-    setHours(prev => {
-      const current = prev[day];
-      if (!current.open || current.windows.length >= 2) return prev;
-      const lastWindow = current.windows[current.windows.length - 1];
-      return {
-        ...prev,
-        [day]: {
-          ...current,
-          windows: [
-            ...current.windows,
-            { start: lastWindow?.end ?? "14:00", end: "22:00" },
-          ],
-        },
-      };
-    });
-  };
-
-  const removeSplitWindow = (day: DayKey, index: number) => {
-    setHours(prev => {
-      const current = prev[day];
-      if (current.windows.length <= 1) return prev;
-      return {
-        ...prev,
-        [day]: {
-          ...current,
-          windows: current.windows.filter((_, windowIdx) => windowIdx !== index),
-        },
-      };
-    });
-  };
-
-  const copyHoursToLaterDays = (day: DayKey) => {
-    setHours(prev => {
-      const sourceIndex = DAY_KEYS.indexOf(day);
-      const source = cloneDayHours(prev[day]);
-      const next = { ...prev };
-      for (const laterDay of DAY_KEYS.slice(sourceIndex + 1)) {
-        next[laterDay] = cloneDayHours(source);
-      }
-      return next;
-    });
   };
 
   const handleAddressChange = (val: string) => {
@@ -530,7 +452,7 @@ export function LocationModal({
       id: location?.id ?? "",
       name: name.trim(),
       address: address.trim(),
-      trading_hours: JSON.stringify(hours),
+      trading_hours: null,
       contact_email: email.trim(),
       contact_phone: phone.trim(),
       // preserve existing archive threshold (or default for new locations)
@@ -562,7 +484,7 @@ export function LocationModal({
             placeholder="e.g. 14 Rue de la Paix, Lyon"
           />
           <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-            Pick a real place from Google Maps to autofill the official address, map preview, and opening hours when available.
+            Pick a real place from Google Maps to autofill the official address and map preview.
           </p>
           {lat !== null && lng !== null && (
             <div className="mt-2 space-y-2">
@@ -573,80 +495,6 @@ export function LocationModal({
               </div>
             </div>
           )}
-        </FormField>
-        <FormField label="Opening hours">
-          <div className="space-y-2">
-            {DAY_KEYS.map(day => (
-              <div key={day} className="rounded-xl border border-border bg-muted/20 px-3 py-2 space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <Switch
-                    checked={hours[day].open}
-                    onCheckedChange={val => setDayOpen(day, val)}
-                  />
-                  <span className="w-8 text-xs font-medium text-muted-foreground shrink-0">
-                    {DAY_LABELS[day]}
-                  </span>
-                  {hours[day].open ? (
-                    <button
-                      type="button"
-                      onClick={() => copyHoursToLaterDays(day)}
-                      aria-label={`Copy ${DAY_LABELS[day]} to later days`}
-                      className="ml-auto text-[10px] font-medium text-sage hover:text-sage-deep transition-colors"
-                    >
-                      Copy to later days
-                    </button>
-                  ) : (
-                    <span className="ml-auto text-xs text-muted-foreground">Closed</span>
-                  )}
-                </div>
-                {hours[day].open && (
-                  <div className="space-y-2 pl-10">
-                    {hours[day].windows.map((window, idx) => (
-                      <div key={`${day}-${idx}`} className="flex items-center gap-2">
-                        <span className="w-14 text-[10px] text-muted-foreground uppercase tracking-widest shrink-0">
-                          Window {idx + 1}
-                        </span>
-                        <input
-                          type="time"
-                          value={window.start}
-                          onChange={e => updateWindow(day, idx, { start: e.target.value })}
-                          aria-label={`${DAY_LABELS[day]} start time window ${idx + 1}`}
-                          className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                        <span className="text-xs text-muted-foreground">–</span>
-                        <input
-                          type="time"
-                          value={window.end}
-                          onChange={e => updateWindow(day, idx, { end: e.target.value })}
-                          aria-label={`${DAY_LABELS[day]} end time window ${idx + 1}`}
-                          className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                        {idx > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSplitWindow(day, idx)}
-                            className="text-[10px] font-medium text-status-error hover:opacity-80 transition-opacity"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                    {hours[day].windows.length < 2 && (
-                      <button
-                        type="button"
-                        onClick={() => addSplitWindow(day)}
-                        aria-label={`Add split hours for ${DAY_LABELS[day]}`}
-                        className="text-[10px] font-medium text-sage hover:text-sage-deep transition-colors"
-                      >
-                        Add split hours
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         </FormField>
         <FormField label="Alert email (required)">
           <input

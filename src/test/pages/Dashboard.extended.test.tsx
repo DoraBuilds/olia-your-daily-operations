@@ -153,28 +153,14 @@ function makeAlert(id: string, type: "error" | "warn" = "warn", overrides: Parti
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("Dashboard extended — greeting variations", () => {
+describe("Dashboard extended — greeting", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("shows 'Good morning' before noon", () => {
+  it("shows the generic greeting regardless of time of day", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-27T08:30:00Z")); // 08:30 UTC
+    vi.setSystemTime(new Date("2026-03-27T08:30:00Z"));
     renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/Good morning, Alex/i)).toBeInTheDocument();
-  });
-
-  it("shows 'Good afternoon' between noon and 17:00", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-27T14:00:00"));
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/Good afternoon, Alex/i)).toBeInTheDocument();
-  });
-
-  it("shows 'Good evening' from 17:00 onwards", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-27T19:00:00"));
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/Good evening, Alex/i)).toBeInTheDocument();
+    expect(screen.getByText(/Here's what's happening today/i)).toBeInTheDocument();
   });
 });
 
@@ -541,16 +527,10 @@ describe("Dashboard extended — pagination (> 4 locations)", () => {
   });
 });
 
-describe("Dashboard extended — greeting when teamMember has no name", () => {
+describe("Dashboard extended — greeting h1", () => {
   afterEach(() => vi.useRealTimers());
 
-  // Override the AuthContext mock for this describe block by using vi.mock in the module scope.
-  // Since vi.mock is hoisted we can't override per-describe; instead we test the branch via
-  // the component rendering with an empty currentUser derived from teamMember.name = "".
-  // The branch `currentUser ? ", ${currentUser}" : ""` fires when currentUser is falsy.
-  // We can't override the module-level vi.mock per describe, so we test the positive path
-  // in other tests and assert the rendered output here by checking the full greeting text.
-  it("shows greeting with name when teamMember name is present", () => {
+  it("renders the generic greeting in the h1 element", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-27T10:00:00"));
     alertsState.data = [];
@@ -559,8 +539,9 @@ describe("Dashboard extended — greeting when teamMember has no name", () => {
     checklistsState.data = [];
     locationsState.data = [];
     renderWithProviders(<Dashboard />);
-    const h1 = screen.getByText(/Good morning, Alex/i);
-    expect(h1).toBeInTheDocument();
+    const h1 = document.getElementById("dashboard-greeting");
+    expect(h1).not.toBeNull();
+    expect(h1?.textContent).toBe("Here's what's happening today");
   });
 });
 

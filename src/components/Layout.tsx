@@ -35,7 +35,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col w-full relative">
+    <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
       {/* Header */}
       {title && (
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -70,17 +70,20 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
         </header>
       )}
 
-      {/* Content */}
-      <main ref={mainRef} className="flex-1 overflow-auto pb-24 pt-5 animate-fade-in md:pb-8">
-        <div className={cn(shellWidthClass, "px-4 sm:px-6 lg:px-8 xl:px-10")}>
-          <div className="flex min-w-0 items-start gap-6 lg:gap-8">
-            <SidebarNav />
+      {/* Body: sidebar is fixed, only the content column scrolls */}
+      <div className="flex flex-1 overflow-hidden">
+        <div className={cn(shellWidthClass, "flex flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
+          {/* Sidebar: outside the scroll container so it never scrolls */}
+          <SidebarNav />
+
+          {/* Only this column scrolls */}
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto pb-24 pt-5 animate-fade-in md:pb-8">
             <div className={cn(contentWidthClass, "min-w-0 space-y-4")}>
               {children}
             </div>
-          </div>
+          </main>
         </div>
-      </main>
+      </div>
 
       <BottomNav />
     </div>

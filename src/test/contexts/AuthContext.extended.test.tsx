@@ -47,6 +47,7 @@ vi.mock("@/lib/supabase", () => ({
     },
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: mockTeamMemberSingle,
     }),

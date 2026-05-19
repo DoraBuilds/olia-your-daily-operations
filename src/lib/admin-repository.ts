@@ -97,6 +97,7 @@ export interface TeamMember {
   /** PIN is never returned from the server — only used transiently when saving. */
   pin?: undefined;
   pin_reset_required?: boolean;
+  last_seen_at?: string | null;
 }
 
 export interface AuditLogEntry {

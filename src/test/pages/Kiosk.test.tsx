@@ -477,19 +477,18 @@ describe("Kiosk — Grid Screen", () => {
     });
   });
 
-  it("Admin Login Modal shows numpad digit buttons (no text input)", async () => {
+  it("Admin Login Modal has a numpad (no legacy text input)", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      // New numpad UI: digit buttons labelled "1"–"9" and "0"
-      expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "5" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "0" })).toBeInTheDocument();
-      // No legacy text inputs
+      expect(screen.getByText("Admin PIN")).toBeInTheDocument();
       expect(document.getElementById("admin-pin-input")).toBeNull();
       expect(document.getElementById("admin-email-input")).toBeNull();
     });
+    // Numpad digit buttons should be present
+    const digitBtns = screen.getAllByRole("button").filter(b => /^[0-9]$/.test(b.textContent ?? ""));
+    expect(digitBtns.length).toBeGreaterThanOrEqual(10);
   });
 
   it("Admin Login Modal shows 'Forgot your PIN?' recovery link", async () => {
@@ -499,6 +498,7 @@ describe("Kiosk — Grid Screen", () => {
     await waitFor(() => {
       expect(screen.getByText(/Forgot your PIN\?/i)).toBeInTheDocument();
     });
+    expect(document.getElementById("admin-pin-signin-btn")).toBeNull();
   });
 
   it("entering 3 digits does not yet submit", async () => {
@@ -507,26 +507,35 @@ describe("Kiosk — Grid Screen", () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
-    await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument());
-    // Each click must be a separate act so React flushes state between them
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "1" })); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "2" })); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "3" })); });
+    await waitFor(() => expect(screen.getByText("Admin PIN")).toBeInTheDocument());
+    const getDigitBtn = (d: string) =>
+      screen.getAllByRole("button").find(b => b.textContent?.trim() === d)!;
+    // Each click in its own act so React flushes pin state between taps
+    await act(async () => { fireEvent.click(getDigitBtn("1")); });
+    await act(async () => { fireEvent.click(getDigitBtn("2")); });
+    await act(async () => { fireEvent.click(getDigitBtn("3")); });
     // Auto-submit only fires on 4th digit
     expect(supabase.rpc).not.toHaveBeenCalledWith("validate_admin_pin", expect.anything());
   });
 
-  it("entering 4 digits auto-submits and calls validate_admin_pin", async () => {
+  it("entering 4 digits auto-submits and calls supabase.rpc validate_admin_pin", async () => {
     const { supabase } = await import("@/lib/supabase");
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
-    await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument());
-    // Each click must be a separate act so React flushes state between them
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "1" })); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "2" })); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "3" })); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "4" })); });
+    await waitFor(() => expect(screen.getByText("Admin PIN")).toBeInTheDocument());
+
+    // Click each digit in its own act() so React re-renders between clicks and
+    // the pin state accumulates correctly before the 4th digit triggers auto-submit.
+    const getDigitBtn = (d: string) =>
+      screen.getAllByRole("button").find(b => b.textContent?.trim() === d)!;
+
+    await act(async () => { fireEvent.click(getDigitBtn("1")); });
+    await act(async () => { fireEvent.click(getDigitBtn("2")); });
+    await act(async () => { fireEvent.click(getDigitBtn("3")); });
+    await act(async () => { fireEvent.click(getDigitBtn("4")); });
+
+
     await waitFor(() => {
       expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
         p_pin: "1234",

@@ -16,8 +16,63 @@ permissions:
   id-token: write
 
 jobs:
+  migrate:
+    name: migrate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link \
+            --project-ref ${{ vars.SUPABASE_PROJECT_ID }} \
+            --password ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # Mark every migration that was applied manually (before the pipeline
+      # existed) as applied in the CLI's tracking table.  This is idempotent —
+      # re-running on an already-repaired migration is a safe no-op.
+      # New migrations added after this list will be picked up by db push below.
+      - name: Seed migration history for already-applied migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          versions=(
+            20260304000001 20260312000001 20260312000002 20260312000003
+            20260312000004 20260312000005 20260312000006 20260316000001
+            20260316000002 20260319000001 20260320000001 20260320000002
+            20260320000003 20260323000001 20260323000002 20260323000003
+            20260323000004 20260326000001 20260327000001 20260327000002
+            20260327000003 20260327000004 20260327000005 20260327000006
+            20260327000007 20260327000008 20260328000001 20260408000001
+            20260408000002 20260408000003 20260408000004 20260408000005
+            20260409000001 20260409000002 20260413000001 20260413000002
+            20260413000003 20260415000001 20260415000002 20260417000001
+            20260429000001 20260429000002 20260429000003 20260429000004
+            20260429000005 20260429000006 20260503000002 20260503000003
+            20260503000004 20260503000005 20260503000006 20260506000001
+            20260508000001 20260513000001 20260515000001
+          )
+          for version in "${versions[@]}"; do
+            supabase migration repair --status applied "$version" 2>/dev/null || true
+          done
+
+      - name: Apply new migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase db push
+
   build:
     name: build
+    needs: migrate
     runs-on: ubuntu-latest
 
     steps:

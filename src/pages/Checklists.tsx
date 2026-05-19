@@ -24,7 +24,7 @@ export default function Checklists() {
   }, [navigate, searchParams]);
 
   return (
-    <Layout title="Checklists" subtitle="Manage your checklists & inspections">
+    <Layout title="Olia" subtitle="Manage your checklists & inspections">
       <ChecklistsTab />
     </Layout>
   );

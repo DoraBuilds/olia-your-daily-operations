@@ -292,6 +292,60 @@ describe("useSaveChecklist integration — mutation pipeline", () => {
     ).rejects.toThrow(/does not belong/i);
   });
 
+  it("saves location_id to the upsert payload and the checklist is returned with that location_id", async () => {
+    const savedRows: any[] = [];
+    upsertFn = vi.fn().mockImplementation((payload) => {
+      savedRows.push(payload);
+      return Promise.resolve({ data: [{ id: "cl-loc" }], error: null });
+    });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "locations") {
+        return {
+          select: vi.fn().mockResolvedValue({ data: [{ id: "loc-1" }], error: null }),
+        };
+      }
+      if (table === "checklists") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          order: vi.fn().mockImplementation(() =>
+            Promise.resolve({
+              data: savedRows.map((r) => ({ ...SAMPLE_CHECKLISTS[0], ...r, id: "cl-loc" })),
+              error: null,
+            }),
+          ),
+          upsert: upsertFn,
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        upsert: upsertFn,
+      };
+    });
+
+    const wrapper = makeWrapper();
+    const save = renderHook(() => useSaveChecklist(), { wrapper });
+
+    await act(async () => {
+      await save.result.current.mutateAsync({
+        title: "Location Checklist",
+        location_id: "loc-1",
+        sections: [],
+      } as any);
+    });
+
+    expect(upsertFn).toHaveBeenCalledWith(
+      expect.objectContaining({ location_id: "loc-1", title: "Location Checklist" }),
+    );
+
+    // Verify the location_id is present in the read-back data
+    const list = renderHook(() => useChecklists(), { wrapper });
+    await waitFor(() => expect(list.result.current.isLoading).toBe(false));
+    const saved = list.result.current.data?.find((c) => c.id === "cl-loc");
+    expect(saved?.location_id).toBe("loc-1");
+  });
+
   it("does not call the location access-check when no location is supplied", async () => {
     const locationSelectSpy = vi.fn().mockResolvedValue({ data: [], error: null });
     mockFrom.mockImplementation((table: string) => {

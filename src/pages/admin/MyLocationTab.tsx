@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  MapPin, Clock, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
+  MapPin, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
   ChevronDown, Search, Tablet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,6 @@ import {
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import {
   ROLE_COLOR_MAP,
-  parseHours, formatHoursText,
 } from "./shared";
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -142,18 +141,6 @@ export function MyLocationTab({
                 <p className="text-sm text-foreground">{currentLocation.address}</p>
               </div>
             )}
-            {currentLocation.trading_hours && (() => {
-              let display = currentLocation.trading_hours;
-              try {
-                display = formatHoursText(parseHours(currentLocation.trading_hours));
-              } catch { /* plain-text fallback */ }
-              return (
-                <div className="flex items-start gap-2">
-                  <Clock size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-sm text-foreground">{display}</p>
-                </div>
-              );
-            })()}
             {currentLocation.contact_email ? (
               <div className="flex items-start gap-2">
                 <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />

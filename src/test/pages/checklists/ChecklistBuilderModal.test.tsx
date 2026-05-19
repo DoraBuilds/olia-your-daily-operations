@@ -46,6 +46,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
   });
 
   it("renders without crashing", () => {

@@ -5,6 +5,15 @@ import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
+// useBlocker requires a data router; stub it for MemoryRouter-based tests
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useBlocker: () => ({ state: "unblocked", proceed: vi.fn(), reset: vi.fn() }),
+  };
+});
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -93,6 +102,7 @@ vi.mock("@/hooks/useChecklists", () => {
     useChecklists: () => ({ data: CHECKLISTS, isLoading: false }),
     useSaveFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteFolder: () => ({ mutate: vi.fn() }),
+    useReorderFolders: () => ({ mutate: vi.fn() }),
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
   };

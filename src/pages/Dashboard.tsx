@@ -92,7 +92,7 @@ export default function Dashboard() {
 
   const today    = new Date();
   const dateLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-  const greeting  = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const greeting  = "Here's what's happening today";
 
   // ── Auth ──
   const { teamMember } = useAuth();
@@ -209,7 +209,7 @@ export default function Dashboard() {
         <section className="pt-1 pb-2">
           <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{dateLabel}</p>
           <h1 id="dashboard-greeting" className="font-display text-3xl text-foreground mt-1 leading-tight">
-            {greeting}{currentUser ? `, ${currentUser}` : ""}
+            {greeting}
           </h1>
 
           {/* Quick stats strip */}

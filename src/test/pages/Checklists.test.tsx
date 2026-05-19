@@ -43,6 +43,7 @@ vi.mock("@/hooks/useChecklists", () => {
     useFolders: () => ({ data: FOLDERS, isLoading: false }),
     useSaveFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
     useDeleteFolder: () => ({ mutate: vi.fn() }),
+    useReorderFolders: () => ({ mutate: vi.fn() }),
     useChecklists: () => ({ data: CHECKLISTS, isLoading: false }),
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
@@ -143,12 +144,11 @@ describe("Checklists page", () => {
     expect(document.body).toBeDefined();
   });
 
-  it("renders header with correct Checklists title", () => {
+  it("renders header with correct title", () => {
     renderWithProviders(<Checklists />);
-    // Get the h1 element specifically
     const h1s = document.querySelectorAll("h1");
-    const checklistsH1 = Array.from(h1s).find(el => el.textContent === "Checklists");
-    expect(checklistsH1).toBeTruthy();
+    const oliaH1 = Array.from(h1s).find(el => el.textContent === "Olia");
+    expect(oliaH1).toBeTruthy();
   });
 });
 

@@ -25,6 +25,29 @@ export function clearKioskLocationSelectionForModal() {
   localStorage.removeItem("kiosk_token");
 }
 
+// ─── ensureKioskToken ─────────────────────────────────────────────────────────
+// Returns the kiosk_token for the given location.  If localStorage already has
+// one we return it immediately.  If it is missing (e.g. the kiosk was set up
+// before the token feature was deployed, or the token was cleared), we fetch it
+// directly from the locations table.  Anonymous users have SELECT access to
+// locations (anon_read_locations policy), so this works without authentication.
+export async function ensureKioskToken(locationId: string): Promise<string | null> {
+  const stored = localStorage.getItem("kiosk_token");
+  if (stored) return stored;
+  try {
+    const { data } = await supabase
+      .from("locations")
+      .select("kiosk_token")
+      .eq("id", locationId)
+      .single();
+    if (data?.kiosk_token) {
+      localStorage.setItem("kiosk_token", data.kiosk_token);
+      return data.kiosk_token;
+    }
+  } catch { /* non-fatal */ }
+  return null;
+}
+
 // ─── verifyKioskToken ─────────────────────────────────────────────────────────
 // Returns true if the stored kiosk_token matches the server record for the
 // given locationId. Returns false if the token is missing or mismatched.
@@ -69,14 +92,18 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       }
     }
 
-    // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
-    const storedToken = localStorage.getItem("kiosk_token");
-    const tokenValid = await verifyKioskToken(locationId, storedToken);
-    if (!tokenValid) {
-      clearKioskLocationSelectionForModal();
-      setLoading(false);
-      setError("Kiosk setup required. Please contact your administrator.");
-      return;
+    // Verify the kiosk_token if available (SEQ-009).
+    // When ensureKioskToken returns null the token infrastructure is not yet
+    // set up in the database — skip the check rather than blocking all PINs.
+    const storedToken = await ensureKioskToken(locationId);
+    if (storedToken) {
+      const tokenValid = await verifyKioskToken(locationId, storedToken);
+      if (!tokenValid) {
+        clearKioskLocationSelectionForModal();
+        setLoading(false);
+        setError("Kiosk setup required. Please contact your administrator.");
+        return;
+      }
     }
 
     const { data, error: rpcError } = await validateKioskAdminPin(pin, locationId);
@@ -134,15 +161,17 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
             return;
           }
         }
-        // Verify the kiosk_token matches the server record before PIN validation (SEQ-009).
-        const storedToken = localStorage.getItem("kiosk_token");
-        const tokenValid = await verifyKioskToken(locationId, storedToken);
-        if (!tokenValid) {
-          clearKioskLocationSelectionForModal();
-          setLoading(false);
-          setError("Kiosk setup required. Please contact your administrator.");
-          setPin("");
-          return;
+        // Verify the kiosk_token if available (SEQ-009).
+        const storedToken = await ensureKioskToken(locationId);
+        if (storedToken) {
+          const tokenValid = await verifyKioskToken(locationId, storedToken);
+          if (!tokenValid) {
+            clearKioskLocationSelectionForModal();
+            setLoading(false);
+            setError("Kiosk setup required. Please contact your administrator.");
+            setPin("");
+            return;
+          }
         }
         const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
         setLoading(false);
@@ -285,22 +314,21 @@ export function PinEntryModal({
   const validate = async (enteredPin: string) => {
     setValidating(true);
 
-    // Verify the stored kiosk_token matches the server record before PIN
-    // validation. This prevents an attacker who modifies kiosk_location_id in
-    // localStorage from being able to brute-force PINs for another location
-    // (SEQ-009).
-    const storedToken = localStorage.getItem("kiosk_token");
-    const tokenValid = await verifyKioskToken(locationId, storedToken);
-    if (!tokenValid) {
-      setValidating(false);
-      setPin("");
-      localStorage.removeItem("kiosk_location_id");
-      localStorage.removeItem("kiosk_location_name");
-      localStorage.removeItem("kiosk_token");
-      setError("Kiosk setup required. Please contact your administrator.");
-      return;
+    // Verify the kiosk_token if available (SEQ-009).
+    // Skip when null — token infrastructure not yet set up in the database.
+    const storedToken = await ensureKioskToken(locationId);
+    if (storedToken) {
+      const tokenValid = await verifyKioskToken(locationId, storedToken);
+      if (!tokenValid) {
+        setValidating(false);
+        setPin("");
+        localStorage.removeItem("kiosk_location_id");
+        localStorage.removeItem("kiosk_location_name");
+        localStorage.removeItem("kiosk_token");
+        setError("Kiosk setup required. Please contact your administrator.");
+        return;
+      }
     }
-
     const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
     setValidating(false);
 

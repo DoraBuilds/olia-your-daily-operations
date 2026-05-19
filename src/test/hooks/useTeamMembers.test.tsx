@@ -1,9 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember } from "@/hooks/useTeamMembers";
+import { useTeamMembers, useSaveTeamMember, useSaveAdminPin, useDeleteTeamMember } from "@/hooks/useTeamMembers";
 
 const mockFrom = vi.fn();
+const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -14,6 +15,7 @@ vi.mock("@/lib/supabase", () => ({
       }),
     },
     from: (...args: any[]) => mockFrom(...args),
+    rpc: mockRpc,
   },
 }));
 
@@ -41,6 +43,7 @@ function makeWrapper() {
 }
 
 beforeEach(() => {
+  mockRpc.mockResolvedValue({ error: null });
   mockFrom.mockReturnValue({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -205,5 +208,52 @@ describe("useDeleteTeamMember", () => {
   it("is not pending by default", () => {
     const { result } = renderHook(() => useDeleteTeamMember(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+});
+
+describe("useSaveAdminPin", () => {
+  it("calls supabase.rpc set_admin_pin with the supplied member id and raw PIN", async () => {
+    const { result } = renderHook(() => useSaveAdminPin(), { wrapper: makeWrapper() });
+
+    await act(async () => {
+      await result.current.mutateAsync({ memberId: "tm-2", rawPin: "5678" });
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith("set_admin_pin", {
+      p_member_id: "tm-2",
+      p_raw_pin: "5678",
+    });
+    expect(result.current.isError).toBe(false);
+  });
+
+  it("throws a user-friendly error when the RPC returns an error", async () => {
+    mockRpc.mockResolvedValue({ error: { message: "Another team member is already using this PIN" } });
+    const { result } = renderHook(() => useSaveAdminPin(), { wrapper: makeWrapper() });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({ memberId: "tm-2", rawPin: "5678" });
+      }),
+    ).rejects.toThrow(/Another team member is already using this PIN/i);
+  });
+
+  it("invalidates team_members cache after a successful PIN update", async () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useSaveAdminPin(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ memberId: "tm-2", rawPin: "5678" });
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["team_members"] }),
+    );
   });
 });

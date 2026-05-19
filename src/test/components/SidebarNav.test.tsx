@@ -20,59 +20,51 @@ describe("SidebarNav", () => {
     });
   });
 
-  it("always shows Infohub child links regardless of active route", () => {
+  it("renders all five top-level nav items", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
 
-    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Training" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Checklists" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reporting" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Infohub" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Admin" })).toBeInTheDocument();
   });
 
-  it("shows Infohub child links when Infohub is active", () => {
+  it("shows no sub-items under Infohub", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/infohub/library"] });
 
-    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Training" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Library" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Training" })).toBeNull();
   });
 
-  it("always shows Admin child links for owners regardless of active route", () => {
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+  it("shows no sub-items under Admin for owners", () => {
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Billing" })).toBeNull();
   });
 
-  it("shows Admin child links for owners when Admin is active", () => {
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/account"] });
-
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Account" })).toBeInTheDocument();
-  });
-
-  it("hides the Account child link for non-owners", () => {
+  it("shows no sub-items under Admin for non-owners either", () => {
     mockUseAuth.mockReturnValue({
-      teamMember: {
-        id: "tm-2",
-        role: "Manager",
-      },
+      teamMember: { id: "tm-2", role: "Manager" },
     });
 
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
   });
 
-  it("hides the Account child link for non-owners even when not on admin route", () => {
-    mockUseAuth.mockReturnValue({
-      teamMember: {
-        id: "tm-2",
-        role: "Manager",
-      },
-    });
-
+  it("marks Dashboard as active when on /dashboard", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+    const dashLink = screen.getByRole("link", { name: "Dashboard" });
+    expect(dashLink.className).toContain("bg-sage");
+  });
 
-    expect(screen.getByRole("link", { name: "My Location" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
+  it("marks Admin as active when on an /admin/* route", () => {
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
+    const adminLink = screen.getByRole("link", { name: "Admin" });
+    expect(adminLink.className).toContain("bg-sage");
   });
 });

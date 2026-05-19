@@ -252,17 +252,16 @@ describe("Admin — parseGoogleOpeningHours helper", () => {
 // ─── Location detail — formatHoursText / parseHours via UI rendering ──────────
 
 describe("Admin — location detail renders parsed JSON trading_hours", () => {
-  it("shows formatted opening hours for a location with JSON trading_hours", async () => {
+  it("does not show trading_hours in the location detail card", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    // Main Branch has structured JSON hours (Mon–Fri 09:00–17:00)
     await waitFor(() => {
       expect(screen.getByText("Location details")).toBeInTheDocument();
     });
-    // formatHoursText produces something like "Mon: 09:00–17:00 · ..."
+    // Opening hours display has been removed — hours should not appear in the card
     const hoursEl = Array.from(document.querySelectorAll("p")).find(el =>
       el.textContent?.includes("09:00") || el.textContent?.includes("Mon:")
     );
-    expect(hoursEl).toBeTruthy();
+    expect(hoursEl).toBeFalsy();
   });
 
   it("does not crash for a location with plain-text trading_hours (fallback path)", async () => {
@@ -276,137 +275,19 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
   });
 });
 
-// ─── Location form — opening hours editor (cloneDayHours, setDayOpen, etc.) ──
-
-describe("Admin — LocationModal opening-hours editor", () => {
-  async function openEditLocationForm() {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
-    // Multiple "Edit" buttons exist (staff rows also have aria-label="Edit").
-    // The location "Edit" link has text content "Edit" (Pencil + "Edit") and
-    // is part of the Location details card. Use getAllByRole and pick the one
-    // whose accessible text is exactly "Edit" (from the button text node, not aria-label).
-    const editBtns = screen.getAllByRole("button", { name: /edit/i });
-    // The location detail edit button renders as text "Edit" after a Pencil icon.
-    // The staff profile edit buttons have aria-label="Edit" (no text node).
-    // Both resolve to the same accessible name, so pick the first one that is
-    // NOT aria-label based — i.e. textContent includes "Edit".
-    const locationEditBtn = editBtns.find(btn => btn.textContent?.includes("Edit")) ?? editBtns[0];
-    fireEvent.click(locationEditBtn);
-    await waitFor(() => expect(screen.getByText("Edit location")).toBeInTheDocument());
-  }
-
-  it("location edit form opens and shows Opening hours section", async () => {
-    await openEditLocationForm();
-    expect(screen.getByText("Opening hours")).toBeInTheDocument();
-  });
-
-  it("opening hours shows Mon toggle as checked (open)", async () => {
-    await openEditLocationForm();
-    // The Switch for Mon should be checked
-    const switches = screen.getAllByRole("switch");
-    // Mon is first in the list and Main Branch has Mon open
-    expect(switches[0]).toBeInTheDocument();
-  });
-
-  it("toggling a day closed via Switch exercises setDayOpen/cloneDayHours", async () => {
-    await openEditLocationForm();
-    const switches = screen.getAllByRole("switch");
-    // Mon is open — toggle it off
-    fireEvent.click(switches[0]);
-    await waitFor(() => {
-      // After toggling, Mon shows 'Closed' label
-      const closedLabels = screen.getAllByText("Closed");
-      expect(closedLabels.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  it("toggling a closed day open exercises setDayOpen opening a default window", async () => {
-    await openEditLocationForm();
-    // Sat is closed in Main Branch (index 5)
-    const switches = screen.getAllByRole("switch");
-    const satSwitch = switches[5];
-    // Sat is closed — toggle it open
-    fireEvent.click(satSwitch);
-    await waitFor(() => {
-      // After opening, a time input should appear for Sat
-      const timeInputs = screen.getAllByRole("button", { name: /add split hours/i });
-      expect(timeInputs.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  it("'Add split hours' button exercises addSplitWindow", async () => {
-    await openEditLocationForm();
-    // Find "Add split hours" for Mon (which is open)
-    const addSplitBtn = screen.getAllByRole("button", { name: /add split hours for Mon/i })[0];
-    fireEvent.click(addSplitBtn);
-    await waitFor(() => {
-      // After adding a split, Window 2 label appears
-      expect(screen.getByText("Window 2")).toBeInTheDocument();
-    });
-  });
-
-  it("'Remove' button on split window exercises removeSplitWindow", async () => {
-    await openEditLocationForm();
-    // Add a split first
-    const addSplitBtn = screen.getAllByRole("button", { name: /add split hours for Mon/i })[0];
-    fireEvent.click(addSplitBtn);
-    await waitFor(() => expect(screen.getByText("Window 2")).toBeInTheDocument());
-
-    // Now find Remove button for the second window
-    const removeBtn = screen.getByRole("button", { name: /remove/i });
-    fireEvent.click(removeBtn);
-    await waitFor(() => {
-      expect(screen.queryByText("Window 2")).not.toBeInTheDocument();
-    });
-  });
-
-  it("'Copy to later days' button exercises copyHoursToLaterDays / cloneDayHours", async () => {
-    await openEditLocationForm();
-    // Find the Mon "Copy to later days" button
-    const copyBtn = screen.getAllByRole("button", { name: /copy mon to later days/i })[0];
-    expect(copyBtn).toBeInTheDocument();
-    fireEvent.click(copyBtn);
-    // No crash — the function ran. The hours for Tue–Sun should now match Mon.
-    expect(document.body).toBeDefined();
-  });
-
-  it("updating a time window input exercises updateWindow", async () => {
-    await openEditLocationForm();
-    // The time inputs have aria-label "Mon start time window 1", "Mon end time window 1" etc.
-    // jsdom may not expose type="time" as role="textbox", so query by aria-label directly.
-    const monStartInput = document.querySelector<HTMLInputElement>("input[aria-label='Mon start time window 1']");
-    if (monStartInput) {
-      fireEvent.change(monStartInput, { target: { value: "10:00" } });
-      // No crash — updateWindow ran
-      expect(document.body).toBeDefined();
-    } else {
-      // fallback: find any time input
-      const timeInputs = document.querySelectorAll<HTMLInputElement>("input[type='time']");
-      if (timeInputs.length > 0) {
-        fireEvent.change(timeInputs[0], { target: { value: "10:00" } });
-      }
-      expect(document.body).toBeDefined();
-    }
-  });
-});
-
 // ─── LocationModal — "Add location" path (new location, no existing data) ─────
 
 describe("Admin — LocationModal add-new-location path", () => {
-  it("opening 'Add location' form initialises opening hours with default values", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+  it("opening 'Add location' form does not show opening hours", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
-    expect(screen.getByText("Opening hours")).toBeInTheDocument();
-    // Mon should default to open
-    const switches = screen.getAllByRole("switch");
-    expect(switches.length).toBeGreaterThan(0);
+    expect(screen.queryByText("Opening hours")).not.toBeInTheDocument();
   });
 
   it("submitting without a name keeps the form open (disabled save button)", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
@@ -419,7 +300,7 @@ describe("Admin — LocationModal add-new-location path", () => {
   });
 
   it("entering a location name and email enables the save button", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
@@ -468,7 +349,7 @@ describe("Admin — StaffProfileModal DepartmentRolePicker", () => {
 
 describe("Admin — ConfirmModal (delete location)", () => {
   it("clicking location delete button opens a confirm modal", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     // "All locations" appears in both the section label and a plan description. Use getAllByText.
     await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
 
@@ -491,7 +372,7 @@ describe("Admin — ConfirmModal (delete location)", () => {
   });
 
   it("confirm modal Cancel button closes the modal", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
 
     const trashBtns = document.querySelectorAll("button svg.lucide-trash-2");
@@ -552,7 +433,7 @@ describe("Admin — parseGoogleOpeningHours time parsing edge cases", () => {
 // ─── formatHoursText via location card ──────────────────────────────────────-
 
 describe("Admin — formatHoursText (via location detail card)", () => {
-  it("shows 'Closed all week' for a location with all days closed", async () => {
+  it("does not show trading_hours in the card even when all days are closed", async () => {
     const closedHours = JSON.stringify({
       mon: { open: false, windows: [] },
       tue: { open: false, windows: [] },
@@ -576,13 +457,13 @@ describe("Admin — formatHoursText (via location detail card)", () => {
       isLoading: false,
     };
 
-    // Use mockReturnValue (persistent) for this test, restore after
     mockUseLocations.mockReturnValue(closedLocationReturn);
 
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
 
-    expect(screen.getByText("Closed all week")).toBeInTheDocument();
+    // Opening hours display has been removed — should not appear
+    expect(screen.queryByText("Closed all week")).not.toBeInTheDocument();
 
     // Restore default mock
     mockUseLocations.mockReturnValue({
