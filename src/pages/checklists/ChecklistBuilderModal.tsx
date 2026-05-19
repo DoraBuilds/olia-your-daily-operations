@@ -115,6 +115,7 @@ export function ChecklistBuilderModal({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
@@ -325,7 +326,8 @@ export function ChecklistBuilderModal({
         clearChecklistDraft();
         onClose();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not save checklist — please try again.");
+        const msg = err instanceof Error ? err.message : (err as any)?.message;
+        toast.error(msg || "Could not save checklist — please try again.");
       } finally {
         setIsSaving(false);
       }
@@ -665,25 +667,31 @@ export function ChecklistBuilderModal({
               const questionChoices = getQuestionChoices(q);
               const questionChoiceColors = q.choiceColors ?? [];
               const qKey = `${si}-${qi}`;
+              const isDropTarget = dragOverKey === qKey && dragQuestionKey !== qKey;
               return (
-                <div
-                  key={q.id}
-                  draggable
-                  onDragStart={() => setDragQuestionKey(qKey)}
-                  onDragOver={e => { e.preventDefault(); }}
-                  onDrop={() => {
-                    if (dragQuestionKey && dragQuestionKey !== qKey) {
-                      const [fromSi, fromQi] = dragQuestionKey.split("-").map(Number);
-                      if (fromSi === si) moveQuestion(si, fromQi, qi);
-                    }
-                    setDragQuestionKey(null);
-                  }}
-                  onDragEnd={() => setDragQuestionKey(null)}
-                  className={cn("card-surface p-4 space-y-3 transition-opacity", dragQuestionKey === qKey && "opacity-40")}
-                >
+                <div key={q.id} className="relative">
+                  {isDropTarget && (
+                    <div className="absolute -top-1 left-0 right-0 h-0.5 bg-sage rounded-full z-10 pointer-events-none" />
+                  )}
+                  <div
+                    draggable
+                    onDragStart={e => { e.dataTransfer.effectAllowed = "move"; setDragQuestionKey(qKey); }}
+                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverKey(qKey); }}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverKey(null); }}
+                    onDrop={() => {
+                      if (dragQuestionKey && dragQuestionKey !== qKey) {
+                        const [fromSi, fromQi] = dragQuestionKey.split("-").map(Number);
+                        if (fromSi === si) moveQuestion(si, fromQi, qi);
+                      }
+                      setDragQuestionKey(null);
+                      setDragOverKey(null);
+                    }}
+                    onDragEnd={() => { setDragQuestionKey(null); setDragOverKey(null); }}
+                    className={cn("card-surface p-4 space-y-3 transition-opacity", dragQuestionKey === qKey && "opacity-40")}
+                  >
                   <div className="flex items-start gap-2">
                     {section.questions.length > 1 && (
-                      <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab" />
+                      <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
                     )}
                     <span className="text-xs text-muted-foreground mt-2.5 shrink-0">Q{qi + 1}</span>
                     <input type="text" placeholder={q.responseType === "instruction" ? "Instruction title / heading" : "Write your question here"} value={q.text}
@@ -1333,6 +1341,7 @@ export function ChecklistBuilderModal({
                       </>
                     );
                   })()}
+                </div>
                 </div>
               );
             })}
