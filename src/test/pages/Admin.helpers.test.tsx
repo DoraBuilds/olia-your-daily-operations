@@ -418,13 +418,17 @@ describe("Admin — LocationModal add-new-location path", () => {
     expect(saveBtn).toBeDisabled();
   });
 
-  it("entering a location name enables the save button", async () => {
+  it("entering a location name and email enables the save button", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
     const addBtn = await screen.findByRole("button", { name: /add location/i });
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. Main Branch/i), {
       target: { value: "The Rooftop Bar" },
+    });
+    // Alert email is also required (added after the original test was written)
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. main@olia\.app/i), {
+      target: { value: "rooftop@example.com" },
     });
     const saveBtn = document.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(saveBtn).not.toBeNull();

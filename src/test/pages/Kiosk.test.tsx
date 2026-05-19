@@ -477,53 +477,56 @@ describe("Kiosk — Grid Screen", () => {
     });
   });
 
-  it("Admin Login Modal has a PIN input", async () => {
+  it("Admin Login Modal shows numpad digit buttons (no text input)", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-pin-input")).not.toBeNull();
+      // New numpad UI: digit buttons labelled "1"–"9" and "0"
+      expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "5" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "0" })).toBeInTheDocument();
+      // No legacy text inputs
+      expect(document.getElementById("admin-pin-input")).toBeNull();
       expect(document.getElementById("admin-email-input")).toBeNull();
-      expect(document.getElementById("admin-password-input")).toBeNull();
     });
   });
 
-  it("Admin Login Modal has 'Continue' button", async () => {
+  it("Admin Login Modal shows 'Forgot your PIN?' recovery link", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(document.getElementById("admin-pin-signin-btn")).not.toBeNull();
+      expect(screen.getByText(/Forgot your PIN\?/i)).toBeInTheDocument();
     });
   });
 
-  it("filling PIN enables the continue button", async () => {
+  it("entering 3 digits does not yet submit", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    (supabase.rpc as ReturnType<typeof vi.fn>).mockClear();
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
-    await waitFor(() => {
-      expect(document.getElementById("admin-pin-input")).not.toBeNull();
-    });
-    const pinInput = document.getElementById("admin-pin-input") as HTMLInputElement;
-    fireEvent.change(pinInput, { target: { value: "1234" } });
-    const signInBtn = document.getElementById("admin-pin-signin-btn") as HTMLButtonElement;
-    expect(signInBtn.disabled).toBe(false);
+    await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument());
+    // Each click must be a separate act so React flushes state between them
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "1" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "2" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "3" })); });
+    // Auto-submit only fires on 4th digit
+    expect(supabase.rpc).not.toHaveBeenCalledWith("validate_admin_pin", expect.anything());
   });
 
-  it("clicking 'Continue' calls supabase.rpc validate_admin_pin", async () => {
+  it("entering 4 digits auto-submits and calls validate_admin_pin", async () => {
     const { supabase } = await import("@/lib/supabase");
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
-    await waitFor(() => {
-      expect(document.getElementById("admin-pin-input")).not.toBeNull();
-    });
-    const pinInput = document.getElementById("admin-pin-input") as HTMLInputElement;
-    fireEvent.change(pinInput, { target: { value: "1234" } });
-    const signInBtn = document.getElementById("admin-pin-signin-btn") as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(signInBtn);
-    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument());
+    // Each click must be a separate act so React flushes state between them
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "1" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "2" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "3" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "4" })); });
     await waitFor(() => {
       expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
         p_pin: "1234",
