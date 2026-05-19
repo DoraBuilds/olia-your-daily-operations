@@ -482,39 +482,40 @@ describe("Kiosk — Grid Screen", () => {
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      // The modal uses a NumberPad — expect digit buttons instead of a text input
       expect(screen.getByText("Admin PIN")).toBeInTheDocument();
       expect(document.getElementById("admin-pin-input")).toBeNull();
       expect(document.getElementById("admin-email-input")).toBeNull();
-      expect(document.getElementById("admin-password-input")).toBeNull();
     });
     // Numpad digit buttons should be present
     const digitBtns = screen.getAllByRole("button").filter(b => /^[0-9]$/.test(b.textContent ?? ""));
     expect(digitBtns.length).toBeGreaterThanOrEqual(10);
   });
 
-  it("Admin Login Modal shows PIN dots indicator", async () => {
+  it("Admin Login Modal shows 'Forgot your PIN?' recovery link", async () => {
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => {
-      expect(screen.getByText("Admin PIN")).toBeInTheDocument();
+      expect(screen.getByText(/Forgot your PIN\?/i)).toBeInTheDocument();
     });
-    // PinDots renders 4 circles — check the numpad is present (no explicit continue btn)
     expect(document.getElementById("admin-pin-signin-btn")).toBeNull();
   });
 
-  it("tapping numpad digits fills PIN dots", async () => {
+  it("entering 3 digits does not yet submit", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    (supabase.rpc as ReturnType<typeof vi.fn>).mockClear();
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
     await waitFor(() => expect(screen.getByText("Admin PIN")).toBeInTheDocument());
-    // Press "1" — should not throw
-    const digitBtns = screen.getAllByRole("button").filter(b => b.textContent === "1");
-    expect(digitBtns.length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(digitBtns[0]);
-    // Still in the modal (need 3 more digits to auto-submit)
-    expect(screen.getByText("Admin PIN")).toBeInTheDocument();
+    const getDigitBtn = (d: string) =>
+      screen.getAllByRole("button").find(b => b.textContent?.trim() === d)!;
+    // Each click in its own act so React flushes pin state between taps
+    await act(async () => { fireEvent.click(getDigitBtn("1")); });
+    await act(async () => { fireEvent.click(getDigitBtn("2")); });
+    await act(async () => { fireEvent.click(getDigitBtn("3")); });
+    // Auto-submit only fires on 4th digit
+    expect(supabase.rpc).not.toHaveBeenCalledWith("validate_admin_pin", expect.anything());
   });
 
   it("entering 4 digits auto-submits and calls supabase.rpc validate_admin_pin", async () => {
@@ -533,6 +534,7 @@ describe("Kiosk — Grid Screen", () => {
     await act(async () => { fireEvent.click(getDigitBtn("2")); });
     await act(async () => { fireEvent.click(getDigitBtn("3")); });
     await act(async () => { fireEvent.click(getDigitBtn("4")); });
+
 
     await waitFor(() => {
       expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {

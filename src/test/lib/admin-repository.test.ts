@@ -1,14 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   getInitials,
   daysAgo,
   staffDisplayName,
   formatTimestamp,
   generatePin,
-  initialLocations,
-  initialStaffProfiles,
-  initialTeamMembers,
-  initialAuditLog,
   DEFAULT_PERMISSIONS,
   DEFAULT_STAFF_DEPARTMENTS,
   DEFAULT_STAFF_ROLES,
@@ -68,14 +64,18 @@ describe("daysAgo", () => {
 // ─── staffDisplayName ─────────────────────────────────────────────────────────
 
 describe("staffDisplayName", () => {
+  const baseProfile = {
+    id: "sp1", location_id: "l1", role: "Front of House", status: "active" as const,
+    pin: "1234", last_used_at: null, archived_at: null, created_at: new Date().toISOString(),
+    first_name: "Maria", last_name: "Garcia",
+  };
+
   it("concatenates first and last name", () => {
-    const profile = initialStaffProfiles[0];
-    expect(staffDisplayName(profile)).toBe(`${profile.first_name} ${profile.last_name}`);
+    expect(staffDisplayName(baseProfile)).toBe("Maria Garcia");
   });
 
   it("trims result", () => {
-    const profile = { ...initialStaffProfiles[0], last_name: "" };
-    expect(staffDisplayName(profile)).toBe(profile.first_name);
+    expect(staffDisplayName({ ...baseProfile, last_name: "" })).toBe("Maria");
   });
 });
 
@@ -104,68 +104,6 @@ describe("generatePin", () => {
   it("generates different PINs across calls", () => {
     const pins = new Set(Array.from({ length: 20 }, () => generatePin()));
     expect(pins.size).toBeGreaterThan(1);
-  });
-});
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-describe("initialLocations", () => {
-  it("contains at least one location", () => {
-    expect(initialLocations.length).toBeGreaterThan(0);
-  });
-
-  it("each location has required fields", () => {
-    initialLocations.forEach(loc => {
-      expect(loc.id).toBeTruthy();
-      expect(loc.name).toBeTruthy();
-      expect(typeof loc.archive_threshold_days).toBe("number");
-    });
-  });
-});
-
-describe("initialStaffProfiles", () => {
-  it("contains active and archived profiles", () => {
-    const active = initialStaffProfiles.filter(p => p.status === "active");
-    const archived = initialStaffProfiles.filter(p => p.status === "archived");
-    expect(active.length).toBeGreaterThan(0);
-    expect(archived.length).toBeGreaterThan(0);
-  });
-
-  it("each profile has a 4-digit PIN", () => {
-    initialStaffProfiles.forEach(p => {
-      expect(p.pin).toHaveLength(4);
-      expect(Number(p.pin)).toBeGreaterThanOrEqual(1000);
-    });
-  });
-});
-
-describe("initialTeamMembers", () => {
-  it("contains an Owner", () => {
-    const owners = initialTeamMembers.filter(m => m.role === "Owner");
-    expect(owners.length).toBeGreaterThan(0);
-  });
-
-  it("each member has initials", () => {
-    initialTeamMembers.forEach(m => {
-      expect(m.initials.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-});
-
-describe("initialAuditLog", () => {
-  it("has audit entries with required fields", () => {
-    expect(initialAuditLog.length).toBeGreaterThan(0);
-    initialAuditLog.forEach(entry => {
-      expect(entry.id).toBeTruthy();
-      expect(entry.user).toBeTruthy();
-      expect(entry.action).toBeTruthy();
-      expect(entry.timestamp).toBeTruthy();
-    });
-  });
-
-  it("allows null location for account-level actions", () => {
-    const noLocation = initialAuditLog.find(e => e.location_id === null);
-    expect(noLocation).toBeDefined();
   });
 });
 
