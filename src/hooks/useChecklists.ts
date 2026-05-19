@@ -111,51 +111,24 @@ export function useChecklists() {
 
 export function useSaveChecklist() {
   const qc = useQueryClient();
-  const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (checklist: Partial<ChecklistItem> & { id?: string }) => {
-      const candidateLocationIds = [
-        ...(checklist.location_id ? [checklist.location_id] : []),
-        ...((checklist.location_ids ?? []).filter(Boolean)),
-      ];
-      const uniqueLocationIds = [...new Set(candidateLocationIds)];
-      if (uniqueLocationIds.length > 0) {
-        const { data: accessibleLocations, error: locationError } = await supabase
-          .from("locations")
-          .select("id");
-        if (locationError) throw locationError;
-        const accessibleIds = new Set((accessibleLocations ?? []).map((location) => location.id));
-        const invalidLocationId = uniqueLocationIds.find((id) => !accessibleIds.has(id));
-        if (invalidLocationId) {
-          throw new Error(
-            "This checklist includes a location that does not belong to your current account. Refresh the page and select locations again.",
-          );
-        }
-      }
-
-      const fields = {
-        organization_id: teamMember!.organization_id,
-        title: checklist.title,
-        folder_id: checklist.folder_id ?? null,
-        location_id: checklist.location_id ?? null,
-        location_ids: checklist.location_ids ?? null,
-        start_date: checklist.start_date ?? null,
-        schedule: checklist.schedule ?? null,
-        sections: checklist.sections ?? [],
-        time_of_day: "anytime",
-        due_time: checklist.due_time ?? null,
-        visibility_from: checklist.visibility_from ?? null,
-        visibility_until: checklist.visibility_until ?? null,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (checklist.id) {
-        const { error } = await supabase.from("checklists").update(fields).eq("id", checklist.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("checklists").insert(fields);
-        if (error) throw error;
-      }
+      const { data, error } = await supabase.rpc("save_checklist", {
+        p_id:              checklist.id || null,
+        p_title:           checklist.title ?? "",
+        p_folder_id:       checklist.folder_id ?? null,
+        p_location_id:     checklist.location_id ?? null,
+        p_location_ids:    checklist.location_ids ?? null,
+        p_start_date:      checklist.start_date ?? null,
+        p_schedule:        checklist.schedule ?? null,
+        p_sections:        checklist.sections ?? [],
+        p_time_of_day:     "anytime",
+        p_due_time:        checklist.due_time ?? null,
+        p_visibility_from: checklist.visibility_from ?? null,
+        p_visibility_until: checklist.visibility_until ?? null,
+      });
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["checklists"] }),
   });
