@@ -236,17 +236,17 @@ describe("useSaveChecklist", () => {
   });
 
   it("persists a checklist start date when saving", async () => {
-    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-1" }], error: null });
+    const update = vi.fn().mockReturnThis();
+    const eq = vi.fn().mockResolvedValue({ data: [{ id: "cl-1" }], error: null });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      eq: vi.fn().mockReturnThis(),
+      eq,
       lte: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
-      update: vi.fn().mockReturnThis(),
-      upsert,
+      update,
       delete: vi.fn().mockReturnThis(),
       then: vi.fn().mockImplementation((cb) =>
         Promise.resolve(cb({ data: [], error: null }))
@@ -261,14 +261,16 @@ describe("useSaveChecklist", () => {
       sections: [],
     } as any);
 
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
       start_date: "2026-04-08",
     }));
+    expect(eq).toHaveBeenCalledWith("id", "cl-1");
   });
 
   it("persists location_ids when saving a checklist", async () => {
-    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-2" }], error: null });
-    // Differentiate locations select (returns the IDs so validation passes) from checklists upsert
+    const update = vi.fn().mockReturnThis();
+    const eq = vi.fn().mockResolvedValue({ data: [{ id: "cl-2" }], error: null });
+    // Differentiate locations select (returns the IDs so validation passes) from checklists update
     mockFrom.mockImplementation((table: string) => {
       if (table === "locations") {
         return {
@@ -282,13 +284,12 @@ describe("useSaveChecklist", () => {
       return {
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        eq: vi.fn().mockReturnThis(),
+        eq,
         lte: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
         insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
-        update: vi.fn().mockReturnThis(),
-        upsert,
+        update,
         delete: vi.fn().mockReturnThis(),
         then: vi.fn().mockImplementation((cb) =>
           Promise.resolve(cb({ data: [], error: null }))
@@ -304,23 +305,24 @@ describe("useSaveChecklist", () => {
       sections: [],
     } as any);
 
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
       location_ids: ["loc-1", "loc-2"],
     }));
+    expect(eq).toHaveBeenCalledWith("id", "cl-2");
   });
 
   it("saves location_ids as null when not provided", async () => {
-    const upsert = vi.fn().mockResolvedValue({ data: [{ id: "cl-3" }], error: null });
+    const update = vi.fn().mockReturnThis();
+    const eq = vi.fn().mockResolvedValue({ data: [{ id: "cl-3" }], error: null });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      eq: vi.fn().mockReturnThis(),
+      eq,
       lte: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockResolvedValue({ data: [{ id: "new1" }], error: null }),
-      update: vi.fn().mockReturnThis(),
-      upsert,
+      update,
       delete: vi.fn().mockReturnThis(),
       then: vi.fn().mockImplementation((cb) =>
         Promise.resolve(cb({ data: [], error: null }))
@@ -334,9 +336,10 @@ describe("useSaveChecklist", () => {
       sections: [],
     } as any);
 
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
       location_ids: null,
     }));
+    expect(eq).toHaveBeenCalledWith("id", "cl-3");
   });
 });
 
