@@ -346,17 +346,14 @@ export function AccountTab({
               <span className="text-xs text-muted-foreground font-medium">New PIN</span>
               <div className="relative">
                 <input
-                  type={showNewPin ? "text" : "password"}
+                  type="password"
                   inputMode="numeric"
                   maxLength={4}
                   value={pin}
                   onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="4 digits"
-                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
                 />
-                <button type="button" onClick={() => setShowNewPin(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
               </div>
             </div>
             <button
