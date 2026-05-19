@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Olia — Architecture Map</title>
+<style>
+  :root {
+    --bg: #0F0F0F;
+    --panel: #161616;
+    --panel-2: #1c1c1c;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --muted: #8a8a8a;
+    --client: #4ea1ff;
+    --route: #7bd389;
+    --service: #c792ea;
+    --db: #ffb86b;
+    --external: #ff6b9d;
+    --critical: #ff3860;
+    --accent: #f5b942;
+    --accent-2: #ff7a45;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; overflow: hidden; height: 100vh; display: flex; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 320px; min-width: 320px; height: 100vh; background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden; z-index: 10;
+  }
+  #sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+  #sidebar-header h2 { font-size: 15px; font-weight: 600; color: var(--text); }
+  #sidebar-header p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  #sidebar-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  #sidebar-body::-webkit-scrollbar { width: 4px; }
+  #sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .node-detail h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .node-detail .role-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; margin-bottom: 8px; }
+  .node-detail .plain { font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 10px; background: var(--panel-2); border-radius: 6px; padding: 8px 10px; }
+  .node-detail .path { font-size: 10px; color: var(--muted); font-family: monospace; background: var(--panel-2); border-radius: 4px; padding: 4px 8px; margin-bottom: 10px; word-break: break-all; }
+  .node-detail .notes-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 5px; }
+  .node-detail .note { font-size: 11px; color: #c8c8c8; line-height: 1.6; padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .node-detail .note:last-child { border-bottom: none; }
+  .node-detail .edges-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 10px 0 5px; }
+  .edge-pill { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 8px; margin: 2px 2px 2px 0; }
+
+  .default-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--accent); }
+  .finding { background: var(--panel-2); border-left: 3px solid var(--accent); border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; }
+  .finding .tag { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+  .finding p { font-size: 11px; color: #c8c8c8; line-height: 1.5; }
+
+  /* Filter chips */
+  #filters { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .chip { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all .15s; user-select: none; background: transparent; }
+  .chip:hover { border-color: #555; color: var(--text); }
+  .chip.active { background: var(--panel-2); border-color: var(--client); color: var(--client); }
+
+  /* Canvas area */
+  #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+  #zoom-controls { position: absolute; bottom: 16px; right: 16px; z-index: 20; display: flex; flex-direction: column; gap: 4px; }
+  .zoom-btn { width: 32px; height: 32px; background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .zoom-btn:hover { background: var(--panel-2); }
+
+  #svg-canvas { width: 100%; height: 100%; cursor: grab; }
+  #svg-canvas.dragging { cursor: grabbing; }
+
+  /* SVG nodes */
+  .cluster-rect { fill: var(--panel); stroke: var(--border); rx: 8; }
+  .cluster-label { fill: #555; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .node-group { cursor: pointer; }
+  .node-rect { stroke-width: 1.5; rx: 7; transition: filter .15s; }
+  .node-group:hover .node-rect { filter: brightness(1.3); }
+  .node-group.selected .node-rect { stroke-width: 2.5; filter: brightness(1.4); }
+  .node-group.dimmed { opacity: 0.15; }
+  .node-label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; fill: #fff; pointer-events: none; }
+  .node-sub { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 9.5px; fill: rgba(255,255,255,0.55); pointer-events: none; }
+  .critical-badge { fill: var(--critical); }
+  .critical-dot { fill: var(--critical); }
+
+  /* Edges */
+  .edge { fill: none; stroke-width: 1.5; pointer-events: none; }
+  .edge-critical { stroke: var(--critical); stroke-width: 2.5; }
+  .edge-api { stroke: var(--accent-2); opacity: 0.8; }
+  .edge-db { stroke: var(--db); opacity: 0.7; }
+  .edge-mount { stroke: #38bdf8; opacity: 0.6; }
+  .edge-normal { stroke: #444; opacity: 0.7; }
+  .edge-label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 9px; fill: #666; pointer-events: none; }
+  .edge-hidden { display: none; }
+
+  /* Legend */
+  #legend { position: absolute; bottom: 16px; left: 16px; z-index: 20; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 10px; color: var(--muted); }
+  .legend-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .legend-line { width: 20px; height: 2px; border-radius: 1px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h2>Olia Architecture Map</h2>
+    <p>Click any node to inspect. Drag to pan, scroll to zoom.</p>
+  </div>
+  <div id="filters"></div>
+  <div id="sidebar-body">
+    <div class="default-info" id="default-info">
+      <h3>Notable findings</h3>
+      <div class="finding">
+        <div class="tag">Critical path</div>
+        <p>New user signup flows: Signup.tsx → supabase.auth.signInWithOtp → verifyOtp → AuthContext SIGNED_IN → fetchTeamMember → setup_new_organization RPC → navigate(/admin). Navigation deferred to useEffect to avoid ProtectedRoute race (line 39 Signup.tsx).</p>
+      </div>
+      <div class="finding">
+        <div class="tag">Architecture insight</div>
+        <p>AuthContext uses ONLY onAuthStateChange (not getSession + listener). Using both caused double-invocation of setup_new_organization on first load — a PK conflict bug fixed by this design (line 159, AuthContext.tsx).</p>
+      </div>
+      <div class="finding">
+        <div class="tag">Dead / mock data</div>
+        <p>admin-repository.ts exports initialLocations, initialStaffProfiles, initialTeamMembers, initialAuditLog (lines 162–346) — hardcoded mock data with French addresses. These are NOT used by any live page — the real data comes from Supabase hooks. Dead code risk: unused exports bloating the bundle.</p>
+      </div>
+      <div class="finding">
+        <div class="tag">Surprise: Kiosk is public</div>
+        <p>Kiosk (/kiosk) is NOT behind ProtectedRoute. It fetches checklists via the anon key RPC get_kiosk_checklists. Submits logs via submit_kiosk_log (SECURITY DEFINER). Staff PINs are hashed server-side. Org ownership stored in localStorage (kiosk_owner_user_id).</p>
+      </div>
+      <div class="finding">
+        <div class="tag">Surprise: setupError navigation</div>
+        <p>Admin.tsx must navigate BEFORE calling signOut (line 311-312). If signOut fires first, ProtectedRoute intercepts and redirects to /login before the .then() can reach /signup. The order matters — this is a React render-cycle trap.</p>
+      </div>
+      <div class="finding">
+        <div class="tag">Submission queue</div>
+        <p>submission-queue.ts implements an offline-resilient retry queue in localStorage (QUEUE_KEY="olia_pending_logs"). Max 10 attempts, 7-day TTL. Drained on every kiosk load (Kiosk.tsx line 439).</p>
+      </div>
+      <div class="finding">
+        <div class="tag">alerts-store.ts</div>
+        <p>alerts-store.ts is a pub/sub store kept for backward compat with tests. Real alerts come from the Supabase `alerts` table via useAlerts hook — NOT this store. The store's DEFAULT_ALERTS array is empty (line 15, alerts-store.ts).</p>
+      </div>
+    </div>
+    <div class="node-detail" id="node-detail" style="display:none"></div>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#555" />
+      </marker>
+      <marker id="arrow-critical" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--critical)" />
+      </marker>
+      <marker id="arrow-api" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--accent-2)" />
+      </marker>
+      <marker id="arrow-db" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="var(--db)" />
+      </marker>
+      <marker id="arrow-mount" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#38bdf8" />
+      </marker>
+    </defs>
+    <g id="graph"></g>
+  </svg>
+  <div id="zoom-controls">
+    <button class="zoom-btn" id="btn-fit" title="Fit">&#x25A2;</button>
+    <button class="zoom-btn" id="btn-plus">+</button>
+    <button class="zoom-btn" id="btn-minus">-</button>
+  </div>
+  <div id="legend">
+    <div class="legend-row"><div class="legend-line" style="background:var(--critical)"></div> Critical path</div>
+    <div class="legend-row"><div class="legend-line" style="background:var(--accent-2)"></div> API / RPC call</div>
+    <div class="legend-row"><div class="legend-line" style="background:var(--db)"></div> Database read/write</div>
+    <div class="legend-row"><div class="legend-line" style="background:#38bdf8"></div> Component mount</div>
+    <div class="legend-row"><div class="legend-line" style="background:#444"></div> Import / use</div>
+  </div>
+</div>
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const clusters = [
+  { id: "entry",      label: "Entry / Routing",    x: 20,   y: 30,  w: 220, h: 600 },
+  { id: "pages",      label: "Pages",              x: 270,  y: 30,  w: 220, h: 860 },
+  { id: "components", label: "Shared Components",  x: 520,  y: 30,  w: 220, h: 400 },
+  { id: "hooks",      label: "React Query Hooks",  x: 770,  y: 30,  w: 220, h: 700 },
+  { id: "lib",        label: "Utility Libs",       x: 1020, y: 30,  w: 220, h: 680 },
+  { id: "external",   label: "External / Supabase",x: 1270, y: 30,  w: 220, h: 500 },
+];
+
+const N = (id, cluster, label, sub, x, y, w, h, color, opts = {}) =>
+  ({ id, cluster, label, sub, x, y, w: w||160, h: h||64, color, ...opts });
+
+const nodes = [
+  // ── Entry cluster ─────────────────────────────────────────────────────────
+  N("main",     "entry", "main.tsx",      "App bootstrap + Capacitor", 40,  70,  170, 64, "var(--client)",
+    { role: "App entry point", plain: "The very first file that runs. It mounts the React app, sets up iOS/Android status bar colours, and handles the GitHub Pages URL redirect hack.", path: "src/main.tsx",
+      notes: ["Line 24: restoreGitHubPagesRoute() rewrites the URL on load — needed because GitHub Pages 404 redirects strip the path.", "Line 26-36: Capacitor native-only setup — StatusBar, SplashScreen, Keyboard (safe no-ops in browsers).", "Line 38: createRoot().render(<App />) — standard React 18 mount."],
+      tag: ["all","auth"] }),
+
+  N("app",      "entry", "App.tsx",       "Router + providers", 40,  160, 170, 64, "var(--client)", { critical: true,
+    role: "Root component / route tree", plain: "Wraps the entire app in QueryClient, AuthProvider, and BrowserRouter. Defines every route. All pages are lazy-loaded via React.lazy to keep initial bundle small.",
+    path: "src/App.tsx",
+    notes: ["Line 8: AuthProvider wraps everything — all child components can call useAuth().", "Lines 50-68: Route tree. /admin redirects to /admin/location (line 64). /kiosk is PUBLIC (no ProtectedRoute).", "Line 11: routerFutureFlags imported from lib/router-future-flags — opts into React Router v7 prep flags.", "Lines 13-25: All pages are lazy() loaded — no page code in the initial JS bundle."],
+    tag: ["all","auth","kiosk","checklists","admin"] }),
+
+  N("authctx",  "entry", "AuthContext.tsx","Auth state + org setup", 40, 260, 170, 64, "var(--critical)", { critical: true,
+    role: "React context — authentication & org bootstrap", plain: "The brain of auth. Listens to Supabase auth events, fetches or creates the team_member row, and exposes user/teamMember/setupError to the whole app.",
+    path: "src/contexts/AuthContext.tsx",
+    notes: ["Line 159: Uses ONLY onAuthStateChange (not getSession too). Dual-use caused a double setup_new_organization PK conflict bug.", "Lines 48-150: fetchTeamMember() — checks team_members first; if missing, reads localStorage then calls setup_new_organization RPC.", "Line 164: queryClient.clear() on SIGNED_IN — clears previous account's React Query cache.", "Line 172: TOKEN_REFRESHED is skipped — avoids silently creating a second org on hourly JWT rotation."],
+    tag: ["all","auth","admin"] }),
+
+  N("protected","entry", "ProtectedRoute", "Auth guard", 40, 360, 170, 50, "var(--service)", { critical: true,
+    role: "Route guard component", plain: "Wraps every protected page. Shows a spinner while auth loads, redirects to /login if no user.",
+    path: "src/components/ProtectedRoute.tsx",
+    notes: ["Line 7: Shows 'Loading…' while loading=true — prevents flash of login redirect.", "Line 15: Navigate to /login (not /kiosk) when user=null.", "Line 18: Renders children when user is set — no teamMember check here."],
+    tag: ["all","auth"] }),
+
+  N("queryclient","entry","query-client.ts","React Query singleton", 40, 440, 170, 50, "var(--client)",
+    { role: "React Query client config", plain: "Single shared QueryClient instance. AuthContext clears it on login/logout so no data leaks between accounts.",
+      path: "src/lib/query-client.ts",
+      notes: ["Used in App.tsx line 40 for QueryClientProvider.", "AuthContext.tsx line 4: imported to call queryClient.clear() on auth events."],
+      tag: ["all"] }),
+
+  N("errorboundary","entry","ErrorBoundary","Crash catch", 40, 520, 170, 50, "var(--client)",
+    { role: "React error boundary", plain: "Catches unexpected crashes at two levels — the outer boundary (App.tsx line 39) and the inner one around routes (line 46). Prevents a single bad route from crashing the entire app.",
+      path: "src/components/ErrorBoundary.tsx",
+      notes: ["Nested twice in App.tsx — outer catches provider errors, inner catches route render errors.", "No recovery UI visible in code — likely shows a generic error message."],
+      tag: ["all"] }),
+
+  // ── Pages cluster ──────────────────────────────────────────────────────────
+  N("signup",   "pages", "Signup.tsx",     "OTP signup flow", 290, 70,  170, 64, "var(--critical)", { critical: true,
+    role: "New user signup page", plain: "The sign-up form. Collects business name, owner name, and email. Sends a one-time code via Supabase. Stores onboarding data in localStorage before verifying so AuthContext can pick it up after the SIGNED_IN event.",
+    path: "src/pages/Signup.tsx",
+    notes: ["Line 39: useEffect redirects to /admin if user is set — but skips if ?reason=account-reset to avoid infinite loop.", "Lines 60-66: Writes olia_pending_onboarding to localStorage BEFORE calling signInWithOtp.", "Line 83: Rate-limit detection — advances to code step even on error so user can use existing code.", "Line 124: Does NOT navigate on verifyOtp success — lets useEffect(user) handle it to avoid ProtectedRoute race."],
+    tag: ["all","auth"] }),
+
+  N("login",    "pages", "Login.tsx",      "OTP login flow", 290, 160, 170, 64, "var(--critical)", { critical: true,
+    role: "Returning user login page", plain: "Email + one-time code sign-in. Two-step: first enter email (sends code), then enter code. Uses shouldCreateUser:false — won't create new accounts.",
+    path: "src/pages/Login.tsx",
+    notes: ["Line 47: useEffect → navigate('/admin') when user is set — same deferred pattern as Signup.", "Line 63: shouldCreateUser:false — login only, does not create accounts.", "Lines 16-25: isMissingAccount() detects 'signups not allowed for otp' and shows a friendly error.", "Line 107-108: Comment documents the ProtectedRoute race prevention pattern."],
+    tag: ["all","auth"] }),
+
+  N("admin",    "pages", "Admin.tsx",       "Admin management", 290, 260, 170, 64, "var(--accent)", { critical: true,
+    role: "Admin page — locations, staff, team", plain: "The main management hub. Two tabs: My Location (staff profiles, checklists) and Account (team members, billing, locations). Only Owners see the Account tab.",
+    path: "src/pages/Admin.tsx",
+    notes: ["Lines 47-60: kiosk_admin_session token validation — from=kiosk URL param enables kiosk-authenticated admin access.", "Lines 309-313: setupError handler — navigates to /signup BEFORE signOut to avoid ProtectedRoute redirect.", "Lines 137-150: 90-second inactivity timer when from=kiosk — returns to /kiosk on idle.", "Line 273: Prevents deleting own team_member row — would create orphan org on next login."],
+    tag: ["all","admin"] }),
+
+  N("dashboard","pages", "Dashboard.tsx",   "Daily ops overview", 290, 360, 170, 64, "var(--route)",
+    { role: "Dashboard page", plain: "The home screen for logged-in staff. Shows today's checklist completions, operational alerts (top 3), and a compliance score grid per location. Paginated in groups of 4.",
+      path: "src/pages/Dashboard.tsx",
+      notes: ["Lines 44-47: SVG ScoreRing component — ≥85% green, ≥65% amber, <65% red.", "Line 102: useAlerts() — real data from Supabase alerts table.", "Lines 172-180: computeMissedChecklists + computeOverdueActions for overdueCount stat.", "Line 183: visibleAlerts = allAlerts.slice(0,3) — caps at 3 on dashboard."],
+      tag: ["all"] }),
+
+  N("kiosk",    "pages", "Kiosk.tsx",       "Staff-facing kiosk", 290, 460, 170, 64, "var(--accent-2)",
+    { role: "Kiosk page — public, no auth required", plain: "The tablet screen staff use to complete checklists. Fetches checklists anonymously using a location-specific token. Supports offline retry queue. Shows checklists split by Due / Overdue / Upcoming / Done.",
+      path: "src/pages/Kiosk.tsx",
+      notes: ["Line 50: fetchKioskChecklists uses get_kiosk_checklists RPC with anon key — no auth needed.", "Line 439: drainQueue() on every load — retries failed offline submissions.", "Lines 489: 30-second auto-refresh interval to keep checklist grid fresh.", "Lines 33-46: Module-level _kioskLocationId vars persist across in-app navigations without re-mounting."],
+      tag: ["all","kiosk"] }),
+
+  N("checklists","pages","Checklists.tsx",  "Checklist manager", 290, 560, 170, 64, "var(--service)",
+    { role: "Checklists page shell", plain: "Thin shell that renders ChecklistsTab. Also redirects legacy ?tab=reporting URLs to the new /reporting route.",
+      path: "src/pages/Checklists.tsx",
+      notes: ["Lines 10-23: useEffect redirects ?tab=reporting to /reporting — backwards compat for old URLs.", "Line 28: Delegates entirely to ChecklistsTab sub-component.", "Actual checklist CRUD logic lives in src/pages/checklists/ sub-modules."],
+      tag: ["all","checklists"] }),
+
+  N("notifications","pages","Notifications.tsx","Alerts list", 290, 660, 170, 64, "var(--service)",
+    { role: "Notifications page", plain: "Shows all active operational alerts. Lets users dismiss individual alerts or clear all. Alerts come from the Supabase alerts table via useAlerts hook.",
+      path: "src/pages/Notifications.tsx",
+      notes: ["Line 11: useDismissAlert + useClearAlerts mutations from useAlerts hook.", "Line 14: clearAll = clearMut.mutate(alerts.map(a => a.id)) — batch dismiss.", "Alerts are created by Kiosk (out-of-range sensor values, notify triggers) via insert_kiosk_alert RPC."],
+      tag: ["all"] }),
+
+  N("infohub",  "pages", "Infohub.tsx",     "Docs + training", 290, 760, 170, 64, "var(--service)",
+    { role: "Infohub page — library and training tabs", plain: "Document library and staff training hub. Two tabs: Library (SOPs, documents) and Training (step-by-step modules). Supports folder hierarchy, drag-to-reorder, access control per folder/doc.",
+      path: "src/pages/Infohub.tsx",
+      notes: ["Lines 46-55: useInfohubContent provides CRUD mutations for folders, docs.", "Lines 175-180: libDrag + trainDrag via useDragReorder — native HTML drag events.", "Line 232: Detail view rendered in-place (not a modal) by returning a different component.", "Access control at line 96: canManageInfohubAccess / canAccessInfohubContent from lib/infohub-access."],
+      tag: ["all"] }),
+
+  // ── Components cluster ─────────────────────────────────────────────────────
+  N("layout",   "components","Layout.tsx",  "Page shell + nav", 540, 70,  170, 64, "var(--client)",
+    { role: "Layout wrapper component", plain: "Wraps every protected page. Provides the sticky header (title, subtitle, left/right slots), scrollable content area, SidebarNav (desktop), and BottomNav (mobile). Scroll resets on route change.",
+      path: "src/components/Layout.tsx",
+      notes: ["Line 30-35: scrollTo top on location.pathname change via useEffect + mainRef.", "Line 74: pb-24 padding — clears the fixed BottomNav on mobile.", "Line 56-61: LogOut button in header — calls signOut() + navigate('/') on click.", "Line 77: SidebarNav rendered on desktop, BottomNav always rendered (hidden via CSS on md+)."],
+      tag: ["all"] }),
+
+  N("bottomnav","components","BottomNav.tsx","Mobile tab bar", 540, 160, 170, 50, "var(--client)",
+    { role: "Fixed bottom navigation (mobile)", plain: "The 4-tab bar at the bottom of the screen on phones. Hidden on desktop (md:hidden). Shows Dashboard, Checklists, Infohub, Admin links.",
+      path: "src/components/BottomNav.tsx",
+      notes: ["Line 4: Imports appNavItems from app-nav — single source of truth for nav items.", "Line 9: fixed bottom-0 with safe-area-pb for iPhone notch support.", "Line 10: md:hidden — invisible on tablet/desktop where SidebarNav is shown."],
+      tag: ["all"] }),
+
+  N("checklisttab","components","ChecklistsTab","Checklist CRUD UI", 540, 240, 170, 64, "var(--service)",
+    { role: "Main checklist management component", plain: "The full checklist builder interface — create, edit, organise into folders, assign to locations. Sits inside the Checklists page shell.",
+      path: "src/pages/checklists/ChecklistsTab.tsx",
+      notes: ["Part of the checklists/ sub-module directory.", "Uses useChecklists, useFolders, useSaveChecklist, useDeleteChecklist hooks.", "ChecklistBuilderModal handles the full question editor with drag-to-reorder sections."],
+      tag: ["all","checklists"] }),
+
+  N("kiosksubmods","components","Kiosk sub-mods","ChecklistRunner etc.", 540, 330, 170, 64, "var(--accent-2)",
+    { role: "Kiosk sub-module components", plain: "The kiosk UI split into focused sub-files: ChecklistRunner (question answering), PinEntryModal (staff PIN), KioskSetupScreen (location picker), CompletionScreen (done state).",
+      path: "src/pages/kiosk/",
+      notes: ["ChecklistRunner.tsx: handles per-question answering, photo capture (media type questions).", "PinEntryModal.tsx: AdminLoginModal lets kiosk staff enter manager PIN to access admin.", "KioskSetupScreen.tsx: location selection UI — supports both manual entry and URL param (locationId=).", "logic-rules.ts: evaluates checklist answers against notify triggers for fireNotifyAlerts."],
+      tag: ["all","kiosk"] }),
+
+  // ── Hooks cluster ─────────────────────────────────────────────────────────
+  N("useChecklist","hooks","useChecklists.ts","Checklist CRUD", 790, 70, 170, 64, "var(--db)",
+    { role: "React Query hook — checklists table", plain: "Reads and writes the checklists table in Supabase. Scoped to the current organization. Validates location IDs before saving to prevent cross-org data leaks.",
+      path: "src/hooks/useChecklists.ts",
+      notes: ["Line 78: useChecklists query — filters by organization_id client-side after fetch (line 88).", "Lines 101-116: useSaveChecklist validates location IDs against accessible locations before upsert.", "Line 130: time_of_day hardcoded to 'anytime' — kiosk uses visibility_from/visibility_until instead.", "useFolders + useSaveFolder + useDeleteFolder also in this file."],
+      tag: ["all","checklists"] }),
+
+  N("useLogs",  "hooks", "useChecklistLogs","Logs read/write", 790, 160, 170, 64, "var(--db)",
+    { role: "React Query hook — checklist_logs table", plain: "Fetches completion records with optional date and location filters. Used by Dashboard and Reporting to display scores and history.",
+      path: "src/hooks/useChecklistLogs.ts",
+      notes: ["Line 30: accepts filters { from, to, location_id } for date-range queries.", "Line 36: Selects started_at (added by migration 20260326000001).", "useCreateChecklistLog is in this file but NOT used by Kiosk — Kiosk uses submit_kiosk_log RPC instead."],
+      tag: ["all","checklists"] }),
+
+  N("useActions","hooks","useActions.ts",  "Open actions", 790, 250, 170, 64, "var(--db)",
+    { role: "React Query hook — actions table", plain: "CRUD for open action items that come out of checklist reviews. Tracks title, assignee, due date, and status (open/in-progress/resolved).",
+      path: "src/hooks/useActions.ts",
+      notes: ["Line 16: useActions — no org filter in query, RLS handles scoping.", "useSaveAction at line 44: INSERT requires teamMember.organization_id; UPDATE does not send org_id.", "useDeleteAction, useUpdateActionStatus also in this file."],
+      tag: ["all","checklists"] }),
+
+  N("useLocations","hooks","useLocations.ts","Locations CRUD", 790, 340, 170, 64, "var(--db)",
+    { role: "React Query hook — locations table", plain: "Reads all locations for the org. Computes active/inactive split when over plan limit. Has grace period logic for teams that temporarily exceeded their location cap.",
+      path: "src/hooks/useLocations.ts",
+      notes: ["Lines 31-33: isOverLimit, graceEndsAt, isGraceActive computed from plan features.", "Lines 36-55: effectiveActiveLocationIds — which locations are 'active' when over limit.", "useSaveLocation (line 80): explicit UPDATE vs INSERT split to avoid RLS WITH CHECK mismatch on organization_id.", "useDeleteLocation returns deleted rows to detect silent RLS blocks."],
+      tag: ["all","admin"] }),
+
+  N("useStaff", "hooks", "useStaffProfiles","Staff profiles", 790, 430, 170, 64, "var(--db)",
+    { role: "React Query hook — staff_profiles table", plain: "Reads staff profiles (names, roles, PINs excluded). Supports archive/restore/delete. Hashes new PINs via Web Crypto API before sending to Supabase.",
+      path: "src/hooks/useStaffProfiles.ts",
+      notes: ["Line 7: hashPin() uses crypto.subtle.digest('SHA-256') — browser Web Crypto, no external dep.", "Line 21: pin intentionally excluded from SELECT — managers must not see raw or hashed PINs.", "useSaveStaffProfile: explicit UPDATE vs INSERT split — omits organization_id on update to pass RLS WITH CHECK.", "useArchiveStaffProfile: sets status='archived' + archived_at timestamp."],
+      tag: ["all","admin"] }),
+
+  N("useTeamMembers","hooks","useTeamMembers","Team members", 790, 520, 170, 64, "var(--db)",
+    { role: "React Query hook — team_members table", plain: "Reads Olia account holders (Owners, Managers). Writes name, email, role, permissions, PIN. Includes a dedicated useSaveAdminPin hook for PIN-only updates.",
+      path: "src/hooks/useTeamMembers.ts",
+      notes: ["Line 25: pin: undefined — never exposes hashed PIN to the browser.", "useSaveAdminPin (line 94): sends ONLY pin + pin_reset_required — avoids false unique-index conflicts.", "Line 79: pin_reset_required defaults to true when role=Owner on new member insert."],
+      tag: ["all","admin"] }),
+
+  N("useAlerts","hooks","useAlerts.ts",    "Supabase alerts", 790, 610, 170, 50, "var(--db)",
+    { role: "React Query hook — alerts table", plain: "Reads, dismisses, and clears operational alerts from the Supabase alerts table. Used by Dashboard, Notifications, and (indirectly) Kiosk.",
+      path: "src/hooks/useAlerts.ts",
+      notes: ["Real data source for operational alerts — replaces the old alerts-store.ts pub/sub.", "useDismissAlert and useClearAlerts mutations for per-item or bulk dismissal."],
+      tag: ["all"] }),
+
+  // ── Lib cluster ─────────────────────────────────────────────────────────
+  N("supabase", "lib",   "supabase.ts",    "Supabase client", 1040, 70, 170, 50, "var(--db)", { critical: true,
+    role: "Supabase JS client singleton", plain: "Creates the single shared Supabase client using the anon key. Used everywhere for DB queries, auth, and RPC calls.",
+      path: "src/lib/supabase.ts",
+      notes: ["Line 4: createClient(supabaseUrl, supabaseAnonKey) — reads from runtime-config.", "Used by AuthContext, all hooks, and Kiosk page directly.", "Anonymous (anon) key — RLS policies on the DB side enforce data isolation per org."],
+      tag: ["all"] }),
+
+  N("adminrepo","lib",   "admin-repository.ts","Types + mock data", 1040, 150, 170, 64, "var(--muted)",
+    { role: "Types, helpers, and dead mock data", plain: "Defines TypeScript types for Location, StaffProfile, TeamMember. Contains helper functions (getInitials, daysAgo, hashPin). Also contains large blocks of hardcoded mock data that is not used in production.",
+      path: "src/lib/admin-repository.ts",
+      notes: ["Lines 162-346: initialLocations, initialStaffProfiles, initialTeamMembers, initialAuditLog — mock data with fake French addresses. NOT used by live pages.", "Line 119-127: getInitials() — splits name by space, takes first char of each word.", "Line 129-135: daysAgo() — formats ISO date as 'Last used: 23 Mar, 14:39'.", "DEFAULT_STAFF_DEPARTMENTS (line 11) is used by Admin.tsx for the department dropdown."],
+      tag: ["all","admin"] }),
+
+  N("planfeatures","lib","plan-features.ts","Billing plan limits", 1040, 250, 170, 64, "var(--accent)",
+    { role: "Plan feature flags and limits", plain: "Single source of truth for what each plan allows. Starter (1 location, 10 checklists), Growth (10 locations, unlimited checklists, AI builder), Enterprise (unlimited everything).",
+      path: "src/lib/plan-features.ts",
+      notes: ["Lines 37-74: PLAN_FEATURES — maxLocations: starter=1, growth=10, enterprise=-1 (unlimited).", "Line 84-88: PLAN_PRICES — Starter €49/mo, Growth €99/mo, Enterprise €199/mo.", "Comment on line 35: 'Matches check_plan_limit() DB function in 20260312000002_server_permissions.sql'.", "AI builder and file convert features disabled for Starter plan (line 43-44)."],
+      tag: ["all","admin"] }),
+
+  N("exportutils","lib","export-utils.ts", "PDF + CSV exports", 1040, 350, 170, 64, "var(--service)",
+    { role: "PDF and CSV export utilities", plain: "Generates real PDF reports and CSV exports using jsPDF. Lazily imported on demand — only downloads the library when user clicks Export, keeping initial bundle small.",
+      path: "src/lib/export-utils.ts",
+      notes: ["Lines 56-57: Dynamic import of jsPDF + autotable — lazy load on first export.", "exportReportingPdf: landscape A4 with stat cards header + autotable.", "exportLogDetailPdf: portrait A4 with answer table — score coloured by status.", "Line 316-319: Photo handling in PDF — detects base64 vs storage path vs no photo."],
+      tag: ["all","checklists"] }),
+
+  N("alertsstore","lib","alerts-store.ts", "Pub/sub store (legacy)", 1040, 450, 170, 50, "var(--muted)",
+    { role: "In-memory pub/sub alert store (largely superseded)", plain: "A simple subscribe/notify store for operational alerts. Still used by some tests and for manual addAlert() calls, but the live UI reads from the Supabase alerts table via useAlerts instead.",
+      path: "src/lib/alerts-store.ts",
+      notes: ["Line 15: DEFAULT_ALERTS = [] — empty by design.", "addAlert/removeAlert/clearAllAlerts/subscribe — pub/sub API using a Set of listeners.", "Real production alerts flow: Kiosk → insert_kiosk_alert RPC → Supabase alerts table → useAlerts hook → Dashboard/Notifications."],
+      tag: ["all"] }),
+
+  N("submissionqueue","lib","submission-queue.ts","Offline retry queue", 1040, 540, 170, 64, "var(--accent-2)",
+    { role: "Offline-resilient checklist log retry queue", plain: "When the kiosk is offline and a checklist submission fails, this stores the payload in localStorage. On next load it retries automatically. Gives up after 10 attempts or 7 days.",
+      path: "src/lib/submission-queue.ts",
+      notes: ["Line 13: QUEUE_KEY='olia_pending_logs' — localStorage key.", "Line 14: MAX_ATTEMPTS=10. Line 15: TTL_DAYS=7.", "drainQueue() accepts an insertFn callback — called by Kiosk.tsx with the supabase.rpc wrapper.", "enqueueLog() uses crypto.randomUUID() for item IDs."],
+      tag: ["all","kiosk"] }),
+
+  N("runtimeconfig","lib","runtime-config.ts","Env config", 1040, 640, 170, 50, "var(--client)",
+    { role: "Runtime configuration — env vars", plain: "Reads VITE_ environment variables (Supabase URL, anon key, Stripe price IDs) and exposes them. Also detects GitHub Pages deployment.",
+      path: "src/lib/runtime-config.ts",
+      notes: ["Used by supabase.ts and Signup.tsx/Login.tsx for auth redirect URLs.", "Stripe Price IDs are optional — not set means billing UI is read-only."],
+      tag: ["all"] }),
+
+  // ── External cluster ───────────────────────────────────────────────────────
+  N("supa-auth","external","Supabase Auth","OTP email auth", 1290, 70, 170, 64, "var(--external)", { critical: true,
+    role: "Supabase Authentication service", plain: "Handles passwordless OTP email sign-in. Sends the 6-8 digit code, verifies it, issues JWTs. Triggers SIGNED_IN events that AuthContext listens to.",
+      path: "https://supabase.com/docs/guides/auth",
+      notes: ["signInWithOtp with shouldCreateUser:true = signup; false = login only.", "verifyOtp confirms the code and fires SIGNED_IN event.", "JWT is refreshed hourly (TOKEN_REFRESHED event) — AuthContext skips re-fetching teamMember on this event.", "OTP rate limits: ~5 emails per hour per address — handled gracefully in Signup.tsx and Login.tsx."],
+      tag: ["all","auth"] }),
+
+  N("supa-db","external","Supabase Postgres","Database (RLS)", 1290, 180, 170, 64, "var(--db)",
+    { role: "Supabase PostgreSQL database with Row Level Security", plain: "The main database. All tables have RLS policies that restrict data to the correct organization. Key tables: team_members, locations, checklists, checklist_logs, alerts, actions, staff_profiles.",
+      path: "https://supabase.com/docs/guides/database",
+      notes: ["48 migrations in supabase/migrations/ — applied manually in production.", "RLS: current_org_id() function (pgcrypto + search_path=public,extensions) used by most policies.", "Kiosk tables (locations, checklists) readable anonymously via get_kiosk_checklists RPC.", "setup_new_organization RPC is SECURITY DEFINER — runs as postgres user to bypass RLS on initial setup."],
+      tag: ["all","auth","admin","kiosk"] }),
+
+  N("setup-rpc","external","setup_new_org RPC","Org bootstrap", 1290, 310, 170, 64, "var(--critical)", { critical: true,
+    role: "Supabase RPC: setup_new_organization", plain: "Creates the organization and owner's team_member row on first signup. Runs as a privileged database user so RLS doesn't block it. Returns the team_member row directly to avoid a second RLS-blocked fetch.",
+      path: "supabase/migrations/",
+      notes: ["SECURITY DEFINER + SET search_path = public, extensions — needed for pgcrypto crypt/gen_salt.", "Returns { team_member: {...} } — AuthContext reads rpcData.team_member directly (line 132).", "Idempotent: if team_member row already exists (returning user), AuthContext's first SELECT finds it and skips the RPC.", "p_business_name and p_owner_name — both required; missing either triggers setupError in AuthContext."],
+      tag: ["all","auth"] }),
+
+  N("kiosk-rpcs","external","Kiosk RPCs","Anon kiosk calls", 1290, 420, 170, 64, "var(--accent-2)",
+    { role: "Supabase RPCs for kiosk (anon key)", plain: "Three RPCs the kiosk calls without a logged-in user: get_kiosk_checklists (fetch checklist list), submit_kiosk_log (save completion), insert_kiosk_alert (create out-of-range alerts).",
+      path: "supabase/migrations/",
+      notes: ["get_kiosk_checklists: filtered by p_location_id, returns visible checklists.", "submit_kiosk_log: SECURITY DEFINER, resolves org_id from location_id server-side so client can't spoof it.", "insert_kiosk_alert: used for out-of-range sensor values and notify-trigger emails.", "All three are accessible via anon key — no session required."],
+      tag: ["all","kiosk"] }),
+];
+
+const edges = [
+  // Critical path: signup → auth flow
+  { from: "main",    to: "app",       kind: "critical", label: "renders" },
+  { from: "app",     to: "authctx",   kind: "critical", label: "wraps" },
+  { from: "app",     to: "protected", kind: "critical", label: "guards routes" },
+  { from: "signup",  to: "supa-auth", kind: "critical", label: "signInWithOtp" },
+  { from: "signup",  to: "supa-auth", kind: "critical", label: "verifyOtp" },
+  { from: "authctx", to: "supa-auth", kind: "critical", label: "onAuthStateChange" },
+  { from: "authctx", to: "supa-db",   kind: "critical", label: "SELECT team_members" },
+  { from: "authctx", to: "setup-rpc", kind: "critical", label: "RPC call" },
+  { from: "authctx", to: "admin",     kind: "critical", label: "setupError → /signup" },
+  { from: "protected",to:"admin",     kind: "critical", label: "renders" },
+
+  // App → pages
+  { from: "app",     to: "signup",    kind: "mount", label: "route /" },
+  { from: "app",     to: "login",     kind: "mount", label: "route" },
+  { from: "app",     to: "kiosk",     kind: "mount", label: "public route" },
+  { from: "app",     to: "dashboard", kind: "mount", label: "protected" },
+  { from: "app",     to: "checklists",kind: "mount", label: "protected" },
+  { from: "app",     to: "notifications",kind:"mount",label:"protected" },
+  { from: "app",     to: "infohub",   kind: "mount", label: "protected" },
+
+  // Auth ctx consumed by pages
+  { from: "authctx", to: "signup",    kind: "normal", label: "useAuth" },
+  { from: "authctx", to: "login",     kind: "normal", label: "useAuth" },
+  { from: "authctx", to: "admin",     kind: "normal", label: "useAuth" },
+  { from: "authctx", to: "dashboard", kind: "normal", label: "useAuth" },
+  { from: "authctx", to: "kiosk",     kind: "normal", label: "useAuth" },
+  { from: "authctx", to: "layout",    kind: "normal", label: "useAuth (signOut)" },
+
+  // Layout usage
+  { from: "layout",  to: "bottomnav", kind: "mount", label: "renders" },
+  { from: "admin",   to: "layout",    kind: "mount", label: "wraps" },
+  { from: "dashboard",to:"layout",    kind: "mount", label: "wraps" },
+  { from: "checklists",to:"layout",   kind: "mount", label: "wraps" },
+  { from: "notifications",to:"layout",kind: "mount", label: "wraps" },
+  { from: "infohub", to: "layout",    kind: "mount", label: "wraps" },
+
+  // Hooks → supabase
+  { from: "useChecklist",to:"supabase",kind:"db",label:"checklists table" },
+  { from: "useLogs",  to: "supabase", kind: "db",  label: "checklist_logs" },
+  { from: "useActions",to:"supabase", kind: "db",  label: "actions table" },
+  { from: "useLocations",to:"supabase",kind:"db",  label: "locations table" },
+  { from: "useStaff", to: "supabase", kind: "db",  label: "staff_profiles" },
+  { from: "useTeamMembers",to:"supabase",kind:"db",label:"team_members" },
+  { from: "useAlerts",to: "supabase", kind: "db",  label: "alerts table" },
+  { from: "supabase", to: "supa-db",  kind: "db",  label: "PostgREST" },
+
+  // Pages → hooks
+  { from: "admin",   to: "useLocations",  kind: "normal" },
+  { from: "admin",   to: "useStaff",      kind: "normal" },
+  { from: "admin",   to: "useTeamMembers",kind: "normal" },
+  { from: "admin",   to: "useChecklist",  kind: "normal" },
+  { from: "dashboard",to:"useAlerts",     kind: "normal" },
+  { from: "dashboard",to:"useLogs",       kind: "normal" },
+  { from: "dashboard",to:"useActions",    kind: "normal" },
+  { from: "dashboard",to:"useChecklist",  kind: "normal" },
+  { from: "dashboard",to:"useLocations",  kind: "normal" },
+  { from: "checklists",to:"checklisttab", kind: "mount" },
+  { from: "checklisttab",to:"useChecklist",kind:"normal" },
+  { from: "notifications",to:"useAlerts", kind: "normal" },
+
+  // Kiosk → lib
+  { from: "kiosk",   to: "submissionqueue",kind:"normal",label:"enqueueLog/drainQueue" },
+  { from: "kiosk",   to: "supabase",    kind: "api",  label: "get_kiosk_checklists" },
+  { from: "kiosk",   to: "kiosk-rpcs",  kind: "api",  label: "submit_kiosk_log" },
+  { from: "kiosk",   to: "kiosksubmods",kind: "mount" },
+  { from: "kiosk",   to: "useLocations",kind: "normal", label: "allLocations" },
+
+  // Login → supabase
+  { from: "login",   to: "supabase",    kind: "api",   label: "signInWithOtp" },
+
+  // Lib
+  { from: "authctx", to: "queryclient", kind: "normal", label: "queryClient.clear()" },
+  { from: "app",     to: "queryclient", kind: "normal", label: "QueryClientProvider" },
+  { from: "adminrepo",to:"admin",       kind: "normal", label: "types + helpers" },
+  { from: "planfeatures",to:"admin",    kind: "normal", label: "plan limits" },
+  { from: "planfeatures",to:"useLocations",kind:"normal",label:"plan limits" },
+  { from: "exportutils",to:"checklisttab",kind:"normal",label:"PDF/CSV export" },
+  { from: "supabase",to: "runtimeconfig",kind:"normal",label:"reads config" },
+];
+
+// ─── Filter configuration ──────────────────────────────────────────────────
+
+const FILTERS = [
+  { id: "all",       label: "Overview" },
+  { id: "auth",      label: "Auth" },
+  { id: "kiosk",     label: "Kiosk" },
+  { id: "checklists",label: "Checklists" },
+  { id: "admin",     label: "Admin" },
+  { id: "wires",     label: "Show all wires", special: "wires" },
+];
+
+let activeFilter = "all";
+let showAllWires = false;
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+
+const svg = document.getElementById("svg-canvas");
+const graph = document.getElementById("graph");
+
+// Build lookup
+const nodeMap = {};
+nodes.forEach(n => { nodeMap[n.id] = n; });
+
+// Node colors for role badges
+const ROLE_COLORS = {
+  "var(--client)": "#4ea1ff",
+  "var(--route)": "#7bd389",
+  "var(--service)": "#c792ea",
+  "var(--db)": "#ffb86b",
+  "var(--external)": "#ff6b9d",
+  "var(--critical)": "#ff3860",
+  "var(--accent)": "#f5b942",
+  "var(--accent-2)": "#ff7a45",
+  "var(--muted)": "#666",
+};
+
+function resolveColor(c) {
+  return ROLE_COLORS[c] || c;
+}
+
+function buildGraph() {
+  graph.innerHTML = "";
+
+  // Clusters
+  clusters.forEach(cl => {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", cl.x);
+    rect.setAttribute("y", cl.y);
+    rect.setAttribute("width", cl.w);
+    rect.setAttribute("height", cl.h);
+    rect.setAttribute("rx", 8);
+    rect.setAttribute("fill", "var(--panel)");
+    rect.setAttribute("stroke", "var(--border)");
+    rect.setAttribute("stroke-width", "1");
+    g.appendChild(rect);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", cl.x + cl.w / 2);
+    text.setAttribute("y", cl.y + 17);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("class", "cluster-label");
+    text.textContent = cl.label;
+    g.appendChild(text);
+    graph.appendChild(g);
+  });
+
+  // Edges first (under nodes)
+  edges.forEach((e, i) => {
+    const from = nodeMap[e.from];
+    const to = nodeMap[e.to];
+    if (!from || !to) return;
+
+    // Centre of each node
+    const x1 = from.x + from.w / 2;
+    const y1 = from.y + from.h / 2;
+    const x2 = to.x + to.w / 2;
+    const y2 = to.y + to.h / 2;
+
+    // Cubic bezier
+    const dx = Math.abs(x2 - x1);
+    const cp1x = x1 + dx * 0.4;
+    const cp2x = x2 - dx * 0.4;
+    const d = `M ${x1} ${y1} C ${cp1x} ${y1}, ${cp2x} ${y2}, ${x2} ${y2}`;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+
+    let cls = "edge ";
+    let markerEnd = "url(#arrow)";
+    if (e.kind === "critical") { cls += "edge-critical"; markerEnd = "url(#arrow-critical)"; }
+    else if (e.kind === "api") { cls += "edge-api"; markerEnd = "url(#arrow-api)"; }
+    else if (e.kind === "db")  { cls += "edge-db";  markerEnd = "url(#arrow-db)"; }
+    else if (e.kind === "mount"){ cls += "edge-mount"; markerEnd = "url(#arrow-mount)"; }
+    else { cls += "edge-normal"; }
+
+    path.setAttribute("class", cls);
+    path.setAttribute("marker-end", markerEnd);
+    path.setAttribute("data-from", e.from);
+    path.setAttribute("data-to", e.to);
+    path.setAttribute("data-kind", e.kind || "normal");
+
+    const fromTags = (nodeMap[e.from]?.tag || []);
+    const toTags   = (nodeMap[e.to]?.tag   || []);
+    const edgeTags = new Set([...fromTags, ...toTags]);
+    path.setAttribute("data-tags", [...edgeTags].join(" "));
+
+    graph.appendChild(path);
+
+    // Edge label
+    if (e.label) {
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2 - 5;
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", mx);
+      label.setAttribute("y", my);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("class", "edge-label");
+      label.setAttribute("data-from", e.from);
+      label.setAttribute("data-to", e.to);
+      const fromTagsArr = (nodeMap[e.from]?.tag || []);
+      const toTagsArr   = (nodeMap[e.to]?.tag   || []);
+      const tagSet = new Set([...fromTagsArr, ...toTagsArr]);
+      label.setAttribute("data-tags", [...tagSet].join(" "));
+      label.textContent = e.label;
+      graph.appendChild(label);
+    }
+  });
+
+  // Nodes on top
+  nodes.forEach(n => {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "node-group");
+    g.setAttribute("data-id", n.id);
+    g.setAttribute("data-tags", (n.tag || ["all"]).join(" "));
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", n.x);
+    rect.setAttribute("y", n.y);
+    rect.setAttribute("width", n.w);
+    rect.setAttribute("height", n.h);
+    rect.setAttribute("rx", 7);
+    rect.setAttribute("class", "node-rect");
+    const col = resolveColor(n.color);
+    rect.setAttribute("fill", col + "22");
+    rect.setAttribute("stroke", col);
+    g.appendChild(rect);
+
+    // Critical badge dot
+    if (n.critical) {
+      const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      dot.setAttribute("cx", n.x + n.w - 8);
+      dot.setAttribute("cy", n.y + 8);
+      dot.setAttribute("r", 4);
+      dot.setAttribute("fill", "var(--critical)");
+      g.appendChild(dot);
+    }
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", n.x + n.w / 2);
+    label.setAttribute("y", n.y + (n.sub ? n.h / 2 - 5 : n.h / 2 + 5));
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "node-label");
+    label.textContent = n.label;
+    g.appendChild(label);
+
+    if (n.sub) {
+      const sub = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      sub.setAttribute("x", n.x + n.w / 2);
+      sub.setAttribute("y", n.y + n.h / 2 + 10);
+      sub.setAttribute("text-anchor", "middle");
+      sub.setAttribute("class", "node-sub");
+      sub.textContent = n.sub;
+      g.appendChild(sub);
+    }
+
+    g.addEventListener("click", () => selectNode(n.id));
+    graph.appendChild(g);
+  });
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+
+function buildFilters() {
+  const wrap = document.getElementById("filters");
+  FILTERS.forEach(f => {
+    const btn = document.createElement("button");
+    btn.className = "chip" + (f.id === "all" ? " active" : "");
+    btn.textContent = f.label;
+    btn.dataset.filter = f.id;
+    btn.addEventListener("click", () => {
+      if (f.special === "wires") {
+        showAllWires = !showAllWires;
+        btn.classList.toggle("active", showAllWires);
+        applyFilter();
+        return;
+      }
+      activeFilter = f.id;
+      document.querySelectorAll(".chip").forEach(c => {
+        if (!FILTERS.find(ff => ff.id === c.dataset.filter)?.special) {
+          c.classList.toggle("active", c.dataset.filter === f.id);
+        }
+      });
+      applyFilter();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function applyFilter() {
+  const f = activeFilter;
+  // Nodes
+  document.querySelectorAll(".node-group").forEach(el => {
+    const tags = (el.getAttribute("data-tags") || "").split(" ");
+    const visible = f === "all" || tags.includes(f);
+    el.classList.toggle("dimmed", !visible);
+  });
+  // Edges
+  document.querySelectorAll(".edge, .edge-label").forEach(el => {
+    const tags = (el.getAttribute("data-tags") || "").split(" ");
+    const fromId = el.getAttribute("data-from");
+    const toId   = el.getAttribute("data-to");
+    const kind   = el.getAttribute("data-kind") || "normal";
+
+    const fromVisible = !fromId || !document.querySelector(`.node-group[data-id="${fromId}"]`)?.classList.contains("dimmed");
+    const toVisible   = !toId   || !document.querySelector(`.node-group[data-id="${toId}"]`)?.classList.contains("dimmed");
+    const bothVisible = fromVisible && toVisible;
+
+    if (showAllWires) {
+      el.classList.toggle("edge-hidden", !bothVisible);
+    } else {
+      // Hide normal/mount edges when not "Show all wires"; show only critical/api/db
+      const isImportant = kind === "critical" || kind === "api" || kind === "db";
+      el.classList.toggle("edge-hidden", !bothVisible || !isImportant);
+    }
+  });
+}
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+let selectedNodeId = null;
+
+function selectNode(id) {
+  if (selectedNodeId === id) {
+    deselectNode();
+    return;
+  }
+  selectedNodeId = id;
+  document.querySelectorAll(".node-group").forEach(el => {
+    el.classList.toggle("selected", el.getAttribute("data-id") === id);
+  });
+
+  const n = nodeMap[id];
+  if (!n) return;
+
+  document.getElementById("default-info").style.display = "none";
+  const detail = document.getElementById("node-detail");
+  detail.style.display = "block";
+
+  const col = resolveColor(n.color);
+  const connectedEdges = edges.filter(e => e.from === id || e.to === id);
+
+  let html = `<h3 style="color:${col}">${n.label}</h3>`;
+  html += `<div class="role-badge" style="background:${col}22;color:${col}">${n.role || "component"}</div>`;
+  html += `<div class="plain">${n.plain || ""}</div>`;
+  html += `<div class="path">${n.path || ""}</div>`;
+
+  if (n.notes && n.notes.length) {
+    html += `<div class="notes-label">Notes</div>`;
+    n.notes.forEach(note => { html += `<div class="note">${note}</div>`; });
+  }
+
+  if (connectedEdges.length) {
+    html += `<div class="edges-label">Connections (${connectedEdges.length})</div>`;
+    connectedEdges.forEach(e => {
+      const other = e.from === id ? e.to : e.from;
+      const dir   = e.from === id ? "→" : "←";
+      const otherNode = nodeMap[other];
+      const kindColors = { critical: "var(--critical)", api: "var(--accent-2)", db: "var(--db)", mount: "#38bdf8", normal: "#555" };
+      const kc = kindColors[e.kind] || "#555";
+      html += `<span class="edge-pill" style="background:${kc}22;color:${kc}">${dir} ${otherNode?.label || other}${e.label ? " · "+e.label : ""}</span>`;
+    });
+  }
+
+  detail.innerHTML = html;
+}
+
+function deselectNode() {
+  selectedNodeId = null;
+  document.querySelectorAll(".node-group").forEach(el => el.classList.remove("selected"));
+  document.getElementById("default-info").style.display = "block";
+  document.getElementById("node-detail").style.display = "none";
+}
+
+// ─── Pan + Zoom ───────────────────────────────────────────────────────────────
+
+let tx = 0, ty = 0, scale = 1;
+let dragging = false, lastX = 0, lastY = 0;
+
+function applyTransform() {
+  graph.setAttribute("transform", `translate(${tx},${ty}) scale(${scale})`);
+}
+
+function fitView() {
+  const wrap = document.getElementById("canvas-wrap");
+  const cw = wrap.clientWidth;
+  const ch = wrap.clientHeight;
+  const CANVAS_W = 1510;
+  const CANVAS_H = 940;
+  const sx = (cw - 40) / CANVAS_W;
+  const sy = (ch - 40) / CANVAS_H;
+  scale = Math.min(sx, sy, 1);
+  tx = (cw - CANVAS_W * scale) / 2;
+  ty = 20;
+  applyTransform();
+}
+
+svg.addEventListener("mousedown", e => {
+  if (e.target.closest(".node-group")) return;
+  dragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  svg.classList.add("dragging");
+});
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  tx += e.clientX - lastX;
+  ty += e.clientY - lastY;
+  lastX = e.clientX;
+  lastY = e.clientY;
+  applyTransform();
+});
+window.addEventListener("mouseup", () => {
+  dragging = false;
+  svg.classList.remove("dragging");
+});
+
+svg.addEventListener("wheel", e => {
+  e.preventDefault();
+  const wrap = document.getElementById("canvas-wrap");
+  const rect = wrap.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const delta = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = Math.min(3, Math.max(0.2, scale * delta));
+  tx = mx - (mx - tx) * (newScale / scale);
+  ty = my - (my - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+document.getElementById("btn-fit").addEventListener("click", fitView);
+document.getElementById("btn-plus").addEventListener("click", () => {
+  scale = Math.min(3, scale * 1.2);
+  applyTransform();
+});
+document.getElementById("btn-minus").addEventListener("click", () => {
+  scale = Math.max(0.2, scale / 1.2);
+  applyTransform();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+buildFilters();
+buildGraph();
+applyFilter();
+setTimeout(fitView, 50);
+</script>
+</body>
+</html>
