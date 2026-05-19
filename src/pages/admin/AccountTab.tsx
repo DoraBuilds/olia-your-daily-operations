@@ -21,6 +21,7 @@ import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, roleUsesDepartment } from "./shared";
+import { ConfirmModal } from "./SharedUI";
 
 export interface AccountTabProps {
   locations: Location[];
@@ -93,6 +94,9 @@ export function AccountTab({
   const [pinSaving, setPinSaving] = useState(false);
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
   const [committedActiveLocationIds, setCommittedActiveLocationIds] = useState<string[]>(activeLocationIds);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setProfileName(authUserName ?? currentAccount?.name ?? "");
@@ -165,6 +169,23 @@ export function AccountTab({
       toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
     } finally {
       setPinSaving(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc("delete_my_account");
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.reason ?? "Could not delete account");
+      // Navigate before signOut to avoid ProtectedRoute race
+      navigate("/signup?reason=account-deleted", { replace: true });
+      await supabase.auth.signOut();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -342,6 +363,23 @@ export function AccountTab({
           </div>
         </div>
       </section>}
+
+      {/* Danger zone — owner only */}
+      {show("account") && currentAccount?.role === "Owner" && (
+        <section className="card-surface p-4 border border-status-error/20">
+          <p className="section-label text-status-error mb-2">Danger zone</p>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            Permanently delete your account and all organisation data. This cannot be undone.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setDeleteConfirmText(""); setShowDeleteModal(true); }}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold border border-status-error text-status-error hover:bg-status-error/5 transition-colors"
+          >
+            Delete account
+          </button>
+        </section>
+      )}
 
       {/* All Locations */}
       {show("locations") && <section>
@@ -793,6 +831,33 @@ export function AccountTab({
           </div>
         </div>
       </section>}
+
+      {/* Delete account confirmation modal */}
+      {showDeleteModal && (
+        <ConfirmModal
+          title="Delete account"
+          message={
+            <span>
+              This will permanently delete your organisation, all locations, checklists, staff profiles, and team members.{" "}
+              <strong>This cannot be undone.</strong>
+              <br /><br />
+              Type <strong>DELETE</strong> to confirm.
+              <br />
+              <input
+                autoFocus
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="Type DELETE"
+                className="mt-3 w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </span>
+          }
+          actionLabel={deleting ? "Deleting…" : "Yes, delete everything"}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={() => { if (deleteConfirmText === "DELETE") deleteAccount(); }}
+        />
+      )}
     </div>
   );
 }

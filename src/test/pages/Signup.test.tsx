@@ -351,3 +351,29 @@ describe("Signup page — account-reset guard", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
   });
 });
+
+describe("Signup page — account-deleted guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ user: null, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+  });
+
+  it("shows the account-deleted banner when reason=account-deleted", () => {
+    render(
+      <MemoryRouter initialEntries={["/signup?reason=account-deleted"]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Your account has been deleted.")).toBeInTheDocument();
+  });
+
+  it("does not redirect to /admin when reason=account-deleted even if user is still set", () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+    render(
+      <MemoryRouter initialEntries={["/signup?reason=account-deleted"]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(mockNavigate).not.toHaveBeenCalledWith("/admin", expect.anything());
+  });
+});
