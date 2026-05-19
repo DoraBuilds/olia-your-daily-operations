@@ -144,6 +144,8 @@ vi.mock("@/hooks/useTeamMembers", () => ({
   useSaveTeamMember: () => mockSaveTeamMember,
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
   useSaveAdminPin: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
+  useTeamMemberInvites: () => ({ data: [], isLoading: false }),
+  useSendInvite: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
 }));
 
 const mockChecklists = [
@@ -409,7 +411,7 @@ describe("Admin page", () => {
     await waitFor(() => {
       expect(screen.getByText("My account")).toBeInTheDocument();
       expect(screen.getByText("Security")).toBeInTheDocument();
-      expect(screen.getAllByText((_, element) => element?.textContent?.includes("auto-generated PIN is") ?? false).length).toBeGreaterThan(0);
+      expect(screen.getAllByText((_, element) => element?.textContent?.includes("Default PIN is") ?? false).length).toBeGreaterThan(0);
       expect(screen.getByDisplayValue("Sarah")).toBeInTheDocument();
       expect(screen.getByDisplayValue("manager@example.com")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("4 digits")).toBeInTheDocument();

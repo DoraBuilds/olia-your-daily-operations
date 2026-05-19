@@ -44,12 +44,14 @@ function makeWrapper() {
 
 beforeEach(() => {
   mockRpc.mockResolvedValue({ error: null });
+  const mockSingle = vi.fn().mockResolvedValue({ data: { id: "new-uuid" }, error: null });
+  const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
   mockFrom.mockReturnValue({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data: [], error: null }),
     update: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockResolvedValue({ error: null }),
+    insert: vi.fn().mockReturnValue({ select: mockInsertSelect }),
     delete: vi.fn().mockReturnThis(),
   });
 });
@@ -146,7 +148,9 @@ describe("useSaveTeamMember", () => {
   });
 
   it("marks a newly created owner PIN as needing a reset", async () => {
-    const insert = vi.fn().mockResolvedValue({ error: null });
+    const insertSingle = vi.fn().mockResolvedValue({ data: { id: "new-uuid" }, error: null });
+    const insertSelect = vi.fn().mockReturnValue({ single: insertSingle });
+    const insert = vi.fn().mockReturnValue({ select: insertSelect });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -212,22 +216,42 @@ describe("useDeleteTeamMember", () => {
 });
 
 describe("useSaveAdminPin", () => {
-  it("calls supabase.rpc set_admin_pin with the supplied member id and raw PIN", async () => {
+  it("calls supabase.from('team_members').update with the correct PIN and member id", async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn().mockReturnValue({ eq });
+    const insertSingle = vi.fn().mockResolvedValue({ data: { id: "x" }, error: null });
+    const insertSelect = vi.fn().mockReturnValue({ single: insertSingle });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      update,
+      insert: vi.fn().mockReturnValue({ select: insertSelect }),
+      delete: vi.fn().mockReturnThis(),
+    });
+
     const { result } = renderHook(() => useSaveAdminPin(), { wrapper: makeWrapper() });
 
     await act(async () => {
       await result.current.mutateAsync({ memberId: "tm-2", rawPin: "5678" });
     });
 
-    expect(mockRpc).toHaveBeenCalledWith("set_admin_pin", {
-      p_member_id: "tm-2",
-      p_raw_pin: "5678",
-    });
+    expect(update).toHaveBeenCalledWith({ pin: "5678", pin_reset_required: false });
+    expect(eq).toHaveBeenCalledWith("id", "tm-2");
     expect(result.current.isError).toBe(false);
   });
 
-  it("throws a user-friendly error when the RPC returns an error", async () => {
-    mockRpc.mockResolvedValue({ error: { message: "Another team member is already using this PIN" } });
+  it("throws a user-friendly error when the update returns an error", async () => {
+    const eq = vi.fn().mockResolvedValue({ error: { message: "Another team member is already using this PIN" } });
+    const update = vi.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      update,
+      insert: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }) }),
+      delete: vi.fn().mockReturnThis(),
+    });
     const { result } = renderHook(() => useSaveAdminPin(), { wrapper: makeWrapper() });
 
     await expect(

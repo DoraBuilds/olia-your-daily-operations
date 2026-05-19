@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Eye, EyeOff,
+  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Eye, EyeOff, MailCheck, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -19,7 +19,7 @@ import { usePlan } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { type ChecklistItem } from "@/hooks/useChecklists";
-import { useSaveAdminPin } from "@/hooks/useTeamMembers";
+import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, roleUsesDepartment } from "./shared";
 
 export interface AccountTabProps {
@@ -50,6 +50,7 @@ export interface AccountTabProps {
   onDeleteLocation: (id: string) => void;
   onSaveActiveLocations: (locationIds: string[]) => Promise<unknown>;
   savingActiveLocations: boolean;
+  pendingInviteIds: Set<string>;
   onInviteMember: () => void;
   onEditMember: (m: TeamMember) => void;
   onDeleteMember: (m: TeamMember) => void;
@@ -62,12 +63,13 @@ export function AccountTab({
   onSaveAccount, departments, setDepartments, auditLog, authAccount, authMemberId, authUserEmail, authUserName,
   billingUnavailable, locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
-  onInviteMember, onEditMember, onDeleteMember, section,
+  pendingInviteIds, onInviteMember, onEditMember, onDeleteMember, section,
 }: AccountTabProps) {
   const navigate = useNavigate();
   const { plan, planStatus, isActive } = usePlan();
   const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
+  const sendInvite = useSendInvite();
   // Team member expand/collapse
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [pendingPerms, setPendingPerms] = useState<Record<string, ManagerPermissions>>({});
@@ -528,11 +530,16 @@ export function AccountTab({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{member.name}</p>
                     <p className="text-xs text-muted-foreground">{member.email}</p>
-                    {member.last_seen_at && (
+                    {pendingInviteIds.has(member.id) ? (
+                      <p className="text-xs text-status-warn flex items-center gap-1">
+                        <MailCheck size={11} />
+                        Invite pending
+                      </p>
+                    ) : member.last_seen_at ? (
                       <p className="text-xs text-muted-foreground/60" title={daysAgoTooltip(member.last_seen_at)}>
                         Last seen {new Date(member.last_seen_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                   <span className={cn(
                     "text-xs px-2 py-0.5 rounded-full font-medium",
@@ -540,6 +547,22 @@ export function AccountTab({
                   )}>
                     {member.role}
                   </span>
+                  {pendingInviteIds.has(member.id) && (
+                    <button
+                      onClick={() => {
+                        sendInvite.mutate(member.id, {
+                          onSuccess: () => toast.success(`Invite resent to ${member.email}`),
+                          onError: () => toast.error("Failed to resend invite"),
+                        });
+                      }}
+                      disabled={sendInvite.isPending}
+                      aria-label={`Resend invite to ${member.name}`}
+                      title="Resend invite"
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Send size={14} className="text-status-warn" />
+                    </button>
+                  )}
                   <button
                     onClick={() => onEditMember(member)}
                     aria-label={`Edit ${member.name}`}

@@ -79,8 +79,13 @@ export function useSaveTeamMember() {
       }
       insertPayload.pin_reset_required = tm.pin_reset_required ?? (tm.role === "Owner");
 
-      const { error } = await supabase.from("team_members").insert(insertPayload);
+      const { data: inserted, error } = await supabase
+        .from("team_members")
+        .insert(insertPayload)
+        .select("id")
+        .single();
       if (error) throw error;
+      return inserted?.id as string | undefined;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
@@ -117,5 +122,38 @@ export function useDeleteTeamMember() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
+  });
+}
+
+export function useTeamMemberInvites() {
+  const { teamMember } = useAuth();
+  return useQuery({
+    queryKey: ["team_member_invites", teamMember?.organization_id ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_member_invites")
+        .select("id, team_member_id, email, accepted_at, expires_at, created_at")
+        .is("accepted_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as { id: string; team_member_id: string; email: string; accepted_at: string | null; expires_at: string; created_at: string }[];
+    },
+    enabled: !!teamMember?.organization_id,
+  });
+}
+
+export function useSendInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (team_member_id: string) => {
+      const { data, error } = await supabase.functions.invoke("invite-team-member", {
+        body: { team_member_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_member_invites"] }),
   });
 }
