@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "@/components/ui/sonner";
 import { createPortal } from "react-dom";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   MessageSquare, Bell, FileText, Image, AlertTriangle, User,
-  GitBranch, Upload, Mail, ArrowLeft, BookOpen, GraduationCap, Link2,
+  GitBranch, Upload, Mail, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
 } from "lucide-react";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
 interface ChecklistBuilderModalProps {
   onClose: () => void;
   onAdd: (item: ChecklistItem) => void;
-  onUpdate?: (id: string, item: Partial<ChecklistItem>) => void;
+  onUpdate?: (id: string, item: Partial<ChecklistItem>) => Promise<void>;
   initialTitle?: string;
   initialSections?: SectionDef[];
   initialLocationIds?: string[] | null;
@@ -112,6 +113,8 @@ export function ChecklistBuilderModal({
   );
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
@@ -186,6 +189,17 @@ export function ChecklistBuilderModal({
     } : s));
   };
 
+  const moveQuestion = (sectionIdx: number, fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return;
+    setSections(prev => prev.map((s, si) => {
+      if (si !== sectionIdx) return s;
+      const qs = [...s.questions];
+      const [moved] = qs.splice(fromIdx, 1);
+      qs.splice(toIdx, 0, moved);
+      return { ...s, questions: qs };
+    }));
+  };
+
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
 
   const selectedLocations = dbLocations.filter(loc => selectedLocationIds.includes(loc.id));
@@ -256,7 +270,7 @@ export function ChecklistBuilderModal({
     return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title.trim()) return;
     const savedSchedule = schedule === "none" ? null
       : schedule === "custom" ? `Every ${customRecurrence.interval} ${customRecurrence.unit}(s)`
@@ -305,7 +319,16 @@ export function ChecklistBuilderModal({
     };
 
     if (editId && onUpdate) {
-      onUpdate(editId, payload);
+      setIsSaving(true);
+      try {
+        await onUpdate(editId, payload);
+        clearChecklistDraft();
+        onClose();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not save checklist — please try again.");
+      } finally {
+        setIsSaving(false);
+      }
     } else {
       onAdd({
         id: `cl-${Date.now()}`,
@@ -314,9 +337,9 @@ export function ChecklistBuilderModal({
         folderId: null,
         createdAt: new Date().toISOString().slice(0, 10),
       } as any);
+      clearChecklistDraft();
+      onClose();
     }
-    clearChecklistDraft();
-    onClose();
   };
 
   // ── Form content (shared between page and modal modes) ────────────────────
@@ -641,11 +664,29 @@ export function ChecklistBuilderModal({
               const mcSet = q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId) : null;
               const questionChoices = getQuestionChoices(q);
               const questionChoiceColors = q.choiceColors ?? [];
+              const qKey = `${si}-${qi}`;
               return (
-                <div key={q.id} className="card-surface p-4 space-y-3">
+                <div
+                  key={q.id}
+                  draggable
+                  onDragStart={() => setDragQuestionKey(qKey)}
+                  onDragOver={e => { e.preventDefault(); }}
+                  onDrop={() => {
+                    if (dragQuestionKey && dragQuestionKey !== qKey) {
+                      const [fromSi, fromQi] = dragQuestionKey.split("-").map(Number);
+                      if (fromSi === si) moveQuestion(si, fromQi, qi);
+                    }
+                    setDragQuestionKey(null);
+                  }}
+                  onDragEnd={() => setDragQuestionKey(null)}
+                  className={cn("card-surface p-4 space-y-3 transition-opacity", dragQuestionKey === qKey && "opacity-40")}
+                >
                   <div className="flex items-start gap-2">
+                    {section.questions.length > 1 && (
+                      <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab" />
+                    )}
                     <span className="text-xs text-muted-foreground mt-2.5 shrink-0">Q{qi + 1}</span>
-                    <input type="text" placeholder="Write your question here" value={q.text}
+                    <input type="text" placeholder={q.responseType === "instruction" ? "Instruction title / heading" : "Write your question here"} value={q.text}
                       onChange={e => updateQuestion(si, qi, { text: e.target.value })}
                       className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
                     {section.questions.length > 1 && (
@@ -700,78 +741,8 @@ export function ChecklistBuilderModal({
                   {/* Response type config panels */}
 
                   {q.responseType === "number" && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">Number response</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.
-                          </p>
-                        </div>
-                        <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
-                          {(["single", "temperature"] as const).map(mode => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => updateQuestion(si, qi, {
-                                config: {
-                                  ...cfg,
-                                  numberMode: mode,
-                                  numberMin: mode === "temperature" ? cfg.numberMin : undefined,
-                                  numberMax: mode === "temperature" ? cfg.numberMax : undefined,
-                                  temperatureUnit: mode === "temperature" ? (cfg.temperatureUnit ?? "C") : undefined,
-                                },
-                              })}
-                              className={cn(
-                                "px-3 py-1 text-[11px] rounded-full transition-colors",
-                                (cfg.numberMode ?? "single") === mode
-                                  ? "bg-sage text-primary-foreground"
-                                  : "text-muted-foreground hover:text-foreground",
-                              )}
-                            >
-                              {mode === "single" ? "Number" : "Temperature"}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {(cfg.numberMode ?? "single") === "single" ? (
-                        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                          Staff will enter one number and see the numeric keypad on supported devices.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <input type="number" placeholder="Min" value={cfg.numberMin ?? ""}
-                              onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", numberMin: e.target.value ? Number(e.target.value) : undefined } })}
-                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-                            <span className="text-xs text-muted-foreground">to</span>
-                            <input type="number" placeholder="Max" value={cfg.numberMax ?? ""}
-                              onChange={e => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", numberMax: e.target.value ? Number(e.target.value) : undefined } })}
-                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring" />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground shrink-0">Unit</span>
-                            <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
-                              {(["C", "F"] as const).map(unit => (
-                                <button
-                                  key={unit}
-                                  type="button"
-                                  onClick={() => updateQuestion(si, qi, { config: { ...cfg, numberMode: "temperature", temperatureUnit: unit } })}
-                                  className={cn(
-                                    "px-3 py-1 text-[11px] rounded-full transition-colors",
-                                    (cfg.temperatureUnit ?? "C") === unit
-                                      ? "bg-sage text-primary-foreground"
-                                      : "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  {unit === "C" ? "Celsius" : "Fahrenheit"}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                    <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                      Staff will enter one number. Use logic rules below to trigger actions based on the value.
                     </div>
                   )}
 
@@ -918,7 +889,7 @@ export function ChecklistBuilderModal({
                         const safePreviewUrl = sanitizeImageUrl(cfg.instructionImageUrl);
                         return safePreviewUrl ? (
                           <div className="relative group">
-                            <img src={safePreviewUrl} alt="Instruction" className="w-full max-h-40 object-cover rounded-lg border border-border" />
+                            <img src={safePreviewUrl} alt="Instruction" className="w-full max-h-48 object-contain rounded-lg border border-border bg-muted" />
                             <button
                               onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
                               className="absolute top-1 right-1 p-1 bg-background/90 rounded-full text-muted-foreground hover:text-status-error transition-colors opacity-0 group-hover:opacity-100">
@@ -1395,12 +1366,12 @@ export function ChecklistBuilderModal({
           </p>
         )}
         <button
-          disabled={!title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+          disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
           onClick={handleCreate}
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
-            title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
+            !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
-          {editId ? "Save checklist" : "Create checklist"}
+          {isSaving ? "Saving…" : editId ? "Save checklist" : "Create checklist"}
         </button>
       </div>
     </>

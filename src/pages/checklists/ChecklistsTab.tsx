@@ -235,9 +235,10 @@ export function ChecklistsTab() {
             visibility_until: item.visibility_until ?? null,
           });
         }}
-        onUpdate={(id, updates) => {
+        onUpdate={async (id, updates) => {
           const orig = dbChecklists.find(c => c.id === id);
-          if (orig) saveChecklistMut.mutate({
+          if (!orig) throw new Error("Checklist not found — please refresh and try again.");
+          await saveChecklistMut.mutateAsync({
             ...orig,
             title: updates.title ?? orig.title,
             sections: updates.sections ?? orig.sections,

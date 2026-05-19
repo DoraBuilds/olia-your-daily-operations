@@ -407,28 +407,16 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
-  it("keeps number questions in single-value mode by default", () => {
+  it("shows single-number hint for number questions", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByText("Checkbox"));
     fireEvent.click(screen.getByText("Number"));
 
-    expect(screen.getByText(/single numeric answer/i)).toBeInTheDocument();
+    expect(screen.getByText(/Staff will enter one number/i)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Min")).not.toBeInTheDocument();
     expect(screen.queryByText("Celsius")).not.toBeInTheDocument();
-  });
-
-  it("shows range and unit controls when number question is switched to temperature mode", () => {
-    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-
-    fireEvent.click(screen.getByText("Checkbox"));
-    fireEvent.click(screen.getByText("Number"));
-    fireEvent.click(screen.getByRole("button", { name: "Temperature" }));
-
-    expect(screen.getByPlaceholderText("Min")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Max")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Celsius" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Fahrenheit" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Temperature" })).not.toBeInTheDocument();
   });
 
   it("lets instruction questions link to Infohub content", () => {
