@@ -89,6 +89,7 @@ export function AccountTab({
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
   const [showNewPin, setShowNewPin] = useState(false);
+  const [showCurrentPin, setShowCurrentPin] = useState(false);
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [pinSaving, setPinSaving] = useState(false);
@@ -318,18 +319,27 @@ export function AccountTab({
                 Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
               </div>
             )}
-            {/* Current PIN — shown as masked dots only; actual hash never sent to browser */}
+            {/* Current PIN */}
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
               <div className="relative">
                 <input
                   readOnly
-                  type="text"
-                  value="••••"
-                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+                  type={showCurrentPin && currentAccount?.pin_plaintext ? "text" : "password"}
+                  value={currentAccount?.pin_plaintext ?? "1234"}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPin(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showCurrentPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
-              <p className="text-[10px] text-muted-foreground">PIN is stored securely and cannot be displayed.</p>
+              {!currentAccount?.pin_plaintext && (
+                <p className="text-[10px] text-muted-foreground">Set a new PIN below to enable viewing.</p>
+              )}
             </div>
             {/* New PIN */}
             <div className="space-y-1">
