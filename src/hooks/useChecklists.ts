@@ -133,8 +133,7 @@ export function useSaveChecklist() {
         }
       }
 
-      const { error } = await supabase.from("checklists").upsert({
-        id: checklist.id || undefined,
+      const fields = {
         organization_id: teamMember!.organization_id,
         title: checklist.title,
         folder_id: checklist.folder_id ?? null,
@@ -143,13 +142,20 @@ export function useSaveChecklist() {
         start_date: checklist.start_date ?? null,
         schedule: checklist.schedule ?? null,
         sections: checklist.sections ?? [],
-        time_of_day: "anytime",              // always anytime — kiosk uses visibility fields instead
+        time_of_day: "anytime",
         due_time: checklist.due_time ?? null,
         visibility_from: checklist.visibility_from ?? null,
         visibility_until: checklist.visibility_until ?? null,
         updated_at: new Date().toISOString(),
-      });
-      if (error) throw error;
+      };
+
+      if (checklist.id) {
+        const { error } = await supabase.from("checklists").update(fields).eq("id", checklist.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("checklists").insert(fields);
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["checklists"] }),
   });
