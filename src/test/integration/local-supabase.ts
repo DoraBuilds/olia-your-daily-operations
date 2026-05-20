@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type IntegrationEnv = {
@@ -14,6 +15,10 @@ type SeededKioskScenario = {
   locationChecklistId: string;
   locationSpecificStaffId: string;
   allLocationsStaffId: string;
+  /** UUID of the seeded team_member (admin) */
+  teamMemberId: string;
+  /** Plaintext PIN that was bcrypt-hashed and stored on the team_member */
+  adminPin: string;
 };
 
 type ManagerPermissions = {
@@ -83,6 +88,12 @@ export function hashPin(pin: string): string {
 export async function deleteOrganization(service: SupabaseClient, organizationId: string) {
   const { error } = await service.from("organizations").delete().eq("id", organizationId);
   if (error) throw error;
+}
+
+export async function deleteAuthUser(service: SupabaseClient, userId: string) {
+  const { error } = await service.auth.admin.deleteUser(userId);
+  // Ignore "user not found" — already cleaned up by cascade or prior test
+  if (error && !error.message.includes("not found")) throw error;
 }
 
 function defaultManagerPermissions(): ManagerPermissions {
@@ -190,6 +201,30 @@ export async function seedKioskScenario(service: SupabaseClient): Promise<Seeded
   ]);
   if (staffError) throw staffError;
 
+  // Seed a team_member (admin) with a bcrypt PIN so validate_admin_pin can be tested.
+  // Uses cost factor 4 for test speed; pgcrypto's crypt() accepts any bcrypt hash.
+  const adminPin = "5678";
+  const adminPinHash = await bcrypt.hash(adminPin, 4);
+  const { data: authUser, error: authUserError } = await service.auth.admin.createUser({
+    email: `admin-${organizationId.slice(0, 8)}@olia.test`,
+    password: "TestPassword123!",
+    email_confirm: true,
+  });
+  if (authUserError) throw authUserError;
+  const teamMemberId = authUser.user.id;
+
+  const { error: teamMemberError } = await service.from("team_members").insert({
+    id: teamMemberId,
+    organization_id: organizationId,
+    name: "Integration Admin",
+    email: `admin-${organizationId.slice(0, 8)}@olia.test`,
+    role: "Owner",
+    location_ids: [locationId],
+    permissions: defaultManagerPermissions(),
+    pin: adminPinHash,
+  });
+  if (teamMemberError) throw teamMemberError;
+
   return {
     organizationId,
     locationId,
@@ -197,6 +232,8 @@ export async function seedKioskScenario(service: SupabaseClient): Promise<Seeded
     locationChecklistId,
     locationSpecificStaffId,
     allLocationsStaffId,
+    teamMemberId,
+    adminPin,
   };
 }
 
