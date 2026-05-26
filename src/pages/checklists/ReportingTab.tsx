@@ -30,8 +30,10 @@ function dotColor(score: number) {
 }
 
 function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
-  const W = 640, H = 178;
-  const PL = 28, PR = 64, PT = 26, PB = 28;
+  // viewBox is 640 wide; on mobile (~430px rendered) the scale is ~0.67
+  // All fontSize values are SVG units — multiply by ~0.67 to get rendered px
+  const W = 640, H = 210;
+  const PL = 36, PR = 74, PT = 38, PB = 34;
   const chartW = W - PL - PR;
   const chartH = H - PT - PB;
   const bottom = PT + chartH;
@@ -44,7 +46,6 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
     ? `M ${linePoints.join(" L ")} L ${getX(data.length - 1)},${bottom} L ${getX(0)},${bottom} Z`
     : "";
 
-  // Skip date labels when there are many points to avoid crowding
   const maxLabels = 7;
   const labelStep = data.length > maxLabels ? Math.ceil(data.length / maxLabels) : 1;
   const showDateLabel = (i: number) => data.length === 1 || i % labelStep === 0 || i === data.length - 1;
@@ -53,7 +54,7 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-[178px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[210px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
         <defs>
           <linearGradient id="score-area-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="hsl(var(--sage))" stopOpacity="0.14" />
@@ -69,12 +70,12 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
         <rect x={PL} y={getY(65)} width={chartW} height={bottom - getY(65)}
           fill="hsl(var(--status-error))" fillOpacity="0.06" />
 
-        {/* Y-axis labels */}
+        {/* Y-axis labels — fontSize 15 → ~10px rendered */}
         {[0, 50, 100].map((v) => (
-          <text key={v} x={PL - 5} y={getY(v) + 4} textAnchor="end" fill={mut} fontSize="10">{v}</text>
+          <text key={v} x={PL - 6} y={getY(v) + 5} textAnchor="end" fill={mut} fontSize="15">{v}</text>
         ))}
 
-        {/* Threshold lines + right-side labels */}
+        {/* Threshold lines + right-side labels — fontSize 14 → ~9px rendered */}
         {[
           { v: 85, varName: "--status-ok", label: "Pass" },
           { v: 65, varName: "--status-warn", label: "Review" },
@@ -82,8 +83,8 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
           <g key={v}>
             <line x1={PL} x2={PL + chartW} y1={getY(v)} y2={getY(v)}
               stroke={`hsl(var(${varName}))`} strokeDasharray="4 4" strokeOpacity="0.5" />
-            <text x={PL + chartW + 5} y={getY(v) + 4}
-              fill={`hsl(var(${varName}))`} fontSize="9" fontWeight="600" opacity="0.85">
+            <text x={PL + chartW + 6} y={getY(v) + 5}
+              fill={`hsl(var(${varName}))`} fontSize="14" fontWeight="600" opacity="0.85">
               {label}
             </text>
           </g>
@@ -107,11 +108,13 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
             <g key={`${point.date}-${i}`}>
               <circle cx={cx} cy={cy} r="8" fill={col} opacity="0.12" />
               <circle cx={cx} cy={cy} r="4.5" fill={col} stroke="white" strokeWidth="1.5" />
-              <text x={cx} y={cy - 12} textAnchor="middle" fill={col} fontSize="10" fontWeight="700">
+              {/* Score label — fontSize 16 → ~11px rendered */}
+              <text x={cx} y={cy - 14} textAnchor="middle" fill={col} fontSize="16" fontWeight="700">
                 {point.avg}%
               </text>
+              {/* Date label — fontSize 14 → ~9px rendered */}
               {showDateLabel(i) && (
-                <text x={cx} y={H - 4} textAnchor="middle" fill={mut} fontSize="10">
+                <text x={cx} y={H - 6} textAnchor="middle" fill={mut} fontSize="14">
                   {point.date}
                 </text>
               )}
