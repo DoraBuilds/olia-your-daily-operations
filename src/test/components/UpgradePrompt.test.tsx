@@ -71,9 +71,8 @@ describe("UpgradePrompt", () => {
     renderWithProviders(
       <UpgradePrompt feature="AI checklist builder" onClose={onClose} />
     );
-    const closeBtn = document.querySelector("button[class*='rounded-full']");
-    expect(closeBtn).not.toBeNull();
-    fireEvent.click(closeBtn!);
+    const closeBtn = screen.getByRole("button", { name: "Close" });
+    fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
 

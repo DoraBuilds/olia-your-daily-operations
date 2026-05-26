@@ -461,7 +461,7 @@ export function ChecklistsTab() {
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-foreground">New folder</h2>
-              <button onClick={() => setShowNewFolder(false)} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+              <button onClick={() => setShowNewFolder(false)} className="btn-icon">
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>
@@ -533,7 +533,7 @@ export function ChecklistsTab() {
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-foreground">Rename folder</h2>
-              <button onClick={() => setRenameTarget(null)} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+              <button onClick={() => setRenameTarget(null)} className="btn-icon">
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>

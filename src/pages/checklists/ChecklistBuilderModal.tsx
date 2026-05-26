@@ -369,7 +369,7 @@ export function ChecklistBuilderModal({
         {asPage ? (
           <div className="w-16" />
         ) : (
-          <button onClick={handleRequestClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={handleRequestClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         )}

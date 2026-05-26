@@ -35,6 +35,7 @@ html { font-size: 16px; }                        /* mobile / default        */
        Maps 1:1 to Tailwind's numeric scale: --space-4 = p-4 = 16px
        ──────────────────────────────────────────────────────────────────── */
     --space-1:   4px;    /* icon gaps, tight insets                   */
+    --space-1-5: 6px;    /* icon button padding (p-1.5)               */
     --space-2:   8px;    /* list item gaps, small chips               */
     --space-3:  12px;    /* compact inner padding                     */
     --space-4:  16px;    /* standard card padding, section content    */
@@ -164,21 +165,14 @@ html { font-size: 16px; }                        /* mobile / default        */
 }
 
 @layer components {
-  /* Status badge helpers */
-  .status-ok {
-    background-color: hsl(var(--status-ok-bg));
-    color: hsl(var(--status-ok));
-  }
-  .status-warn {
-    background-color: hsl(var(--status-warn-bg));
-    color: hsl(var(--status-warn));
-  }
-  .status-error {
-    background-color: hsl(var(--status-error-bg));
-    color: hsl(var(--status-error));
-  }
+  /* ── Status helpers ──────────────────────────────────────────────────────── */
+  .status-ok   { background-color: hsl(var(--status-ok-bg));   color: hsl(var(--status-ok)); }
+  .status-warn { background-color: hsl(var(--status-warn-bg)); color: hsl(var(--status-warn)); }
+  .status-error{ background-color: hsl(var(--status-error-bg));color: hsl(var(--status-error)); }
 
-  /* Card elevation */
+  /* ── Cards ───────────────────────────────────────────────────────────────── */
+
+  /* Elevated card — border + shadow, no padding (add p-* in JSX) */
   .card-surface {
     background-color: hsl(var(--card));
     border: 1px solid hsl(var(--border));
@@ -186,7 +180,173 @@ html { font-size: 16px; }                        /* mobile / default        */
     box-shadow: var(--shadow-card);
   }
 
-  /* Section label */
+  /* Card with standard inset padding */
+  .card {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-card-inset);
+  }
+
+  /* Nested section inside a card — tinted background, tighter radius */
+  .card-inset {
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px);
+    padding: var(--space-3);
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+  /* Base — layout, reset, transitions. Always pair with a variant. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border-radius: var(--radius);
+    font-family: var(--font-body);
+    font-size: var(--text-body-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition-property: color, background-color, border-color, opacity, box-shadow;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+  }
+  .btn:disabled { opacity: 0.5; pointer-events: none; }
+
+  /* Sizes — compose with variant */
+  .btn-sm { padding: var(--space-1) var(--space-3);  font-size: var(--text-caption); }
+  .btn-md { padding: var(--space-2) var(--space-4); }           /* default */
+  .btn-lg { padding: var(--space-3) var(--space-5);  font-size: var(--text-body); }
+  .btn-full { width: 100%; }
+
+  /* Variants */
+  .btn-primary {
+    background-color: hsl(var(--sage));
+    color: hsl(var(--primary-foreground));
+  }
+  .btn-primary:hover { background-color: hsl(var(--sage-deep)); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+  .btn-secondary:hover { background-color: hsl(var(--muted)); }
+
+  .btn-ghost { color: hsl(var(--foreground)); }
+  .btn-ghost:hover { background-color: hsl(var(--muted)); }
+
+  .btn-danger {
+    background-color: hsl(var(--status-error));
+    color: hsl(0 0% 100%);
+  }
+  .btn-danger:hover { opacity: 0.9; }
+
+  .btn-outline {
+    border: 1px solid hsl(var(--sage) / 0.4);
+    color: hsl(var(--sage));
+  }
+  .btn-outline:hover { background-color: hsl(var(--sage-light)); }
+
+  /* Icon-only button — circle touch target, no label */
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-1-5);  /* 6px — matches Tailwind p-1.5, safe swap */
+    border-radius: 9999px;
+    transition-property: background-color, color;
+    transition-duration: var(--duration-fast);
+    transition-timing-function: var(--ease-out);
+    cursor: pointer;
+  }
+  .btn-icon:hover { background-color: hsl(var(--muted)); }
+
+  /* ── Badges ──────────────────────────────────────────────────────────────── */
+
+  /* Base — always pair with a color variant */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    border-radius: 9999px;
+    padding: 2px var(--space-2);
+    font-family: var(--font-body);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .badge-primary { background-color: hsl(var(--sage-light));       color: hsl(var(--sage)); }
+  .badge-muted   { background-color: hsl(var(--muted));            color: hsl(var(--muted-foreground)); }
+  .badge-ok      { background-color: hsl(var(--status-ok-bg));     color: hsl(var(--status-ok)); }
+  .badge-warn    { background-color: hsl(var(--status-warn-bg));   color: hsl(var(--status-warn)); }
+  .badge-error   { background-color: hsl(var(--status-error-bg));  color: hsl(var(--status-error)); }
+
+  /* ── Bottom sheet / modal ────────────────────────────────────────────────── */
+
+  /* Backdrop — set z-index via Tailwind (z-[60]/z-[70] etc.) in JSX */
+  .sheet-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background-color: hsl(var(--foreground) / 0.2);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: fade-in var(--duration-base) var(--ease-out) both;
+    padding-bottom: 4rem;  /* clears bottom nav on mobile */
+  }
+
+  /* Slide-up panel */
+  .sheet-panel {
+    background-color: hsl(var(--card));
+    width: 100%;
+    max-width: 32rem;
+    border-radius: calc(var(--radius) + 8px) calc(var(--radius) + 8px) 0 0;
+    padding: var(--space-5);
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: fade-in var(--duration-base) var(--ease-out) both;
+  }
+
+  /* On wider screens: centre the panel and round all corners */
+  @media (min-width: 640px) {
+    .sheet-overlay { align-items: center; padding: var(--space-8); }
+    .sheet-panel   { border-radius: calc(var(--radius) + 8px); max-height: 90vh; }
+  }
+
+  /* ── Form elements ───────────────────────────────────────────────────────── */
+
+  .form-label {
+    display: block;
+    font-family: var(--font-body);
+    font-size: var(--text-body-sm);
+    font-weight: 500;
+    color: hsl(var(--foreground));
+    margin-bottom: var(--space-1);
+  }
+
+  .form-hint {
+    font-size: var(--text-caption);
+    color: hsl(var(--muted-foreground));
+    margin-top: var(--space-1);
+  }
+
+  .form-error {
+    font-size: var(--text-caption);
+    color: hsl(var(--status-error));
+    margin-top: var(--space-1);
+  }
+
+  /* ── Section label ───────────────────────────────────────────────────────── */
   .section-label {
     font-family: var(--font-body);
     font-size: var(--text-caption);
@@ -196,7 +356,7 @@ html { font-size: 16px; }                        /* mobile / default        */
     color: hsl(var(--muted-foreground));
   }
 
-  /* Score ring helpers */
+  /* ── Score ring ──────────────────────────────────────────────────────────── */
   .score-ring {
     border-radius: 50%;
     display: flex;
@@ -206,21 +366,8 @@ html { font-size: 16px; }                        /* mobile / default        */
   }
 
   /* ── Safe area utilities (Capacitor / iOS notch / Android edge-to-edge) ── */
+  .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-area-pt { padding-top:    env(safe-area-inset-top,    0px); }
 
-  /* Bottom nav sits above the home indicator */
-  .safe-area-pb {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  /* Top content respects status bar height */
-  .safe-area-pt {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-
-  /* Full-bleed page wrapper fills behind status bar + home indicator */
-  #root {
-    /* Prevents content from being obscured by iOS home indicator or
-       Android gesture nav bar when running in Capacitor */
-    min-height: 100dvh;
-  }
+  #root { min-height: 100dvh; }
 }

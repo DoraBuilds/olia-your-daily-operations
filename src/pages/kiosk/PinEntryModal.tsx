@@ -201,7 +201,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">Admin PIN</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

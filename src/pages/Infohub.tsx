@@ -415,7 +415,7 @@ export default function Infohub() {
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === folder.id ? null : folder.id); }}
-                        className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                        className="btn-icon shrink-0"
                       >
                         <MoreVertical size={16} className="text-muted-foreground" />
                       </button>
@@ -467,7 +467,7 @@ export default function Infohub() {
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === doc.id ? null : doc.id); }}
-                        className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                        className="btn-icon shrink-0"
                       >
                         <MoreVertical size={16} className="text-muted-foreground" />
                       </button>
@@ -573,7 +573,7 @@ export default function Infohub() {
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === folder.id ? null : folder.id); }}
-                        className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                        className="btn-icon shrink-0"
                       >
                         <MoreVertical size={16} className="text-muted-foreground" />
                       </button>
@@ -627,7 +627,7 @@ export default function Infohub() {
                       )}
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === doc.id ? null : doc.id); }}
-                        className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                        className="btn-icon shrink-0"
                       >
                         <MoreVertical size={16} className="text-muted-foreground" />
                       </button>

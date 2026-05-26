@@ -48,7 +48,7 @@ export function ModalHeader({ title, onClose }: { title: string; onClose: () => 
   return (
     <div className="flex items-center justify-between">
       <h2 className="font-display text-lg text-foreground">{title}</h2>
-      <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+      <button onClick={onClose} className="btn-icon">
         <X size={18} className="text-muted-foreground" />
       </button>
     </div>
