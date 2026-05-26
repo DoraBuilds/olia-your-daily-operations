@@ -185,10 +185,19 @@ export function ChecklistRunner({
 
             const isLastQ = qi >= questions.length - 1;
             const answerVal = answers[q.id];
-            const isNoAnswer = q.type === "multiple_choice" &&
-              !q.optionColors?.length &&
-              typeof answerVal === "string" &&
-              answerVal.toLowerCase() === "no";
+            // For colored multiple-choice (e.g. Yes/No preset), reflect the selected option's color
+            let selectedOptionSeverity: "error" | "warn" | null = null;
+            if (q.type === "multiple_choice" && q.optionColors?.length && typeof answerVal === "string" && q.options?.length) {
+              const idx = q.options.indexOf(answerVal);
+              if (idx >= 0 && idx < q.optionColors.length) {
+                const color = q.optionColors[idx];
+                if (color.includes("status-error")) selectedOptionSeverity = "error";
+                else if (color.includes("status-warn")) selectedOptionSeverity = "warn";
+              }
+            }
+            // For uncolored multiple-choice, treat a "No" answer as a warning
+            const isNoAnswer = q.type === "multiple_choice" && !q.optionColors?.length &&
+              typeof answerVal === "string" && answerVal.toLowerCase() === "no";
             const hasBlankUnansweredTrigger = hasUnansweredTrigger(q);
             const needsNextBtn = isCurrent && (
               isInstruction ||
@@ -304,12 +313,16 @@ export function ChecklistRunner({
                       "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
                       isPast ? "border-border" : "border-border opacity-60",
                       isMissing && "border-status-error/40 bg-status-error/5",
-                      isNoAnswer && "border-status-warn/30 bg-status-warn/5",
+                      !isMissing && selectedOptionSeverity === "error" && "border-status-error/30 bg-status-error/5",
+                      !isMissing && selectedOptionSeverity === "warn" && "border-status-warn/30 bg-status-warn/5",
+                      !isMissing && isNoAnswer && "border-status-warn/30 bg-status-warn/5",
                     )}
                   >
                     {isAnswered ? (
                       <div className={cn(
                         "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
+                        selectedOptionSeverity === "error" ? "bg-status-error" :
+                        selectedOptionSeverity === "warn" ? "bg-status-warn" :
                         isNoAnswer ? "bg-status-warn" : "bg-sage",
                       )}>
                         <Check size={11} className="text-white" />
@@ -330,6 +343,8 @@ export function ChecklistRunner({
                     {isAnswered && (
                       <span className={cn(
                         "text-[10px] font-semibold shrink-0",
+                        selectedOptionSeverity === "error" ? "text-status-error" :
+                        selectedOptionSeverity === "warn" ? "text-status-warn" :
                         isNoAnswer ? "text-status-warn" : "text-sage",
                       )}>✓ Done</span>
                     )}
