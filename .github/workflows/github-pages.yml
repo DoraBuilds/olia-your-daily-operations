@@ -25,9 +25,9 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+        run: |
+          curl -sfLS https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
+            | tar xz -C /usr/local/bin supabase
 
       - name: Link Supabase project
         env:
@@ -61,6 +61,7 @@ jobs:
             20260503000004 20260503000005 20260503000006 20260506000001
             20260508000001 20260513000001 20260515000001
             20260519000001 20260519000002 20260519000003 20260519000004
+            20260519000005 20260520000001 20260520000002
           )
           for version in "${versions[@]}"; do
             supabase migration repair --status applied "$version" 2>/dev/null || true
@@ -84,9 +85,9 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2.2.0
-        with:
-          bun-version: latest
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
