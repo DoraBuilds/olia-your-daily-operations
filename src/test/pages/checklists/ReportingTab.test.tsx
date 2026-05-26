@@ -225,7 +225,8 @@ describe("ReportingTab", () => {
 
   it("shows correct avg score (90+65)/2 = 78%", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("78%")).toBeInTheDocument();
+    // "78%" appears in the stat card AND on chart dot labels — check at least one exists
+    expect(screen.getAllByText("78%").length).toBeGreaterThan(0);
   });
 
   it("shows Open Actions stat card", () => {
@@ -507,7 +508,8 @@ describe("ReportingTab", () => {
       isLoading: false,
     });
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("Review")).toBeInTheDocument();
+    // "Review" appears in the stat card sub-label AND as a threshold label in the chart
+    expect(screen.getAllByText("Review").length).toBeGreaterThan(0);
   });
 
   it("shows 'Action needed' sub-label when avg score < 65", () => {

@@ -23,59 +23,101 @@ function scoreBadge(score: number | null) {
   return { label: "ACTION REQ.", cls: "status-error" };
 }
 
+function dotColor(score: number) {
+  if (score >= 85) return "hsl(var(--status-ok))";
+  if (score >= 65) return "hsl(var(--status-warn))";
+  return "hsl(var(--status-error))";
+}
+
 function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
-  const width = 640;
-  const height = 140;
-  const paddingX = 28;
-  const paddingTop = 14;
-  const paddingBottom = 26;
-  const chartHeight = height - paddingTop - paddingBottom;
-  const stepX = data.length > 1 ? (width - paddingX * 2) / (data.length - 1) : 0;
-  const getX = (index: number) => paddingX + index * stepX;
-  const getY = (value: number) => paddingTop + ((100 - value) / 100) * chartHeight;
-  const points = data.map((point, index) => `${getX(index)},${getY(point.avg)}`).join(" ");
+  const W = 640, H = 178;
+  const PL = 28, PR = 64, PT = 26, PB = 28;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+  const bottom = PT + chartH;
+
+  const getX = (i: number) => PL + (data.length > 1 ? (i * chartW) / (data.length - 1) : chartW / 2);
+  const getY = (v: number) => PT + ((100 - v) / 100) * chartH;
+
+  const linePoints = data.map((p, i) => `${getX(i)},${getY(p.avg)}`);
+  const fillPath = data.length > 1
+    ? `M ${linePoints.join(" L ")} L ${getX(data.length - 1)},${bottom} L ${getX(0)},${bottom} Z`
+    : "";
+
+  // Skip date labels when there are many points to avoid crowding
+  const maxLabels = 7;
+  const labelStep = data.length > maxLabels ? Math.ceil(data.length / maxLabels) : 1;
+  const showDateLabel = (i: number) => data.length === 1 || i % labelStep === 0 || i === data.length - 1;
+
+  const mut = "hsl(var(--muted-foreground))";
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[140px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
-        {[65, 85].map((threshold) => (
-          <line
-            key={threshold}
-            x1={paddingX}
-            x2={width - paddingX}
-            y1={getY(threshold)}
-            y2={getY(threshold)}
-            stroke={`hsl(var(${threshold === 85 ? "--status-ok" : "--status-warn"}))`}
-            strokeDasharray="4 4"
-            strokeOpacity="0.5"
-          />
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[178px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
+        <defs>
+          <linearGradient id="score-area-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(var(--sage))" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="hsl(var(--sage))" stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+
+        {/* Zone bands */}
+        <rect x={PL} y={PT} width={chartW} height={getY(85) - PT}
+          fill="hsl(var(--status-ok))" fillOpacity="0.06" />
+        <rect x={PL} y={getY(85)} width={chartW} height={getY(65) - getY(85)}
+          fill="hsl(var(--status-warn))" fillOpacity="0.06" />
+        <rect x={PL} y={getY(65)} width={chartW} height={bottom - getY(65)}
+          fill="hsl(var(--status-error))" fillOpacity="0.06" />
+
+        {/* Y-axis labels */}
+        {[0, 50, 100].map((v) => (
+          <text key={v} x={PL - 5} y={getY(v) + 4} textAnchor="end" fill={mut} fontSize="10">{v}</text>
         ))}
-        {[0, 50, 100].map((value) => (
-          <text
-            key={value}
-            x={4}
-            y={getY(value) + 4}
-            className="fill-muted-foreground text-[10px]"
-          >
-            {value}
-          </text>
-        ))}
-        <polyline
-          fill="none"
-          stroke="hsl(var(--sage))"
-          strokeWidth="3"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          points={points}
-        />
-        {data.map((point, index) => (
-          <g key={`${point.date}-${index}`}>
-            <circle cx={getX(index)} cy={getY(point.avg)} r="4" fill="hsl(var(--sage))" />
-            <text x={getX(index)} y={height - 6} textAnchor="middle" className="fill-muted-foreground text-[10px]">
-              {point.date}
+
+        {/* Threshold lines + right-side labels */}
+        {[
+          { v: 85, varName: "--status-ok", label: "Pass" },
+          { v: 65, varName: "--status-warn", label: "Review" },
+        ].map(({ v, varName, label }) => (
+          <g key={v}>
+            <line x1={PL} x2={PL + chartW} y1={getY(v)} y2={getY(v)}
+              stroke={`hsl(var(${varName}))`} strokeDasharray="4 4" strokeOpacity="0.5" />
+            <text x={PL + chartW + 5} y={getY(v) + 4}
+              fill={`hsl(var(${varName}))`} fontSize="9" fontWeight="600" opacity="0.85">
+              {label}
             </text>
           </g>
         ))}
+
+        {/* Gradient fill + line */}
+        {data.length > 1 && (
+          <>
+            <path d={fillPath} fill="url(#score-area-fill)" />
+            <polyline fill="none" stroke="hsl(var(--sage))" strokeWidth="2.5"
+              strokeLinejoin="round" strokeLinecap="round" points={linePoints.join(" ")} />
+          </>
+        )}
+
+        {/* Data points: glow ring + colored dot + score label + date label */}
+        {data.map((point, i) => {
+          const cx = getX(i);
+          const cy = getY(point.avg);
+          const col = dotColor(point.avg);
+          return (
+            <g key={`${point.date}-${i}`}>
+              <circle cx={cx} cy={cy} r="8" fill={col} opacity="0.12" />
+              <circle cx={cx} cy={cy} r="4.5" fill={col} stroke="white" strokeWidth="1.5" />
+              <text x={cx} y={cy - 12} textAnchor="middle" fill={col} fontSize="10" fontWeight="700">
+                {point.avg}%
+              </text>
+              {showDateLabel(i) && (
+                <text x={cx} y={H - 4} textAnchor="middle" fill={mut} fontSize="10">
+                  {point.date}
+                </text>
+              )}
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
@@ -452,10 +494,18 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </p>
       </div>
 
-      {/* Score Trend — Line chart (no fill) */}
+      {/* Score Trend */}
       {trendData.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-4">
-          <p className="section-label mb-4">Score Trend</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="section-label">Score Trend</p>
+            {trendData.length >= 2 && (() => {
+              const delta = trendData[trendData.length - 1].avg - trendData[0].avg;
+              if (delta > 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-ok"><TrendingUp size={12} />+{delta}%</span>;
+              if (delta < 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-error"><TrendingDown size={12} />{delta}%</span>;
+              return <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Minus size={12} />No change</span>;
+            })()}
+          </div>
           <ScoreTrendChart data={trendData} />
         </div>
       )}
