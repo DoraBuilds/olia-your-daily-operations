@@ -27,9 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Supabase CLI
-        run: |
-          curl -sfLS https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
-            | tar xz -C /usr/local/bin supabase
+        run: npm install -g supabase
 
       - name: Link Supabase project
         env:
