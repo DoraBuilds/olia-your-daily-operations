@@ -97,9 +97,24 @@ export default {
         "2xl": "calc(var(--radius) + 8px)",
       },
       boxShadow: {
-        sm: "var(--shadow-sm)",
-        md: "var(--shadow-md)",
-        card: "var(--shadow-card)",
+        sm:    "var(--shadow-sm)",
+        card:  "var(--shadow-card)",
+        md:    "var(--shadow-md)",
+        lg:    "var(--shadow-lg)",       // modals, bottom sheets
+        inset: "var(--shadow-inset)",    // inputs, pressed states
+      },
+      transitionDuration: {
+        instant: "var(--duration-instant)",  // 50ms
+        fast:    "var(--duration-fast)",     // 150ms
+        base:    "var(--duration-base)",     // 250ms
+        slow:    "var(--duration-slow)",     // 400ms
+        slower:  "var(--duration-slower)",   // 600ms
+      },
+      transitionTimingFunction: {
+        "ease-out":    "var(--ease-out)",
+        "ease-in":     "var(--ease-in)",
+        "ease-inout":  "var(--ease-inout)",
+        "ease-spring": "var(--ease-spring)",
       },
       keyframes: {
         "fade-in": {
@@ -116,9 +131,9 @@ export default {
         },
       },
       animation: {
-        "fade-in": "fade-in 0.25s ease-out both",
+        "fade-in":       "fade-in var(--duration-base) var(--ease-out) both",
         "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-up":   "accordion-up 0.2s ease-out",
       },
     },
   },
