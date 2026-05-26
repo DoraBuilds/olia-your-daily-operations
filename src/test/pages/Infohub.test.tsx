@@ -316,9 +316,9 @@ describe("Infohub page", () => {
         const docRow = moduleTitle.closest("div[class*='cursor-pointer']") as HTMLElement;
         if (docRow) {
           fireEvent.click(docRow);
-          // Find back button (ChevronLeft)
+          // Find back button — first button in header containing a chevron-left SVG
           const backBtn = screen.getAllByRole("button").find(btn =>
-            btn.className.includes("rounded-full") && btn.querySelector("svg")
+            btn.querySelector("svg.lucide-chevron-left")
           );
           if (backBtn) {
             fireEvent.click(backBtn);

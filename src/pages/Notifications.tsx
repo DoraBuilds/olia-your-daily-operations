@@ -76,7 +76,7 @@ export default function Notifications() {
                   </div>
                   <button
                     onClick={() => clearOne(alert.id)}
-                    className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+                    className="btn-icon shrink-0"
                     aria-label="Dismiss alert"
                   >
                     <X size={14} className="text-muted-foreground" />

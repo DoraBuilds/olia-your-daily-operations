@@ -30,7 +30,8 @@ export function UpgradePrompt({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-muted transition-colors"
+            className="btn-icon"
+            aria-label="Close"
           >
             <X size={18} className="text-muted-foreground" />
           </button>

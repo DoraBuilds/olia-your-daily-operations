@@ -86,7 +86,7 @@ export function MoveToFolderSheet({
       <div className="space-y-3">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-display text-base text-foreground">Move to folder</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -195,7 +195,7 @@ export function CreateFolderModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">New folder</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -236,7 +236,7 @@ export function RenameFolderModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">Rename folder</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -281,7 +281,7 @@ export function CreateDocModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">New document</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -331,7 +331,7 @@ export function PlusMenu({ onClose, onAction }: { onClose: () => void; onAction:
       <div className="space-y-1">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-base text-foreground">Create new</h3>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -404,7 +404,7 @@ export function ManageAccessModal({
             <h3 className="font-display text-base text-foreground">Manage access</h3>
             <p className="text-xs text-muted-foreground mt-1">{target.name}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -553,7 +553,7 @@ export function AIActionsSheet({
             <Sparkles size={16} className="text-lavender-deep" />
             <h3 className="font-display text-base text-foreground">AI Tools</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -696,7 +696,7 @@ export function SearchOverlay({
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 text-sm bg-transparent focus:outline-none"
         />
-        <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+        <button onClick={onClose} className="btn-icon">
           <X size={18} className="text-muted-foreground" />
         </button>
       </header>

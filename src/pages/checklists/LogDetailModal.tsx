@@ -62,7 +62,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
               className="flex items-center gap-1.5 text-xs font-medium text-sage px-3 py-1.5 rounded-full border border-sage/40 hover:bg-sage-light transition-colors">
               <FileText size={12} /> Export PDF
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+            <button onClick={onClose} className="btn-icon">
               <X size={18} className="text-muted-foreground" />
             </button>
           </div>

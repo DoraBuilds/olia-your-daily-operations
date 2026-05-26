@@ -58,7 +58,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <h2 className="font-display text-lg text-foreground">Type of response</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

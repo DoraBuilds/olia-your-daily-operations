@@ -40,7 +40,7 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
             Build with AI
             <Sparkles size={16} className="text-lavender" />
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+          <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
