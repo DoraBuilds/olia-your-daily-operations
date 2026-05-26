@@ -15,6 +15,11 @@ export default {
         display: ["DM Serif Display", "Georgia", "serif"],
         body: ["DM Sans", "system-ui", "sans-serif"],
       },
+      fontSize: {
+        // Corrected to match Olia's Major-Third scale (×1.25)
+        "3xl": ["2rem",   { lineHeight: "1.2" }],  // 32px  (Tailwind default: 30px)
+        "4xl": ["2.5rem", { lineHeight: "1.2" }],  // 40px  (Tailwind default: 36px)
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

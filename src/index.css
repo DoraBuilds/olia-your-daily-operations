@@ -4,8 +4,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Responsive type root ──────────────────────────────────────────────────
+   All rem values across the app scale automatically with the html font-size.
+   Mobile-first: 16px base. Laptop: slightly denser at 14px. Wide desktop: 18px.
+   ────────────────────────────────────────────────────────────────────────── */
+html { font-size: 16px; }                        /* mobile / default        */
+@media (min-width: 768px)  { html { font-size: 14px; } } /* laptop          */
+@media (min-width: 1280px) { html { font-size: 18px; } } /* wide desktop    */
+
 @layer base {
   :root {
+    /* ── Typography scale — Major Third (×1.25) ──────────────────────────
+       Values shown as: mobile / laptop / wide-desktop (px)
+       ──────────────────────────────────────────────────────────────────── */
+    --text-caption:  clamp(11px, 0.75rem, 12px); /* 12 / 11 / 12  — captions, timestamps, helper text */
+    --text-body-sm:  0.875rem;                   /* 14 / 12 / 16  — secondary text, labels            */
+    --text-body:     1rem;                       /* 16 / 14 / 18  — primary body                      */
+    --text-subtitle: 1.25rem;                    /* 20 / 18 / 23  — card subtitles, section intros    */
+    --text-h4:       1.5rem;                     /* 24 / 21 / 27  — card headings, modal titles       */
+    --text-h3:       2rem;                       /* 32 / 28 / 36  — section headers                   */
+    --text-h2:       2.5rem;                     /* 40 / 35 / 45  — page sections                     */
+    --text-h1:       3rem;                       /* 48 / 42 / 54  — page titles                       */
+    --text-display:  3.75rem;                    /* 60 / 53 / 68  — hero / display                    */
+
+    /* Line heights */
+    --leading-tight: 1.2;    /* headings                              */
+    --leading-body:  1.5;    /* body — WCAG 2.1 §1.4.12 minimum      */
+
     /* Olia Brand Colors — all HSL */
     --sage:            219 46% 19%;   /* midnight blue #1A2A47 */
     --sage-deep:       219 52% 13%;   /* hover/active */
@@ -86,14 +111,14 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    line-height: 1.2;
+    line-height: var(--leading-tight);
     letter-spacing: -0.01em;
   }
 }
@@ -124,7 +149,7 @@
   /* Section label */
   .section-label {
     font-family: var(--font-body);
-    font-size: 0.6875rem;
+    font-size: var(--text-caption);
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
