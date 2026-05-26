@@ -126,23 +126,91 @@ function MultipleChoiceInput({
 
   return (
     <div className="space-y-2">
-      {options.map((opt, idx) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => toggleOption(opt)}
-          className={cn(
-            "w-full min-h-[56px] rounded-xl border-2 px-4 py-3 text-sm text-left font-medium transition-colors",
-            selected.includes(opt)
-              ? "border-sage text-sage-deep"
-              : "bg-card border-border text-foreground hover:border-sage/40",
-            selected.includes(opt) && optionColors?.[idx],
-            selected.includes(opt) && !optionColors?.[idx] && "bg-sage-light",
-          )}
-        >
-          {opt}
-        </button>
-      ))}
+      {options.map((opt, idx) => {
+        const isSelected = selected.includes(opt);
+        const isNoOption = isSelected && !optionColors?.[idx] && opt.toLowerCase() === "no";
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => toggleOption(opt)}
+            className={cn(
+              "w-full min-h-[56px] rounded-xl border-2 px-4 py-3 text-sm text-left font-medium transition-colors",
+              isSelected
+                ? isNoOption
+                  ? "bg-status-warn/10 border-status-warn text-status-warn"
+                  : "border-sage text-sage-deep"
+                : "bg-card border-border text-foreground hover:border-sage/40",
+              isSelected && optionColors?.[idx],
+              isSelected && !optionColors?.[idx] && !isNoOption && "bg-sage-light",
+            )}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TemperatureSliderInput({
+  value, onChange, acceptableMin, acceptableMax, unit = "C",
+}: {
+  value: number | "";
+  onChange: (v: number | "") => void;
+  acceptableMin?: number;
+  acceptableMax?: number;
+  unit?: "C" | "F";
+}) {
+  const sliderMin = unit === "F" ? 32 : 0;
+  const sliderMax = unit === "F" ? 104 : 40;
+  const displayValue = value === "" ? sliderMin : Number(value);
+
+  const hasAcceptableRange = acceptableMin != null || acceptableMax != null;
+  const outOfRange = hasAcceptableRange && value !== "" && (
+    (acceptableMin != null && displayValue < acceptableMin) ||
+    (acceptableMax != null && displayValue > acceptableMax)
+  );
+
+  return (
+    <div className="space-y-3 px-1">
+      <div className="flex items-end justify-center gap-1 py-2">
+        <span className={cn(
+          "text-6xl font-bold tabular-nums leading-none",
+          outOfRange ? "text-status-error" : "text-foreground",
+        )}>
+          {value === "" ? "—" : displayValue}
+        </span>
+        <span className={cn(
+          "text-2xl font-medium pb-1",
+          outOfRange ? "text-status-error" : "text-muted-foreground",
+        )}>
+          °{unit}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={sliderMin}
+        max={sliderMax}
+        step={1}
+        value={displayValue}
+        onChange={e => onChange(Number(e.target.value))}
+        className="w-full cursor-pointer"
+        style={{ accentColor: outOfRange ? "var(--status-error)" : "var(--sage)" }}
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{sliderMin}°{unit}</span>
+        <span>{sliderMax}°{unit}</span>
+      </div>
+      {hasAcceptableRange && (
+        <p className={cn(
+          "text-[11px] text-center",
+          outOfRange ? "text-status-error font-semibold" : "text-muted-foreground",
+        )}>
+          {outOfRange ? "⚠ Out of acceptable range · " : ""}
+          Acceptable: {acceptableMin != null ? acceptableMin : "—"} – {acceptableMax != null ? acceptableMax : "—"}°{unit}
+        </p>
+      )}
     </div>
   );
 }
@@ -595,6 +663,17 @@ function QuestionInput({
         />
       );
     case "number":
+      if (question.temperatureUnit) {
+        return (
+          <TemperatureSliderInput
+            value={value ?? ""}
+            onChange={onChange}
+            acceptableMin={question.min}
+            acceptableMax={question.max}
+            unit={question.temperatureUnit}
+          />
+        );
+      }
       return <NumberInput value={value ?? ""} onChange={onChange} min={question.min} max={question.max} unit={question.temperatureUnit} />;
     case "text":
       return <TextInput value={value ?? ""} onChange={onChange} />;
@@ -945,21 +1024,18 @@ export function ChecklistRunner({
                   )}
                 </div>
               ) : (
-                // ── Collapsed question (past = clickable, future = dimmed) ──
+                // ── Collapsed question (all clickable — free-order navigation) ──
                 <button
                   id={`question-${q.id}`}
                   type="button"
-                  onClick={() => { if (isPast) setCurrentQuestionId(q.id); }}
-                  disabled={!isPast}
+                  onClick={() => setCurrentQuestionId(q.id)}
                   className={cn(
-                    "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors",
-                    isPast
-                      ? "border-border hover:border-sage/30 cursor-pointer"
-                      : "border-border opacity-40 cursor-default",
+                    "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
+                    isPast ? "border-border" : "border-border opacity-60",
                     isMissing && "border-status-error/40 bg-status-error/5",
                   )}
                 >
-                  {isPast && isAnswered ? (
+                  {isAnswered ? (
                     <div className="w-5 h-5 rounded-full bg-sage flex items-center justify-center shrink-0">
                       <Check size={11} className="text-white" />
                     </div>
@@ -976,13 +1052,13 @@ export function ChecklistRunner({
                     {isInstruction ? (q.instructionText ?? q.text ?? "Note") : q.text}
                     {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
                   </p>
-                  {isPast && isAnswered && (
+                  {isAnswered && (
                     <span className="text-[10px] text-sage font-semibold shrink-0">✓ Done</span>
                   )}
-                  {isPast && !isAnswered && !isInstruction && (
+                  {!isAnswered && isPast && !isInstruction && (
                     <span className="text-[10px] text-muted-foreground/60 shrink-0">Edit</span>
                   )}
-                  {!isPast && (
+                  {!isAnswered && !isPast && (
                     <span className="text-[10px] text-muted-foreground/50 shrink-0">Pending</span>
                   )}
                 </button>
