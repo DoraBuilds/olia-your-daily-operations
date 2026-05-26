@@ -338,7 +338,7 @@ export function AccountTab({
                 </button>
               </div>
               {!currentAccount?.pin_plaintext && (
-                <p className="text-[10px] text-muted-foreground">Set a new PIN below to enable viewing.</p>
+                <p className="text-xs text-muted-foreground">Set a new PIN below to enable viewing.</p>
               )}
             </div>
             {/* New PIN */}
@@ -397,7 +397,7 @@ export function AccountTab({
         {/* Usage + plan line */}
         <div className="flex items-center gap-2 mb-3">
           <span className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide",
+            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium tracking-wide",
             billingUnavailable
               ? "bg-muted text-muted-foreground"
               : "bg-sage/10 text-sage",
@@ -506,12 +506,12 @@ export function AccountTab({
                 {isLocationOverLimit && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {activeLocationSet.has(loc.id) ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-[10px] font-medium tracking-wide">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-xs font-medium tracking-wide">
                         {isGraceExpired ? "Active" : "Grace window"}
                       </span>
                     ) : null}
                     {inactiveLocationSet.has(loc.id) ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium tracking-wide">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium tracking-wide">
                         Read-only
                       </span>
                     ) : null}
@@ -559,8 +559,8 @@ export function AccountTab({
           {/* Column headers */}
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="w-9 shrink-0" />
-            <p className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
-            <p className="w-20 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Role</p>
+            <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
+            <p className="w-20 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Role</p>
             <div className="w-20 shrink-0" />
           </div>
           {[...teamMembers].sort((a, b) => a.role === "Owner" ? -1 : b.role === "Owner" ? 1 : 0).map(member => {
@@ -811,7 +811,7 @@ export function AccountTab({
               </p>
             </div>
             <span className={cn(
-              "text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
+              "text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
               isActive ? "border-sage/20 text-sage bg-sage/10" : "border-status-warn/30 text-status-warn bg-status-warn/10"
             )}>
               {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}

@@ -266,7 +266,7 @@ export function LogicRulesEditor({
                               </select>
                             )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground pl-4">Notification sent by email. SMS/push coming soon.</p>
+                          <p className="text-xs text-muted-foreground pl-4">Notification sent by email. SMS/push coming soon.</p>
                         </div>
                       )}
 
@@ -294,7 +294,7 @@ export function LogicRulesEditor({
                               <AlertTriangle size={11} className="text-status-warn mt-0.5 shrink-0" />
                               <div>
                                 <p className="text-[11px] font-medium text-foreground leading-snug">{trigger.config.actionTitle}</p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
                               </div>
                             </div>
                           )}

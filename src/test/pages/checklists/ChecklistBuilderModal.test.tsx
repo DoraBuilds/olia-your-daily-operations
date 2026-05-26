@@ -417,7 +417,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.getByText(/Staff will enter one number/i)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Min")).not.toBeInTheDocument();
     expect(screen.queryByText("Celsius")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Temperature" })).not.toBeInTheDocument();
+    // "Temperature" is always visible as a mode-selector tab — Min/Max inputs and Celsius are hidden in single mode
   });
 
   it("lets instruction questions link to Infohub content", () => {

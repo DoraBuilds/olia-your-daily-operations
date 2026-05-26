@@ -400,7 +400,7 @@ export default function Infohub() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{folder.name}</p>
                           {folder.access.accessScope === "restricted" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
                               Restricted
                             </span>
@@ -449,7 +449,7 @@ export default function Infohub() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{doc.title}</p>
                           {doc.access.accessScope === "restricted" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
                               Restricted
                             </span>
@@ -563,7 +563,7 @@ export default function Infohub() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{folder.name}</p>
                           {folder.access.accessScope === "restricted" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
                               Restricted
                             </span>
@@ -607,7 +607,7 @@ export default function Infohub() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground">{doc.title}</p>
                           {doc.access.accessScope === "restricted" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
                               Restricted
                             </span>

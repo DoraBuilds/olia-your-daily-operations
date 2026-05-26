@@ -107,7 +107,7 @@ export function FollowUpQuestionEditor({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Number response</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.
               </p>
             </div>
@@ -202,7 +202,7 @@ export function FollowUpQuestionEditor({
               disabled
               className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">max 160 chars</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">max 160 chars</span>
           </div>
         </div>
       );
@@ -231,7 +231,7 @@ export function FollowUpQuestionEditor({
             <Camera size={16} />
             Take photo
           </button>
-          <p className="text-[10px] text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
+          <p className="text-xs text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
         </div>
       );
     }
@@ -242,7 +242,7 @@ export function FollowUpQuestionEditor({
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs font-medium text-muted-foreground">Multiple choice options</p>
-              {mcSet && <p className="text-[10px] text-muted-foreground mt-0.5">{mcSet.name}</p>}
+              {mcSet && <p className="text-xs text-muted-foreground mt-0.5">{mcSet.name}</p>}
             </div>
             <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
               {(["single", "multiple"] as const).map(mode => (
@@ -322,7 +322,7 @@ export function FollowUpQuestionEditor({
               ))}
             </div>
           ) : (
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Choose a preset to add answer options.
             </p>
           )}
@@ -680,7 +680,7 @@ function LogicRulesEditor({
                               </select>
                             )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground pl-4">Notification sent by email. SMS/push coming soon.</p>
+                          <p className="text-xs text-muted-foreground pl-4">Notification sent by email. SMS/push coming soon.</p>
                         </div>
                       )}
 
@@ -708,7 +708,7 @@ function LogicRulesEditor({
                               <AlertTriangle size={11} className="text-status-warn mt-0.5 shrink-0" />
                               <div>
                                 <p className="text-[11px] font-medium text-foreground leading-snug">{trigger.config.actionTitle}</p>
-                                <p className="text-[10px] text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
                               </div>
                             </div>
                           )}

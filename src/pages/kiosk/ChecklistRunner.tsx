@@ -243,7 +243,7 @@ export function ChecklistRunner({
                           {q.text}
                           {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
                         </p>
-                        <span className="text-[10px] text-sage/70 font-medium shrink-0 mt-0.5">
+                        <span className="text-xs text-sage/70 font-medium shrink-0 mt-0.5">
                           {qi + 1}/{questions.length}
                         </span>
                       </div>
@@ -342,14 +342,14 @@ export function ChecklistRunner({
                     </p>
                     {isAnswered && (
                       <span className={cn(
-                        "text-[10px] font-semibold shrink-0",
+                        "text-xs font-semibold shrink-0",
                         selectedOptionSeverity === "error" ? "text-status-error" :
                         selectedOptionSeverity === "warn" ? "text-status-warn" :
                         isNoAnswer ? "text-status-warn" : "text-sage",
                       )}>✓ Done</span>
                     )}
-                    {!isAnswered && isPast && !isInstruction && <span className="text-[10px] text-muted-foreground/60 shrink-0">Edit</span>}
-                    {!isAnswered && !isPast && <span className="text-[10px] text-muted-foreground/50 shrink-0">Pending</span>}
+                    {!isAnswered && isPast && !isInstruction && <span className="text-xs text-muted-foreground/60 shrink-0">Edit</span>}
+                    {!isAnswered && !isPast && <span className="text-xs text-muted-foreground/50 shrink-0">Pending</span>}
                   </button>
                 )}
               </Fragment>
@@ -412,7 +412,7 @@ export function ChecklistRunner({
               >
                 <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{resource.section}</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{resource.section}</p>
                     <h3 className="text-base font-semibold text-foreground mt-1">{resource.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{resource.subtitle}</p>
                   </div>

@@ -32,7 +32,7 @@ export function KioskMock() {
 
           {/* ── App header ── */}
           <div className="px-5 pt-6 pb-5" style={{ background: "hsl(var(--sage))" }}>
-            <p className="text-white/50 text-[10px] font-semibold tracking-widest uppercase mb-1">
+            <p className="text-white/50 text-xs font-semibold tracking-widest uppercase mb-1">
               The Anchor · Morning
             </p>
             <h3 className="font-display text-white text-[22px] italic leading-tight">

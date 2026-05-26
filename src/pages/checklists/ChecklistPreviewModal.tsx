@@ -67,13 +67,13 @@ function MockResponse({
           <Hash size={11} className="text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground">0.00</span>
           {isTemperature && (
-            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
               {questionConfig?.temperatureUnit === "F" ? "Fahrenheit" : "Celsius"}
             </span>
           )}
         </div>
         {isTemperature && (
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Acceptable range: {questionConfig?.numberMin ?? "—"} to {questionConfig?.numberMax ?? "—"} {questionConfig?.temperatureUnit === "F" ? "F" : "C"}
           </p>
         )}
@@ -107,7 +107,7 @@ function MockResponse({
           <span className="text-xs text-muted-foreground italic">Instruction content will appear here</span>
         </div>
         {questionConfig?.instructionLinkTitle && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-sage/20 bg-background/70 px-3 py-1 text-[10px] text-sage-deep">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-sage/20 bg-background/70 px-3 py-1 text-xs text-sage-deep">
             <ChevronRight size={10} />
             Open linked {questionConfig.instructionLinkSection === "training" ? "training" : "document"}: {questionConfig.instructionLinkTitle}
           </div>
@@ -225,18 +225,18 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                   <div key={q.id} className={cn("px-5 py-4", qi < section.questions.length - 1 && "border-b border-border/60")}>
                     <div className="flex items-start gap-3">
                       <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-[10px] font-semibold text-muted-foreground">{globalIdx + 1}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">{globalIdx + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-2">
                           <p className="text-sm text-foreground flex-1">{q.text || `Question ${globalIdx + 1}`}</p>
                           {q.required && (
-                            <span className="text-[10px] text-status-error font-medium shrink-0 mt-0.5">Required</span>
+                            <span className="text-xs text-status-error font-medium shrink-0 mt-0.5">Required</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
                           <RtIcon size={10} className="text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground">{rtDef?.label || "Multiple choice"}</span>
+                          <span className="text-xs text-muted-foreground">{rtDef?.label || "Multiple choice"}</span>
                         </div>
                         <MockResponse
                           responseType={q.responseType}
@@ -254,9 +254,9 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                                 if (!followUp) return null;
                                 return (
                                   <div key={`${q.id}-${ri}-${ti}`} className="rounded-lg border border-sage/20 bg-sage/5 px-3 py-2">
-                                    <p className="text-[10px] uppercase tracking-wide text-sage-deep/70">Follow-up question</p>
+                                    <p className="text-xs uppercase tracking-wide text-sage-deep/70">Follow-up question</p>
                                     <p className="text-sm font-medium text-foreground mt-1">{followUp.text || "Untitled follow-up question"}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                       {RESPONSE_TYPES.find(r => r.key === followUp.responseType)?.label || "Response type"} and nested triggers enabled
                                     </p>
                                   </div>

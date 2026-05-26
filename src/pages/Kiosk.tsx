@@ -101,15 +101,15 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
           {cl.questions.length} item{cl.questions.length !== 1 ? "s" : ""}
         </p>
         {(cl.visibility_from || cl.visibility_until) ? (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 mt-0.5">
             {formatWindow(cl.visibility_from, cl.visibility_until)}
           </p>
         ) : cl.due_time ? (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 mt-0.5">
             Due {formatDueTime(cl.due_time)}
           </p>
         ) : (
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+          <p className="text-xs text-muted-foreground/70 mt-0.5">
             Visible all day
           </p>
         )}
@@ -688,12 +688,12 @@ export default function Kiosk() {
       <div className="px-5 pt-7 pb-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center shrink-0">
-            <span className="text-white text-[10px] font-bold">O</span>
+            <span className="text-white text-xs font-bold">O</span>
           </div>
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
             {/* Issue 9: Show location name prominently */}
-            <p className="text-[10px] text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
+            <p className="text-xs text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
               {locationName || "Kiosk"}
             </p>
           </div>
@@ -903,9 +903,9 @@ export default function Kiosk() {
       <div className="px-5 py-3 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">System Online</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">System Online</p>
         </div>
-        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">Olia Operations</p>
+        <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">Olia Operations</p>
       </div>
 
       {/* PinEntryModal (Screen 2) */}

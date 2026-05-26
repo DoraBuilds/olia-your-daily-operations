@@ -412,7 +412,7 @@ export default function Billing() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className={cn(
-                "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium",
+                "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
                 billingUnavailable ? "bg-muted text-muted-foreground"
                 : plan === "enterprise" ? "bg-lavender/15 text-lavender"
                 : plan === "growth"   ? "bg-sage/15 text-sage"
@@ -465,7 +465,7 @@ export default function Billing() {
             >
               {period === "monthly" ? "Monthly" : "Annual"}
               {period === "annual" && (
-                <span className="ml-1.5 text-[10px] font-normal opacity-80">Save ~20%</span>
+                <span className="ml-1.5 text-xs font-normal opacity-80">Save ~20%</span>
               )}
             </button>
           ))}
@@ -513,13 +513,13 @@ export default function Billing() {
                 <div className="absolute left-1/2 top-0 z-10 flex min-h-5 -translate-x-1/2 -translate-y-[62%] items-center justify-center gap-2">
                   {isCurrent && (
                     <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
+                      "text-xs px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
                     )}>
                       Current plan
                     </span>
                   )}
                   {isRecommended && !isCurrent && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm border border-sage">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm border border-sage">
                       Recommended
                     </span>
                   )}
@@ -539,7 +539,7 @@ export default function Billing() {
                     {isEnterprise ? (
                       <>
                         <p className="text-sm font-semibold text-foreground">Custom pricing</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
                         <div className="mt-auto h-[2.25rem]" aria-hidden="true" />
                       </>
                     ) : (
@@ -547,10 +547,10 @@ export default function Billing() {
                         <p className="text-[1.75rem] font-bold leading-none text-foreground">
                           {price.currency}{priceVal}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           / location / {billing === "monthly" ? "month" : "year"}
                         </p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">
                           {PLAN_LOCATION_HINT[p]}
                         </p>
                         {PLAN_EXAMPLE_LOCATIONS[p] != null && (() => {
@@ -558,7 +558,7 @@ export default function Billing() {
                           const total = (priceVal * n).toLocaleString("en-IE");
                           const period = billing === "monthly" ? "month" : "year";
                           return (
-                            <p className="text-[10px] text-muted-foreground/50 mt-1.5 italic">
+                            <p className="text-xs text-muted-foreground/50 mt-1.5 italic">
                               e.g. {n} {n === 1 ? "location" : "locations"} = {price.currency}{total} / {period}
                             </p>
                           );
@@ -584,7 +584,7 @@ export default function Billing() {
                 {/* CTA */}
                 <div className="space-y-3">
                 {isEnterprise && !isCurrent && (
-                  <p className="text-[10px] text-muted-foreground/70 text-center">
+                  <p className="text-xs text-muted-foreground/70 text-center">
                     Pricing tailored to your operation
                   </p>
                 )}
@@ -634,7 +634,7 @@ export default function Billing() {
               <div /> {/* feature label column */}
               {(["starter", "growth", "enterprise"] as Plan[]).map(colPlan => (
                 <p key={colPlan} className={cn(
-                  "text-[10px] font-semibold text-center py-1 rounded",
+                  "text-xs font-semibold text-center py-1 rounded",
                   colPlan === plan
                     ? "text-sage bg-sage/[0.06]"
                     : "text-muted-foreground"
@@ -648,7 +648,7 @@ export default function Billing() {
               if (row.isHeader) {
                 return (
                   <div key={`header-${row.label}`} className="grid grid-cols-4 gap-1 pt-3 pb-1">
-                    <p className="col-span-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    <p className="col-span-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
                       {row.label}
                     </p>
                   </div>
