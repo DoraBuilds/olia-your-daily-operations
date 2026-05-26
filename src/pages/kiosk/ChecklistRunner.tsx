@@ -184,6 +184,11 @@ export function ChecklistRunner({
             const showSectionHeader = sectionChanged && !!(q.sectionName);
 
             const isLastQ = qi >= questions.length - 1;
+            const answerVal = answers[q.id];
+            const isNoAnswer = q.type === "multiple_choice" &&
+              !q.optionColors?.length &&
+              typeof answerVal === "string" &&
+              answerVal.toLowerCase() === "no";
             const hasBlankUnansweredTrigger = hasUnansweredTrigger(q);
             const needsNextBtn = isCurrent && (
               isInstruction ||
@@ -299,10 +304,14 @@ export function ChecklistRunner({
                       "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
                       isPast ? "border-border" : "border-border opacity-60",
                       isMissing && "border-status-error/40 bg-status-error/5",
+                      isNoAnswer && "border-status-warn/30 bg-status-warn/5",
                     )}
                   >
                     {isAnswered ? (
-                      <div className="w-5 h-5 rounded-full bg-sage flex items-center justify-center shrink-0">
+                      <div className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
+                        isNoAnswer ? "bg-status-warn" : "bg-sage",
+                      )}>
                         <Check size={11} className="text-white" />
                       </div>
                     ) : (
@@ -318,7 +327,12 @@ export function ChecklistRunner({
                       {isInstruction ? (q.instructionText ?? q.text ?? "Note") : q.text}
                       {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
                     </p>
-                    {isAnswered && <span className="text-[10px] text-sage font-semibold shrink-0">✓ Done</span>}
+                    {isAnswered && (
+                      <span className={cn(
+                        "text-[10px] font-semibold shrink-0",
+                        isNoAnswer ? "text-status-warn" : "text-sage",
+                      )}>✓ Done</span>
+                    )}
                     {!isAnswered && isPast && !isInstruction && <span className="text-[10px] text-muted-foreground/60 shrink-0">Edit</span>}
                     {!isAnswered && !isPast && <span className="text-[10px] text-muted-foreground/50 shrink-0">Pending</span>}
                   </button>
