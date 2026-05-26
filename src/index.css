@@ -31,6 +31,51 @@ html { font-size: 16px; }                        /* mobile / default        */
     --leading-tight: 1.2;    /* headings                              */
     --leading-body:  1.5;    /* body — WCAG 2.1 §1.4.12 minimum      */
 
+    /* ── Spacing — 4px base grid (px so layout stays stable across viewports)
+       Maps 1:1 to Tailwind's numeric scale: --space-4 = p-4 = 16px
+       ──────────────────────────────────────────────────────────────────── */
+    --space-1:   4px;    /* icon gaps, tight insets                   */
+    --space-2:   8px;    /* list item gaps, small chips               */
+    --space-3:  12px;    /* compact inner padding                     */
+    --space-4:  16px;    /* standard card padding, section content    */
+    --space-5:  20px;    /* comfortable button padding                */
+    --space-6:  24px;    /* card padding relaxed, between cards       */
+    --space-8:  32px;    /* section gaps, large card padding          */
+    --space-10: 40px;    /* page section dividers                     */
+    --space-12: 48px;    /* major layout gaps                         */
+    --space-16: 64px;    /* hero / full-bleed sections                */
+
+    /* Semantic aliases */
+    --space-card-inset:  var(--space-4);   /* inner padding for cards  */
+    --space-section-gap: var(--space-6);   /* vertical between sections */
+    --space-page-inset:  var(--space-4);   /* page horizontal padding   */
+
+    /* ── Elevation — four levels using espresso base hsl(17 30% 9%)
+       Level 0: flat (no shadow)  →  Level 3: modal / bottom sheet
+       ──────────────────────────────────────────────────────────────────── */
+    --shadow-sm:    0 1px 3px 0 hsl(17 30% 9% / 0.06),
+                    0 1px 2px -1px hsl(17 30% 9% / 0.04);   /* level 1 — subtle lift    */
+    --shadow-card:  0 2px 8px 0 hsl(17 30% 9% / 0.06);     /* level 2 — cards          */
+    --shadow-md:    0 4px 12px 0 hsl(17 30% 9% / 0.07),
+                    0 2px 6px -2px hsl(17 30% 9% / 0.05);   /* level 3 — popovers       */
+    --shadow-lg:    0 8px 24px 0 hsl(17 30% 9% / 0.10),
+                    0 4px 12px -2px hsl(17 30% 9% / 0.08);  /* level 4 — modals, sheets */
+    --shadow-inset: inset 0 1px 3px 0 hsl(17 30% 9% / 0.08); /* inputs, pressed states */
+
+    /* ── Motion — duration + easing tokens
+       Use var(--duration-*) + var(--ease-*) in transition/animation declarations.
+       ──────────────────────────────────────────────────────────────────── */
+    --duration-instant:  50ms;   /* state toggles (checked, active)   */
+    --duration-fast:    150ms;   /* hover effects, tooltips           */
+    --duration-base:    250ms;   /* default — page fade-in, drawers   */
+    --duration-slow:    400ms;   /* sheet slide-up, complex reveals   */
+    --duration-slower:  600ms;   /* onboarding, splash animations     */
+
+    --ease-out:    cubic-bezier(0.0, 0.0, 0.2, 1);    /* decelerate — entering        */
+    --ease-in:     cubic-bezier(0.4, 0.0, 1.0, 1.0);  /* accelerate — leaving         */
+    --ease-inout:  cubic-bezier(0.4, 0.0, 0.2, 1.0);  /* symmetric — repositioning   */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* slight bounce — playful UX  */
+
     /* Olia Brand Colors — all HSL */
     --sage:            219 46% 19%;   /* midnight blue #1A2A47 */
     --sage-deep:       219 52% 13%;   /* hover/active */
@@ -91,11 +136,6 @@ html { font-size: 16px; }                        /* mobile / default        */
     /* Typography */
     --font-display: 'DM Serif Display', Georgia, serif;
     --font-body: 'DM Sans', system-ui, sans-serif;
-
-    /* Shadows — espresso hue */
-    --shadow-sm: 0 1px 3px 0 hsl(17 30% 9% / 0.06), 0 1px 2px -1px hsl(17 30% 9% / 0.04);
-    --shadow-md: 0 4px 12px 0 hsl(17 30% 9% / 0.07), 0 2px 6px -2px hsl(17 30% 9% / 0.05);
-    --shadow-card: 0 2px 8px 0 hsl(17 30% 9% / 0.06);
   }
 }
 
