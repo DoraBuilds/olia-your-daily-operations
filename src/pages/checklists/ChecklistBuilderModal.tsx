@@ -755,8 +755,100 @@ export function ChecklistBuilderModal({
                   {/* Response type config panels */}
 
                   {q.responseType === "number" && (
-                    <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                      Staff will enter one number. Use logic rules below to trigger actions based on the value.
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Number response</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Enable temperature mode to set an acceptable range and show a slider in kiosk.
+                          </p>
+                        </div>
+                        <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
+                          {(["single", "temperature"] as const).map(mode => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => updateQuestion(si, qi, {
+                                config: {
+                                  ...cfg,
+                                  numberMode: mode,
+                                  numberMin: mode === "temperature" ? cfg.numberMin : undefined,
+                                  numberMax: mode === "temperature" ? cfg.numberMax : undefined,
+                                  temperatureUnit: mode === "temperature" ? (cfg.temperatureUnit ?? "C") : undefined,
+                                },
+                              })}
+                              className={cn(
+                                "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                (cfg.numberMode ?? "single") === mode
+                                  ? "bg-sage text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {mode === "single" ? "Number" : "Temperature"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {(cfg.numberMode ?? "single") === "single" ? (
+                        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+                          Staff will enter one number. Use logic rules below to trigger actions based on the value.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              placeholder="Min"
+                              value={cfg.numberMin ?? ""}
+                              onChange={e => updateQuestion(si, qi, {
+                                config: {
+                                  ...cfg,
+                                  numberMode: "temperature",
+                                  numberMin: e.target.value ? Number(e.target.value) : undefined,
+                                },
+                              })}
+                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            <span className="text-xs text-muted-foreground">to</span>
+                            <input
+                              type="number"
+                              placeholder="Max"
+                              value={cfg.numberMax ?? ""}
+                              onChange={e => updateQuestion(si, qi, {
+                                config: {
+                                  ...cfg,
+                                  numberMode: "temperature",
+                                  numberMax: e.target.value ? Number(e.target.value) : undefined,
+                                },
+                              })}
+                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Unit</span>
+                            <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
+                              {(["C", "F"] as const).map(unit => (
+                                <button
+                                  key={unit}
+                                  type="button"
+                                  onClick={() => updateQuestion(si, qi, {
+                                    config: { ...cfg, numberMode: "temperature", temperatureUnit: unit },
+                                  })}
+                                  className={cn(
+                                    "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                    (cfg.temperatureUnit ?? "C") === unit
+                                      ? "bg-sage text-primary-foreground"
+                                      : "text-muted-foreground hover:text-foreground",
+                                  )}
+                                >
+                                  {unit === "C" ? "Celsius" : "Fahrenheit"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
