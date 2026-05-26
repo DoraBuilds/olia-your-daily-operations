@@ -218,7 +218,7 @@ export default function Dashboard() {
               <p className="text-xl font-bold text-foreground">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">Checklists</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Checklists</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center">
               <p className={cn("text-xl font-bold",
@@ -226,13 +226,13 @@ export default function Dashboard() {
               )}>
                 {allAlerts.length}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">Alerts</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Alerts</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center">
               <p className={cn("text-xl font-bold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">Overdue</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Overdue</p>
             </div>
           </div>
         </section>
@@ -340,12 +340,12 @@ export default function Dashboard() {
                       </div>
                       <div className="w-full">
                         <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{loc.name}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {loc.count > 0
                             ? `${loc.completedCount}/${loc.count} checklists completed`
                             : "No checklists assigned"}
                         </p>
-                        <p className="text-[10px] text-sage mt-0.5 font-medium">Tap to review reporting →</p>
+                        <p className="text-xs text-sage mt-0.5 font-medium">Tap to review reporting →</p>
                       </div>
                     </button>
                   );

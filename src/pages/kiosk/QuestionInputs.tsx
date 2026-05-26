@@ -222,7 +222,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
   return (
     <div className="space-y-2">
       <div>
-        <label className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 block">Date</label>
+        <label className="text-xs text-muted-foreground uppercase tracking-widest mb-1 block">Date</label>
         <input
           type="date"
           value={datePart}
@@ -231,7 +231,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
         />
       </div>
       <div>
-        <label className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 block">Time</label>
+        <label className="text-xs text-muted-foreground uppercase tracking-widest mb-1 block">Time</label>
         <input
           type="time"
           value={timePart}
@@ -272,7 +272,7 @@ export function InstructionBlock({
             className="w-full max-h-48 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
           />
           <div className="absolute inset-0 flex items-end justify-end p-2 pointer-events-none">
-            <span className="bg-foreground/60 text-background text-[10px] px-2 py-0.5 rounded-full font-medium">
+            <span className="bg-foreground/60 text-background text-xs px-2 py-0.5 rounded-full font-medium">
               Tap to enlarge
             </span>
           </div>

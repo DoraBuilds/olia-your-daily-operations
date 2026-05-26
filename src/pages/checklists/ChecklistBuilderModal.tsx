@@ -479,7 +479,7 @@ export function ChecklistBuilderModal({
                       : `${selectedLocations.length} locations selected`}
               </p>
               {locationMode === "specific" && selectedLocations.length > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
                   {selectedLocations.length === 1
                     ? "Specific location selected"
                     : `${selectedLocations.length} specific locations selected`}
@@ -759,7 +759,7 @@ export function ChecklistBuilderModal({
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <p className="text-xs font-medium text-muted-foreground">Number response</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             Enable temperature mode to set an acceptable range and show a slider in kiosk.
                           </p>
                         </div>
@@ -858,7 +858,7 @@ export function ChecklistBuilderModal({
                       <div className="relative">
                         <input type="text" placeholder="Respondent types here…" maxLength={160} disabled
                           className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground" />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">max 160 chars</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">max 160 chars</span>
                       </div>
                     </div>
                   )}
@@ -870,7 +870,7 @@ export function ChecklistBuilderModal({
                         <Camera size={16} />
                         Take photo
                       </button>
-                      <p className="text-[10px] text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
+                      <p className="text-xs text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
                     </div>
                   )}
 
@@ -879,7 +879,7 @@ export function ChecklistBuilderModal({
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-medium text-muted-foreground">Multiple choice options</p>
                         {mcSet && (
-                          <span className="text-[10px] text-muted-foreground">{mcSet.name}</span>
+                          <span className="text-xs text-muted-foreground">{mcSet.name}</span>
                         )}
                       </div>
                       <div className="flex items-center justify-between gap-2">
@@ -962,7 +962,7 @@ export function ChecklistBuilderModal({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Choose a preset to add answer options.
                         </p>
                       )}
@@ -1062,7 +1062,7 @@ export function ChecklistBuilderModal({
                         <div className="rounded-xl border border-sage/25 bg-sage/5 px-3 py-2 flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-foreground">{cfg.instructionLinkTitle}</p>
-                            <p className="text-[10px] text-muted-foreground capitalize">{cfg.instructionLinkSection}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{cfg.instructionLinkSection}</p>
                           </div>
                           <button
                             type="button"
@@ -1143,7 +1143,7 @@ export function ChecklistBuilderModal({
                                   )}
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-foreground">{resource.title}</p>
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{resource.section}</p>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">{resource.section}</p>
                                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resource.subtitle}</p>
                                   </div>
                                 </div>

@@ -15,7 +15,7 @@ export function BottomNav() {
               key={to}
               to={to}
               id={`nav-${label.toLowerCase()}`}
-              className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2 px-2 text-[10px] font-medium transition-colors min-h-[58px] select-none"
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2 px-2 text-xs font-medium transition-colors min-h-[58px] select-none"
             >
               <span
                 className={cn(

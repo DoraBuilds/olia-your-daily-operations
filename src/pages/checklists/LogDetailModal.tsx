@@ -86,7 +86,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                     </div>
                   )}
                   {type === "number" && (
-                    <div className={cn("mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 text-[10px] font-semibold",
+                    <div className={cn("mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 text-xs font-semibold",
                       answered ? "bg-sage border-sage text-primary-foreground" : "border-status-error")}>
                       <Hash size={9} strokeWidth={2.5} />
                     </div>
@@ -128,7 +128,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                       <p className="text-sm text-foreground leading-snug">{ans.label}</p>
                       {ans.required && <span className="text-xs text-muted-foreground/60">Required</span>}
                       {type === "instruction" && (
-                        <span className="text-[10px] text-sage/70 font-medium uppercase tracking-wide">Instruction</span>
+                        <span className="text-xs text-sage/70 font-medium uppercase tracking-wide">Instruction</span>
                       )}
                     </div>
 

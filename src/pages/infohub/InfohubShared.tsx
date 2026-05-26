@@ -609,7 +609,7 @@ export function AIActionsSheet({
         {result && result.type === "summary" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Summary</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Summary</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <ul className="space-y-2">
@@ -621,7 +621,7 @@ export function AIActionsSheet({
               ))}
             </ul>
             <div className="rounded-xl bg-lavender-light px-4 py-3">
-              <p className="text-[10px] uppercase tracking-wide text-lavender-deep/70">Takeaway</p>
+              <p className="text-xs uppercase tracking-wide text-lavender-deep/70">Takeaway</p>
               <p className="text-sm text-lavender-deep mt-1">{result.takeaway}</p>
             </div>
           </div>
@@ -629,7 +629,7 @@ export function AIActionsSheet({
         {result && result.type === "flashcards" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Flashcards</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Flashcards</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <div className="space-y-2">
@@ -647,7 +647,7 @@ export function AIActionsSheet({
         {result && result.type === "quiz" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Quiz</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Quiz</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <div className="space-y-3">

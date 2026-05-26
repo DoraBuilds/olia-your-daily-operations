@@ -381,7 +381,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           {!isLoading && logEntries.length === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">none</span>
             </div>
           )}
         </div>
@@ -398,10 +398,10 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           {!isLoading && hasAvgScore && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               {avgScoreValue >= 85
-                ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-[10px] text-status-ok font-medium">Good</span></>
+                ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-xs text-status-ok font-medium">Good</span></>
                 : avgScoreValue >= 65
-                ? <><Minus size={10} className="text-status-warn" /><span className="text-[10px] text-status-warn font-medium">Review</span></>
-                : <><TrendingDown size={10} className="text-status-error" /><span className="text-[10px] text-status-error font-medium">Action needed</span></>
+                ? <><Minus size={10} className="text-status-warn" /><span className="text-xs text-status-warn font-medium">Review</span></>
+                : <><TrendingDown size={10} className="text-status-error" /><span className="text-xs text-status-error font-medium">Action needed</span></>
               }
             </div>
           )}
@@ -414,7 +414,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           {openActionsCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">none</span>
             </div>
           )}
         </div>
@@ -442,7 +442,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </div>
         <div className="grid gap-2 md:grid-cols-3">
           <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Checklist name</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Checklist name</span>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -461,7 +461,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           </label>
 
           <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Person</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Person</span>
             <div className="relative">
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <select
@@ -479,7 +479,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           </label>
 
           <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Status</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Status</span>
             <select
               data-testid="reporting-status-filter"
               value={statusFilter}
@@ -530,8 +530,8 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">Status</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">Status</p>
               <div className="w-4" />
             </div>
             {logEntries.map(log => {
@@ -545,7 +545,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
                     <p className="text-xs text-muted-foreground mt-0.5">{log.completedBy} · {log.date}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide", badge.cls)}>
+                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold tracking-wide", badge.cls)}>
                       {badge.label}
                     </span>
                     <ChevronRight size={13} className="text-muted-foreground" />
