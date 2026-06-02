@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
@@ -153,10 +153,18 @@ const css = `
   .ol-kprog { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 5px; overflow: hidden; }
   .ol-kprog-fill {
     height: 100%; width: 0; background: linear-gradient(90deg, #4ADE80, #22C55E);
-    border-radius: 2px; transition: width 1.4s ease;
+    border-radius: 2px; transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .ol-kprog-fill.go { width: 67%; }
-  .ol-kprog-label { font-size: 10px; color: rgba(255,255,255,0.35); margin-bottom: 18px; }
+  .ol-kprog-label { font-size: 10px; color: rgba(255,255,255,0.35); margin-bottom: 18px; transition: opacity 0.3s; }
+  @keyframes ol-check-pop {
+    0%   { transform: scale(0); opacity: 0; }
+    55%  { transform: scale(1.25); }
+    80%  { transform: scale(0.92); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .ol-kcircle.done { animation: ol-check-pop 0.35s ease forwards; }
+  .ol-ktask { transition: opacity 0.3s; }
+  .ol-ktask.pending { opacity: 0.35; }
   .ol-ktask {
     display: flex; align-items: center; gap: 11px;
     padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.055);
@@ -480,15 +488,23 @@ const features = [
 
 const delay = (i: number) => i % 3 === 1 ? " ol-d1" : i % 3 === 2 ? " ol-d2" : "";
 
+const KIOSK_TASKS = [
+  { label: "Confirm fridge temp",   time: "06:47" },
+  { label: "Bar stocked and ready", time: "06:51" },
+  { label: "Floor mopped and dry",  time: "07:04" },
+  { label: "Menus updated",         time: "07:12" },
+  { label: "Staff briefed",         time: "07:18" },
+];
+
 export default function Landing() {
   const navRef = useRef<HTMLElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
+  const [completed, setCompleted] = useState(0);
+  const total = KIOSK_TASKS.length;
 
   useEffect(() => {
     const nav = navRef.current;
     const handleScroll = () => nav?.classList.toggle("scrolled", window.scrollY > 24);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    setTimeout(() => progressRef.current?.classList.add("go"), 500);
 
     const obs = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add("visible"); }),
@@ -496,7 +512,27 @@ export default function Landing() {
     );
     document.querySelectorAll(".ol-fade").forEach((el) => obs.observe(el));
 
-    return () => { window.removeEventListener("scroll", handleScroll); obs.disconnect(); };
+    // Kiosk animation loop: tick a task every 900ms, pause 2.5s at 100%, then reset
+    const TICK = 900;
+    const PAUSE = 2500;
+    const INITIAL = 700;
+    let timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    function runSequence() {
+      timeouts = [];
+      setCompleted(0);
+      for (let i = 1; i <= total; i++) {
+        timeouts.push(setTimeout(() => setCompleted(i), INITIAL + i * TICK));
+      }
+      timeouts.push(setTimeout(() => runSequence(), INITIAL + total * TICK + PAUSE));
+    }
+    runSequence();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      obs.disconnect();
+      timeouts.forEach(clearTimeout);
+    };
   }, []);
 
   return (
@@ -535,19 +571,37 @@ export default function Landing() {
             <div className="ol-kiosk-card">
               <div className="ol-kiosk-venue">The Anchor — Wednesday morning</div>
               <div className="ol-kiosk-title">Opening Checklist</div>
-              <div className="ol-kprog"><div className="ol-kprog-fill" ref={progressRef} /></div>
-              <div className="ol-kprog-label">4 of 6 complete</div>
-              {[["Confirm fridge temp","06:47"],["Bar stocked and ready","06:51"],["Floor mopped and dry","07:04"],["Menus updated","07:12"]].map(([label, time]) => (
-                <div key={label} className="ol-ktask done">
-                  <div className="ol-kcircle done"><Tick /></div>
-                  <span className="ol-ktext">{label}</span>
-                  <span className="ol-ktime">{time}</span>
-                </div>
-              ))}
-              <div className="ol-kactive">
-                <div className="ol-kdot" />
-                <span className="ol-kactive-text">Staff briefed — tap to complete</span>
+              <div className="ol-kprog">
+                <div className="ol-kprog-fill" style={{ width: `${(completed / total) * 100}%` }} />
               </div>
+              <div className="ol-kprog-label">
+                {completed < total ? `${completed} of ${total} complete` : `${total} of ${total} complete`}
+              </div>
+              {KIOSK_TASKS.map((t, i) => {
+                const done = i < completed;
+                const pending = i > completed;
+                return (
+                  <div key={t.label} className={`ol-ktask${done ? " done" : ""}${pending ? " pending" : ""}`}>
+                    <div className={`ol-kcircle${done ? " done" : ""}`}>
+                      {done && <Tick />}
+                    </div>
+                    <span className="ol-ktext">{t.label}</span>
+                    {done && <span className="ol-ktime">{t.time}</span>}
+                  </div>
+                );
+              })}
+              {completed < total && (
+                <div className="ol-kactive">
+                  <div className="ol-kdot" />
+                  <span className="ol-kactive-text">{KIOSK_TASKS[completed].label} — tap to complete</span>
+                </div>
+              )}
+              {completed === total && (
+                <div className="ol-kactive" style={{ borderColor: "rgba(74,222,128,0.4)" }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round"><polyline points="1.5 6 4.5 9 10.5 3"/></svg>
+                  <span className="ol-kactive-text" style={{ color: "rgba(74,222,128,0.85)" }}>Shift complete — all tasks done</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
