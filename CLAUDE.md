@@ -155,7 +155,7 @@ Every page wraps its content in `src/components/Layout.tsx`, which provides:
 
 **`src/lib/export-utils.ts`** — PDF & CSV export helpers using jsPDF + jspdf-autotable.
 
-Infohub documents/training and some Dashboard data still live in local `useState`.
+Infohub documents/training are Supabase-backed via `useInfohubContent` (React Query → `infohub_folders` + `infohub_documents`). Some Dashboard data still lives in local `useState`.
 
 ### Key UI Patterns
 - **Bottom sheet modals:** Fixed overlay with `rounded-t-2xl`, slides up from bottom, max-height 85vh
@@ -176,9 +176,7 @@ Reusable CSS utility classes: `.status-ok/warn/error`, `.card-surface`, `.sectio
 shadcn/ui components are in `src/components/ui/` — do not edit these files manually; use the shadcn CLI to add/update them.
 
 ### What Is Not Yet Built
-- "Build with AI" and "Convert File" features in Checklists call Supabase edge functions (AI-powered)
 - Export buttons generate real PDFs/CSVs via `src/lib/export-utils.ts`
-- Infohub documents/training data is still local mock data (not Supabase-backed)
 - No real payment processing (Stripe integration is UI-only)
 
 ### TypeScript Config

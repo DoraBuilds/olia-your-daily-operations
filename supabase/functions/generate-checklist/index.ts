@@ -3,14 +3,9 @@
 // Called by BuildWithAIModal (mode: "text") and ConvertFileModal (mode: "file" | "document").
 
 import { enforcePaidPlan } from "../_shared/plan-guard.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const SYSTEM_PROMPT = `You are a hospitality operations expert. Generate a checklist as a JSON object.
 
@@ -54,18 +49,20 @@ GENERAL:
 • Omit fields that are not needed (no "config" unless temperature, no "choices" unless multiple_choice).`;
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req.headers.get("origin"));
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
+    return new Response("ok", { headers: CORS });
   }
 
-  const planBlock = await enforcePaidPlan(req.headers.get("authorization"));
+  const planBlock = await enforcePaidPlan(req.headers.get("authorization"), req.headers.get("origin"));
   if (planBlock) return planBlock;
 
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS } }
     );
   }
 
@@ -110,7 +107,7 @@ Deno.serve(async (req) => {
     } else {
       return new Response(
         JSON.stringify({ error: "Provide either prompt (text mode) or content/fileBase64 (file/document mode)" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS } }
       );
     }
 
@@ -138,7 +135,7 @@ Deno.serve(async (req) => {
       // letting the actual Anthropic error reach the frontend.
       return new Response(
         JSON.stringify({ error: `Anthropic ${anthropicRes.status}: ${err}` }),
-        { headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+        { headers: { "Content-Type": "application/json", ...CORS } }
       );
     }
 
@@ -160,14 +157,14 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify(parsed), {
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      headers: { "Content-Type": "application/json", ...CORS },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     // Return 200 so Supabase puts the body in data (not fnError), letting the real error reach the frontend
     return new Response(
       JSON.stringify({ error: message }),
-      { headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+      { headers: { "Content-Type": "application/json", ...CORS } }
     );
   }
 });
