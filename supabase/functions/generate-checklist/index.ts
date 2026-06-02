@@ -2,6 +2,8 @@
 // Proxies requests to Anthropic Claude to keep the API key server-side.
 // Called by BuildWithAIModal (mode: "text") and ConvertFileModal (mode: "file" | "document").
 
+import { enforcePaidPlan } from "../_shared/plan-guard.ts";
+
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
 const CORS_HEADERS = {
@@ -56,6 +58,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
+
+  const planBlock = await enforcePaidPlan(req.headers.get("authorization"));
+  if (planBlock) return planBlock;
 
   if (!ANTHROPIC_API_KEY) {
     return new Response(
