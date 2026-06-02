@@ -16,6 +16,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL              = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -23,26 +24,22 @@ const RESEND_API_KEY            = Deno.env.get("RESEND_API_KEY");
 const INVITE_FROM_EMAIL         = Deno.env.get("INVITE_FROM_EMAIL") ?? "onboarding@resend.dev";
 const RESEND_ENDPOINT           = "https://api.resend.com/emails";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const ok  = (body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
-
-const err = (message: string) =>
-  new Response(JSON.stringify({ error: message }), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
-
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  const CORS = corsHeaders(req.headers.get("origin"));
+
+  const ok  = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...CORS },
+    });
+
+  const err = (message: string) =>
+    new Response(JSON.stringify({ error: message }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...CORS },
+    });
+
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST")    return err("Method not allowed");
 
   // ── Authenticate caller ─────────────────────────────────────────────

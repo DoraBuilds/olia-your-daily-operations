@@ -3,14 +3,9 @@
 
 import { buildTrainingPrompt, parseTrainingModule, type TrainingCategory } from "./training.ts";
 import { enforcePaidPlan } from "../_shared/plan-guard.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const SYSTEM_PROMPT = `You are a hospitality training specialist. Generate a practical training module as JSON.
 
@@ -31,18 +26,20 @@ Rules:
 - duration should be realistic, such as 5 min or 8 min`;
 
 Deno.serve(async (req) => {
+  const CORS = corsHeaders(req.headers.get("origin"));
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
+    return new Response("ok", { headers: CORS });
   }
 
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS } }
     );
   }
 
-  const planBlock = await enforcePaidPlan(req.headers.get("authorization"));
+  const planBlock = await enforcePaidPlan(req.headers.get("authorization"), req.headers.get("origin"));
   if (planBlock) return planBlock;
 
   try {
@@ -55,7 +52,7 @@ Deno.serve(async (req) => {
     if (!prompt || !prompt.trim()) {
       return new Response(
         JSON.stringify({ error: "Provide a prompt" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+        { status: 400, headers: { "Content-Type": "application/json", ...CORS } }
       );
     }
 
@@ -80,7 +77,7 @@ Deno.serve(async (req) => {
       const err = await anthropicRes.text();
       return new Response(
         JSON.stringify({ error: `Anthropic API error (${anthropicRes.status}): ${err}` }),
-        { status: 502, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+        { status: 502, headers: { "Content-Type": "application/json", ...CORS } }
       );
     }
 
@@ -89,13 +86,13 @@ Deno.serve(async (req) => {
     const parsed = parseTrainingModule(rawText);
 
     return new Response(JSON.stringify(parsed), {
-      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      headers: { "Content-Type": "application/json", ...CORS },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...CORS_HEADERS } }
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS } }
     );
   }
 });
