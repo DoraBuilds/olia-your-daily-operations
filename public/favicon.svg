@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="faviconStroke" x1="10" y1="51" x2="55" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B05DFF"/>
+      <stop offset="0.5" stop-color="#7A68FF"/>
+      <stop offset="1" stop-color="#4AA8FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#050608"/>
+  <circle cx="32" cy="32" r="20" stroke="url(#faviconStroke)" stroke-width="2.6"/>
+  <circle cx="32" cy="32" r="15" stroke="url(#faviconStroke)" stroke-width="2.6" opacity="0.9"/>
+  <circle cx="32" cy="32" r="10" stroke="#FFFFFF" stroke-width="2.6"/>
+</svg>
+
