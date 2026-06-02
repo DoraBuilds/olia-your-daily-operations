@@ -382,7 +382,6 @@ export default function Admin() {
                 location_ids: authMember.location_ids,
                 permissions: authMember.permissions,
                 pin_reset_required: authMember.pin_reset_required ?? false,
-                default_pin: authMember.default_pin ?? null,
               } : null,
               authMemberId: authMember?.id,
               authUserEmail: user?.email,

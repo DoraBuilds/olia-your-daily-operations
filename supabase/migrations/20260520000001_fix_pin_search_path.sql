@@ -238,8 +238,7 @@ BEGIN
 
   UPDATE public.team_members
   SET
-    pin               = crypt(p_raw_pin, gen_salt('bf', 12)),
-    default_pin       = NULL,
+    pin                = p_raw_pin,   -- trigger hashes this and stores it in pin_plaintext
     pin_reset_required = false
   WHERE id = p_member_id;
 END;

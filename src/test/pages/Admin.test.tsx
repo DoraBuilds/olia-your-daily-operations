@@ -61,7 +61,7 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "u1", email: "manager@example.com" },
     session: { user: { id: "u1" } },
-    teamMember: { id: "u1", organization_id: "org1", name: "Sarah", email: "sarah@example.com", role: "Owner", location_ids: [], permissions: {}, pin_reset_required: true, default_pin: "7382" },
+    teamMember: { id: "u1", organization_id: "org1", name: "Sarah", email: "sarah@example.com", role: "Owner", location_ids: [], permissions: {}, pin_reset_required: true },
     loading: false,
     signOut: vi.fn(),
   }),
@@ -106,7 +106,7 @@ const mockStaff = [
 ];
 
 const mockTeam = [
-  { id: "tm1", name: "Sarah Owner", email: "sarah@example.com", role: "Owner", initials: "SO", location_ids: ["l1"], pin_reset_required: true, default_pin: "7382", permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: true, view_reporting: true, edit_location_details: true, manage_alerts: true, export_data: true, override_inactivity_threshold: true } },
+  { id: "tm1", name: "Sarah Owner", email: "sarah@example.com", role: "Owner", initials: "SO", location_ids: ["l1"], pin_reset_required: true, permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: true, view_reporting: true, edit_location_details: true, manage_alerts: true, export_data: true, override_inactivity_threshold: true } },
   { id: "tm2", name: "Mike Manager", email: "mike@example.com", role: "Manager", initials: "MM", location_ids: ["l2"], permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: false, view_reporting: true, edit_location_details: false, manage_alerts: false, export_data: false, override_inactivity_threshold: false } },
 ];
 

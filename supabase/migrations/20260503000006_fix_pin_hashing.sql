@@ -5,24 +5,20 @@
 --   1. setup_new_organization used SHA-256; validate_admin_pin uses
 --      bcrypt → new accounts could never authenticate at the kiosk.
 --   2. Existing SHA-256 default PINs rehashed to bcrypt with a new
---      random 4-digit PIN per account.
---   3. Default PIN is now random (not "1234") and surfaced once via
---      a temporary default_pin column so the user can see it.
---   4. set_admin_pin() enforces PIN uniqueness within an org and
+--      random 4-digit PIN per account.  The raw PIN is passed to the
+--      pin column so the hash_team_member_pin trigger intercepts it,
+--      stores it in pin_plaintext for the owner to read, then hashes.
+--   3. set_admin_pin() enforces PIN uniqueness within an org and
 --      hashes server-side so rawPin never reaches the table directly.
 -- ================================================================
 
--- ── 0. Temporary column: default_pin ──────────────────────────────
--- Stores the auto-generated plaintext PIN only while
--- pin_reset_required = true.  Cleared by set_admin_pin on first
--- custom-PIN save.  RLS on team_members already restricts reads.
-
-ALTER TABLE public.team_members
-  ADD COLUMN IF NOT EXISTS default_pin text;
-
 -- ── 1. Rehash existing SHA-256 default PINs to bcrypt ─────────────
 -- SHA-256 hashes are exactly 64 lowercase hex chars.
--- Each account gets its own random 4-digit PIN.
+-- Each account gets its own random 4-digit PIN generated with a
+-- cryptographically secure source.
+-- The raw PIN is written to pin column directly so that the
+-- hash_team_member_pin trigger can capture it in pin_plaintext
+-- before hashing — consistent with all other PIN-setting paths.
 
 DO $$
 DECLARE
@@ -40,15 +36,14 @@ BEGIN
     raw := lpad((1000 + (get_byte(_b, 0) * 256 + get_byte(_b, 1)) % 9000)::text, 4, '0');
     UPDATE public.team_members
     SET
-      pin               = crypt(raw, gen_salt('bf', 12)),
-      default_pin       = raw,
+      pin                = raw,   -- trigger hashes this and stores it in pin_plaintext
       pin_reset_required = true
     WHERE id = r.id;
   END LOOP;
 END;
 $$;
 
--- ── 2. Fix setup_new_organization — random PIN, returned to client ─
+-- ── 2. Fix setup_new_organization — random PIN via trigger ─────────
 
 CREATE OR REPLACE FUNCTION public.setup_new_organization(
   p_business_name TEXT,
@@ -58,7 +53,7 @@ CREATE OR REPLACE FUNCTION public.setup_new_organization(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_user_id              uuid := auth.uid();
@@ -120,6 +115,8 @@ BEGIN
   RETURNING id INTO v_org_id;
 
   -- Random 4-digit PIN (1000–9999) using a cryptographically secure source.
+  -- Written as raw digits so the hash_team_member_pin trigger captures it
+  -- in pin_plaintext then stores the bcrypt hash in pin.
   v_pin_bytes := gen_random_bytes(2);
   v_raw_pin   := lpad((1000 + (get_byte(v_pin_bytes, 0) * 256 + get_byte(v_pin_bytes, 1)) % 9000)::text, 4, '0');
 
@@ -132,7 +129,6 @@ BEGIN
     location_ids,
     permissions,
     pin,
-    default_pin,
     pin_reset_required
   ) VALUES (
     v_user_id,
@@ -151,8 +147,7 @@ BEGIN
       "export_data": true,
       "override_inactivity_threshold": true
     }'::jsonb,
-    crypt(v_raw_pin, gen_salt('bf', 12)),
-    v_raw_pin,
+    v_raw_pin,   -- trigger hashes this and stores it in pin_plaintext
     true
   );
 
@@ -175,7 +170,7 @@ CREATE OR REPLACE FUNCTION public.set_admin_pin(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_org_id uuid;
@@ -213,8 +208,7 @@ BEGIN
 
   UPDATE public.team_members
   SET
-    pin               = crypt(p_raw_pin, gen_salt('bf', 12)),
-    default_pin       = NULL,
+    pin                = p_raw_pin,   -- trigger hashes this and stores it in pin_plaintext
     pin_reset_required = false
   WHERE id = p_member_id;
 END;
