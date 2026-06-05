@@ -6,25 +6,17 @@
     <title>Olia</title>
     <script>
       (function () {
-        var pathname = window.location.pathname;
-        var firstRouteSlash = pathname.indexOf("/", 1);
-        var basePath = firstRouteSlash === -1 ? pathname.replace(/\/$/, "") : pathname.slice(0, firstRouteSlash);
-        var route = firstRouteSlash === -1 ? "/" : pathname.slice(firstRouteSlash);
+        var path = window.location.pathname;
         var search = window.location.search || "";
         var hash = window.location.hash || "";
-        var searchParams = new URLSearchParams(search);
 
-        if (route === "/") {
-          window.location.replace(basePath + "/");
+        // Already carrying a ?p= param — just go to root so the app can read it
+        if (new URLSearchParams(search).get("p") !== null) {
+          window.location.replace("/" + search + hash);
           return;
         }
 
-        if (searchParams.get("p") !== null) {
-          window.location.replace(basePath + "/" + search + hash);
-          return;
-        }
-
-        window.location.replace(basePath + "/?p=" + encodeURIComponent(route + search + hash));
+        window.location.replace("/?p=" + encodeURIComponent(path + search + hash));
       })();
     </script>
   </head>
