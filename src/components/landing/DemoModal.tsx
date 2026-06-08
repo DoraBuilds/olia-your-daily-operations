@@ -39,19 +39,27 @@ export function DemoModal({ open, onClose }: Props) {
     e.preventDefault();
     setState("submitting");
 
-    const { error } = await supabase.from("demo_requests").insert({
+    const payload = {
       name:       name.trim(),
       email:      email.trim(),
       venue_name: venue.trim() || null,
-    });
+    };
+
+    const { error } = await supabase.from("demo_requests").insert(payload);
 
     if (error) {
       console.error("demo_requests insert:", error);
       setErrorMsg("Something went wrong — please email dora@oliahq.com directly.");
       setState("error");
-    } else {
-      setState("success");
+      return;
     }
+
+    // Fire notification directly — doesn't block the success state even if it fails.
+    supabase.functions.invoke("notify-demo-request", { body: payload }).catch(
+      err => console.error("notify-demo-request invoke:", err)
+    );
+
+    setState("success");
   }
 
   return (
