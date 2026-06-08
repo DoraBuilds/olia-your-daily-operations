@@ -10,14 +10,15 @@
  *                     shared secret (the DB trigger sends app.alert_secret)
  *
  * Optional:
- *   DEMO_FROM_EMAIL → verified sender in Resend (default: onboarding@resend.dev)
  *   DEMO_TO_EMAIL   → where to send the notification (default: dora.angelov@gmail.com)
+ *   DEMO_FROM_EMAIL → verified sender in Resend (falls back to ALERT_FROM_EMAIL)
  */
 
 const RESEND_API_KEY  = Deno.env.get("RESEND_API_KEY");
 // Reuse ALERT_SECRET so no new DB setting is needed.
 const DEMO_SECRET     = Deno.env.get("ALERT_SECRET");
-const DEMO_FROM_EMAIL = Deno.env.get("DEMO_FROM_EMAIL") ?? "onboarding@resend.dev";
+// Fall back to ALERT_FROM_EMAIL so we always use a verified sender.
+const DEMO_FROM_EMAIL = Deno.env.get("DEMO_FROM_EMAIL") ?? Deno.env.get("ALERT_FROM_EMAIL") ?? "onboarding@resend.dev";
 const DEMO_TO_EMAIL   = Deno.env.get("DEMO_TO_EMAIL")   ?? "dora.angelov@gmail.com";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
