@@ -9,8 +9,7 @@
  * a caller must first successfully insert a real row (subject to RLS), and
  * then call this function before the 60-second window closes.
  *
- * Also enforces per-email rate limiting (1 notification per 24 h) and
- * field length caps to prevent abuse.
+ * Also enforces field length caps and a 60-second insert window to prevent abuse.
  *
  * Required secrets — all auto-available in Supabase edge functions:
  *   RESEND_API_KEY          → set from send-alert-email setup
@@ -70,8 +69,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
-  const since60s  = new Date(Date.now() - 60_000).toISOString();
-  const since24h  = new Date(Date.now() - 86_400_000).toISOString();
+  const since60s = new Date(Date.now() - 60_000).toISOString();
 
   const { data: rows, error: dbError } = await supabase
     .from("demo_requests")
@@ -86,22 +84,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "Server error" }, 500);
   }
 
-  // No matching insert in the last 60 s → this call wasn't triggered by the form
+  // No matching insert in the last 60 s → call wasn't triggered by the real form
   if (!rows || rows.length === 0) {
     return json({ error: "No recent submission found" }, 403);
-  }
-
-  // Rate limit: has a notification already gone out for this email in the last 24 h?
-  const { count } = await supabase
-    .from("demo_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("email", email)
-    .gte("created_at", since24h);
-
-  if ((count ?? 0) > 1) {
-    // More than one submission from this email today — silently accept but skip email
-    console.log(`notify-demo-request: rate-limited ${email}`);
-    return json({ sent: false, reason: "rate_limited" }, 200);
   }
 
   if (!RESEND_API_KEY) {
