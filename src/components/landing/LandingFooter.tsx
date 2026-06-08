@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export function LandingFooter() {
+export function LandingFooter({ onBookDemo }: { onBookDemo?: () => void }) {
   return (
     <footer className="border-t border-border bg-background">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
@@ -20,12 +20,12 @@ export function LandingFooter() {
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
-            <a
-              href="mailto:hello@useolia.com?subject=Demo request"
+            <button
+              onClick={onBookDemo}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Book a demo
-            </a>
+            </button>
             <a
               href="mailto:hello@useolia.com"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
