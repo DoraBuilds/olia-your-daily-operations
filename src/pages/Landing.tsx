@@ -540,6 +540,7 @@ export default function Landing() {
   }, []);
 
   return (
+    <>
     <div className="olia-landing">
       <style>{css}</style>
 
@@ -792,7 +793,8 @@ export default function Landing() {
           <p className="ol-footer-copy">© 2026 Olia. All rights reserved.</p>
         </div>
       </footer>
-      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
+    <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+    </>
   );
 }
