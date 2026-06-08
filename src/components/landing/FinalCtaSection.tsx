@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays } from "lucide-react";
 
-export function FinalCtaSection() {
+export function FinalCtaSection({ onBookDemo }: { onBookDemo?: () => void }) {
   return (
     <section className="py-20 sm:py-28" style={{ background: "hsl(var(--sage))" }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
@@ -25,13 +25,13 @@ export function FinalCtaSection() {
             Set up your first checklist
             <ArrowRight size={16} />
           </Link>
-          <a
-            href="mailto:hello@useolia.com?subject=Demo request"
+          <button
+            onClick={onBookDemo}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-white/25 text-white font-medium text-base px-7 py-3.5 rounded-2xl hover:bg-white/10 transition-colors"
           >
             <CalendarDays size={16} className="opacity-70" />
             Book a demo
-          </a>
+          </button>
         </div>
 
         {/* Trust trio */}

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays } from "lucide-react";
 import { KioskMock } from "./KioskMock";
 
-export function HeroSection() {
+export function HeroSection({ onBookDemo }: { onBookDemo?: () => void }) {
   return (
     <section className="bg-background overflow-hidden">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 lg:pt-24 lg:pb-28">
@@ -35,13 +35,13 @@ export function HeroSection() {
                 Set up your first checklist
                 <ArrowRight size={16} />
               </Link>
-              <a
-                href="mailto:hello@useolia.com?subject=Demo request"
+              <button
+                onClick={onBookDemo}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-card border border-border text-foreground text-base font-medium px-6 py-3.5 rounded-2xl hover:bg-background transition-colors"
               >
                 <CalendarDays size={16} className="text-muted-foreground" />
                 Book a demo
-              </a>
+              </button>
             </div>
 
             {/* Trust line */}

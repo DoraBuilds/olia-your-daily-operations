@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { DemoModal } from "@/components/landing/DemoModal";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
@@ -500,6 +501,8 @@ const KIOSK_TASKS = [
 export default function Landing() {
   const navRef = useRef<HTMLElement>(null);
   const [completed, setCompleted] = useState(0);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const openDemo = (e: React.MouseEvent) => { e.preventDefault(); setDemoOpen(true); };
   const total = KIOSK_TASKS.length;
 
   useEffect(() => {
@@ -550,7 +553,7 @@ export default function Landing() {
           </ul>
           <div className="ol-nav-actions">
             <Link to="/login" className="ol-signin">Sign in</Link>
-            <a href="#" className="ol-btn-ghost">Book a demo</a>
+            <a href="#" className="ol-btn-ghost" onClick={openDemo}>Book a demo</a>
             <Link to="/signup" className="ol-btn-solid">Get started</Link>
           </div>
         </div>
@@ -564,7 +567,7 @@ export default function Landing() {
             <p className="ol-hero-sub">Olia replaces paper checklists and WhatsApp chasing with a simple system your team actually uses.</p>
             <div className="ol-hero-ctas">
               <Link to="/signup" className="ol-btn-hero">Set up your first checklist →</Link>
-              <a href="#" className="ol-btn-hero-ghost">Book a demo</a>
+              <a href="#" className="ol-btn-hero-ghost" onClick={openDemo}>Book a demo</a>
             </div>
             <p className="ol-hero-note">Starter from €49 · per location · no per-user fees</p>
           </div>
@@ -765,7 +768,7 @@ export default function Landing() {
           <p className="ol-cta-sub ol-fade">Set up your first checklist today. Most venues are running in under an hour.</p>
           <div className="ol-cta-btns ol-fade">
             <Link to="/signup" className="ol-btn-cream">Set up your first checklist →</Link>
-            <a href="#" className="ol-btn-outline-light">Book a demo</a>
+            <a href="#" className="ol-btn-outline-light" onClick={openDemo}>Book a demo</a>
           </div>
           <p className="ol-cta-fine ol-fade">No long-term contract. No setup fee.</p>
         </div>
@@ -781,7 +784,7 @@ export default function Landing() {
             <a href="#how">How it works</a>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="#">Book a demo</a>
+            <a href="#" onClick={openDemo}>Book a demo</a>
             <Link to="/login">Sign in</Link>
             <a href="#">Privacy</a>
             <a href="#">Terms</a>
@@ -789,6 +792,7 @@ export default function Landing() {
           <p className="ol-footer-copy">© 2026 Olia. All rights reserved.</p>
         </div>
       </footer>
+      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   );
 }
