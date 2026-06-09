@@ -42,7 +42,9 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8 xl:px-10")}>
             {headerLeft ? (
               <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
-            ) : <div className="w-8" />}
+            ) : (
+              <img src="/brand/logo/olia-mark-navy.svg" alt="Olia" className="w-8 h-8 shrink-0" />
+            )}
             <div className="flex-1 min-w-0 text-center">
               <h1 className="font-display text-lg text-foreground leading-tight truncate">{title}</h1>
               {subtitle && (

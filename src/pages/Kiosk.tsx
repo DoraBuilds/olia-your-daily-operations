@@ -685,28 +685,34 @@ export default function Kiosk() {
   return (
     <div className="min-h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col">
       {/* Top bar */}
-      <div className="px-5 pt-7 pb-4 flex items-center justify-between border-b border-border">
-        <div className="flex items-center gap-2">
-          <img src="/brand/logo/olia-mark-navy.svg" alt="Olia" className="w-7 h-7 shrink-0" />
+      <div className="px-5 pt-6 pb-4 grid grid-cols-3 items-center border-b border-border">
+        {/* Left: current status */}
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest">Current Status</p>
+          <p className="text-sm font-semibold text-foreground">{dateStr} · {timeStr}</p>
+        </div>
+
+        {/* Center: brand mark + name */}
+        <div className="flex items-center justify-center gap-2.5">
+          <img src="/brand/logo/olia-mark-navy.svg" alt="Olia" className="w-10 h-10 shrink-0" />
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
-            {/* Issue 9: Show location name prominently */}
             <p className="text-xs text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
               {locationName || "Kiosk"}
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">Current Status</p>
-          <p className="text-sm font-semibold text-foreground">{dateStr} · {timeStr}</p>
+
+        {/* Right: admin */}
+        <div className="flex justify-end">
+          <button
+            id="admin-btn"
+            onClick={handleAdminButtonClick}
+            className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+          >
+            Admin
+          </button>
         </div>
-        <button
-          id="admin-btn"
-          onClick={handleAdminButtonClick}
-          className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors ml-2 shrink-0"
-        >
-          Admin
-        </button>
       </div>
 
       {/* Agenda heading */}
