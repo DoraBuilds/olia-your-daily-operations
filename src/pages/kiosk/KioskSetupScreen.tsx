@@ -42,9 +42,7 @@ export function KioskSetupScreen({
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 sm:px-8 lg:px-10">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <div className="w-16 h-16 rounded-full bg-sage flex items-center justify-center mx-auto mb-5">
-            <span className="text-white text-2xl font-bold font-display">O</span>
-          </div>
+          <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-16 h-16 mx-auto mb-5" />
           <h1 className="font-display text-3xl italic text-foreground tracking-tight">Olia Kiosk</h1>
           <p className="section-label mt-2 tracking-widest">Select a location to launch</p>
         </div>

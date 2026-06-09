@@ -261,9 +261,7 @@ export default function Signup() {
 
         {/* Logo */}
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-sage flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-display text-2xl font-bold">O</span>
-          </div>
+          <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
           <h1 className="font-display text-2xl text-foreground">Create your account</h1>
           <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business with a one-time code</p>
         </div>
