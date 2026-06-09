@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="Olia">
+  <defs>
+    <linearGradient id="oliaSweep" x1="0.04" y1="0.74" x2="0.96" y2="0.26">
+      <stop offset="0" stop-color="#8E3CC0"></stop>
+      <stop offset="0.34" stop-color="#7A4FCB"></stop>
+      <stop offset="0.62" stop-color="#5566D8"></stop>
+      <stop offset="1" stop-color="#3E78E0"></stop>
+    </linearGradient>
+    <radialGradient id="oliaWhite" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"></stop>
+      <stop offset="1" stop-color="#D9DCEA"></stop>
+    </radialGradient>
+    <filter id="oliaGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.5" result="b"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="b"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="#000000"></rect>
+  <g fill="none" filter="url(#oliaGlow)">
+    <g stroke="url(#oliaSweep)" stroke-linecap="round">
+      <circle cx="200" cy="200" r="188" stroke-width="3" opacity="0.85"></circle>
+      <circle cx="200" cy="200" r="163" stroke-width="3.4"></circle>
+      <circle cx="200" cy="200" r="138" stroke-width="3.6"></circle>
+    </g>
+    <g stroke="url(#oliaWhite)">
+      <circle cx="200" cy="200" r="113" stroke-width="3" opacity="0.92"></circle>
+      <circle cx="200" cy="200" r="88" stroke-width="3.6"></circle>
+      <circle cx="200" cy="200" r="63" stroke-width="4.4"></circle>
+    </g>
+  </g>
+  <circle cx="200" cy="200" r="49" fill="#000000"></circle>
+</svg>

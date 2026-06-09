@@ -12,8 +12,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["DM Serif Display", "Georgia", "serif"],
-        body: ["DM Sans", "system-ui", "sans-serif"],
+        display: ["Cormorant Garamond", "Georgia", "serif"],
+        body: ["Hanken Grotesk", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "Courier New", "monospace"],
       },
       fontSize: {
         // Corrected to match Olia's Major-Third scale (×1.25)

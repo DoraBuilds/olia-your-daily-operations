@@ -687,9 +687,7 @@ export default function Kiosk() {
       {/* Top bar */}
       <div className="px-5 pt-7 pb-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">O</span>
-          </div>
+          <img src="/brand/logo/olia-mark-navy.svg" alt="Olia" className="w-7 h-7 shrink-0" />
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
             {/* Issue 9: Show location name prominently */}
