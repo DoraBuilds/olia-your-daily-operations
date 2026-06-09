@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Serif+Display:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -78,9 +78,9 @@ html { font-size: 16px; }                        /* mobile / default        */
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* slight bounce — playful UX  */
 
     /* Olia Brand Colors — all HSL */
-    --sage:            219 46% 19%;   /* midnight blue #1A2A47 */
-    --sage-deep:       219 52% 13%;   /* hover/active */
-    --sage-light:      219 40% 93%;   /* light blue tint for badges */
+    --sage:            222 49% 16%;   /* ink #15213E */
+    --sage-deep:       222 55% 11%;   /* ink deep #0E1830 */
+    --sage-light:      222 40% 93%;   /* light ink tint for badges */
 
     --lavender:        273 24% 72%;   /* dusty lavender #B8A5C8 */
     --lavender-deep:   273 32% 50%;   /* WCAG AA on lavender-light */
@@ -90,7 +90,7 @@ html { font-size: 16px; }                        /* mobile / default        */
     --powder-blue-deep:  210 52% 42%;
     --powder-blue-light: 210 35% 93%;
 
-    --background:      30 60% 98%;   /* alabaster white #FDFAF7 */
+    --background:      39 43% 93%;   /* ivory #F4EFE5 */
     --foreground:      17 30% 9%;    /* espresso #1E1410 */
 
     --card:            0 0% 100%;    /* pure white #FFFFFF */
@@ -116,8 +116,8 @@ html { font-size: 16px; }                        /* mobile / default        */
     --ring:            219 46% 19%;
 
     /* Status — semantically distinct from brand primary */
-    --status-ok:       146 30% 32%;  /* forest green #3A6B4F */
-    --status-ok-bg:    146 25% 93%;
+    --status-ok:       147 56% 42%;  /* service green #2FA86A */
+    --status-ok-bg:    147 50% 93%;
     --status-warn:     29 51% 53%;   /* warm amber #C4854A */
     --status-warn-bg:  29 45% 93%;
     --status-error:    351 50% 37%;  /* deep rose #8E2F3E */
@@ -135,8 +135,9 @@ html { font-size: 16px; }                        /* mobile / default        */
     --sidebar-ring:                219 46% 19%;
 
     /* Typography */
-    --font-display: 'DM Serif Display', Georgia, serif;
-    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   }
 }
 

@@ -3,25 +3,25 @@ import { Link } from "react-router-dom";
 import { DemoModal } from "@/components/landing/DemoModal";
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap');
 
   .olia-landing *, .olia-landing *::before, .olia-landing *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   .olia-landing {
-    --navy: #1B2A4A;
-    --navy-mid: #243558;
-    --cream: #F7F3EE;
+    --navy: #15213E;
+    --navy-mid: #1E2F52;
+    --cream: #F4EFE5;
     --white: #FFFFFF;
-    --gold: #C9A96E;
-    --gold-light: #E8D5B0;
-    --text-mid: #4A5568;
-    --text-light: #718096;
-    --border: rgba(27,42,74,0.1);
-    --border-mid: rgba(27,42,74,0.16);
-    --shadow-sm: 0 2px 12px rgba(27,42,74,0.06);
-    --shadow-lg: 0 16px 48px rgba(27,42,74,0.14);
+    --gold: #C2A15B;
+    --gold-light: #E4CFA0;
+    --text-mid: #4A5468;
+    --text-light: #687080;
+    --border: rgba(21,33,62,0.1);
+    --border-mid: rgba(21,33,62,0.16);
+    --shadow-sm: 0 2px 12px rgba(21,33,62,0.06);
+    --shadow-lg: 0 16px 48px rgba(21,33,62,0.14);
     --r: 12px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
     color: var(--navy);
     background: var(--cream);
     -webkit-font-smoothing: antialiased;
@@ -29,7 +29,7 @@ const css = `
   }
 
   .olia-landing h1, .olia-landing h2, .olia-landing h3 {
-    font-family: 'Playfair Display', serif; font-weight: 400; line-height: 1.15; color: var(--navy);
+    font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; line-height: 1.15; color: var(--navy);
   }
 
   .ol-label {
@@ -65,10 +65,12 @@ const css = `
   }
   .ol-nav-inner { display: flex; align-items: center; width: 100%; max-width: 1140px; margin: 0 auto; }
   .ol-logo {
-    font-family: 'Playfair Display', serif; font-style: italic;
-    font-size: 20px; font-weight: 500; color: var(--navy);
+    display: flex; align-items: center; gap: 9px;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-size: 22px; font-weight: 600; color: var(--navy);
     text-decoration: none; margin-right: 48px;
   }
+  .ol-logo-mark { width: 28px; height: 28px; display: block; flex-shrink: 0; }
   .ol-nav-links { display: flex; gap: 30px; list-style: none; }
   .ol-nav-links a { font-size: 13.5px; color: var(--text-mid); text-decoration: none; transition: color 0.2s; }
   .ol-nav-links a:hover { color: var(--navy); }
@@ -118,14 +120,14 @@ const css = `
   }
   .ol-hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
   .ol-btn-hero {
-    font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 500;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 500;
     color: var(--cream); background: var(--navy); border: 1.5px solid var(--navy);
     padding: 12px 24px; border-radius: 7px; text-decoration: none;
     transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
   }
   .ol-btn-hero:hover { background: var(--navy-mid); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,42,74,0.22); }
   .ol-btn-hero-ghost {
-    font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 400;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400;
     color: var(--navy); background: transparent;
     border: 1.5px solid var(--border-mid); padding: 12px 24px; border-radius: 7px;
     text-decoration: none; transition: border-color 0.2s, background 0.2s;
@@ -149,7 +151,7 @@ const css = `
     text-transform: uppercase; color: rgba(201,169,110,0.7); margin-bottom: 10px;
   }
   .ol-kiosk-title {
-    font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 500;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 500;
     color: #fff; margin-bottom: 18px;
   }
   .ol-kprog { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 5px; overflow: hidden; }
@@ -213,7 +215,7 @@ const css = `
   .ol-pain-card:hover { background: var(--cream); }
   .ol-pain-icon { width: 28px; height: 28px; color: var(--navy); opacity: 0.65; margin-bottom: 14px; }
   .ol-pain-card h3 {
-    font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 600;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 600;
     color: var(--navy); margin-bottom: 9px; letter-spacing: -0.01em;
   }
   .ol-pain-card p { font-size: 13.5px; font-weight: 300; color: var(--text-light); line-height: 1.65; }
@@ -226,7 +228,7 @@ const css = `
   }
   .ol-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
   .ol-step-num {
-    font-family: 'Playfair Display', serif; font-size: 12px; font-weight: 400;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 12px; font-weight: 400;
     color: var(--gold); letter-spacing: 0.06em; margin-bottom: 12px; opacity: 0.8;
   }
   .ol-step-icon {
@@ -236,7 +238,7 @@ const css = `
   }
   .ol-step-icon svg { width: 19px; height: 19px; }
   .ol-step h3 {
-    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 16px; font-weight: 600;
     color: var(--navy); margin-bottom: 8px; letter-spacing: -0.01em;
   }
   .ol-step p { font-size: 14px; font-weight: 300; color: var(--text-mid); line-height: 1.65; }
@@ -302,7 +304,7 @@ const css = `
   .ol-feat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
   .ol-feat-icon { width: 30px; height: 30px; color: var(--navy); opacity: 0.72; margin-bottom: 14px; }
   .ol-feat-card h3 {
-    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 15px; font-weight: 600;
     color: var(--navy); margin-bottom: 9px; letter-spacing: -0.01em;
   }
   .ol-feat-card p { font-size: 13.5px; font-weight: 300; color: var(--text-light); line-height: 1.65; }
@@ -325,11 +327,11 @@ const css = `
   .ol-built-card { padding: 26px 28px; background: rgba(255,255,255,0.03); transition: background 0.2s; }
   .ol-built-card:hover { background: rgba(255,255,255,0.07); }
   .ol-built-n {
-    font-family: 'Playfair Display', serif; font-size: 34px; font-weight: 400;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 34px; font-weight: 400;
     color: rgba(201,169,110,0.18); margin-bottom: 8px; line-height: 1;
   }
   .ol-built-card h3 {
-    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 16px; font-weight: 600;
     color: var(--cream); margin-bottom: 10px; letter-spacing: -0.01em;
   }
   .ol-built-card p { font-size: 13.5px; font-weight: 300; color: rgba(247,243,238,0.48); line-height: 1.65; }
@@ -355,10 +357,10 @@ const css = `
     color: var(--navy); background: var(--gold-light);
     padding: 4px 10px; border-radius: 4px; margin-bottom: 18px;
   }
-  .ol-pname { font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--navy); margin-bottom: 7px; }
+  .ol-pname { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 15px; font-weight: 500; color: var(--navy); margin-bottom: 7px; }
   .ol-pcard.featured .ol-pname { color: var(--cream); }
   .ol-pamount {
-    font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 400;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 40px; font-weight: 400;
     color: var(--navy); letter-spacing: -0.02em; line-height: 1;
   }
   .ol-pcard.featured .ol-pamount { color: var(--cream); }
@@ -379,7 +381,7 @@ const css = `
   .ol-pcard.featured .ol-pcheck { color: #4ADE80; }
   .ol-pbtn {
     display: block; width: 100%; text-align: center;
-    font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 500;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 500;
     padding: 12px 20px; border-radius: 7px; cursor: pointer;
     text-decoration: none; transition: all 0.2s;
   }
@@ -400,14 +402,14 @@ const css = `
   .ol-cta-sub { font-size: 16px; font-weight: 300; color: rgba(247,243,238,0.55); max-width: 420px; margin: 0 auto 28px; line-height: 1.6; position: relative; }
   .ol-cta-btns { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 18px; position: relative; }
   .ol-btn-cream {
-    font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 500;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 500;
     color: var(--navy); background: var(--cream);
     border: 1.5px solid var(--cream); padding: 12px 24px; border-radius: 7px;
     text-decoration: none; transition: all 0.2s;
   }
   .ol-btn-cream:hover { background: white; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.14); }
   .ol-btn-outline-light {
-    font-family: 'DM Sans', sans-serif; font-size: 14.5px; font-weight: 400;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400;
     color: rgba(247,243,238,0.78); background: transparent;
     border: 1.5px solid rgba(247,243,238,0.22); padding: 12px 24px; border-radius: 7px;
     text-decoration: none; transition: all 0.2s;
@@ -423,9 +425,11 @@ const css = `
     max-width: 1140px; margin: 0 auto; padding: 0 40px;
   }
   .ol-footer-logo {
-    font-family: 'Playfair Display', serif; font-style: italic;
-    font-size: 19px; color: var(--cream); text-decoration: none; display: block; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 9px;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-size: 21px; font-weight: 600; color: var(--cream); text-decoration: none; margin-bottom: 6px;
   }
+  .ol-footer-logo-mark { width: 26px; height: 26px; display: block; flex-shrink: 0; }
   .ol-footer-tagline { font-size: 11.5px; font-weight: 300; color: rgba(247,243,238,0.33); line-height: 1.5; }
   .ol-footer-links { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
   .ol-footer-links a { font-size: 12.5px; color: rgba(247,243,238,0.38); text-decoration: none; transition: color 0.2s; }
@@ -546,7 +550,10 @@ export default function Landing() {
 
       <nav className="ol-nav" ref={navRef}>
         <div className="ol-nav-inner">
-          <a href="#" className="ol-logo">Olia</a>
+          <a href="#" className="ol-logo">
+            <img src="/brand/logo/olia-mark-navy.svg" alt="" className="ol-logo-mark" />
+            Olia
+          </a>
           <ul className="ol-nav-links">
             <li><a href="#how">How it works</a></li>
             <li><a href="#features">Features</a></li>
@@ -778,7 +785,10 @@ export default function Landing() {
       <footer className="ol-footer">
         <div className="ol-footer-inner">
           <div>
-            <a href="#" className="ol-footer-logo">Olia</a>
+            <a href="#" className="ol-footer-logo">
+              <img src="/brand/logo/olia-mark-champagne.svg" alt="" className="ol-footer-logo-mark" />
+              Olia
+            </a>
             <p className="ol-footer-tagline">Operations software for<br />Hospitality teams.</p>
           </div>
           <div className="ol-footer-links">
