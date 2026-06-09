@@ -142,9 +142,7 @@ export default function Login() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-sage flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-display text-2xl font-bold">O</span>
-          </div>
+          <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
           <h1 className="font-display text-2xl text-foreground">Sign in</h1>
           <p className="text-sm text-muted-foreground mt-1">Use the one-time code from your inbox.</p>
         </div>
