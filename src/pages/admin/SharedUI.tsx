@@ -303,7 +303,11 @@ export function TeamMemberModal({
       role,
       location_ids: locationIds,
       initials: getInitials(name),
-      permissions: role === "Owner" ? { ...DEFAULT_PERMISSIONS } : perms,
+      permissions: role === "Owner"
+        ? { ...DEFAULT_PERMISSIONS }
+        : role === "Manager"
+        ? perms
+        : Object.fromEntries(Object.keys(DEFAULT_PERMISSIONS).map(k => [k, false])) as ManagerPermissions,
       ...(pin ? { rawPin: pin } : {}),
     });
     onClose();
@@ -329,7 +333,7 @@ export function TeamMemberModal({
         </FormField>
         <FormField label="Role">
           <div className="flex gap-2">
-            {(["Owner", "Manager"] as AccountRole[]).map(r => (
+            {(["Owner", "Manager", "Member"] as AccountRole[]).map(r => (
               <button
                 type="button" key={r} onClick={() => setRole(r)}
                 className={cn(
