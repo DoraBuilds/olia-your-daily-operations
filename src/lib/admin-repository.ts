@@ -1,7 +1,7 @@
 // ─── Admin Data Types & Mock Repository ─────────────────────────────────────
 // Isolated data access layer — swap to DB later without rewriting UI.
 
-export type AccountRole = "Owner" | "Manager";
+export type AccountRole = "Owner" | "Manager" | "Member";
 export type StaffStatus = "active" | "archived";
 
 export interface StaffDepartment {

@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker } from "react-router-dom";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -260,7 +261,7 @@ export function ChecklistsTab() {
         editId={editingChecklistId || undefined}
       />
       </Suspense>
-      {blocker.state === "blocked" && (
+      {blocker.state === "blocked" && createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
             <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
@@ -280,7 +281,8 @@ export function ChecklistsTab() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       </>
     );
