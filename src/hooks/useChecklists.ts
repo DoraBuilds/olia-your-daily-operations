@@ -130,7 +130,19 @@ export function useSaveChecklist() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["checklists"] }),
+    onSuccess: (_, variables) => {
+      // Immediately patch the cache so the list reflects the new field values
+      // (e.g. location_ids) before the background refetch completes.
+      // Without this, opening the edit modal immediately after saving reads
+      // stale cache data and shows "All locations" even though the save succeeded.
+      if (variables.id) {
+        qc.setQueriesData<ChecklistItem[]>(
+          { queryKey: ["checklists"] },
+          (old) => old?.map((c) => c.id === variables.id ? { ...c, ...variables } : c),
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["checklists"] });
+    },
   });
 }
 
