@@ -386,6 +386,7 @@ export function ChecklistsTab() {
                 setEditingChecklistId(cl.id);
                 setPrefillTitle(cl.title);
                 setPrefillSections(cl.sections);
+                setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
                 setShowBuilder(true);
               }}
                 className="flex-1 flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors">
