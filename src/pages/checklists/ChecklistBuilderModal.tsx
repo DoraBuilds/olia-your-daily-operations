@@ -116,6 +116,8 @@ export function ChecklistBuilderModal({
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const footerPublishRef = useRef<HTMLButtonElement>(null);
+  const [footerPublishVisible, setFooterPublishVisible] = useState(false);
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
@@ -143,6 +145,19 @@ export function ChecklistBuilderModal({
     if (!isNewChecklist) return;
     try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title, sections })); } catch { /* ignore */ }
   }, [title, sections, isNewChecklist]);
+
+  // Hide the top Publish button when the footer Publish button scrolls into view
+  useEffect(() => {
+    if (!asPage || !('IntersectionObserver' in window)) return;
+    const el = footerPublishRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFooterPublishVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [asPage]);
   const [showResponsePicker, setShowResponsePicker] = useState<
     | { scope: "main"; sectionIdx: number; questionIdx: number }
     | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
@@ -357,9 +372,24 @@ export function ChecklistBuilderModal({
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
       <div className="p-5 space-y-5">
         {asPage && (
-          <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={16} /> Back
-          </button>
+          <div className="sticky top-0 z-10 -mx-5 px-5 py-2 bg-background flex items-center justify-between">
+            <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft size={16} /> Back
+            </button>
+            <button
+              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+              onClick={handleCreate}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+                footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+                !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              {isSaving ? "Publishing…" : "Publish"}
+            </button>
+          </div>
         )}
         {/* Locations */}
         <div className="space-y-3">
@@ -1183,6 +1213,7 @@ export function ChecklistBuilderModal({
           </p>
         )}
         <button
+          ref={footerPublishRef}
           disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
           onClick={handleCreate}
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
@@ -1294,21 +1325,6 @@ export function ChecklistBuilderModal({
         </div>
         {subModals}
         {discardConfirmDialog}
-        {createPortal(
-          <button
-            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-            onClick={handleCreate}
-            className={cn(
-              "fixed bottom-24 right-4 z-50 shadow-lg px-5 py-3 rounded-2xl text-sm font-medium transition-colors",
-              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            {isSaving ? "Publishing…" : "Publish"}
-          </button>,
-          document.body
-        )}
       </>
     );
   }
