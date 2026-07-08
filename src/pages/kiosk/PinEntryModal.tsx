@@ -24,6 +24,16 @@ export async function validateKioskStaffPin(pin: string, locationId: string) {
   });
 }
 
+// Validates any team member in the same org as the kiosk location.
+// Unlike validate_admin_pin this has no location_ids restriction —
+// physical presence at the kiosk is sufficient for checklist access.
+export async function validateKioskMemberPin(pin: string, locationId: string) {
+  return supabase.rpc("validate_kiosk_member_pin", {
+    p_pin: pin,
+    p_location_id: locationId,
+  });
+}
+
 // ─── clearKioskLocationSelection (needed by AdminLoginModal) ──────────────────
 
 export function clearKioskLocationSelectionForModal() {
@@ -336,19 +346,22 @@ export function PinEntryModal({
         return;
       }
     }
-    const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
+    // Check team members org-wide (any team member of the location's org).
+    // Uses a dedicated RPC with no location_ids restriction — physical presence
+    // at the kiosk is the access control, not the location assignment.
+    const { data: memberData, error: memberRpcError } = await validateKioskMemberPin(enteredPin, locationId);
 
-    if (!adminRpcError && adminData && adminData.length > 0) {
+    if (!memberRpcError && memberData && memberData.length > 0) {
       setValidating(false);
-      const admin = adminData[0];
-      onSuccess(null, admin.name, admin.organization_id ?? "");
+      const member = memberData[0];
+      onSuccess(null, member.name, member.organization_id ?? "");
       return;
     }
 
-    if (adminRpcError) {
+    if (memberRpcError) {
       setValidating(false);
       setPin("");
-      if (adminRpcError.message?.includes("Too many PIN attempts")) {
+      if (memberRpcError.message?.includes("Too many PIN attempts")) {
         // Server-side rate limit hit — enforce a 5-minute lockout in the UI
         const until = Date.now() + 5 * 60 * 1000;
         setLockedUntil(until);
@@ -360,7 +373,7 @@ export function PinEntryModal({
       return;
     }
 
-    // Admin PIN not recognised — try staff PIN
+    // No team member match — try staff profile PIN (SHA-256, location-scoped)
     const { data: staffData, error: staffRpcError } = await validateKioskStaffPin(enteredPin, locationId);
     setValidating(false);
 

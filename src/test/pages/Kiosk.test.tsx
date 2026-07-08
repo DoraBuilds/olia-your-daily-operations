@@ -124,6 +124,13 @@ vi.mock("@/lib/supabase", () => ({
         });
       }
 
+      if (fn === "validate_kiosk_member_pin") {
+        return Promise.resolve({
+          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1" }],
+          error: null,
+        });
+      }
+
       if (fn === "insert_kiosk_alert") {
         return mockInsertKioskAlert(params);
       }
@@ -210,19 +217,9 @@ async function openRunnerWithQuestions(questions: any[]) {
       return Promise.resolve({ data: true, error: null });
     }
 
-    if (fn === "validate_admin_pin") {
+    if (fn === "validate_kiosk_member_pin") {
       return Promise.resolve({
-        data: [
-          {
-            id: "tm-1",
-            name: "Sarah Owner",
-            email: "sarah@example.com",
-            role: "Owner",
-            organization_id: "org-1",
-            location_ids: [],
-            permissions: {},
-          },
-        ],
+        data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1" }],
         error: null,
       });
     }
@@ -635,7 +632,7 @@ describe("Kiosk — Grid Screen", () => {
     }
   });
 
-  it("uses the admin PIN validation path when starting a checklist", async () => {
+  it("uses the kiosk member PIN validation path when starting a checklist", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {
       if (fn === "get_kiosk_checklists") {
@@ -658,15 +655,9 @@ describe("Kiosk — Grid Screen", () => {
         return Promise.resolve({ data: true, error: null });
       }
 
-      if (fn === "validate_admin_pin") {
+      if (fn === "validate_kiosk_member_pin") {
         return Promise.resolve({
-          data: [
-            {
-              id: "tm-1",
-              name: "Sarah Owner",
-              organization_id: "org-1",
-            },
-          ],
+          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1" }],
           error: null,
         });
       }
@@ -688,7 +679,7 @@ describe("Kiosk — Grid Screen", () => {
     }
 
     await waitFor(() => {
-      expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
+      expect(supabase.rpc).toHaveBeenCalledWith("validate_kiosk_member_pin", {
         p_pin: "1234",
         p_location_id: "00000000-0000-0000-0000-000000000011",
       });
@@ -724,7 +715,7 @@ describe("Kiosk — Grid Screen", () => {
         return Promise.resolve({ data: true, error: null });
       }
 
-      if (fn === "validate_admin_pin") {
+      if (fn === "validate_kiosk_member_pin") {
         return Promise.resolve({
           data: [{ id: "tm-1", name: "Jay Tester", organization_id: "org-1" }],
           error: null,
@@ -891,7 +882,7 @@ describe("Kiosk — PIN Entry Modal", () => {
         });
       }
       if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
-      if (fn === "validate_admin_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
       if (fn === "validate_staff_pin") {
         return Promise.resolve({
           data: [{ id: "sp-1", first_name: "Jay", last_name: "Chen", role: "Waiter", organization_id: "org-1" }],
@@ -924,7 +915,7 @@ describe("Kiosk — PIN Entry Modal", () => {
         });
       }
       if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
-      if (fn === "validate_admin_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
       if (fn === "validate_staff_pin") {
         return Promise.resolve({ data: null, error: { message: "network error" } });
       }
