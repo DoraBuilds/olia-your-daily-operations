@@ -369,10 +369,10 @@ export function ChecklistBuilderModal({
 
   const formContent = (
     <>
-      {/* Form body — no inner scroll; outer overlay handles all scrolling */}
-      <div className="p-5 space-y-5">
-        {asPage && (
-          <div className="sticky top-0 z-10 -mx-5 px-5 py-2 flex items-center justify-between">
+      {/* Zero-height sticky overlay: floats Back + Publish over content with no layout impact */}
+      {asPage && (
+        <div className="sticky top-0 z-10 h-0 overflow-visible px-5 pointer-events-none">
+          <div className="flex items-center justify-between pt-4 pointer-events-auto">
             <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft size={16} /> Back
             </button>
@@ -390,7 +390,10 @@ export function ChecklistBuilderModal({
               {isSaving ? "Publishing…" : "Publish"}
             </button>
           </div>
-        )}
+        </div>
+      )}
+      {/* Form body — no inner scroll; outer overlay handles all scrolling */}
+      <div className="p-5 space-y-5">
         {/* Locations */}
         <div className="space-y-3">
           <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Locations</label>
