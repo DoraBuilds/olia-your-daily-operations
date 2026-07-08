@@ -355,24 +355,31 @@ export function ChecklistBuilderModal({
   const formContent = (
     <>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0 sticky top-0 z-10 bg-card">
         {asPage ? (
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
         ) : (
-          <div />
-        )}
-        <h2 className="font-display text-lg text-foreground">
-          {editId ? "Edit checklist" : "Build checklist"}
-        </h2>
-        {asPage ? (
-          <div className="w-16" />
-        ) : (
           <button onClick={handleRequestClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         )}
+        <h2 className="font-display text-lg text-foreground">
+          {editId ? "Edit checklist" : "Build checklist"}
+        </h2>
+        <button
+          disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+          onClick={handleCreate}
+          className={cn(
+            "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+            !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+              ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          {isSaving ? "Publishing…" : "Publish"}
+        </button>
       </div>
 
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
@@ -1204,7 +1211,7 @@ export function ChecklistBuilderModal({
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
             !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
-          {isSaving ? "Saving…" : editId ? "Save checklist" : "Create checklist"}
+          {isSaving ? "Publishing…" : "Publish"}
         </button>
       </div>
     </>
