@@ -133,14 +133,14 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(afterInputs).toBe(beforeInputs + 1);
   });
 
-  it("has a Create checklist button", () => {
+  it("has a Publish button", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Create checklist")).toBeInTheDocument();
+    expect(screen.getAllByText("Publish")[0]).toBeInTheDocument();
   });
 
   it("does not call onAdd if title is empty", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
     expect(onAdd).not.toHaveBeenCalled();
   });
 
@@ -149,7 +149,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const titleInput = screen.getByPlaceholderText(/Morning Opening Checklist/);
     fireEvent.change(titleInput, { target: { value: "New Checklist" } });
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: "New Checklist" })));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -193,7 +193,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Nested Follow-up Checklist" },
     });
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Nested Follow-up Checklist",
@@ -231,7 +231,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Unanswered Checklist" },
     });
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     const saved = onAdd.mock.calls[0][0] as any;
     expect(saved.sections[0].questions[0].config.logicRules[0].comparator).toBe("unanswered");
@@ -298,7 +298,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Location Checklist" },
     });
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Location Checklist",
@@ -316,7 +316,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "All Locations Checklist" },
     });
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "All Locations Checklist",
@@ -362,7 +362,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
       target: { value: "MC Checklist" },
     });
 
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "MC Checklist",
@@ -434,7 +434,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
       target: { value: "Instruction Checklist" },
     });
 
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Instruction Checklist",
@@ -465,7 +465,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
       target: { value: "Window Checklist" },
     });
 
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Window Checklist",
@@ -490,7 +490,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
       target: { value: "Date Checklist" },
     });
 
-    fireEvent.click(screen.getByText("Create checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Date Checklist",
@@ -568,7 +568,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     expect(screen.getByDisplayValue("Check temps")).toBeInTheDocument();
   });
 
-  it("shows 'Save checklist' button in edit mode", () => {
+  it("shows 'Publish' button in edit mode", () => {
     renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
@@ -578,7 +578,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
         initialTitle="Existing Checklist"
       />
     );
-    expect(screen.getByText("Save checklist")).toBeInTheDocument();
+    expect(screen.getAllByText("Publish")[0]).toBeInTheDocument();
   });
 
   it("calls onUpdate (not onAdd) when saving in edit mode", () => {
@@ -591,7 +591,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
         initialTitle="Existing Checklist"
       />
     );
-    fireEvent.click(screen.getByText("Save checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Existing Checklist" }));
     expect(onAdd).not.toHaveBeenCalled();
   });
@@ -623,7 +623,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     );
 
     expect(screen.getByRole("button", { name: "Select specific locations" })).toHaveClass("bg-sage");
-    fireEvent.click(screen.getByText("Save checklist"));
+    fireEvent.click(screen.getAllByText("Publish")[0]);
 
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({
       location_id: "loc-2",
