@@ -17,6 +17,13 @@ export async function validateKioskAdminPin(pin: string, locationId: string) {
   });
 }
 
+export async function validateKioskStaffPin(pin: string, locationId: string) {
+  return supabase.rpc("validate_staff_pin", {
+    p_pin: pin,
+    p_location_id: locationId,
+  });
+}
+
 // ─── clearKioskLocationSelection (needed by AdminLoginModal) ──────────────────
 
 export function clearKioskLocationSelectionForModal() {
@@ -330,15 +337,16 @@ export function PinEntryModal({
       }
     }
     const { data: adminData, error: adminRpcError } = await validateKioskAdminPin(enteredPin, locationId);
-    setValidating(false);
 
     if (!adminRpcError && adminData && adminData.length > 0) {
+      setValidating(false);
       const admin = adminData[0];
       onSuccess(null, admin.name, admin.organization_id ?? "");
       return;
     }
 
     if (adminRpcError) {
+      setValidating(false);
       setPin("");
       if (adminRpcError.message?.includes("Too many PIN attempts")) {
         // Server-side rate limit hit — enforce a 5-minute lockout in the UI
@@ -349,6 +357,22 @@ export function PinEntryModal({
       } else {
         setError("Connection error. Check your network and try again.");
       }
+      return;
+    }
+
+    // Admin PIN not recognised — try staff PIN
+    const { data: staffData, error: staffRpcError } = await validateKioskStaffPin(enteredPin, locationId);
+    setValidating(false);
+
+    if (!staffRpcError && staffData && staffData.length > 0) {
+      const staff = staffData[0];
+      onSuccess(staff.id, `${staff.first_name} ${staff.last_name}`.trim(), staff.organization_id ?? "");
+      return;
+    }
+
+    if (staffRpcError) {
+      setPin("");
+      setError("Connection error. Check your network and try again.");
       return;
     }
 
