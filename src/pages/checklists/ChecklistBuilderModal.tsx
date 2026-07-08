@@ -369,31 +369,31 @@ export function ChecklistBuilderModal({
 
   const formContent = (
     <>
-      {/* Zero-height sticky overlay: floats Back + Publish over content with no layout impact */}
+      {/* Zero-height sticky overlay: Publish only, floats top-right with no layout impact */}
       {asPage && (
-        <div className="sticky top-0 z-10 h-0 overflow-visible px-5 pointer-events-none">
-          <div className="flex items-center justify-between pt-4 pointer-events-auto">
-            <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft size={16} /> Back
-            </button>
-            <button
-              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-              onClick={handleCreate}
-              className={cn(
-                "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
-                footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
-                !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              {isSaving ? "Publishing…" : "Publish"}
-            </button>
-          </div>
+        <div className="sticky top-0 z-10 h-0 overflow-visible flex justify-end px-5 pointer-events-none">
+          <button
+            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+            onClick={handleCreate}
+            className={cn(
+              "pointer-events-auto mt-4 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {isSaving ? "Publishing…" : "Publish"}
+          </button>
         </div>
       )}
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
       <div className="p-5 space-y-5">
+        {asPage && (
+          <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft size={16} /> Back
+          </button>
+        )}
         {/* Locations */}
         <div className="space-y-3">
           <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Locations</label>
