@@ -369,24 +369,6 @@ export function ChecklistBuilderModal({
 
   const formContent = (
     <>
-      {/* Zero-height sticky overlay: Publish only, floats top-right with no layout impact */}
-      {asPage && (
-        <div className="sticky top-0 z-10 h-0 overflow-visible flex justify-end px-5 pointer-events-none">
-          <button
-            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-            onClick={handleCreate}
-            className={cn(
-              "pointer-events-auto mt-4 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
-              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
-              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            {isSaving ? "Publishing…" : "Publish"}
-          </button>
-        </div>
-      )}
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
       <div className="p-5 space-y-5">
         {asPage && (
@@ -1328,6 +1310,22 @@ export function ChecklistBuilderModal({
         </div>
         {subModals}
         {discardConfirmDialog}
+        {createPortal(
+          <button
+            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+            onClick={handleCreate}
+            className={cn(
+              "fixed top-20 right-4 z-30 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {isSaving ? "Publishing…" : "Publish"}
+          </button>,
+          document.body
+        )}
       </>
     );
   }
