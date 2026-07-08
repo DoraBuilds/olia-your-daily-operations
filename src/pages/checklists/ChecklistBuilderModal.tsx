@@ -121,18 +121,17 @@ export function ChecklistBuilderModal({
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
-  // Track whether the user has made any changes to an existing checklist after mount
-  const isDirtyRef = useRef(false);
-  const isMountedRef = useRef(false);
-  useEffect(() => {
-    if (!isMountedRef.current) { isMountedRef.current = true; return; }
-    if (editId) isDirtyRef.current = true;
-  }, [title, sections, editId]);
+  // Snapshot initial values so we can detect real changes at close time
+  const initialTitleRef = useRef(initialTitle ?? "");
+  const initialSectionsRef = useRef(JSON.stringify(initialSections ?? []));
 
   // Intercept Back/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
     const warnForNew = !editId && hasContent;
-    const warnForEdit = !!editId && isDirtyRef.current;
+    const warnForEdit = !!editId && (
+      title !== initialTitleRef.current ||
+      JSON.stringify(sections) !== initialSectionsRef.current
+    );
     if (warnForNew || warnForEdit) {
       setShowDiscardConfirm(true);
     } else {
