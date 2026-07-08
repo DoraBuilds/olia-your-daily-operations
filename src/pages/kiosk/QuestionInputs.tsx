@@ -94,9 +94,9 @@ export function TemperatureSliderInput({
   acceptableMax?: number;
   unit?: "C" | "F";
 }) {
-  const sliderMin = unit === "F" ? 32 : 0;
-  const sliderMax = unit === "F" ? 104 : 40;
-  const displayValue = value === "" ? sliderMin : Number(value);
+  const sliderMin = acceptableMin != null ? acceptableMin : (unit === "F" ? 32 : 0);
+  const sliderMax = acceptableMax != null ? acceptableMax : (unit === "F" ? 104 : 40);
+  const displayValue = value === "" ? sliderMin : Math.round(Number(value) * 10) / 10;
 
   const hasAcceptableRange = acceptableMin != null || acceptableMax != null;
   const outOfRange = hasAcceptableRange && value !== "" && (
@@ -124,9 +124,9 @@ export function TemperatureSliderInput({
         type="range"
         min={sliderMin}
         max={sliderMax}
-        step={1}
+        step={0.1}
         value={displayValue}
-        onChange={e => onChange(Number(e.target.value))}
+        onChange={e => onChange(Math.round(Number(e.target.value) * 10) / 10)}
         className="w-full cursor-pointer"
         style={{ accentColor: outOfRange ? "var(--status-error)" : "var(--sage)" }}
       />
