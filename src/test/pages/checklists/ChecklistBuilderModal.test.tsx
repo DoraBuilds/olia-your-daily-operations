@@ -51,12 +51,12 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
   it("renders without crashing", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Build checklist")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toBeInTheDocument();
   });
 
-  it("shows 'Build checklist' title for new checklist", () => {
+  it("shows the Title input for a new checklist", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Build checklist")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toBeInTheDocument();
   });
 
   it("has a Title input field", () => {
@@ -508,7 +508,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     vi.clearAllMocks();
   });
 
-  it("shows 'Edit checklist' title when editId is provided", () => {
+  it("pre-fills the title input when editId is provided", () => {
     renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
@@ -525,7 +525,8 @@ describe("ChecklistBuilderModal - edit mode", () => {
         ]}
       />
     );
-    expect(screen.getByText("Edit checklist")).toBeInTheDocument();
+    const titleInput = screen.getByPlaceholderText(/Morning Opening Checklist/);
+    expect((titleInput as HTMLInputElement).value).toBe("Existing Checklist");
   });
 
   it("pre-fills title in edit mode", () => {

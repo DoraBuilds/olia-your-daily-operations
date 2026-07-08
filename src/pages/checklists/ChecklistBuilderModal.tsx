@@ -354,36 +354,13 @@ export function ChecklistBuilderModal({
 
   const formContent = (
     <>
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0 sticky top-0 z-10 bg-card">
-        {asPage ? (
+      {/* Form body — no inner scroll; outer overlay handles all scrolling */}
+      <div className="p-5 space-y-5">
+        {asPage && (
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> Back
           </button>
-        ) : (
-          <button onClick={handleRequestClose} className="btn-icon">
-            <X size={18} className="text-muted-foreground" />
-          </button>
         )}
-        <h2 className="font-display text-lg text-foreground">
-          {editId ? "Edit checklist" : "Build checklist"}
-        </h2>
-        <button
-          disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-          onClick={handleCreate}
-          className={cn(
-            "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
-            !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-              ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
-          )}
-        >
-          {isSaving ? "Publishing…" : "Publish"}
-        </button>
-      </div>
-
-      {/* Form body — no inner scroll; outer overlay handles all scrolling */}
-      <div className="p-5 space-y-5">
         {/* Locations */}
         <div className="space-y-3">
           <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Locations</label>
@@ -1317,6 +1294,21 @@ export function ChecklistBuilderModal({
         </div>
         {subModals}
         {discardConfirmDialog}
+        {createPortal(
+          <button
+            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+            onClick={handleCreate}
+            className={cn(
+              "fixed bottom-24 right-4 z-50 shadow-lg px-5 py-3 rounded-2xl text-sm font-medium transition-colors",
+              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {isSaving ? "Publishing…" : "Publish"}
+          </button>,
+          document.body
+        )}
       </>
     );
   }
@@ -1326,7 +1318,10 @@ export function ChecklistBuilderModal({
     <>
       <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm overflow-y-auto">
         <div className="flex min-h-full items-end sm:items-center justify-center sm:py-8 px-0 sm:px-4 pb-20">
-          <div className="bg-card w-full max-w-3xl rounded-t-2xl sm:rounded-2xl flex flex-col shadow-xl">
+          <div className="relative bg-card w-full max-w-3xl rounded-t-2xl sm:rounded-2xl flex flex-col shadow-xl">
+            <button onClick={handleRequestClose} className="absolute top-3 right-3 z-10 btn-icon">
+              <X size={18} className="text-muted-foreground" />
+            </button>
             {formContent}
           </div>
         </div>
