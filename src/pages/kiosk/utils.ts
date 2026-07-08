@@ -3,11 +3,9 @@
 import type { LogicComparator, LogicRule, QuestionDef } from "@/pages/checklists/types";
 import type { KioskChecklist, KioskDraftSnapshot, Question, QuestionType, TimeOfDay } from "./types";
 
-// "datetime" is intentionally excluded — removed from builder in P0 triage pass.
-// Existing saved questions with responseType "datetime" fall back to "text".
-// "signature" and "person" are also excluded (removed earlier) for the same reason.
+// "signature" and "person" are excluded (removed from builder); they fall back to "text".
 export const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
-  "checkbox", "text", "number", "multiple_choice", "instruction", "media",
+  "checkbox", "text", "number", "datetime", "multiple_choice", "instruction", "media",
 ];
 
 /**
