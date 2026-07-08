@@ -55,9 +55,9 @@ describe("ResponseTypePicker", () => {
     expect(screen.getByText("Number")).toBeInTheDocument();
   });
 
-  it("does NOT show Date & Time (removed from builder)", () => {
+  it("shows Date & Time response type", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    expect(screen.queryByText("Date & Time")).not.toBeInTheDocument();
+    expect(screen.getByText("Date & Time")).toBeInTheDocument();
   });
 
   it("shows Photo / Media response type", () => {
