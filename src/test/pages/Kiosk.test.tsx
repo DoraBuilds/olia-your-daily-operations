@@ -853,18 +853,94 @@ describe("Kiosk — PIN Entry Modal", () => {
   });
 
   it("entering 4 digits triggers validation — shows error for wrong PIN (no match)", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [{ id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] }],
+          error: null,
+        });
+      }
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      // Both admin and staff PIN return no match → should show error
+      return Promise.resolve({ data: [], error: null });
+    });
+
     const opened = await openPinModal();
     if (!opened) return;
-    // The rpc mock returns empty data, so any PIN will fail
     for (const d of ["9", "9", "9", "9"]) {
       fireEvent.click(screen.getByRole("button", { name: d }));
     }
     await waitFor(() => {
-      // Either "PIN not recognised" or "Checking PIN…" should appear
-      const errorMsg = screen.queryByText(/PIN not recognised/i);
-      const checkingMsg = screen.queryByText(/Checking PIN/i);
-      expect(errorMsg || checkingMsg).not.toBeNull();
-    }, { timeout: 2000 });
+      expect(screen.queryByText(/PIN not recognised/i)).not.toBeNull();
+    }, { timeout: 3000 });
+  });
+
+  it("staff PIN: valid staff PIN opens the runner with staff name", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [{
+            id: "ck-test-1",
+            title: "Table Setup Check",
+            location_id: "00000000-0000-0000-0000-000000000011",
+            sections: [{ name: "Main", questions: [{ id: "q1", text: "Check done?", responseType: "checkbox", required: false, config: {} }] }],
+          }],
+          error: null,
+        });
+      }
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_admin_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_staff_pin") {
+        return Promise.resolve({
+          data: [{ id: "sp-1", first_name: "Jay", last_name: "Chen", role: "Waiter", organization_id: "org-1" }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    const opened = await openPinModal();
+    if (!opened) return;
+
+    for (const d of ["5", "6", "7", "8"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await waitFor(() => {
+      // Runner opens — staff name appears in the header (alongside a time string)
+      expect(screen.getByText(/Jay Chen/)).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  it("staff PIN: RPC error shows connection error message", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [{ id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] }],
+          error: null,
+        });
+      }
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_admin_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_staff_pin") {
+        return Promise.resolve({ data: null, error: { message: "network error" } });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    const opened = await openPinModal();
+    if (!opened) return;
+
+    for (const d of ["1", "2", "3", "4"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Connection error/i)).not.toBeNull();
+    }, { timeout: 3000 });
   });
 });
 
