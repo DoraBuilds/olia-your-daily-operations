@@ -88,7 +88,20 @@ function MockResponse({
       </div>
     );
   }
-  // "datetime" removed from builder — legacy questions show text preview (falls through below)
+  if (responseType === "datetime") {
+    return (
+      <div className="mt-2 space-y-1.5">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50">
+          <Calendar size={11} className="text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">DD / MM / YYYY</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50 w-32">
+          <Calendar size={11} className="text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">HH : MM</span>
+        </div>
+      </div>
+    );
+  }
   if (responseType === "media") {
     return (
       <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border bg-muted/30 w-32">
