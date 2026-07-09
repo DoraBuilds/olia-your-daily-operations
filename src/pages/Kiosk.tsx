@@ -134,6 +134,8 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  // Maps checklist id → { answers, contributors } so re-edits pre-fill and attribute all staff
+  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[] }>>(new Map());
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
@@ -558,17 +560,24 @@ export default function Kiosk() {
     setCompletedAt(now);
     setScreen("completion");
 
-    // Mark checklist as done so it leaves the Due/Upcoming lists immediately
+    // Mark checklist as done so it leaves the Due/Upcoming lists immediately.
+    // Build contributors list: accumulate all distinct staff who have worked on this checklist.
+    let contributors: string[] = [selectedStaffName];
     if (selectedChecklist) {
       const id = selectedChecklist.id;
-      setCompletedIds(prev => {
-        const next = new Set([...prev, id]);
+      const prev = completedSubmissions.get(id);
+      if (prev) {
+        contributors = [...prev.contributors.filter(n => n !== selectedStaffName), selectedStaffName];
+      }
+      setCompletedIds(prevIds => {
+        const next = new Set([...prevIds, id]);
         if (locationId) {
           const key = `kiosk_done_${now.toISOString().slice(0, 10)}_${locationId}`;
           try { localStorage.setItem(key, JSON.stringify([...next])); } catch { /* ignore */ }
         }
         return next;
       });
+      setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors }]]));
     }
 
     // Save checklist log to Supabase (kiosk uses anon key — no auth session required)
@@ -598,7 +607,7 @@ export default function Kiosk() {
         p_score: score,
         p_answers: answerPayload,
         p_checklist_title: selectedChecklist.title,
-        p_completed_by: selectedStaffName,
+        p_completed_by: contributors.join(", "),
         p_started_at: startedAt ? startedAt.toISOString() : null,
       };
       const { error: dbInsertError } = await supabase.rpc("submit_kiosk_log", rpcPayload);
@@ -656,6 +665,7 @@ export default function Kiosk() {
         staffName={selectedStaffName}
         onComplete={handleComplete}
         onCancel={handleDone}
+        initialAnswers={completedSubmissions.get(selectedChecklist.id)?.answers}
         organizationId={selectedOrgId || teamMember?.organization_id}
         locationId={locationId ?? undefined}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {
@@ -884,16 +894,20 @@ export default function Kiosk() {
                   <p className="section-label mb-2 text-status-ok">Completed today</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {doneChecklists.map((cl, idx) => (
-                      <div
+                      <button
                         key={cl.id}
-                        className="bg-card border border-status-ok/30 rounded-2xl p-4 opacity-70"
+                        onClick={() => handleChecklistSelect(cl)}
+                        className="bg-card border border-status-ok/30 rounded-2xl p-4 text-left hover:bg-status-ok/5 transition-colors active:scale-[0.98]"
                       >
                         <div className="w-full h-20 rounded-xl flex items-center justify-center bg-status-ok/10 mb-3">
                           <Check size={28} className="text-status-ok" />
                         </div>
                         <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
-                        <p className="text-xs text-status-ok mt-1 font-medium">Completed</p>
-                      </div>
+                        <p className="text-xs text-status-ok mt-1 font-medium">
+                          {completedSubmissions.get(cl.id)?.contributors.join(", ") ?? "Completed"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Tap to edit</p>
+                      </button>
                     ))}
                   </div>
                 </div>
