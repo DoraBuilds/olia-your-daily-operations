@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -119,7 +120,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm animate-fade-in sm:p-6"
       onClick={onClose}
@@ -185,6 +186,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
           {converting ? "Converting…" : "Convert to checklist"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

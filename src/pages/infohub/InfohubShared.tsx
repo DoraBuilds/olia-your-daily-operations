@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { supabase } from "@/lib/supabase";
 import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
@@ -45,7 +46,7 @@ export function CenteredModalShell({
   onClose: () => void;
   maxWidthClass?: string;
 }) {
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/30 px-4 pb-8 backdrop-blur-sm sm:items-center sm:px-6 sm:py-10"
       onClick={onClose}
@@ -59,7 +60,8 @@ export function CenteredModalShell({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
