@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Layout } from "@/components/Layout";
 import { Plus, X, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,7 @@ function NewTaskModal({ onClose, onAdd }: {
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in">
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-8 space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
@@ -132,7 +133,8 @@ function NewTaskModal({ onClose, onAdd }: {
           Add task
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

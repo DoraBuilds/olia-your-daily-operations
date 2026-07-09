@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Layout } from "@/components/Layout";
 import { ChevronRight, FileText, Link, Brain, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -94,7 +95,7 @@ const catColors: Record<string, string> = {
 // ─── SOP Detail Sheet (simple modal) ─────────────────────────────────────────
 
 function SOPDetail({ sop, onClose }: { sop: SOP; onClose: () => void }) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col bg-background animate-fade-in">
       <header className="flex items-center gap-3 px-5 py-4 border-b border-border">
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
@@ -159,7 +160,8 @@ function SOPDetail({ sop, onClose }: { sop: SOP; onClose: () => void }) {
 
         <p className="text-xs text-muted-foreground">Last updated {sop.updatedAt}</p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

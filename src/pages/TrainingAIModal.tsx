@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -40,7 +41,7 @@ export function TrainingAIModal({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:pb-8">
         <div className="flex items-center justify-between">
@@ -108,6 +109,7 @@ export function TrainingAIModal({
           {generating ? "Generating…" : "Generate training module"}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

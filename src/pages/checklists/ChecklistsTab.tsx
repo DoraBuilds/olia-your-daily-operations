@@ -459,7 +459,7 @@ export function ChecklistsTab() {
         )}
       </Suspense>
 
-      {showNewFolder && (
+      {showNewFolder && createPortal(
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
@@ -477,7 +477,8 @@ export function ChecklistsTab() {
               Create folder
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {contextMenu && (
@@ -485,7 +486,7 @@ export function ChecklistsTab() {
           onClose={() => setContextMenu(null)} />
       )}
 
-      {deleteConfirm && (
+      {deleteConfirm && createPortal(
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center gap-3">
@@ -512,7 +513,8 @@ export function ChecklistsTab() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {moveTarget && (
@@ -531,7 +533,7 @@ export function ChecklistsTab() {
         />
       )}
 
-      {renameTarget && (
+      {renameTarget && createPortal(
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
@@ -553,7 +555,8 @@ export function ChecklistsTab() {
               Rename
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

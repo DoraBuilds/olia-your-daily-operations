@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { X, ClipboardList, FileUp, Sparkles, FolderPlus, ChevronRight } from "lucide-react";
 
 export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI, onCreateFolder }: {
@@ -14,7 +15,7 @@ export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI,
     { label: "Create a folder", icon: FolderPlus, action: onCreateFolder },
   ];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 px-4 pb-8 backdrop-blur-sm animate-fade-in sm:items-center sm:px-6 sm:py-10">
       <div className="bg-card w-full max-w-md rounded-3xl border border-border p-5 pb-6 space-y-1 shadow-2xl animate-fade-in">
         <div className="flex items-center justify-between mb-3">
@@ -40,6 +41,7 @@ export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI,
           </button>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1330,7 +1330,7 @@ export function ChecklistBuilderModal({
   }
 
   // Modal mode — single scroll container is the outer overlay; card grows naturally
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm overflow-y-auto">
         <div className="flex min-h-full items-end sm:items-center justify-center sm:py-8 px-0 sm:px-4 pb-20">
@@ -1344,6 +1344,7 @@ export function ChecklistBuilderModal({
       </div>
       {subModals}
       {discardConfirmDialog}
-    </>
+    </>,
+    document.body
   );
 }

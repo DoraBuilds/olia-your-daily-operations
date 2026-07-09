@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { Move, Pencil, Copy, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export function ItemContextMenu({ type, onAction, onClose }: {
   ];
   const actions = type === "folder" ? folderActions : checklistActions;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8" onClick={onClose}>
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-2 pb-20 animate-fade-in sm:max-w-xl sm:rounded-2xl sm:pb-4" onClick={e => e.stopPropagation()}>
         {actions.map(a => (
@@ -32,6 +33,7 @@ export function ItemContextMenu({ type, onAction, onClose }: {
           </button>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
