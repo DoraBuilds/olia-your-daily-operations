@@ -134,6 +134,7 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [completedAnswers, setCompletedAnswers] = useState<Map<string, Record<string, any>>>(new Map());
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
@@ -569,6 +570,7 @@ export default function Kiosk() {
         }
         return next;
       });
+      setCompletedAnswers(prev => new Map([...prev, [id, answers]]));
     }
 
     // Save checklist log to Supabase (kiosk uses anon key — no auth session required)
@@ -656,6 +658,7 @@ export default function Kiosk() {
         staffName={selectedStaffName}
         onComplete={handleComplete}
         onCancel={handleDone}
+        initialAnswers={completedAnswers.get(selectedChecklist.id)}
         organizationId={selectedOrgId || teamMember?.organization_id}
         locationId={locationId ?? undefined}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {
@@ -884,16 +887,17 @@ export default function Kiosk() {
                   <p className="section-label mb-2 text-status-ok">Completed today</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {doneChecklists.map((cl, idx) => (
-                      <div
+                      <button
                         key={cl.id}
-                        className="bg-card border border-status-ok/30 rounded-2xl p-4 opacity-70"
+                        onClick={() => handleChecklistSelect(cl)}
+                        className="bg-card border border-status-ok/30 rounded-2xl p-4 text-left hover:bg-status-ok/5 transition-colors active:scale-[0.98]"
                       >
                         <div className="w-full h-20 rounded-xl flex items-center justify-center bg-status-ok/10 mb-3">
                           <Check size={28} className="text-status-ok" />
                         </div>
                         <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
-                        <p className="text-xs text-status-ok mt-1 font-medium">Completed</p>
-                      </div>
+                        <p className="text-xs text-status-ok mt-1 font-medium">Completed · tap to edit</p>
+                      </button>
                     ))}
                   </div>
                 </div>

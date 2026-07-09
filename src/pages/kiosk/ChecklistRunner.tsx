@@ -20,7 +20,7 @@ import { QuestionInput } from "./QuestionInputs";
 // Answers are persisted to localStorage so progress survives interruptions.
 export function ChecklistRunner({
   checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
-  organizationId, locationId,
+  organizationId, locationId, initialAnswers,
 }: {
   checklist: KioskChecklist;
   staffName: string;
@@ -31,9 +31,15 @@ export function ChecklistRunner({
   organizationId?: string;
   /** Location ID — used to scope photo uploads to the correct storage path */
   locationId?: string;
+  /** Pre-filled answers when re-editing a completed checklist */
+  initialAnswers?: Record<string, any>;
 }) {
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
-  const [initialDraft] = useState(() => loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions));
+  const [initialDraft] = useState(() => {
+    const draft = loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions);
+    if (initialAnswers) return { ...draft, answers: initialAnswers, hasSavedDraft: false };
+    return draft;
+  });
   const draftRef = useRef(initialDraft);
 
   const [answers, setAnswers] = useState<Record<string, any>>(() => initialDraft.answers);
