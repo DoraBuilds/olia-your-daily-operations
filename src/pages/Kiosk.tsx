@@ -134,8 +134,8 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  // Maps checklist id → { answers, contributors } so re-edits pre-fill and attribute all staff
-  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[] }>>(new Map());
+  // Maps checklist id → { answers, contributors, logId } so re-edits pre-fill, attribute all staff, and update in place
+  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[]; logId: string | null }>>(new Map());
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
@@ -439,12 +439,15 @@ export default function Kiosk() {
   useEffect(() => {
     if (!locationId) return;
     drainQueue(async (payload) => {
-      // Queued payloads use the RPC parameter shape (p_* keys) written by handleComplete.
-      // Legacy queue entries with the old direct-insert shape are discarded gracefully —
-      // the RPC will raise an exception which drainQueue catches and keeps in the queue
-      // until MAX_ATTEMPTS is reached.
-      const { error } = await supabase.rpc("submit_kiosk_log", payload as any);
-      if (error) throw new Error(error.message);
+      // Payloads tagged with _log_id are re-edit updates; all others are fresh inserts.
+      if (payload._log_id) {
+        const { _log_id, ...rest } = payload;
+        const { error } = await supabase.rpc("update_kiosk_log", rest as any);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase.rpc("submit_kiosk_log", payload as any);
+        if (error) throw new Error(error.message);
+      }
     }).then(n => {
       if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
     });
@@ -563,11 +566,13 @@ export default function Kiosk() {
     // Mark checklist as done so it leaves the Due/Upcoming lists immediately.
     // Build contributors list: accumulate all distinct staff who have worked on this checklist.
     let contributors: string[] = [selectedStaffName];
+    let existingLogId: string | null = null;
     if (selectedChecklist) {
       const id = selectedChecklist.id;
       const prev = completedSubmissions.get(id);
       if (prev) {
         contributors = [...prev.contributors.filter(n => n !== selectedStaffName), selectedStaffName];
+        existingLogId = prev.logId;
       }
       setCompletedIds(prevIds => {
         const next = new Set([...prevIds, id]);
@@ -577,10 +582,11 @@ export default function Kiosk() {
         }
         return next;
       });
-      setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors }]]));
     }
 
-    // Save checklist log to Supabase (kiosk uses anon key — no auth session required)
+    // Save checklist log to Supabase (kiosk uses anon key — no auth session required).
+    // If this is a re-edit of an existing submission, update the row in place instead of
+    // inserting a new one — prevents duplicate entries in Reporting.
     if (selectedChecklist && selectedOrgId) {
       const questions = selectedChecklist.questions ?? [];
       // Instruction-type questions are display-only and must not count toward the score
@@ -592,32 +598,63 @@ export default function Kiosk() {
       const score = scorable.length > 0 ? Math.round((answered / scorable.length) * 100) : 100;
       const answerPayload = questions.map(q => ({
         label: q.text,
-        type: q.type,          // q.responseType does not exist on the local Question type
+        type: q.type,
         answer: String(answers[q.id] ?? ""),
         hasPhoto: q.type === "media" ? Boolean(answers[q.id]) : undefined,
         comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
       }));
+      const completedBy = contributors.join(", ");
 
-      // Submit via SECURITY DEFINER RPC — organization_id is resolved server-side
-      // from p_location_id so the client can never spoof a different org (SEQ-003).
-      const rpcPayload = {
-        p_location_id: locationId ?? null,
-        p_checklist_id: selectedChecklist.id,
-        p_staff_profile_id: selectedStaffId ?? null,
-        p_score: score,
-        p_answers: answerPayload,
-        p_checklist_title: selectedChecklist.title,
-        p_completed_by: contributors.join(", "),
-        p_started_at: startedAt ? startedAt.toISOString() : null,
-      };
-      const { error: dbInsertError } = await supabase.rpc("submit_kiosk_log", rpcPayload);
+      let returnedLogId: string | null = existingLogId;
+      let dbError: any = null;
 
-      if (dbInsertError) {
-        // Queue for retry — the submission will be retried on next kiosk load
-        const msg = dbInsertError.message ?? "Unknown error";
-        console.error("Checklist log insert failed, queuing for retry:", msg);
+      if (existingLogId) {
+        // Re-edit: update the existing log row
+        const updatePayload = {
+          p_log_id:       existingLogId,
+          p_location_id:  locationId ?? null,
+          p_score:        score,
+          p_answers:      answerPayload,
+          p_completed_by: completedBy,
+          p_started_at:   startedAt ? startedAt.toISOString() : null,
+        };
+        const { error } = await supabase.rpc("update_kiosk_log", updatePayload);
+        if (error) {
+          dbError = error;
+          // Tag with _log_id so the drain knows to call update_kiosk_log, not submit_kiosk_log
+          enqueueLog({ ...updatePayload, _log_id: existingLogId });
+        }
+      } else {
+        // First submission: insert via SECURITY DEFINER RPC — org resolved server-side (SEQ-003)
+        const insertPayload = {
+          p_location_id:      locationId ?? null,
+          p_checklist_id:     selectedChecklist.id,
+          p_staff_profile_id: selectedStaffId ?? null,
+          p_score:            score,
+          p_answers:          answerPayload,
+          p_checklist_title:  selectedChecklist.title,
+          p_completed_by:     completedBy,
+          p_started_at:       startedAt ? startedAt.toISOString() : null,
+        };
+        const { data, error } = await supabase.rpc("submit_kiosk_log", insertPayload);
+        if (error) {
+          dbError = error;
+          enqueueLog(insertPayload);
+        } else {
+          returnedLogId = data as string ?? null;
+        }
+      }
+
+      if (dbError) {
+        const msg = dbError.message ?? "Unknown error";
+        console.error("Checklist log save failed, queuing for retry:", msg);
         setInsertError(`Submission queued (offline/error): ${msg}`);
-        enqueueLog(rpcPayload);
+      }
+
+      // Store final submission state (answers, contributors, logId) for potential future re-edits
+      if (selectedChecklist) {
+        const id = selectedChecklist.id;
+        setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors, logId: returnedLogId }]]));
       }
 
       // Evaluate checklist logic rules and send notify-trigger emails.
