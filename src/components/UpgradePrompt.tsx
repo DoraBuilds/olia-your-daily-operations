@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, X, ExternalLink } from "lucide-react";
 import { PLAN_LABELS, type Plan } from "@/lib/plan-features";
@@ -17,7 +18,7 @@ export function UpgradePrompt({
   const navigate = useNavigate();
   const isNative = useIsNativeApp();
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8">
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-10 space-y-4 animate-fade-in sm:max-w-xl sm:rounded-2xl sm:pb-6">
         {/* Header */}
@@ -72,6 +73,7 @@ export function UpgradePrompt({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

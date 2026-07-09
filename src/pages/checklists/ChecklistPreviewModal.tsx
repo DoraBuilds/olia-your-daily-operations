@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
@@ -157,7 +158,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8"
       onClick={onClose}
@@ -294,6 +295,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
