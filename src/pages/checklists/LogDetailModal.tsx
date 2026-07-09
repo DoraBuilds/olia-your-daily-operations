@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { X, Camera, Check, MessageSquare, FileText, Hash, Type, Calendar, GitBranch, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportLogDetailPdf } from "@/lib/export-utils";
@@ -48,7 +49,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
     });
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:px-4 sm:py-8" onClick={onClose}>
       <div className="bg-card w-full rounded-t-2xl flex flex-col max-h-[85vh] animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:max-h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col gap-3 px-5 pt-5 pb-4 border-b border-border shrink-0 sm:flex-row sm:items-start sm:justify-between">
@@ -184,6 +185,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
