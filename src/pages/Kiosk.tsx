@@ -134,8 +134,8 @@ export default function Kiosk() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  // Maps checklist id → { answers, contributors, logId } so re-edits pre-fill, attribute all staff, and update in place
-  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[]; logId: string | null }>>(new Map());
+  // Maps checklist id → { answers, contributors, logId, editToken } so re-edits pre-fill, attribute all staff, and update in place
+  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[]; logId: string | null; editToken: string | null }>>(new Map());
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
@@ -606,13 +606,14 @@ export default function Kiosk() {
       const completedBy = contributors.join(", ");
 
       let returnedLogId: string | null = existingLogId;
+      let returnedEditToken: string | null = completedSubmissions.get(selectedChecklist.id)?.editToken ?? null;
       let dbError: any = null;
 
-      if (existingLogId) {
-        // Re-edit: update the existing log row
+      if (existingLogId && returnedEditToken) {
+        // Re-edit: update the existing log row — edit_token proves possession (SEQ-edit)
         const updatePayload = {
           p_log_id:       existingLogId,
-          p_location_id:  locationId ?? null,
+          p_edit_token:   returnedEditToken,
           p_score:        score,
           p_answers:      answerPayload,
           p_completed_by: completedBy,
@@ -641,7 +642,9 @@ export default function Kiosk() {
           dbError = error;
           enqueueLog(insertPayload);
         } else {
-          returnedLogId = data as string ?? null;
+          const result = data as { log_id: string; edit_token: string } | null;
+          returnedLogId = result?.log_id ?? null;
+          returnedEditToken = result?.edit_token ?? null;
         }
       }
 
@@ -651,10 +654,10 @@ export default function Kiosk() {
         setInsertError(`Submission queued (offline/error): ${msg}`);
       }
 
-      // Store final submission state (answers, contributors, logId) for potential future re-edits
+      // Store final submission state for potential future re-edits
       if (selectedChecklist) {
         const id = selectedChecklist.id;
-        setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors, logId: returnedLogId }]]));
+        setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors, logId: returnedLogId, editToken: returnedEditToken }]]));
       }
 
       // Evaluate checklist logic rules and send notify-trigger emails.
