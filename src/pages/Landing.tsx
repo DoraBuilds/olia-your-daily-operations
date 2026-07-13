@@ -448,6 +448,14 @@ const css = `
     .ol-footer-links { justify-content: flex-start; }
     .ol-footer-copy { text-align: left; }
   }
+  @media (max-width: 640px) {
+    .ol-nav { padding: 0 20px; height: 56px; }
+    .ol-nav-links { display: none; }
+    .ol-nav-actions .ol-btn-ghost { display: none; }
+    .ol-signin { display: none; }
+    .ol-container { padding: 0 20px; }
+    .ol-hero { padding: 88px 0 48px; }
+  }
 `;
 
 function Tick() {

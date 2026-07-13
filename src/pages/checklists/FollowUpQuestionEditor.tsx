@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Bell,
   Camera,
@@ -474,6 +474,19 @@ function LogicRulesEditor({
   const showLogic = rules.length > 0;
   const isNumericType = question.responseType === "number";
   const isMcType = question.responseType === "multiple_choice" || question.responseType === "checkbox";
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openDropdown === null) return;
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [openDropdown]);
 
   const NUMERIC_COMPARATORS: { key: LogicComparator; label: string }[] = [
     { key: "lt", label: "Less than" },
@@ -720,23 +733,29 @@ function LogicRulesEditor({
                     </button>
                   </div>
                 ))}
-                <div className="relative group inline-block">
-                  <button className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1">
+                <div className="relative inline-block" ref={openDropdown === ri ? dropdownRef : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenDropdown(openDropdown === ri ? null : ri)}
+                    className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
+                  >
                     <Plus size={11} /> trigger
                   </button>
-                  <div className="hidden group-focus-within:block absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
-                    {TRIGGER_OPTIONS.filter(t => t.key !== "require_action" && !rule.triggers.some(rt => rt.type === t.key)).map(t => (
-                      <button
-                        key={t.key}
-                        onClick={() => addTrigger(ri, t.key)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
-                        type="button"
-                      >
-                        <t.icon size={13} className="text-sage shrink-0" />
-                        <span className="text-xs text-foreground">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {openDropdown === ri && (
+                    <div className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
+                      {TRIGGER_OPTIONS.filter(t => t.key !== "require_action" && !rule.triggers.some(rt => rt.type === t.key)).map(t => (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => { addTrigger(ri, t.key); setOpenDropdown(null); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                        >
+                          <t.icon size={13} className="text-sage shrink-0" />
+                          <span className="text-xs text-foreground">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
