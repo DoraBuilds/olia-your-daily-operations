@@ -13,21 +13,11 @@ Items that must be completed before launching to real customers.
 - Test suite — all 5 pre-existing failures fixed (4× Kiosk numpad, 1× Admin LocationModal)
 - Error monitoring — Sentry installed, `ErrorBoundary` wrapping app, `VITE_SENTRY_DSN` wired into deploy workflow (one manual step: create DSN in sentry.io and add as GitHub Actions variable)
 - Infohub — `infohub_folders` + `infohub_documents` Supabase tables + RLS + React Query hooks — fully working
+- Team member invitations — `invite-team-member` edge function + `team_member_invites` table + `/accept-invite` route — fully working, sending from `invites@oliahq.com`
 
 ---
 
 ## 🔲 Pending
-
-### 1. Team member invitations — email delivery
-**Why:** The "Invite team member" button in Admin exists, but there is no email sent. Invited managers receive no notification and cannot create their account.
-
-**What to build:**
-1. Supabase edge function: `invite-team-member` — sends a magic-link-style email via Resend
-2. `team_member_invites` table to track pending invites
-3. `/accept-invite?token=` route to handle click-through
-4. UI: pending invite badge on the team member row
-
----
 
 ### 2. "Build with AI" and "Convert File" — verify edge functions
 **Why:** Both buttons in the Checklist builder call Supabase edge functions. It is not confirmed whether those functions are deployed and returning correct responses.
