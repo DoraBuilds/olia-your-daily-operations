@@ -5,9 +5,9 @@ Items that must be completed before launching to real customers.
 ---
 
 ## ✅ Done
-- Email alert pipeline (Resend + pg_net + DB trigger) — fully working
-- Checklist logic rule "Notify" triggers — working end-to-end
-- Resend sending domain — `oliahq.com` verified
+- Email alert pipeline (Resend + pg_net + DB trigger) — fully working end-to-end, confirmed delivered
+- Checklist logic rule "Notify" triggers — working end-to-end, custom subject supported, delivered to `dora.angelov@gmail.com`
+- Resend sending domain — `oliahq.com` verified, sending as `alerts@oliahq.com`
 - Stripe billing UI — connected to live Stripe account
 - Google Maps address autocomplete + map preview — working
 - Test suite — all 5 pre-existing failures fixed (4× Kiosk numpad, 1× Admin LocationModal)
