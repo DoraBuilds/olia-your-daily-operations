@@ -684,6 +684,7 @@ function LogicRulesEditor({
                                 onChange={e => updateTriggerConfig(ri, ti, { notifyUser: e.target.value })}
                                 className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                               >
+
                                 <option value="">Select recipient…</option>
                                 {notifyRecipients.map(m => (
                                   <option key={m.id} value={m.email}>
@@ -693,7 +694,13 @@ function LogicRulesEditor({
                               </select>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground pl-4">Notification sent by email. SMS/push coming soon.</p>
+                          <input
+                            type="text"
+                            placeholder="Email subject (optional — auto-generated if blank)"
+                            value={trigger.config?.notifyMessage || ""}
+                            onChange={e => updateTriggerConfig(ri, ti, { notifyMessage: e.target.value })}
+                            className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
                         </div>
                       )}
 

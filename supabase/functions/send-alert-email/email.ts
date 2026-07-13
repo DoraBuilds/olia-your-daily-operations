@@ -44,7 +44,10 @@ export function formatAlertWhen(createdAt: string, fallbackTime?: string | null)
 }
 
 export function buildAlertEmail(alert: AlertPayload) {
-  const severityLabel = alert.type === "error" ? "🔴 Error" : "⚠️ Warning";
+  const severityLabel =
+    alert.type === "error" ? "🔴 Error" :
+    alert.type === "warn"  ? "⚠️ Warning" :
+                             "📋 Notification";
   const subject = `${severityLabel}: ${alert.message}`;
   const when = formatAlertWhen(alert.created_at, alert.time);
 
@@ -58,7 +61,7 @@ export function buildAlertEmail(alert: AlertPayload) {
     alert.source ? `Source   : ${alert.source}` : null,
     "",
     "---",
-    "You are receiving this because your location has alert notifications enabled.",
+    "You are receiving this because a checklist notification rule matched.",
     "Log in to Olia to view and dismiss this alert.",
   ]
     .filter((line): line is string => line !== null)
@@ -81,7 +84,7 @@ export function buildAlertEmail(alert: AlertPayload) {
       ${alert.source ? row("Source", alert.source) : ""}
     </table>
     <p style="margin:24px 0 0;font-size:12px;color:#857B72">
-      You are receiving this because your location has alert notifications enabled.
+      You are receiving this because a checklist notification rule matched.
       Log in to Olia to view and dismiss this alert.
     </p>
   </div>

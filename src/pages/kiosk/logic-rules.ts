@@ -115,14 +115,20 @@ export function collectNotifyAlerts(
         );
         if (alreadyAdded) continue;
 
-        const answerStr =
-          answer === undefined || answer === null || answer === "" || answer === false
-            ? "unanswered"
-            : String(answer);
+        const isBlank = answer === undefined || answer === null || answer === "" || answer === false;
+        const answerStr = isBlank ? "not answered" : String(answer);
+
+        const customMessage = trigger.config?.notifyMessage?.trim();
+        const message = customMessage
+          ? customMessage
+          : isBlank
+            ? `"${question.text}" — not answered`
+            : `"${question.text}": ${answerStr}`;
+
         alerts.push({
           recipientEmail,
           questionText: question.text,
-          message: `"${question.text}" answered: ${answerStr} — notify rule triggered`,
+          message,
         });
       }
     }
