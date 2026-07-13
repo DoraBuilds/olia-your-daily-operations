@@ -487,8 +487,8 @@ export function ChecklistsTab() {
       )}
 
       {deleteConfirm && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in sm:items-center sm:pb-0 sm:px-4 sm:py-8">
+          <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in sm:rounded-2xl sm:pb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-status-error/10 flex items-center justify-center shrink-0">
                 <Trash2 size={18} className="text-status-error" />

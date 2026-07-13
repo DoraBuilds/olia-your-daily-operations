@@ -150,7 +150,7 @@ export function useDeleteChecklist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("checklists").delete().eq("id", id);
+      const { error } = await supabase.rpc("delete_checklist", { p_id: id });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["checklists"] }),
