@@ -57,6 +57,7 @@ export interface LogicTrigger {
     questionText?: string;
     followUpQuestion?: QuestionDef;
     notifyUser?: string;
+    notifyMessage?: string;
     actionTitle?: string;
     actionAssignee?: string;
   };
