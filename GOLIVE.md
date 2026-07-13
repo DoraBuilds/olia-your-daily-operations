@@ -7,6 +7,7 @@ Items that must be completed before launching to real customers.
 ## ✅ Done
 - Email alert pipeline (Resend + pg_net + DB trigger) — fully working
 - Checklist logic rule "Notify" triggers — working end-to-end
+- Resend sending domain — `oliahq.com` verified
 - Stripe billing UI — connected to live Stripe account
 - Google Maps address autocomplete + map preview — working
 - Test suite — all 5 pre-existing failures fixed (4× Kiosk numpad, 1× Admin LocationModal)
@@ -48,15 +49,11 @@ Items that must be completed before launching to real customers.
 
 ---
 
-### 4. Verified sending domain for email alerts
-**Why:** Resend's `onboarding@resend.dev` sender can only deliver to your own email address.
-Staff members and other recipients will not receive alert emails until a real domain is verified.
-
-**What to do:**
-1. Register a domain (e.g. `yourolia.app`, `yourbusiness.com`)
-2. Go to resend.com → Domains → Add Domain → follow DNS setup
-3. Once verified, go to Supabase → Settings → Edge Functions → Secrets
-4. Update `ALERT_FROM_EMAIL` to `alerts@yourdomain.com` (or similar)
+### ~~4. Finalize email alert secrets in Supabase~~ ✅ Done
+- Migration `20260713000003`: `insert_kiosk_alert` now callable by authenticated users (was anon-only)
+- Migration `20260713000005`: switched trigger from GUC-based config (blocked by Supabase) to `app_config` table; seeded URL + secret; table locked down so API roles can't read it
+- `ALERT_SECRET` edge function secret synced to match `app_config` table value
+- `ALERT_FROM_EMAIL` updated to `alerts@oliahq.com`
 
 ---
 
