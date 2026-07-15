@@ -21,6 +21,8 @@ export interface InfohubLibraryDoc {
   lastUpdated: string;
   folderId: string;
   access: InfohubAccessControl;
+  filePath?: string;
+  fileType?: string;
 }
 
 export interface InfohubTrainingFolder {
