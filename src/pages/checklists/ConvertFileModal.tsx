@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
-import pdfjsWorkerSrc from "pdfjs-dist/build/pdf.worker.mjs?url";
 
 /** Reads a file as a base64-encoded string. */
 async function fileToBase64(file: File): Promise<string> {
@@ -18,19 +17,31 @@ async function fileToBase64(file: File): Promise<string> {
 /** Extracts text from a PDF using pdfjs-dist (client-side, no API required). */
 async function extractPdfText(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = "";
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    text += content.items
-      .filter((item: any) => "str" in item)
-      .map((item: any) => item.str)
-      .join(" ") + "\n";
+  // Create the Worker ourselves so Vite bundles it with the right URL and Safari
+  // doesn't have to handle pdf.js's internal new Worker() call, which fails on Safari
+  // when loading an ES-module worker from a path-relative URL.
+  const worker = new Worker(
+    new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url),
+    { type: "module" }
+  );
+  pdfjsLib.GlobalWorkerOptions.workerPort = worker;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items
+        .filter((item: any) => "str" in item)
+        .map((item: any) => item.str)
+        .join(" ") + "\n";
+    }
+    return text.trim();
+  } finally {
+    worker.terminate();
+    pdfjsLib.GlobalWorkerOptions.workerPort = null;
   }
-  return text.trim();
 }
 
 /** Extracts readable text from CSV/Excel/PDF files. For images, returns base64 for Claude's vision API. */
@@ -81,6 +92,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
   const [file, setFile] = useState<File | null>(null);
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -140,6 +152,18 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
           </button>
         </div>
         <p className="text-sm text-muted-foreground">Upload an Excel, PDF, or image file and we'll convert it into a checklist.</p>
+        {/* Hidden input kept in DOM so Safari can always trigger it via .click() */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg"
+          className="sr-only"
+          onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
         <div
           data-testid="convert-drop-zone"
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -149,16 +173,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
             "border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer",
             dragOver ? "border-sage bg-sage-light/30" : "border-border hover:border-sage/40"
           )}
-          onClick={() => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = ".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg";
-            input.onchange = e => {
-              const f = (e.target as HTMLInputElement).files?.[0];
-              if (f) handleFile(f);
-            };
-            input.click();
-          }}
+          onClick={() => fileInputRef.current?.click()}
         >
           <FileUp size={32} className="mx-auto text-muted-foreground mb-3" />
           {file ? (

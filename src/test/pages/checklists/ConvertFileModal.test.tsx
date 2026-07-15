@@ -31,9 +31,8 @@ vi.mock("xlsx", () => ({
 }));
 
 // Mock pdfjs-dist so PDF text extraction works in tests without a real worker
-vi.mock("pdfjs-dist/build/pdf.worker.mjs?url", () => ({ default: "/mock-pdf-worker.js" }));
 vi.mock("pdfjs-dist", () => ({
-  GlobalWorkerOptions: { workerSrc: "" },
+  GlobalWorkerOptions: { workerSrc: "", workerPort: null },
   getDocument: vi.fn().mockReturnValue({
     promise: Promise.resolve({
       numPages: 1,
@@ -59,9 +58,9 @@ describe("ConvertFileModal", () => {
   });
 
   it("renders without crashing", () => {
-    const { container } = render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
+    render(<ConvertFileModal onClose={onClose} onConvert={onConvert} />);
     expect(screen.getByText("Convert file to checklist")).toBeInTheDocument();
-    expect(container.querySelector(".max-w-3xl")).toBeInTheDocument();
+    expect(document.body.querySelector(".max-w-3xl")).toBeInTheDocument();
   });
 
   it("shows file upload instruction", () => {

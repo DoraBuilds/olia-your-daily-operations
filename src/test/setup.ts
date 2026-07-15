@@ -39,3 +39,17 @@ if (!global.ResizeObserver) {
     disconnect() {}
   };
 }
+
+// Stub Worker — jsdom doesn't support web workers; components that create Workers
+// (e.g. pdf.js extraction) need this so tests don't throw NotSupportedError.
+global.Worker = class MockWorker {
+  constructor(_url: string | URL, _options?: WorkerOptions) {}
+  terminate() {}
+  postMessage() {}
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() { return false; }
+  onmessage = null;
+  onerror = null;
+  onmessageerror = null;
+} as any;
