@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
 import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
@@ -321,6 +322,159 @@ export function CreateDocModal({
           )}
         >
           Create document
+        </button>
+      </div>
+    </CenteredModalShell>
+  );
+}
+
+export function UploadDocModal({
+  folderId,
+  folders,
+  onClose,
+  onSave,
+}: {
+  folderId: string | null;
+  folders: { id: string; name: string }[];
+  onClose: () => void;
+  onSave: (title: string, folderId: string, filePath: string, fileType: string, tags: string[]) => void;
+}) {
+  const { teamMember } = useAuth();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [title, setTitle] = useState("");
+  const [selectedFolder, setSelectedFolder] = useState(folderId || folders[0]?.id || "");
+  const [tagsInput, setTagsInput] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_SIZE = 20 * 1024 * 1024;
+
+  function handleFile(file: File) {
+    if (file.size > MAX_SIZE) {
+      setError("File is too large. Maximum size is 20 MB.");
+      return;
+    }
+    setError(null);
+    setSelectedFile(file);
+    if (!title) {
+      setTitle(file.name.replace(/\.[^.]+$/, ""));
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }
+
+  async function handleSubmit() {
+    if (!selectedFile || !title.trim() || !selectedFolder) return;
+    const orgId = teamMember?.organization_id;
+    if (!orgId) { setError("Not signed in."); return; }
+    setUploading(true);
+    setError(null);
+    try {
+      const ext = selectedFile.name.includes(".") ? selectedFile.name.slice(selectedFile.name.lastIndexOf(".")) : "";
+      const path = `${orgId}/${Date.now()}${ext}`;
+      const { error: uploadError } = await supabase.storage.from("infohub-files").upload(path, selectedFile);
+      if (uploadError) throw uploadError;
+      const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
+      onSave(title.trim(), selectedFolder, path, selectedFile.type, tags);
+      onClose();
+    } catch (err: any) {
+      setError(err.message ?? "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const canSubmit = !!selectedFile && !!title.trim() && !!selectedFolder && !uploading;
+
+  return (
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-base text-foreground">Upload file</h3>
+          <button onClick={onClose} className="btn-icon">
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div
+          data-testid="upload-dropzone"
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            "border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors",
+            isDragging ? "border-primary bg-sage-light/30" : "border-border hover:border-primary/50 hover:bg-muted/30",
+            selectedFile && "border-sage-deep/40 bg-sage-light/20",
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            data-testid="upload-file-input"
+            className="hidden"
+            accept=".pdf,.doc,.docx,.txt,image/jpeg,image/png,image/webp"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          />
+          {selectedFile ? (
+            <>
+              <FileText size={24} className="text-sage-deep" />
+              <p className="text-sm font-medium text-foreground text-center">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
+            </>
+          ) : (
+            <>
+              <Upload size={24} className="text-muted-foreground" />
+              <p className="text-sm text-muted-foreground text-center">
+                Drag & drop or <span className="text-primary font-medium">browse</span>
+              </p>
+              <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, images · max 20 MB</p>
+            </>
+          )}
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Title</label>
+          <Input data-testid="upload-title-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Fire safety procedure" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Folder</label>
+          <select
+            value={selectedFolder}
+            onChange={(e) => setSelectedFolder(e.target.value)}
+            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>{folder.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">Tags <span className="text-muted-foreground/60">(comma-separated, optional)</span></label>
+          <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="e.g. Safety, Weekly, Kitchen" />
+        </div>
+
+        <button
+          data-testid="upload-submit-btn"
+          disabled={!canSubmit}
+          onClick={handleSubmit}
+          className={cn(
+            "w-full py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2",
+            canSubmit ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {uploading ? (
+            <><Loader2 size={16} className="animate-spin" /> Uploading…</>
+          ) : "Upload file"}
         </button>
       </div>
     </CenteredModalShell>

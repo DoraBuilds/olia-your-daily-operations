@@ -44,6 +44,8 @@ interface InfohubDocumentRow {
     tags?: string[];
     duration?: string;
     steps?: string[];
+    filePath?: string;
+    fileType?: string;
   } | null;
   archived_at: string | null;
   access_scope: InfohubAccessControl["accessScope"];
@@ -78,6 +80,8 @@ interface CreateDocumentInput {
   title: string;
   folderId: string;
   tags?: string[];
+  filePath?: string;
+  fileType?: string;
 }
 
 interface UpdateFolderInput {
@@ -138,6 +142,8 @@ function mapLibraryDocRow(row: InfohubDocumentRow): InfohubLibraryDoc {
     lastUpdated: formatDate(row.updated_at),
     folderId: row.folder_id,
     access: mapAccess(row),
+    filePath: row.metadata?.filePath,
+    fileType: row.metadata?.fileType,
   };
 }
 
@@ -395,7 +401,10 @@ export function useInfohubContent() {
             title: input.title,
             summary: "New document — tap to edit.",
             body: "",
-            metadata: { tags: input.tags ?? [] },
+            metadata: {
+              tags: input.tags ?? [],
+              ...(input.filePath ? { filePath: input.filePath, fileType: input.fileType } : {}),
+            },
             ...applyAccessFields(DEFAULT_INFOHUB_ACCESS),
             created_by: teamMember?.id ?? null,
           }
@@ -436,6 +445,8 @@ export function useInfohubContent() {
                 lastUpdated: now,
                 folderId: input.folderId,
                 access: DEFAULT_INFOHUB_ACCESS,
+                filePath: input.filePath,
+                fileType: input.fileType,
               },
             ],
           };

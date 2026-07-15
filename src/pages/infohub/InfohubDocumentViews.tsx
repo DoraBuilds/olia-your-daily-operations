@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-import { CheckCircle, ChevronLeft, Circle, Pencil, Sparkles, Tag } from "lucide-react";
+import { CheckCircle, ChevronLeft, Circle, Download, FileText, Pencil, Sparkles, Tag } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 import { cn } from "@/lib/utils";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc } from "@/lib/infohub-catalog";
@@ -25,6 +26,14 @@ export function LibraryDocDetail({
   const [editSummary, setEditSummary] = useState(doc.summary);
   const [editContent, setEditContent] = useState(doc.content);
   const [editTags, setEditTags] = useState(doc.tags.join(", "));
+  const [fileSignedUrl, setFileSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!doc.filePath) return;
+    supabase.storage.from("infohub-files").createSignedUrl(doc.filePath, 86400).then(({ data }) => {
+      if (data?.signedUrl) setFileSignedUrl(data.signedUrl);
+    });
+  }, [doc.filePath]);
 
   function handleSave() {
     onSave({
@@ -126,6 +135,33 @@ export function LibraryDocDetail({
                 </span>
               ))}
             </div>
+            {doc.filePath && (
+              <div className="card-surface p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
+                  <FileText size={18} className="text-lavender-deep" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                  <p className="text-xs text-muted-foreground">{doc.fileType ?? "File"}</p>
+                </div>
+                {fileSignedUrl ? (
+                  <a
+                    href={fileSignedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="p-2 rounded-full hover:bg-muted transition-colors"
+                    aria-label="Download file"
+                  >
+                    <Download size={16} className="text-muted-foreground" />
+                  </a>
+                ) : (
+                  <div className="p-2 rounded-full">
+                    <Download size={16} className="text-muted-foreground/40" />
+                  </div>
+                )}
+              </div>
+            )}
             <div className="card-surface p-5">
               {doc.content ? (
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{doc.content}</p>

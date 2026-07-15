@@ -34,6 +34,12 @@ vi.mock("@/lib/supabase", () => ({
     functions: {
       invoke: vi.fn(),
     },
+    storage: {
+      from: vi.fn().mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: "https://example.com/signed" } }),
+      }),
+    },
   },
 }));
 
@@ -415,6 +421,15 @@ describe("Infohub page", () => {
       expect(screen.getByText("New document")).toBeInTheDocument();
       expect(screen.queryByText("Title")).toBeTruthy();
     }
+  });
+
+  it("clicking 'Upload file' from Plus menu opens UploadDoc modal (not CreateDoc)", () => {
+    renderWithProviders(<Infohub />);
+    fireEvent.click(screen.getByLabelText("Add content"));
+    fireEvent.click(screen.getByText("Upload file"));
+    expect(screen.getByTestId("upload-dropzone")).toBeInTheDocument();
+    expect(screen.getByTestId("upload-file-input")).toBeInTheDocument();
+    expect(screen.queryByTestId("doc-title-input")).toBeNull();
   });
 
   it("folder context menu (3-dot) opens when MoreVertical button is clicked", () => {

@@ -31,7 +31,7 @@ import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessCont
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
-import { AIActionsSheet, CreateDocModal, CreateFolderModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay } from "./infohub/InfohubShared";
+import { AIActionsSheet, CreateDocModal, CreateFolderModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
 
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
@@ -61,6 +61,7 @@ export default function Infohub() {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showCreateDoc, setShowCreateDoc] = useState(false);
+  const [showUploadDoc, setShowUploadDoc] = useState(false);
 
   // Data state
   const libFolders = infohubData.libraryFolders;
@@ -664,7 +665,7 @@ export default function Infohub() {
           setShowPlusMenu(false);
           if (action === "folder") setShowCreateFolder(true);
           if (action === "document") setShowCreateDoc(true);
-          if (action === "upload") setShowCreateDoc(true);
+          if (action === "upload") setShowUploadDoc(true);
         }} />
       )}
       {showCreateFolder && (
@@ -689,6 +690,23 @@ export default function Infohub() {
             }
 
             createDocument.mutate({ section: "training", title, folderId });
+          }}
+        />
+      )}
+      {showUploadDoc && (
+        <UploadDocModal
+          folderId={subTab === "library" ? currentLibFolder : currentTrainFolder}
+          folders={subTab === "library" ? allLibFolderOptions : allTrainFolderOptions}
+          onClose={() => setShowUploadDoc(false)}
+          onSave={(title, folderId, filePath, fileType, tags) => {
+            createDocument.mutate({
+              section: subTab === "library" ? "library" : "training",
+              title,
+              folderId,
+              filePath,
+              fileType,
+              tags,
+            });
           }}
         />
       )}
