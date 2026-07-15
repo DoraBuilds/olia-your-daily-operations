@@ -328,6 +328,78 @@ export function CreateDocModal({
   );
 }
 
+export function FilePreviewModal({
+  signedUrl,
+  fileType,
+  title,
+  onClose,
+}: {
+  signedUrl: string;
+  fileType: string;
+  title: string;
+  onClose: () => void;
+}) {
+  const isImage = fileType.startsWith("image/");
+  const isPdf = fileType === "application/pdf";
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex flex-col bg-foreground/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border shrink-0" onClick={e => e.stopPropagation()}>
+        <p className="text-sm font-medium text-foreground truncate flex-1 mr-3">{title}</p>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={signedUrl}
+            download={title}
+            onClick={e => e.stopPropagation()}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+            aria-label="Download"
+          >
+            <Download size={18} className="text-muted-foreground" />
+          </a>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors" aria-label="Close preview">
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
+        {isImage && (
+          <img
+            src={signedUrl}
+            alt={title}
+            className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+          />
+        )}
+        {isPdf && (
+          <iframe
+            src={signedUrl}
+            title={title}
+            className="w-full h-full rounded-xl shadow-lg bg-white"
+          />
+        )}
+        {!isImage && !isPdf && (
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-lavender-light flex items-center justify-center">
+              <FileText size={28} className="text-lavender-deep" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">{title}</p>
+              <p className="text-xs text-muted-foreground mt-1">This file type can't be previewed in the browser.</p>
+            </div>
+            <a
+              href={signedUrl}
+              download={title}
+              className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Download to open
+            </a>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function UploadDocModal({
   folderId,
   folders,
