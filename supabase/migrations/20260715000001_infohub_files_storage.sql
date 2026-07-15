@@ -31,7 +31,7 @@ CREATE POLICY "infohub_file_upload_own_org"
     AND (storage.foldername(name))[1] = (
       SELECT organization_id::text
       FROM public.team_members
-      WHERE user_id = auth.uid()
+      WHERE id = auth.uid() OR auth_user_id = auth.uid()
       LIMIT 1
     )
   );
@@ -44,7 +44,7 @@ CREATE POLICY "infohub_file_read_own_org"
     AND (storage.foldername(name))[1] = (
       SELECT organization_id::text
       FROM public.team_members
-      WHERE user_id = auth.uid()
+      WHERE id = auth.uid() OR auth_user_id = auth.uid()
       LIMIT 1
     )
   );
@@ -57,7 +57,7 @@ CREATE POLICY "infohub_file_delete_own_org"
     AND (storage.foldername(name))[1] = (
       SELECT organization_id::text
       FROM public.team_members
-      WHERE user_id = auth.uid()
+      WHERE id = auth.uid() OR auth_user_id = auth.uid()
       LIMIT 1
     )
   );
