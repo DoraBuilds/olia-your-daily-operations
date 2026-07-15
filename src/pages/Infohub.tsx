@@ -32,7 +32,7 @@ import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessCont
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
-import { AIActionsSheet, CreateDocModal, CreateFolderModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
+import { AIActionsSheet, CreateDocModal, CreateFolderModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
 
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ export default function Infohub() {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [showCreateDoc, setShowCreateDoc] = useState(false);
   const [showUploadDoc, setShowUploadDoc] = useState(false);
+  const [filePreview, setFilePreview] = useState<{ signedUrl: string; fileType: string; title: string } | null>(null);
 
   // Data state
   const libFolders = infohubData.libraryFolders;
@@ -339,7 +340,7 @@ export default function Infohub() {
   const handleOpenLibDoc = async (doc: DocItem) => {
     if (doc.filePath) {
       const { data } = await supabase.storage.from("infohub-files").createSignedUrl(doc.filePath, 3600);
-      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+      if (data?.signedUrl) setFilePreview({ signedUrl: data.signedUrl, fileType: doc.fileType ?? "", title: doc.title });
     } else {
       setSelectedDoc(doc);
     }
@@ -729,6 +730,14 @@ export default function Infohub() {
               tags,
             });
           }}
+        />
+      )}
+      {filePreview && (
+        <FilePreviewModal
+          signedUrl={filePreview.signedUrl}
+          fileType={filePreview.fileType}
+          title={filePreview.title}
+          onClose={() => setFilePreview(null)}
         />
       )}
       {accessTarget && (
