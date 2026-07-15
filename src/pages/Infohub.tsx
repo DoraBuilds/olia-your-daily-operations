@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
+import { supabase } from "@/lib/supabase";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useLocations } from "@/hooks/useLocations";
 import { useTrainingProgress } from "@/hooks/useTrainingProgress";
@@ -294,7 +295,18 @@ export default function Infohub() {
       {
         label: "Download file",
         icon: <Download size={16} className="text-muted-foreground" />,
-        onClick: () => {
+        onClick: async () => {
+          const libraryDoc = section === "library" ? (doc as DocItem) : null;
+          if (libraryDoc?.filePath) {
+            const { data } = await supabase.storage.from("infohub-files").createSignedUrl(libraryDoc.filePath, 3600);
+            if (data?.signedUrl) {
+              const a = document.createElement("a");
+              a.href = data.signedUrl;
+              a.download = doc.title;
+              a.click();
+            }
+            return;
+          }
           let text: string;
           if (section === "library") {
             const libraryDoc = doc as DocItem;
@@ -322,6 +334,15 @@ export default function Infohub() {
     }
     actions.push({ label: "Archive file", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) });
     return actions;
+  };
+
+  const handleOpenLibDoc = async (doc: DocItem) => {
+    if (doc.filePath) {
+      const { data } = await supabase.storage.from("infohub-files").createSignedUrl(doc.filePath, 3600);
+      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    } else {
+      setSelectedDoc(doc);
+    }
   };
 
   return (
@@ -440,11 +461,11 @@ export default function Infohub() {
                 {accessibleDocsInCurrentFolder.map(doc => (
                   <div key={doc.id} className="relative">
                     <div
-                      onClick={() => setSelectedDoc(doc)}
+                      onClick={() => handleOpenLibDoc(doc)}
                       className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/30 transition-colors cursor-pointer"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
-                        <FileText size={16} className="text-sage-deep" />
+                      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", doc.filePath ? "bg-lavender-light" : "bg-sage-light")}>
+                        <FileText size={16} className={doc.filePath ? "text-lavender-deep" : "text-sage-deep"} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

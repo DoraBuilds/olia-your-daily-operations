@@ -399,7 +399,7 @@ export function useInfohubContent() {
             section: input.section,
             folder_id: input.folderId,
             title: input.title,
-            summary: "New document — tap to edit.",
+            summary: input.filePath ? "Uploaded file" : "New document — tap to edit.",
             body: "",
             metadata: {
               tags: input.tags ?? [],
@@ -439,7 +439,7 @@ export function useInfohubContent() {
               {
                 id: crypto.randomUUID(),
                 title: input.title,
-                summary: "New document — tap to edit.",
+                summary: input.filePath ? "Uploaded file" : "New document — tap to edit.",
                 content: "",
                 tags: input.tags ?? [],
                 lastUpdated: now,
