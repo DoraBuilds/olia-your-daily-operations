@@ -218,21 +218,6 @@ export function LogicRulesEditor({
 
                       {trigger.type === "ask_question" && (
                         <div className="space-y-2">
-                          <input
-                            type="text"
-                            placeholder="Follow-up question text"
-                            value={trigger.config?.questionText || ""}
-                            onChange={e => {
-                              const nextFollowUp = trigger.config?.followUpQuestion
-                                ? { ...trigger.config.followUpQuestion, text: e.target.value }
-                                : createDefaultFollowUpQuestion(e.target.value);
-                              updateTriggerConfig(ri, ti, {
-                                questionText: e.target.value,
-                                followUpQuestion: nextFollowUp,
-                              });
-                            }}
-                            className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                          />
                           {trigger.config?.followUpQuestion ? (
                             <FollowUpQuestionEditor
                               question={trigger.config.followUpQuestion}
