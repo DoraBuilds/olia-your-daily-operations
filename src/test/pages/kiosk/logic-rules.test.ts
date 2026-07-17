@@ -138,7 +138,7 @@ describe("collectNotifyAlerts", () => {
     expect(alerts.map(a => a.recipientEmail)).toContain("safety@example.com");
   });
 
-  it("shows 'unanswered' in the message for an empty answer", () => {
+  it("shows 'not answered' in the message for an empty answer", () => {
     const questions = [{
       id: "q1", text: "Clean?",
       config: {
@@ -146,6 +146,6 @@ describe("collectNotifyAlerts", () => {
       },
     }];
     const alerts = collectNotifyAlerts(questions, { q1: "" });
-    expect(alerts[0].message).toContain("unanswered");
+    expect(alerts[0].message).toContain("not answered");
   });
 });

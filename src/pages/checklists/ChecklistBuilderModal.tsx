@@ -123,9 +123,11 @@ export function ChecklistBuilderModal({
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
-  // Snapshot initial values so we can detect real changes at close time
-  const initialTitleRef = useRef(initialTitle ?? "");
-  const initialSectionsRef = useRef(JSON.stringify(initialSections ?? []));
+  // Snapshot the actual initial state values (not the raw props) so that
+  // null/undefined initialSections that fall back to the default section
+  // still compare equal to the state React actually initialised.
+  const initialTitleRef = useRef(title);
+  const initialSectionsRef = useRef(JSON.stringify(sections));
 
   // Intercept Back/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
@@ -406,6 +408,7 @@ export function ChecklistBuilderModal({
       <div className="relative flex justify-center py-0.5">
         <button
           type="button"
+          aria-label="Insert question or section"
           onClick={() => setInsertDropdown(isOpen ? null : { si, qi })}
           className="w-5 h-5 flex items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-sage/60 hover:text-sage transition-colors"
         >

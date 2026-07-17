@@ -106,29 +106,33 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(buttons.length).toBeGreaterThan(0);
   });
 
-  it("has 'Add another question' button", () => {
+  it("has an insert button after each question", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Add another question")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Insert question or section" }).length).toBeGreaterThan(0);
   });
 
-  it("has 'Add a section' button", () => {
+  it("insert button opens a dropdown with Question and Section options", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Add a section")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[0]);
+    expect(screen.getByText("Question")).toBeInTheDocument();
+    expect(screen.getByText("Section")).toBeInTheDocument();
   });
 
-  it("clicking 'Add a section' adds a new section (section name inputs appear)", () => {
+  it("clicking 'Section' in the insert dropdown adds a new section (section name inputs appear)", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     // Initially 1 section — the section name input is hidden (only shown when 2+ sections exist)
     expect(screen.queryByPlaceholderText("Section name")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("Add a section"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[0]);
+    fireEvent.click(screen.getByText("Section"));
     // Now 2 sections → both show the section name input
     expect(screen.getAllByPlaceholderText("Section name").length).toBeGreaterThan(0);
   });
 
-  it("clicking 'Add another question' adds a new question row", () => {
+  it("clicking 'Question' in the insert dropdown adds a new question row", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const beforeInputs = screen.getAllByPlaceholderText("Write your question here").length;
-    fireEvent.click(screen.getByText("Add another question"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[0]);
+    fireEvent.click(screen.getByText("Question"));
     const afterInputs = screen.getAllByPlaceholderText("Write your question here").length;
     expect(afterInputs).toBe(beforeInputs + 1);
   });
@@ -327,7 +331,8 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
   it("shows section name input after adding a second section", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    fireEvent.click(screen.getByText("Add a section"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[0]);
+    fireEvent.click(screen.getByText("Section"));
     expect(screen.getAllByPlaceholderText("Section name").length).toBeGreaterThan(0);
   });
 
