@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/sonner";
 import { createPortal } from "react-dom";
 import {
@@ -116,6 +116,8 @@ export function ChecklistBuilderModal({
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [insertDropdown, setInsertDropdown] = useState<{ si: number; qi: number } | null>(null);
+  const insertDropdownRef = useRef<HTMLDivElement>(null);
   const footerPublishRef = useRef<HTMLButtonElement>(null);
   const [footerPublishVisible, setFooterPublishVisible] = useState(false);
 
@@ -157,6 +159,18 @@ export function ChecklistBuilderModal({
     observer.observe(el);
     return () => observer.disconnect();
   }, [asPage]);
+
+  useEffect(() => {
+    if (insertDropdown === null) return;
+    const handleClick = (e: MouseEvent) => {
+      if (insertDropdownRef.current && !insertDropdownRef.current.contains(e.target as Node)) {
+        setInsertDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [insertDropdown]);
+
   const [showResponsePicker, setShowResponsePicker] = useState<
     | { scope: "main"; sectionIdx: number; questionIdx: number }
     | { scope: "followup"; sectionIdx: number; questionIdx: number; ruleIdx: number; triggerIdx: number }
@@ -186,8 +200,28 @@ export function ChecklistBuilderModal({
 
   const addSection = () => {
     setSections(prev => [...prev, {
-      id: `sec-${Date.now()}`, name: "", questions: [{ id: `q-${Date.now()}`, text: "", responseType: "checkbox", required: true }],
+      id: `sec-${Date.now()}`, name: "", questions: [],
     }]);
+  };
+
+  const addQuestionAt = (sectionIdx: number, afterIdx: number) => {
+    setSections(prev => prev.map((s, i) => {
+      if (i !== sectionIdx) return s;
+      const newQ: QuestionDef = { id: `q-${Date.now()}`, text: "", responseType: "checkbox", required: true, config: {} };
+      const qs = [...s.questions];
+      qs.splice(afterIdx + 1, 0, newQ);
+      return { ...s, questions: qs };
+    }));
+  };
+
+  const addSectionAfter = (afterSectionIdx: number) => {
+    setSections(prev => {
+      const next = [...prev];
+      next.splice(afterSectionIdx + 1, 0, {
+        id: `sec-${Date.now()}`, name: "", questions: [],
+      });
+      return next;
+    });
   };
 
   const updateQuestion = (sectionIdx: number, questionIdx: number, update: Partial<QuestionDef>) => {
@@ -365,6 +399,44 @@ export function ChecklistBuilderModal({
   };
 
   // ── Form content (shared between page and modal modes) ────────────────────
+
+  const renderInsertButton = (si: number, qi: number) => {
+    const isOpen = insertDropdown?.si === si && insertDropdown?.qi === qi;
+    return (
+      <div className="relative flex justify-center py-0.5">
+        <button
+          type="button"
+          onClick={() => setInsertDropdown(isOpen ? null : { si, qi })}
+          className="w-5 h-5 flex items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-sage/60 hover:text-sage transition-colors"
+        >
+          <Plus size={10} />
+        </button>
+        {isOpen && (
+          <div
+            ref={insertDropdownRef}
+            className="absolute top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[140px] left-1/2 -translate-x-1/2"
+          >
+            <button
+              type="button"
+              onClick={() => { addQuestionAt(si, qi); setInsertDropdown(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+            >
+              <Plus size={11} className="text-sage shrink-0" />
+              <span className="text-xs text-foreground">Question</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { addSectionAfter(si); setInsertDropdown(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+            >
+              <Plus size={11} className="text-sage shrink-0" />
+              <span className="text-xs text-foreground">Section</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const formContent = (
     <>
@@ -665,6 +737,8 @@ export function ChecklistBuilderModal({
               </div>
             )}
 
+            {section.questions.length === 0 && renderInsertButton(si, -1)}
+
             {section.questions.map((q, qi) => {
               const cfg = q.config || {};
               const mcSet = q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId) : null;
@@ -673,7 +747,8 @@ export function ChecklistBuilderModal({
               const qKey = `${si}-${qi}`;
               const isDropTarget = dragOverKey === qKey && dragQuestionKey !== qKey;
               return (
-                <div key={q.id} className="relative">
+                <React.Fragment key={q.id}>
+                <div className="relative">
                   {isDropTarget && (
                     <div className="absolute -top-1 left-0 right-0 h-0.5 bg-sage rounded-full z-10 pointer-events-none" />
                   )}
@@ -701,11 +776,9 @@ export function ChecklistBuilderModal({
                     <input type="text" placeholder={q.responseType === "instruction" ? "Instruction title / heading" : "Write your question here"} value={q.text}
                       onChange={e => updateQuestion(si, qi, { text: e.target.value })}
                       className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
-                    {section.questions.length > 1 && (
-                      <button onClick={() => removeQuestion(si, qi)} className="p-1 mt-1 text-muted-foreground hover:text-status-error transition-colors">
-                        <X size={14} />
-                      </button>
-                    )}
+                    <button onClick={() => removeQuestion(si, qi)} className="p-1 mt-1 text-muted-foreground hover:text-status-error transition-colors">
+                      <X size={14} />
+                    </button>
                   </div>
 
                   {(q.uncertain || q.warning) && (
@@ -1165,20 +1238,13 @@ export function ChecklistBuilderModal({
                   />
                 </div>
                 </div>
+                {renderInsertButton(si, qi)}
+                </React.Fragment>
               );
             })}
-
-            <button onClick={() => addQuestion(si)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-sage/40 text-xs text-sage hover:bg-sage-light transition-colors">
-              <Plus size={13} /> Add another question
-            </button>
           </div>
         ))}
 
-        <button onClick={addSection}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-sage/40 transition-colors">
-          <Plus size={13} /> Add a section
-        </button>
       </div>
 
       {/* Footer */}
