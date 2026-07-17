@@ -68,11 +68,13 @@ interface ChecklistBuilderModalProps {
   /** When true, renders as a full-page editor (no overlay).
    *  The parent is responsible for showing/hiding it. */
   asPage?: boolean;
+  /** Called whenever the dirty state changes so the parent can gate router-level navigation blocking. */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialSections, initialLocationIds,
-  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false,
+  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
   const { user, teamMember: authTeamMember } = useAuth();
@@ -161,6 +163,14 @@ export function ChecklistBuilderModal({
     observer.observe(el);
     return () => observer.disconnect();
   }, [asPage]);
+
+  useEffect(() => {
+    if (!onDirtyChange) return;
+    const dirty = !editId
+      ? !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())))
+      : title !== initialTitleRef.current || JSON.stringify(sections) !== initialSectionsRef.current;
+    onDirtyChange(dirty);
+  }, [title, sections, editId, onDirtyChange]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
