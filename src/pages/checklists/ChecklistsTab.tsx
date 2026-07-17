@@ -123,6 +123,7 @@ export function ChecklistsTab() {
   const [prefillLocationIds, setPrefillLocationIds] = useState<string[] | null | undefined>(undefined);
   const [dragFolderId, setDragFolderId] = useState<string | null>(null);
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
+  const [isBuilderDirty, setIsBuilderDirty] = useState(false);
   const [previewChecklist, setPreviewChecklist] = useState<ChecklistItem | null>(null);
   const editingChecklist = editingChecklistId ? dbChecklists.find(c => c.id === editingChecklistId) : null;
   const normalizedSearch = search.trim().toLowerCase();
@@ -143,15 +144,15 @@ export function ChecklistsTab() {
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
-  const blocker = useBlocker(showBuilder);
+  const blocker = useBlocker(showBuilder && isBuilderDirty);
 
-  // Warn the browser when the user tries to leave the tab/app entirely while the builder is open
+  // Warn the browser when the user tries to leave the tab/app entirely while the builder has unsaved changes
   useEffect(() => {
-    if (!showBuilder) return;
+    if (!showBuilder || !isBuilderDirty) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [showBuilder]);
+  }, [showBuilder, isBuilderDirty]);
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
@@ -211,6 +212,7 @@ export function ChecklistsTab() {
       setPrefillSections(undefined);
       setPrefillLocationIds(undefined);
       setEditingChecklistId(null);
+      setIsBuilderDirty(false);
     };
 
     return (
@@ -259,6 +261,7 @@ export function ChecklistsTab() {
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
         editId={editingChecklistId || undefined}
+        onDirtyChange={setIsBuilderDirty}
       />
       </Suspense>
       {blocker.state === "blocked" && createPortal(
