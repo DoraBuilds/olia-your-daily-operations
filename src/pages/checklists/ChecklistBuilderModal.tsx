@@ -408,6 +408,7 @@ export function ChecklistBuilderModal({
       <div className="relative flex justify-center py-0.5">
         <button
           type="button"
+          aria-label="Insert question or section"
           onClick={() => setInsertDropdown(isOpen ? null : { si, qi })}
           className="w-5 h-5 flex items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-sage/60 hover:text-sage transition-colors"
         >
