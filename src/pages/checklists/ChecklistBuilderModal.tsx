@@ -123,9 +123,11 @@ export function ChecklistBuilderModal({
 
   const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
-  // Snapshot initial values so we can detect real changes at close time
-  const initialTitleRef = useRef(initialTitle ?? "");
-  const initialSectionsRef = useRef(JSON.stringify(initialSections ?? []));
+  // Snapshot the actual initial state values (not the raw props) so that
+  // null/undefined initialSections that fall back to the default section
+  // still compare equal to the state React actually initialised.
+  const initialTitleRef = useRef(title);
+  const initialSectionsRef = useRef(JSON.stringify(sections));
 
   // Intercept Back/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
