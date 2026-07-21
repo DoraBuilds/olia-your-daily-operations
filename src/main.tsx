@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { initSentryIfConsented } from "@/lib/sentry";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -12,15 +13,8 @@ import { Capacitor } from "@capacitor/core";
 import { restoreGitHubPagesRoute as restoreGitHubPagesRoutePath } from "@/lib/github-pages-routing";
 
 // ── Sentry error monitoring ───────────────────────────────────────────────────
-// Only initialises when VITE_SENTRY_DSN is set (skipped in local dev).
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    environment: import.meta.env.MODE,
-    integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: 0.1,
-  });
-}
+// Only initialises when VITE_SENTRY_DSN is set AND the user has accepted cookies.
+initSentryIfConsented();
 
 function restoreGitHubPagesRoute() {
   const targetRoute = restoreGitHubPagesRoutePath(

@@ -46,12 +46,12 @@ export function LandingFooter({ onBookDemo }: { onBookDemo?: () => void }) {
             © {new Date().getFullYear()} Olia. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Privacy
-            </a>
-            <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            </Link>
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Terms
-            </a>
+            </Link>
           </div>
         </div>
       </div>

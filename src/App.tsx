@@ -3,12 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
+import { CookieBanner } from "@/components/CookieBanner";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -24,6 +25,17 @@ const Login = lazy(() => import("./pages/Login"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+
+function RootLayout() {
+  return (
+    <>
+      <Outlet />
+      <CookieBanner />
+    </>
+  );
+}
 
 function RouteLoadingFallback() {
   return (
@@ -38,28 +50,35 @@ function RouteLoadingFallback() {
 
 const router = createBrowserRouter(
   [
-    { path: "/", element: <Landing /> },
-    { path: "/kiosk", element: <Kiosk /> },
-    { path: "/signup", element: <Signup /> },
-    { path: "/login", element: <Login /> },
-    { path: "/auth/callback", element: <AuthCallback /> },
-    { path: "/accept-invite", element: <AcceptInvite /> },
-    { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
-    { path: "/notifications", element: <ProtectedRoute><Notifications /></ProtectedRoute> },
-    { path: "/checklists/*", element: <ProtectedRoute><Checklists /></ProtectedRoute> },
-    { path: "/reporting", element: <ProtectedRoute><Reporting /></ProtectedRoute> },
-    { path: "/infohub", element: <Navigate to="/infohub/library" replace /> },
-    { path: "/infohub/library/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
-    { path: "/infohub/training/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
-    { path: "/training/*", element: <Navigate to="/infohub/training" replace /> },
-    { path: "/maintenance", element: <Navigate to="/dashboard" replace /> },
-    { path: "/admin", element: <Navigate to="/admin/location" replace /> },
-    { path: "/admin/location", element: <ProtectedRoute><Admin /></ProtectedRoute> },
-    { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
-    { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
-    { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
-    { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
-    { path: "*", element: <NotFound /> },
+    {
+      element: <RootLayout />,
+      children: [
+        { path: "/", element: <Landing /> },
+        { path: "/privacy", element: <Privacy /> },
+        { path: "/terms", element: <Terms /> },
+        { path: "/kiosk", element: <Kiosk /> },
+        { path: "/signup", element: <Signup /> },
+        { path: "/login", element: <Login /> },
+        { path: "/auth/callback", element: <AuthCallback /> },
+        { path: "/accept-invite", element: <AcceptInvite /> },
+        { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+        { path: "/notifications", element: <ProtectedRoute><Notifications /></ProtectedRoute> },
+        { path: "/checklists/*", element: <ProtectedRoute><Checklists /></ProtectedRoute> },
+        { path: "/reporting", element: <ProtectedRoute><Reporting /></ProtectedRoute> },
+        { path: "/infohub", element: <Navigate to="/infohub/library" replace /> },
+        { path: "/infohub/library/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
+        { path: "/infohub/training/*", element: <ProtectedRoute><Infohub /></ProtectedRoute> },
+        { path: "/training/*", element: <Navigate to="/infohub/training" replace /> },
+        { path: "/maintenance", element: <Navigate to="/dashboard" replace /> },
+        { path: "/admin", element: <Navigate to="/admin/location" replace /> },
+        { path: "/admin/location", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
+        { path: "*", element: <NotFound /> },
+      ],
+    },
   ],
   {
     basename: import.meta.env.BASE_URL,
