@@ -12,11 +12,12 @@ Items that must be completed before launching to real customers.
 - Stripe billing UI — connected to live Stripe account
 - Google Maps address autocomplete + map preview — working
 - Test suite — all 5 pre-existing failures fixed (4× Kiosk numpad, 1× Admin LocationModal)
-- Error monitoring — Sentry installed, `ErrorBoundary` wrapping app, `VITE_SENTRY_DSN` wired into deploy workflow (one manual step: create DSN in sentry.io and add as GitHub Actions variable)
+- Error monitoring — Sentry active, DSN set in GitHub Actions, deployed
 - Infohub — `infohub_folders` + `infohub_documents` Supabase tables + RLS + React Query hooks — fully working
 - Team member invitations — edge function (`invite-team-member`) sends email via Resend, `team_member_invites` table + `validate_invite_token()` + `accept_invite()` RPCs in migration, `AcceptInvite.tsx` OTP flow, pending invite badge + resend button in AccountTab, `/accept-invite` route registered
 - GDPR account deletion — `delete_my_account()` RPC in migration, Delete Account button with "type DELETE to confirm" modal in AccountTab, `?reason=account-deleted` banner on Signup
-- "Build with AI" / "Convert File" — edge function written, both modals have visible error states with humanized messages
+- "Build with AI" / "Convert File" — `generate-checklist`, `generate-training`, `infohub-ai-tools` all deployed, `ANTHROPIC_API_KEY` set, error states in place
+- Google Maps — API key set in GitHub, working in production
 
 ---
 
