@@ -29,17 +29,18 @@ export function CookieBanner() {
           We use essential cookies to run the app, and optional cookies for error
           monitoring. See our{" "}
           <Link
-            to="/privacy"
+            to="/cookies"
             className="underline underline-offset-2 hover:text-foreground transition-colors"
           >
-            Privacy Policy
+            Cookie Policy
           </Link>{" "}
           for details.
         </p>
         <div className="flex gap-2 shrink-0">
+          {/* Equal visual weight required by AEPD — no dark patterns */}
           <button
             onClick={decline}
-            className="px-4 py-2 text-sm font-medium border border-border rounded-xl hover:bg-muted transition-colors"
+            className="px-4 py-2 text-sm font-medium bg-muted text-foreground rounded-xl hover:opacity-80 transition-opacity"
           >
             Essential only
           </button>

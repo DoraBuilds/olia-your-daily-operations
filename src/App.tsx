@@ -27,6 +27,8 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Cookies = lazy(() => import("./pages/Cookies"));
+const AvisoLegal = lazy(() => import("./pages/AvisoLegal"));
 
 function RootLayout() {
   return (
@@ -56,6 +58,8 @@ const router = createBrowserRouter(
         { path: "/", element: <Landing /> },
         { path: "/privacy", element: <Privacy /> },
         { path: "/terms", element: <Terms /> },
+        { path: "/cookies", element: <Cookies /> },
+        { path: "/aviso-legal", element: <AvisoLegal /> },
         { path: "/kiosk", element: <Kiosk /> },
         { path: "/signup", element: <Signup /> },
         { path: "/login", element: <Login /> },

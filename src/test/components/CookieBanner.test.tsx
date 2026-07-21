@@ -78,8 +78,8 @@ describe("CookieBanner", () => {
     expect(initSentryIfConsented).not.toHaveBeenCalled();
   });
 
-  it("shows a link to the Privacy Policy", () => {
+  it("shows a link to the Cookie Policy", () => {
     renderWithProviders(<CookieBanner />);
-    expect(screen.getByRole("link", { name: /privacy policy/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /cookie policy/i })).toBeInTheDocument();
   });
 });

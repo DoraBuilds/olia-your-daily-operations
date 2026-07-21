@@ -27,8 +27,9 @@ export default function Privacy() {
 
         <p className="text-sm text-muted-foreground leading-relaxed">
           Olia ("we", "us", "our") operates oliahq.com and the Olia mobile app. This policy explains
-          what personal data we collect, why we collect it, and your rights under the General Data
-          Protection Regulation (GDPR).
+          what personal data we collect, why we collect it, and your rights under the EU General Data
+          Protection Regulation (GDPR / RGPD) and Spain's Ley Orgánica 3/2018 de Protección de Datos
+          Personales y garantía de los derechos digitales (LOPDGDD).
         </p>
 
         <Section title="1. Who we are">
@@ -108,10 +109,23 @@ export default function Privacy() {
               hello@oliahq.com
             </a>. We will respond within 30 days.
           </p>
+          <p>
+            You also have the right to lodge a complaint with Spain's data protection authority,
+            the{" "}
+            <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Agencia Española de Protección de Datos (AEPD)
+            </a>, C/ Jorge Juan 6, 28001 Madrid.
+          </p>
         </Section>
 
         <Section title="7. Cookies">
-          <p>We use two categories of cookies:</p>
+          <p>
+            We use cookies in compliance with Article 22.2 of Spain's LSSI-CE and AEPD guidelines.
+            A full list of every cookie we use is in our{" "}
+            <Link to="/cookies" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Cookie Policy
+            </Link>. In summary:
+          </p>
           <ul className="list-disc pl-5 space-y-1">
             <li>
               <strong className="text-foreground">Essential:</strong> authentication session cookies set by Supabase. These are required
@@ -119,8 +133,8 @@ export default function Privacy() {
             </li>
             <li>
               <strong className="text-foreground">Analytics / monitoring:</strong> error tracking via Sentry. These are only active
-              if you click "Accept all" on the cookie banner. You can decline without affecting
-              any core functionality.
+              if you click "Accept all" on the cookie banner. Both options are given equal
+              prominence — you can decline without affecting any core functionality.
             </li>
           </ul>
         </Section>
@@ -141,8 +155,10 @@ export default function Privacy() {
         </Section>
 
         {/* Footer */}
-        <div className="pt-6 border-t border-border flex gap-4 text-xs text-muted-foreground">
+        <div className="pt-6 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground">
           <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+          <Link to="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link>
+          <Link to="/aviso-legal" className="hover:text-foreground transition-colors">Aviso Legal</Link>
           <a href="mailto:hello@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
         </div>
       </div>
