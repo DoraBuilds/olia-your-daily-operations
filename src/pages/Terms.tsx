@@ -151,12 +151,22 @@ export default function Terms() {
 
         <Section title="12. Governing law">
           <p>
-            These Terms are governed by the laws of England and Wales. Any disputes will be subject
-            to the exclusive jurisdiction of the courts of England and Wales.
+            These Terms are governed by Spanish law. Any disputes arising from or relating to these
+            Terms or the use of the service will be subject to the exclusive jurisdiction of the
+            courts of Barcelona, Spain, unless mandatory consumer protection law in your country
+            grants you the right to bring proceedings in your local courts.
           </p>
         </Section>
 
-        <Section title="13. Contact">
+        <Section title="13. VAT / IVA">
+          <p>
+            Prices shown do not include VAT (IVA in Spain). For customers based in Spain, IVA at
+            the applicable rate (currently 21%) will be added to invoices. EU business customers
+            outside Spain may be subject to the reverse charge mechanism.
+          </p>
+        </Section>
+
+        <Section title="14. Contact">
           <p>
             For any questions about these Terms, email us at{" "}
             <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
@@ -166,8 +176,10 @@ export default function Terms() {
         </Section>
 
         {/* Footer */}
-        <div className="pt-6 border-t border-border flex gap-4 text-xs text-muted-foreground">
+        <div className="pt-6 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground">
           <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+          <Link to="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link>
+          <Link to="/aviso-legal" className="hover:text-foreground transition-colors">Aviso Legal</Link>
           <a href="mailto:hello@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
         </div>
       </div>
