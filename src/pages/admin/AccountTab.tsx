@@ -174,11 +174,31 @@ export function AccountTab({
       setShowNewPin(false);
       setSavedPin(savedValue);
       setShowSavedPin(false);
+      setRevealedPin(null);
+      setShowRevealedPin(false);
       toast.success("Admin PIN updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
     } finally {
       setPinSaving(false);
+    }
+  };
+
+  const handleRevealPin = async () => {
+    if (!currentAccount?.id) return;
+    setRevealLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_reveal_pin", {
+        p_member_type: "team_member",
+        p_member_id: currentAccount.id,
+      });
+      if (error) throw error;
+      setRevealedPin((data as string) ?? "");
+      setShowRevealedPin(true);
+    } catch (err) {
+      toast.error((err as any)?.message ?? "Could not reveal PIN");
+    } finally {
+      setRevealLoading(false);
     }
   };
 
@@ -379,6 +399,36 @@ export function AccountTab({
                   {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
+              {currentAccount?.id && currentAccount.role === "Owner" && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  {revealedPin !== null ? (
+                    <>
+                      <span className="text-xs text-muted-foreground">
+                        Current PIN:&nbsp;
+                        <span className="font-mono font-medium">
+                          {showRevealedPin ? revealedPin : "••••"}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowRevealedPin(v => !v)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showRevealedPin ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRevealPin}
+                      disabled={revealLoading}
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
+                    >
+                      {revealLoading ? "Loading…" : "View current PIN"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <button
               type="button"
