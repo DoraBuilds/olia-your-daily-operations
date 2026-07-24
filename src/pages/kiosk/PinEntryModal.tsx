@@ -482,3 +482,189 @@ export function PinEntryModal({
     </div>
   );
 }
+
+// ─── LibraryPinModal ──────────────────────────────────────────────────────────
+export function LibraryPinModal({
+  locationId,
+  onSuccess,
+  onCancel,
+}: {
+  locationId: string;
+  onSuccess: (memberId: string | null, memberName: string, orgId: string) => void;
+  onCancel: () => void;
+}) {
+  const [pin, setPin] = useState("");
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
+  const [error, setError] = useState("");
+  const [validating, setValidating] = useState(false);
+
+  const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
+
+  useEffect(() => {
+    if (!lockedUntil) return;
+    if (import.meta.env.TEST) {
+      setLockSecondsLeft(Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000)));
+      return;
+    }
+    const id = setInterval(() => {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) {
+        clearInterval(id);
+        setLockedUntil(null);
+        setAttempts(0);
+        setLockSecondsLeft(0);
+        setError("Please try again.");
+      } else {
+        setLockSecondsLeft(remaining);
+      }
+    }, 500);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
+
+  const validate = async (enteredPin: string) => {
+    setValidating(true);
+
+    const storedToken = await ensureKioskToken(locationId);
+    if (storedToken) {
+      const tokenValid = await verifyKioskToken(locationId, storedToken);
+      if (!tokenValid) {
+        setValidating(false);
+        setPin("");
+        localStorage.removeItem("kiosk_location_id");
+        localStorage.removeItem("kiosk_location_name");
+        localStorage.removeItem("kiosk_token");
+        setError("Kiosk setup required. Please contact your administrator.");
+        return;
+      }
+    }
+
+    const { data: memberData, error: memberRpcError } = await validateKioskMemberPin(enteredPin, locationId);
+
+    if (!memberRpcError && memberData && memberData.length > 0) {
+      setValidating(false);
+      const member = memberData[0];
+      onSuccess(member.id, member.name, member.organization_id ?? "");
+      return;
+    }
+
+    if (memberRpcError) {
+      setValidating(false);
+      setPin("");
+      if (memberRpcError.message?.includes("Too many PIN attempts")) {
+        const until = Date.now() + 5 * 60 * 1000;
+        setLockedUntil(until);
+        setLockSecondsLeft(5 * 60);
+        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+      } else {
+        setError("Connection error. Check your network and try again.");
+      }
+      return;
+    }
+
+    // No team member match — try staff profile PIN (gets org-wide items only)
+    const { data: staffData, error: staffRpcError } = await validateKioskStaffPin(enteredPin, locationId);
+    setValidating(false);
+
+    if (!staffRpcError && staffData && staffData.length > 0) {
+      const staff = staffData[0];
+      onSuccess(null, `${staff.first_name} ${staff.last_name}`.trim(), staff.organization_id ?? "");
+      return;
+    }
+
+    if (staffRpcError) {
+      setPin("");
+      setError("Connection error. Check your network and try again.");
+      return;
+    }
+
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    setPin("");
+    if (newAttempts >= 3) {
+      const until = Date.now() + 30000;
+      setLockedUntil(until);
+      setLockSecondsLeft(30);
+      setError("Please ask your manager for help.");
+    } else {
+      setError("PIN not recognised. Please try again.");
+    }
+  };
+
+  const handleDigit = (d: string) => {
+    if (lockedUntil || validating) return;
+    const next = pin + d;
+    setPin(next);
+    setError("");
+    if (next.length === 4) {
+      setTimeout(() => validate(next), 150);
+    }
+  };
+
+  const handleBackspace = () => {
+    if (lockedUntil || validating) return;
+    setPin(p => p.slice(0, -1));
+  };
+
+  const canSubmit = pin.length >= 4 && !validating && !lockedUntil;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 backdrop-blur-md">
+      <div className="bg-white w-full max-w-[320px] mx-4 rounded-3xl p-6 space-y-4 animate-fade-in shadow-xl relative">
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
+          aria-label="Close"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="text-center pt-1 space-y-1">
+          <h2 className="font-display text-3xl italic text-foreground">Staff Library</h2>
+          <p className="text-xs text-muted-foreground">Enter your PIN to access training documents.</p>
+        </div>
+
+        <PinDots count={pin.length} />
+
+        {error && !validating && (
+          <p className="text-xs text-center text-status-error font-medium">{error}</p>
+        )}
+        {validating && (
+          <p className="text-xs text-center text-muted-foreground">Checking PIN…</p>
+        )}
+
+        {lockedUntil ? (
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">
+              Try again in <span className="font-bold text-foreground">{lockSecondsLeft}s</span>
+            </p>
+          </div>
+        ) : (
+          <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
+        )}
+
+        <button
+          data-testid="library-pin-access-btn"
+          onClick={() => canSubmit && validate(pin)}
+          disabled={!canSubmit}
+          className={cn(
+            "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
+            canSubmit
+              ? "bg-sage text-white hover:bg-sage-deep"
+              : "bg-muted text-muted-foreground cursor-not-allowed",
+          )}
+        >
+          ACCESS
+        </button>
+      </div>
+
+      {secondsLeft !== null && (
+        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
+          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
+          <button onClick={cancelCountdown} className="text-sm font-semibold underline">Stay</button>
+        </div>
+      )}
+    </div>
+  );
+}

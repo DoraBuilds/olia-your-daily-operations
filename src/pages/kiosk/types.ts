@@ -38,7 +38,7 @@ export interface KioskChecklist {
   questions: Question[];
 }
 
-export type KioskScreen = "grid" | "runner" | "completion";
+export type KioskScreen = "grid" | "runner" | "completion" | "library";
 
 export type KioskDraftSnapshot = {
   answers: Record<string, any>;

@@ -17,7 +17,8 @@ import {
   dbToKioskChecklist,
 } from "./kiosk/utils";
 import { KioskSetupScreen } from "./kiosk/KioskSetupScreen";
-import { AdminLoginModal, PinEntryModal, ensureKioskToken } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, PinEntryModal, LibraryPinModal, ensureKioskToken } from "./kiosk/PinEntryModal";
+import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
 import { useLiveClock } from "./kiosk/hooks";
@@ -139,6 +140,9 @@ export default function Kiosk() {
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
+  const [showLibraryPin, setShowLibraryPin] = useState(false);
+  const [libraryMemberId, setLibraryMemberId] = useState<string | null>(null);
+  const [libraryMemberName, setLibraryMemberName] = useState("");
 
   useEffect(() => {
     const ownerKey = "kiosk_owner_user_id";
@@ -557,6 +561,13 @@ export default function Kiosk() {
     setShowAdminLogin(true);
   };
 
+  const handleLibraryPinSuccess = (memberId: string | null, memberName: string, _orgId: string) => {
+    setShowLibraryPin(false);
+    setLibraryMemberId(memberId);
+    setLibraryMemberName(memberName);
+    setScreen("library");
+  };
+
   const handleComplete = async (answers: Record<string, any>, startedAt?: Date) => {
     const now = new Date();
     setInsertError(null);
@@ -728,6 +739,22 @@ export default function Kiosk() {
     );
   }
 
+  // ── Library screen ───────────────────────────────────────────────────────────
+  if (screen === "library" && locationId) {
+    return (
+      <KioskLibrary
+        memberId={libraryMemberId}
+        memberName={libraryMemberName}
+        locationId={locationId}
+        onBack={() => {
+          setScreen("grid");
+          setLibraryMemberId(null);
+          setLibraryMemberName("");
+        }}
+      />
+    );
+  }
+
   // ── Grid screen (Screen 1) ────────────────────────────────────────────────
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -753,8 +780,15 @@ export default function Kiosk() {
           </div>
         </div>
 
-        {/* Right: admin */}
-        <div className="flex justify-end">
+        {/* Right: library + admin */}
+        <div className="flex justify-end items-center gap-2">
+          <button
+            id="library-btn"
+            onClick={() => setShowLibraryPin(true)}
+            className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+          >
+            Library
+          </button>
           <button
             id="admin-btn"
             onClick={handleAdminButtonClick}
@@ -978,6 +1012,15 @@ export default function Kiosk() {
 
       {/* AdminLoginModal */}
       {showAdminLogin && <AdminLoginModal onClose={() => setShowAdminLogin(false)} kioskLocationId={locationId} />}
+
+      {/* LibraryPinModal */}
+      {showLibraryPin && locationId && (
+        <LibraryPinModal
+          locationId={locationId}
+          onSuccess={handleLibraryPinSuccess}
+          onCancel={() => setShowLibraryPin(false)}
+        />
+      )}
     </div>
   );
 }
