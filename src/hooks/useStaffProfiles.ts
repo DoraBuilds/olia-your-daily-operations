@@ -70,6 +70,9 @@ export function useSaveStaffProfile() {
         if (!updated || updated.length === 0) {
           throw new Error("Profile update failed — your session may have expired. Please refresh and try again.");
         }
+        if (sp.rawPin) {
+          await supabase.rpc("vault_staff_pin", { p_profile_id: sp.id, p_pin: sp.rawPin });
+        }
       } else {
         // ── Creating a new profile: explicit INSERT ─────────────────────────
         if (!sp.rawPin) {
@@ -85,8 +88,12 @@ export function useSaveStaffProfile() {
           email: sp.email?.trim() || null,
           pin: await hashPin(sp.rawPin),
         };
-        const { error } = await supabase.from("staff_profiles").insert(insertPayload);
+        const { data: inserted, error } = await supabase.from("staff_profiles").insert(insertPayload).select("id");
         if (error) throw error;
+        const newId = inserted?.[0]?.id as string | undefined;
+        if (newId) {
+          await supabase.rpc("vault_staff_pin", { p_profile_id: newId, p_pin: sp.rawPin });
+        }
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
