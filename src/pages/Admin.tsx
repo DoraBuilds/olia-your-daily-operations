@@ -27,6 +27,7 @@ import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 export { parseGoogleOpeningHours } from "./admin/shared";
 import { MyLocationTab } from "./admin/MyLocationTab";
 import { AccountTab } from "./admin/AccountTab";
+import { NotificationsTab } from "./admin/NotificationsTab";
 import {
   ConfirmModal, LocationModal, StaffProfileModal, TeamMemberModal,
   type ConfirmState,
@@ -100,11 +101,12 @@ export default function Admin() {
   const auditLog: AuditLogEntry[] = [];
 
   // UI state
-  const routeTab: "location" | "users" | "account" | "billing" =
+  const routeTab: "location" | "users" | "account" | "billing" | "notifications" =
     location.pathname.startsWith("/admin/users") ? "users" :
     location.pathname.startsWith("/admin/account") ? "account" :
-    location.pathname.startsWith("/admin/billing") ? "billing" : "location";
-  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing">(routeTab);
+    location.pathname.startsWith("/admin/billing") ? "billing" :
+    location.pathname.startsWith("/admin/notifications") ? "notifications" : "location";
+  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing" | "notifications">(routeTab);
   const [currentLocationId, setCurrentLocationId] = useState("");
 
   // Set default location once data loads
@@ -128,7 +130,7 @@ export default function Admin() {
   const isOwner = !activeUser || activeUser.role === "Owner";
 
   useEffect(() => {
-    if (!isOwner && routeTab === "account") {
+    if (!isOwner && (routeTab === "account" || routeTab === "notifications")) {
       navigate("/admin/location", { replace: true });
       return;
     }
@@ -312,6 +314,7 @@ export default function Admin() {
     ...(isOwner ? [
       { key: "users" as const, label: "Users" },
       { key: "account" as const, label: "Account" },
+      { key: "notifications" as const, label: "Notifications" },
       { key: "billing" as const, label: "Billing" },
     ] : []),
   ];
@@ -432,6 +435,7 @@ export default function Admin() {
                 )}
                 {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}
                 {activeTab === "account" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="account" />}
+                {activeTab === "notifications" && isOwner && <NotificationsTab />}
                 {activeTab === "billing" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="billing" />}
               </>
             );
