@@ -566,6 +566,7 @@ export default function Admin() {
           departments={departments}
           onClose={() => setStaffModal(null)}
           onSave={sp => { saveStaff(sp); setStaffModal(null); }}
+          isOwner={isOwner}
         />
       )}
 
@@ -575,6 +576,7 @@ export default function Admin() {
           locations={locations}
           onClose={() => setMemberModal(null)}
           onSave={m => { saveMember(m); setMemberModal(null); }}
+          isOwner={isOwner}
         />
       )}
 

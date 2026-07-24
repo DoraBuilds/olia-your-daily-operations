@@ -6,9 +6,11 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   MapPin, Plus, Pencil, X,
-  ChevronDown,
+  ChevronDown, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
 import {
   PlacesAutocompleteInput, StaticMapPreview, type PlaceResult,
@@ -155,10 +157,11 @@ export function ConfirmModal({
 // ─── StaffProfileModal ────────────────────────────────────────────────────────
 
 export function StaffProfileModal({
-  profile, locations, departments, onClose, onSave,
+  profile, locations, departments, onClose, onSave, isOwner,
 }: {
   profile: StaffProfile | null; locations: Location[]; departments: StaffDepartment[];
   onClose: () => void; onSave: (p: StaffProfile & { rawPin?: string }) => void;
+  isOwner?: boolean;
 }) {
   const isEdit = !!profile;
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
@@ -168,6 +171,28 @@ export function StaffProfileModal({
   const [email, setEmail] = useState(profile?.email ?? "");
   // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
   const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
+  const [revealedPin, setRevealedPin] = useState<string | null>(null);
+  const [showRevealedPin, setShowRevealedPin] = useState(false);
+  const [revealLoading, setRevealLoading] = useState(false);
+
+  const handleRevealPin = async () => {
+    if (!profile?.id) return;
+    setRevealLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_reveal_pin", {
+        p_member_type: "staff_profile",
+        p_member_id: profile.id,
+      });
+      if (error) throw error;
+      setRevealedPin((data as string) ?? "");
+      setShowRevealedPin(true);
+    } catch (err) {
+      const msg = (err as any)?.message ?? "Could not reveal PIN";
+      toast.error(msg);
+    } finally {
+      setRevealLoading(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +288,36 @@ export function StaffProfileModal({
               Generate
             </button>
           </div>
+          {isEdit && isOwner && (
+            <div className="flex items-center gap-2 mt-1.5">
+              {revealedPin !== null ? (
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    Current PIN:&nbsp;
+                    <span className="font-mono font-medium">
+                      {showRevealedPin ? revealedPin : "••••"}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowRevealedPin(v => !v)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showRevealedPin ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRevealPin}
+                  disabled={revealLoading}
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {revealLoading ? "Loading…" : "View current PIN"}
+                </button>
+              )}
+            </div>
+          )}
         </FormField>
         <SaveButton disabled={!firstName.trim() || !locationId || (!isEdit && !pin)} label={isEdit ? "Save changes" : "Add profile"} />
       </form>
@@ -273,10 +328,11 @@ export function StaffProfileModal({
 // ─── TeamMemberModal ──────────────────────────────────────────────────────────
 
 export function TeamMemberModal({
-  member, locations, onClose, onSave,
+  member, locations, onClose, onSave, isOwner,
 }: {
   member: TeamMember | null; locations: Location[];
   onClose: () => void; onSave: (m: TeamMember & { rawPin?: string }) => void;
+  isOwner?: boolean;
 }) {
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
@@ -284,6 +340,28 @@ export function TeamMemberModal({
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
   const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
+  const [revealedPin, setRevealedPin] = useState<string | null>(null);
+  const [showRevealedPin, setShowRevealedPin] = useState(false);
+  const [revealLoading, setRevealLoading] = useState(false);
+
+  const handleRevealPin = async () => {
+    if (!member?.id) return;
+    setRevealLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_reveal_pin", {
+        p_member_type: "team_member",
+        p_member_id: member.id,
+      });
+      if (error) throw error;
+      setRevealedPin((data as string) ?? "");
+      setShowRevealedPin(true);
+    } catch (err) {
+      const msg = (err as any)?.message ?? "Could not reveal PIN";
+      toast.error(msg);
+    } finally {
+      setRevealLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (member?.id) return;
@@ -377,6 +455,36 @@ export function TeamMemberModal({
               Generate
             </button>
           </div>
+          {member?.id && isOwner && (
+            <div className="flex items-center gap-2 mt-1.5">
+              {revealedPin !== null ? (
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    Current PIN:&nbsp;
+                    <span className="font-mono font-medium">
+                      {showRevealedPin ? revealedPin : "••••"}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowRevealedPin(v => !v)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showRevealedPin ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRevealPin}
+                  disabled={revealLoading}
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {revealLoading ? "Loading…" : "View current PIN"}
+                </button>
+              )}
+            </div>
+          )}
         </FormField>
         <FormField label="Location(s)">
           <div className="flex gap-2 flex-wrap">
