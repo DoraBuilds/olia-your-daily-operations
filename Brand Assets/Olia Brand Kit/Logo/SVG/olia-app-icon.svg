@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Olia app icon">
+  <defs>
+    <linearGradient id="oliaSweepIcon" x1="0.06" y1="0.78" x2="0.94" y2="0.22">
+      <stop offset="0" stop-color="#8E3CC0"></stop>
+      <stop offset="0.4" stop-color="#7150CE"></stop>
+      <stop offset="1" stop-color="#3E78E0"></stop>
+    </linearGradient>
+    <radialGradient id="oliaTile" cx="0.5" cy="0.34" r="0.9">
+      <stop offset="0" stop-color="#141A2E"></stop>
+      <stop offset="1" stop-color="#080B14"></stop>
+    </radialGradient>
+    <filter id="oliaGlowIcon" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"></feGaussianBlur>
+      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="114" fill="url(#oliaTile)"></rect>
+  <g fill="none" filter="url(#oliaGlowIcon)" stroke-linecap="round">
+    <circle cx="256" cy="256" r="176" stroke="url(#oliaSweepIcon)" stroke-width="9"></circle>
+    <circle cx="256" cy="256" r="138" stroke="url(#oliaSweepIcon)" stroke-width="10"></circle>
+    <circle cx="256" cy="256" r="100" stroke="#EDEFF7" stroke-width="11"></circle>
+    <circle cx="256" cy="256" r="62" stroke="#FFFFFF" stroke-width="13"></circle>
+  </g>
+  <circle cx="256" cy="256" r="40" fill="#0A0E18"></circle>
+</svg>
