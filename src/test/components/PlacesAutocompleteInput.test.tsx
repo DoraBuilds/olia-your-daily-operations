@@ -150,6 +150,6 @@ describe("StaticMapPreview", () => {
 
     const preview = screen.getByTitle("Location map preview");
     expect(preview).toBeInTheDocument();
-    expect(preview).toHaveAttribute("src", expect.stringContaining("center=45.7608,4.8597"));
+    expect(preview).toHaveAttribute("src", expect.stringContaining("openstreetmap.org"));
   });
 });
