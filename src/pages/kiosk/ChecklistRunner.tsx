@@ -115,6 +115,12 @@ export function ChecklistRunner({
   }, [answers, currentQuestionId, questions, persistDraft]);
 
   useEffect(() => {
+    if (!completionError) return;
+    const missing = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
+    if (missing.length === 0) setCompletionError(null);
+  }, [answers, questions, completionError]);
+
+  useEffect(() => {
     if (!lightboxImage) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxImage(null); };
     window.addEventListener("keydown", handler);
