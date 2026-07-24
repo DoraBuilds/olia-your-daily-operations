@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BookOpen, ChevronLeft, FileText, Folder } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
 
 interface KioskFolder {
@@ -45,20 +46,24 @@ export function KioskLibrary({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    supabase
-      .rpc("get_kiosk_library", {
-        p_location_id: locationId,
-        p_team_member_id: memberId,
-      })
-      .then(({ data: rpcData, error: rpcError }) => {
-        if (cancelled) return;
-        if (rpcError) {
-          setError("Could not load library. Check your connection and try again.");
-        } else {
-          setData((rpcData as KioskLibraryData) ?? { folders: [], documents: [] });
-        }
-        setLoading(false);
-      });
+    ensureKioskToken(locationId).then(token => {
+      if (cancelled) return;
+      supabase
+        .rpc("get_kiosk_library", {
+          p_location_id: locationId,
+          p_team_member_id: memberId,
+          p_kiosk_token: token,
+        })
+        .then(({ data: rpcData, error: rpcError }) => {
+          if (cancelled) return;
+          if (rpcError) {
+            setError("Could not load library. Check your connection and try again.");
+          } else {
+            setData((rpcData as KioskLibraryData) ?? { folders: [], documents: [] });
+          }
+          setLoading(false);
+        });
+    });
     return () => {
       cancelled = true;
     };
