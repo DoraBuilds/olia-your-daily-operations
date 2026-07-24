@@ -82,10 +82,13 @@ REVOKE ALL ON FUNCTION public.validate_kiosk_member_pin(text, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.validate_kiosk_member_pin(text, uuid) TO anon, authenticated;
 
 -- 2. get_kiosk_library
+-- Drop the text-parameter variant first; kiosk_token column is UUID not text.
+DROP FUNCTION IF EXISTS public.get_kiosk_library(uuid, uuid, text);
+
 CREATE OR REPLACE FUNCTION public.get_kiosk_library(
   p_location_id    uuid,
   p_team_member_id uuid,   -- null means staff-profile PIN: org-wide items only
-  p_kiosk_token    text    -- server-issued device token; required for non-empty response
+  p_kiosk_token    uuid    -- server-issued device token; required for non-empty response
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -181,5 +184,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_kiosk_library(uuid, uuid, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_kiosk_library(uuid, uuid, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_kiosk_library(uuid, uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_kiosk_library(uuid, uuid, uuid) TO anon, authenticated;
