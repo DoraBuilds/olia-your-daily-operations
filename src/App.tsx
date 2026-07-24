@@ -78,6 +78,7 @@ const router = createBrowserRouter(
         { path: "/admin/location", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/admin/notifications", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
         { path: "*", element: <NotFound /> },
