@@ -20,6 +20,7 @@ vi.mock("@/lib/supabase", () => ({
       }),
     },
     from: (...args: any[]) => mockFrom(...args),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
 
@@ -122,7 +123,8 @@ describe("useStaffProfiles", () => {
 
 describe("useSaveStaffProfile — INSERT (new profile)", () => {
   it("inserts a new profile and hashes the raw PIN before storage", async () => {
-    const insertFn = vi.fn().mockResolvedValue({ error: null });
+    const selectAfterInsertFn = vi.fn().mockResolvedValue({ data: [{ id: "sp-new" }], error: null });
+    const insertFn = vi.fn().mockReturnValue({ select: selectAfterInsertFn });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),

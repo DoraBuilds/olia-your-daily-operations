@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, MailCheck, Send,
+  MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, MailCheck, Send, Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -88,6 +88,37 @@ export function AccountTab({
   const [profileName, setProfileName] = useState(authUserName ?? currentAccount?.name ?? "");
   const [profileEmail, setProfileEmail] = useState(authUserEmail ?? currentAccount?.email ?? "");
   const [pin, setPin] = useState("");
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [savedPin, setSavedPin] = useState<string | null>(null);
+  const [showSavedPin, setShowSavedPin] = useState(false);
+  // PIN vault reveal — keyed by "tm:{id}" or "sp:{id}"
+  const [revealedPins, setRevealedPins] = useState<Record<string, string>>({});
+  const [showingPins, setShowingPins] = useState<Record<string, boolean>>({});
+  const [loadingPinId, setLoadingPinId] = useState<string | null>(null);
+
+  const revealPin = async (memberType: "team_member" | "staff_profile", memberId: string) => {
+    const key = `${memberType}:${memberId}`;
+    if (revealedPins[key] !== undefined) {
+      setShowingPins(prev => ({ ...prev, [key]: !prev[key] }));
+      return;
+    }
+    setLoadingPinId(key);
+    try {
+      const { data, error } = await supabase.rpc("admin_reveal_pin", {
+        p_member_type: memberType,
+        p_member_id: memberId,
+      });
+      if (error) throw error;
+      setRevealedPins(prev => ({ ...prev, [key]: (data as string) ?? "" }));
+      setShowingPins(prev => ({ ...prev, [key]: true }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not reveal PIN");
+    } finally {
+      setLoadingPinId(null);
+    }
+  };
+
+  const isOwner = currentAccount?.role === "Owner";
 
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -162,8 +193,12 @@ export function AccountTab({
     if (!currentAccount || pin.length !== 4) return;
     setPinSaving(true);
     try {
-      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin: pin });
+      const savedValue = pin;
+      await saveAdminPin.mutateAsync({ memberId: currentAccount.id, rawPin: savedValue });
       setPin("");
+      setShowNewPin(false);
+      setSavedPin(savedValue);
+      setShowSavedPin(false);
       toast.success("Admin PIN updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
@@ -318,19 +353,56 @@ export function AccountTab({
                 Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
               </div>
             )}
+            {/* Current PIN (shown once after save) */}
+            {savedPin && (
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
+                <div className="relative">
+                  <input
+                    readOnly
+                    type={showSavedPin ? "text" : "password"}
+                    value={savedPin}
+                    className="w-full border border-border rounded-xl px-3 py-2.5 pr-16 text-sm bg-muted/50 text-muted-foreground tracking-[0.3em] cursor-default select-none"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowSavedPin(v => !v)}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                    >
+                      {showSavedPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSavedPin(null); setShowSavedPin(false); }}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* PIN */}
             <div className="space-y-1">
               <span className="text-xs text-muted-foreground font-medium">New PIN</span>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showNewPin ? "text" : "password"}
                   inputMode="numeric"
                   maxLength={4}
                   value={pin}
                   onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="4 digits"
-                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
+                  className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPin(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showNewPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
             </div>
             <button
@@ -562,6 +634,13 @@ export function AccountTab({
                         Last seen {new Date(member.last_seen_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                       </p>
                     ) : null}
+                    {isOwner && revealedPins[`team_member:${member.id}`] !== undefined && (
+                      <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                        PIN: {showingPins[`team_member:${member.id}`]
+                          ? revealedPins[`team_member:${member.id}`]
+                          : "••••"}
+                      </p>
+                    )}
                   </div>
                   <span className={cn(
                     "text-xs px-2 py-0.5 rounded-full font-medium",
@@ -583,6 +662,19 @@ export function AccountTab({
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                     >
                       <Send size={14} className="text-status-warn" />
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={() => revealPin("team_member", member.id)}
+                      disabled={loadingPinId === `team_member:${member.id}`}
+                      aria-label={`Reveal PIN for ${member.name}`}
+                      title="Reveal PIN"
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      {showingPins[`team_member:${member.id}`]
+                        ? <EyeOff size={14} className="text-muted-foreground" />
+                        : <Eye size={14} className="text-muted-foreground" />}
                     </button>
                   )}
                   <button
@@ -650,9 +742,32 @@ export function AccountTab({
               <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
                 {(sp.first_name[0] ?? "") + (sp.last_name[0] ?? "")}
               </div>
-              <p className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">{sp.first_name} {sp.last_name}</p>
-              <span className="w-20 text-xs text-muted-foreground truncate">{sp.role}</span>
-              <div className="w-20 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{sp.first_name} {sp.last_name}</p>
+                {isOwner && revealedPins[`staff_profile:${sp.id}`] !== undefined && (
+                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                    PIN: {showingPins[`staff_profile:${sp.id}`]
+                      ? revealedPins[`staff_profile:${sp.id}`]
+                      : "••••"}
+                  </p>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground truncate">{sp.role}</span>
+              {isOwner ? (
+                <button
+                  onClick={() => revealPin("staff_profile", sp.id)}
+                  disabled={loadingPinId === `staff_profile:${sp.id}`}
+                  aria-label={`Reveal PIN for ${sp.first_name}`}
+                  title="Reveal PIN"
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                >
+                  {showingPins[`staff_profile:${sp.id}`]
+                    ? <EyeOff size={14} className="text-muted-foreground" />
+                    : <Eye size={14} className="text-muted-foreground" />}
+                </button>
+              ) : (
+                <div className="w-8 shrink-0" />
+              )}
             </div>
           ))}
           <div className="flex justify-end px-4 py-3 border-t border-border">
