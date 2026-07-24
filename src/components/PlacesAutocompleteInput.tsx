@@ -252,21 +252,17 @@ interface StaticMapPreviewProps {
 }
 
 export function StaticMapPreview({ lat, lng, className }: StaticMapPreviewProps) {
-  if (!API_KEY) return null;
-
   return (
     <div className={cn("rounded-xl overflow-hidden border border-border", className)} style={{ height: 160 }}>
       <iframe
         title="Location map preview"
         src={
-          `https://www.google.com/maps/embed/v1/view` +
-          `?key=${API_KEY}` +
-          `&center=${lat},${lng}` +
-          `&zoom=15&maptype=roadmap`
+          `https://www.openstreetmap.org/export/embed.html` +
+          `?bbox=${lng - 0.003},${lat - 0.002},${lng + 0.003},${lat + 0.002}` +
+          `&layer=mapnik&marker=${lat},${lng}`
         }
-        className="w-full h-full border-0"
+        className="w-full h-full border-0 pointer-events-none"
         loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
   );

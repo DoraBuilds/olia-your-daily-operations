@@ -164,35 +164,25 @@ export function MyLocationTab({
         {/* Right — map thumbnail + kiosk CTA */}
         <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2 h-full">
           {currentLocation.lat != null && currentLocation.lng != null ? (
-            <div
-              className="rounded-2xl overflow-hidden border border-border shadow-sm"
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-90 transition-opacity block"
               style={{ height: 120 }}
+              title="Open in Google Maps"
             >
-              {MAPS_API_KEY ? (
-                <iframe
-                  title="Location map"
-                  src={
-                    `https://www.google.com/maps/embed/v1/view` +
-                    `?key=${MAPS_API_KEY}` +
-                    `&center=${currentLocation.lat},${currentLocation.lng}` +
-                    `&zoom=15&maptype=roadmap`
-                  }
-                  className="w-full h-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              ) : (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full h-full flex items-center justify-center bg-muted hover:opacity-80 transition-opacity"
-                  title="Open in Google Maps"
-                >
-                  <MapPin size={18} className="text-muted-foreground" />
-                </a>
-              )}
-            </div>
+              <iframe
+                title="Location map"
+                src={
+                  `https://www.openstreetmap.org/export/embed.html` +
+                  `?bbox=${currentLocation.lng - 0.003},${currentLocation.lat - 0.002},${currentLocation.lng + 0.003},${currentLocation.lat + 0.002}` +
+                  `&layer=mapnik&marker=${currentLocation.lat},${currentLocation.lng}`
+                }
+                className="w-full h-full border-0 pointer-events-none"
+                loading="lazy"
+              />
+            </a>
           ) : (
             <div
               className="rounded-2xl border border-border bg-muted flex items-center justify-center"
