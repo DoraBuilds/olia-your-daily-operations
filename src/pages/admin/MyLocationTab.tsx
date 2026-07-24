@@ -170,7 +170,6 @@ export function MyLocationTab({
               rel="noopener noreferrer"
               className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-90 transition-opacity block"
               style={{ height: 120 }}
-              title="Open in Google Maps"
             >
               <iframe
                 title="Location map"
