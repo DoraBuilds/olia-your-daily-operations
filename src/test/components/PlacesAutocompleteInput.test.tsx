@@ -145,10 +145,10 @@ describe("PlacesAutocompleteInput", () => {
 });
 
 describe("StaticMapPreview", () => {
-  it("renders a map preview image for the selected coordinates", () => {
+  it("renders a map preview iframe for the selected coordinates", () => {
     render(<StaticMapPreview lat={45.7608} lng={4.8597} />);
 
-    const preview = screen.getByAltText("Location map preview");
+    const preview = screen.getByTitle("Location map preview");
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveAttribute("src", expect.stringContaining("center=45.7608,4.8597"));
   });
