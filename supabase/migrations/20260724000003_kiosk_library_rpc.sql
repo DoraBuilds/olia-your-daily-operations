@@ -81,7 +81,8 @@ GRANT EXECUTE ON FUNCTION public.validate_kiosk_member_pin(text, uuid) TO anon, 
 -- 2. get_kiosk_library
 CREATE OR REPLACE FUNCTION public.get_kiosk_library(
   p_location_id    uuid,
-  p_team_member_id uuid  -- null means staff-profile PIN: org-wide items only
+  p_team_member_id uuid,   -- null means staff-profile PIN: org-wide items only
+  p_kiosk_token    text    -- server-issued device token; required for non-empty response
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -94,9 +95,16 @@ DECLARE
   v_member_lids uuid[];
   v_is_owner    boolean := false;
 BEGIN
+  -- Verify the kiosk_token server-side so callers cannot supply arbitrary
+  -- p_team_member_id values without proof of a valid kiosk device.
+  IF p_kiosk_token IS NULL THEN
+    RETURN '{"folders":[],"documents":[]}'::jsonb;
+  END IF;
+
   SELECT organization_id INTO v_org_id
   FROM locations
-  WHERE id = p_location_id;
+  WHERE id = p_location_id
+    AND kiosk_token = p_kiosk_token;
 
   IF v_org_id IS NULL THEN
     RETURN '{"folders":[],"documents":[]}'::jsonb;
@@ -170,5 +178,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_kiosk_library(uuid, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_kiosk_library(uuid, uuid) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.get_kiosk_library(uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_kiosk_library(uuid, uuid, text) TO anon, authenticated;

@@ -10,10 +10,26 @@ vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: vi.fn().mockImplementation((fn: string, _params?: unknown) => {
       if (fn === "get_kiosk_library") return mockGetKioskLibrary();
+      if (fn === "get_kiosk_token") return Promise.resolve({ data: { kiosk_token: "test-token" }, error: null });
       return Promise.resolve({ data: null, error: null });
+    }),
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { kiosk_token: "test-token" }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { kiosk_token: "test-token" }, error: null }),
     }),
   },
 }));
+
+// ensureKioskToken reads from localStorage then queries Supabase — stub it out
+vi.mock("@/pages/kiosk/PinEntryModal", async () => {
+  const actual = await vi.importActual<typeof import("@/pages/kiosk/PinEntryModal")>("@/pages/kiosk/PinEntryModal");
+  return {
+    ...actual,
+    ensureKioskToken: vi.fn().mockResolvedValue("test-token"),
+  };
+});
 
 const FOLDERS = [
   { id: "f1", name: "Safety Procedures", parent_id: null },
