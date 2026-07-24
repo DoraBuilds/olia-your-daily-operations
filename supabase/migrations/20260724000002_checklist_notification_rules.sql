@@ -29,7 +29,7 @@ CREATE POLICY "owners can manage notification rules"
   USING (
     organization_id IN (
       SELECT organization_id FROM public.team_members
-       WHERE user_id = auth.uid() AND role = 'Owner'
+       WHERE id = auth.uid() AND role = 'Owner'
     )
   );
 
