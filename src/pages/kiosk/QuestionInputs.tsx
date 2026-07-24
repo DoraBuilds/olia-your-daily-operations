@@ -215,6 +215,17 @@ export function MultipleChoiceInput({
 // ─── DateTime ─────────────────────────────────────────────────────────────────
 
 export function DateTimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Auto-initialize to current date/time when the field first appears with no value
+  useEffect(() => {
+    if (!value) {
+      const now = new Date();
+      const d = now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+      const t = now.toTimeString().slice(0, 5);   // HH:MM
+      onChange(`${d}T${t}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Store date and time separately for clear mobile UX; combine on change
   const datePart = value ? value.slice(0, 10) : "";
   const timePart = value ? value.slice(11, 16) : "";
