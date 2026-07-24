@@ -126,9 +126,13 @@ vi.mock("@/lib/supabase", () => ({
 
       if (fn === "validate_kiosk_member_pin") {
         return Promise.resolve({
-          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1" }],
+          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1", role: "Owner", location_ids: [] }],
           error: null,
         });
+      }
+
+      if (fn === "get_kiosk_library") {
+        return Promise.resolve({ data: { folders: [], documents: [] }, error: null });
       }
 
       if (fn === "insert_kiosk_alert") {
