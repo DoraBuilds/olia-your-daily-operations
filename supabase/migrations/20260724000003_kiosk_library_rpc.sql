@@ -11,7 +11,10 @@
 --    PIN holders) limits results to org-wide items only.
 -- ================================================================
 
--- 1. Update validate_kiosk_member_pin (non-breaking: adds columns)
+-- 1. Update validate_kiosk_member_pin to return role + location_ids.
+-- Must DROP first: Postgres disallows OR REPLACE when the return type changes.
+DROP FUNCTION IF EXISTS public.validate_kiosk_member_pin(text, uuid);
+
 CREATE OR REPLACE FUNCTION public.validate_kiosk_member_pin(
   p_pin         text,
   p_location_id uuid
