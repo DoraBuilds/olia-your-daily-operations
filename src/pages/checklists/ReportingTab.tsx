@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
+import { useChecklists } from "@/hooks/useChecklists";
 import { useActions } from "@/hooks/useActions";
 import { useLocations } from "@/hooks/useLocations";
 import { usePlan } from "@/hooks/usePlan";
@@ -137,7 +138,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   const [locationFilter, setLocationFilter] = useState<string>(initialLocationId ?? "all");
   const [personFilter, setPersonFilter] = useState<string>("all");
   const [checklistSearch, setChecklistSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">("all");
 
   useEffect(() => {
     setLocationFilter(initialLocationId ?? "all");
@@ -173,6 +174,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   }, [period, dateRange, locationFilter]);
 
   const { data: logs = [], isLoading } = useChecklistLogs(filters);
+  const { data: allChecklists = [] } = useChecklists();
   const { data: actions = [] } = useActions();
   const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
   const peopleOptions = useMemo(
@@ -184,7 +186,26 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
     [logs]
   );
 
+  // Unstarted: active checklists that have no log entry in the selected period
+  const unstartedChecklists = useMemo(() => {
+    if (isLoading) return [];
+    const periodEnd = filters.to ? new Date(filters.to) : new Date();
+    const loggedIds = new Set(logs.map(l => l.checklist_id).filter(Boolean));
+    const checklistQuery = checklistSearch.trim().toLowerCase();
+    return allChecklists.filter(c => {
+      if (loggedIds.has(c.id)) return false;
+      if (c.start_date && new Date(c.start_date) > periodEnd) return false;
+      if (locationFilter !== "all") {
+        const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : null);
+        if (locIds && !locIds.includes(locationFilter)) return false;
+      }
+      if (checklistQuery && !c.title.toLowerCase().startsWith(checklistQuery)) return false;
+      return true;
+    });
+  }, [allChecklists, logs, locationFilter, filters, isLoading, checklistSearch]);
+
   const filteredChecklistLogs = useMemo(() => {
+    if (statusFilter === "unstarted") return [];
     const checklistQuery = checklistSearch.trim().toLowerCase();
     return logs.filter(log => {
       if (personFilter !== "all" && log.completed_by !== personFilter) return false;
@@ -222,6 +243,10 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   }, [filteredChecklistLogs]);
 
   const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0;
+
+  const completedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score !== null).length, [filteredChecklistLogs]);
+  const unfinishedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score === null).length, [filteredChecklistLogs]);
+  const unstartedCount = unstartedChecklists.length;
 
   // Log entries
   const logEntries: LogEntry[] = useMemo(
@@ -373,18 +398,46 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       </div>
       </div>{/* end top toolbar */}
 
-      {/* Stat cards */}
+      {/* Stat cards — row 1: completion breakdown */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Entries</p>
-          <p className="text-2xl font-bold text-foreground">{isLoading ? "—" : logEntries.length}</p>
-          {!isLoading && logEntries.length === 0 && (
+        <div data-testid="stat-completed" className="bg-card border border-border rounded-2xl p-4 text-center">
+          <p className="section-label mb-1">Completed</p>
+          <p className="text-2xl font-bold text-status-ok">{isLoading ? "—" : completedCount}</p>
+          {!isLoading && completedCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
               <span className="text-xs text-muted-foreground font-medium">none</span>
             </div>
           )}
         </div>
+        <div data-testid="stat-unfinished" className="bg-card border border-border rounded-2xl p-4 text-center">
+          <p className="section-label mb-1">Unfinished</p>
+          <p className={cn("text-2xl font-bold", unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground")}>
+            {isLoading ? "—" : unfinishedCount}
+          </p>
+          {!isLoading && unfinishedCount === 0 && (
+            <div className="flex items-center justify-center gap-0.5 mt-1">
+              <Minus size={10} className="text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">none</span>
+            </div>
+          )}
+        </div>
+        <div data-testid="stat-unstarted" className="bg-card border border-border rounded-2xl p-4 text-center">
+          <p className="section-label mb-1">Unstarted</p>
+          <p className={cn("text-2xl font-bold", unstartedCount > 0 ? "text-status-error" : "text-muted-foreground")}>
+            {isLoading ? "—" : unstartedCount}
+          </p>
+          {!isLoading && unstartedCount === 0 && (
+            <div className="flex items-center justify-center gap-0.5 mt-1">
+              <Minus size={10} className="text-muted-foreground" />
+              <span className="text-xs text-muted-foreground font-medium">none</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stat cards — row 2: score + actions */}
+      <div className="grid grid-cols-2 gap-2">
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Avg Score</p>
           <p className={cn("text-2xl font-bold",
@@ -489,11 +542,15 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
               <option value="all">All statuses</option>
               <option value="completed">Completed</option>
               <option value="unfinished">Unfinished</option>
+              <option value="unstarted">Unstarted</option>
             </select>
           </label>
         </div>
         <p className="text-xs text-muted-foreground">
-          Showing {logEntries.length} of {logs.length} log{logs.length === 1 ? "" : "s"}.
+          {statusFilter === "unstarted"
+            ? `Showing ${unstartedCount} unstarted checklist${unstartedCount === 1 ? "" : "s"}.`
+            : `Showing ${logEntries.length} of ${logs.length} log${logs.length === 1 ? "" : "s"}.`
+          }
         </p>
       </div>
 
@@ -526,7 +583,29 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           <div className="bg-card border border-border rounded-2xl p-6 text-center">
             <p className="text-sm text-muted-foreground">Loading…</p>
           </div>
-        ) : logEntries.length > 0 ? (
+        ) : statusFilter === "unstarted" ? (
+          unstartedChecklists.length > 0 ? (
+            <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-24 text-right">Status</p>
+              </div>
+              {unstartedChecklists.map(c => (
+                <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">No activity this period</p>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">UNSTARTED</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-2xl p-8 text-center">
+              <p className="text-sm text-muted-foreground">All checklists have been started this period.</p>
+            </div>
+          )
+        ) : logEntries.length > 0 || (statusFilter === "all" && unstartedChecklists.length > 0) ? (
           <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
@@ -553,6 +632,19 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
                 </button>
               );
             })}
+            {/* Unstarted rows appended when "all" filter is active */}
+            {statusFilter === "all" && unstartedChecklists.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">No activity this period</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">UNSTARTED</span>
+                  <div className="w-[13px]" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="bg-card border border-border rounded-2xl p-8 text-center">

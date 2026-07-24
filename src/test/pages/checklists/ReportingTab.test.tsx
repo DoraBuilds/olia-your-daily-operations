@@ -57,6 +57,7 @@ const mockUseChecklistLogs = vi.fn((filters?: any) => ({
     : MOCK_LOGS,
   isLoading: false,
 }));
+const mockUseChecklists = vi.fn(() => ({ data: MOCK_CHECKLISTS, isLoading: false }));
 
 vi.mock("@/lib/export-utils", () => ({
   exportReportingPdf: (...args: any[]) => mockExportReportingPdf(...args),
@@ -127,6 +128,22 @@ vi.mock("@/hooks/useChecklistLogs", () => ({
   useCreateChecklistLog: () => ({ mutate: vi.fn() }),
 }));
 
+// Checklists: c1 has logs (c2 does not → unstarted)
+const MOCK_CHECKLISTS = [
+  { id: "c1", title: "Opening Checklist", location_id: null, location_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "morning", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: "c3", title: "Safety Walk", location_id: null, location_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "anytime", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+];
+
+vi.mock("@/hooks/useChecklists", () => ({
+  useChecklists: (...args: any[]) => mockUseChecklists(...args),
+  useFolders: () => ({ data: [], isLoading: false }),
+  useSaveChecklist: () => ({ mutate: vi.fn() }),
+  useDeleteChecklist: () => ({ mutate: vi.fn() }),
+  useSaveFolder: () => ({ mutate: vi.fn() }),
+  useDeleteFolder: () => ({ mutate: vi.fn() }),
+  useReorderFolders: () => ({ mutate: vi.fn() }),
+}));
+
 vi.mock("@/hooks/useActions", () => ({
   useActions: () => ({
     data: MOCK_ACTIONS,
@@ -180,13 +197,14 @@ vi.mock("@/hooks/usePlan", () => ({
 describe("ReportingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Restore default implementation after any mockReturnValueOnce usage
+    // Restore default implementations after any mockReturnValueOnce usage
     mockUseChecklistLogs.mockImplementation((filters?: any) => ({
       data: filters?.location_id
         ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
         : MOCK_LOGS,
       isLoading: false,
     }));
+    mockUseChecklists.mockImplementation(() => ({ data: MOCK_CHECKLISTS, isLoading: false }));
   });
 
   it("renders without crashing", () => {
@@ -207,15 +225,40 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
-  it("shows Entries stat card", () => {
+  it("shows Completed stat card", () => {
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("Entries")).toBeInTheDocument();
+    expect(screen.getByTestId("stat-completed")).toBeInTheDocument();
   });
 
-  it("shows 3 log entries", () => {
+  it("shows Unfinished stat card", () => {
     render(<ReportingTab />, { wrapper });
-    const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
-    expect(statCards[0]).toHaveTextContent("3");
+    expect(screen.getByTestId("stat-unfinished")).toBeInTheDocument();
+  });
+
+  it("shows Unstarted stat card", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByTestId("stat-unstarted")).toBeInTheDocument();
+  });
+
+  it("shows correct completed count (2 logs with non-null scores)", () => {
+    render(<ReportingTab />, { wrapper });
+    // MOCK_LOGS: scores 90, 65 (completed), null (unfinished) → 2 completed
+    const completedCard = screen.getByTestId("stat-completed");
+    expect(completedCard.querySelector(".text-2xl")).toHaveTextContent("2");
+  });
+
+  it("shows correct unfinished count (1 log with null score)", () => {
+    render(<ReportingTab />, { wrapper });
+    // MOCK_LOGS: Inventory Check has score null → 1 unfinished
+    const unfinishedCard = screen.getByTestId("stat-unfinished");
+    expect(unfinishedCard.querySelector(".text-2xl")).toHaveTextContent("1");
+  });
+
+  it("shows correct unstarted count (checklists with no log in period)", () => {
+    render(<ReportingTab />, { wrapper });
+    // MOCK_CHECKLISTS has c1 and c3; MOCK_LOGS has c1 and c2 logged → c3 (Safety Walk) is unstarted
+    const unstartedCard = screen.getByTestId("stat-unstarted");
+    expect(unstartedCard.querySelector(".text-2xl")).toHaveTextContent("1");
   });
 
   it("shows Avg Score stat card", () => {
@@ -234,13 +277,10 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Open Actions")).toBeInTheDocument();
   });
 
-  it("shows 1 open action", () => {
+  it("shows 1 open action in Open Actions stat card", () => {
     render(<ReportingTab />, { wrapper });
-    // "1" appears in multiple places (open actions count + completion log counts)
-    // Verify specifically the Open Actions stat card contains "1"
-    const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
-    const openActionsValue = statCards[2]; // third stat card is Open Actions
-    expect(openActionsValue).toHaveTextContent("1");
+    const openActionsCard = screen.getByText("Open Actions").closest(".rounded-2xl");
+    expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
   });
 
   it("shows Completion Log section", () => {
@@ -330,7 +370,7 @@ describe("ReportingTab", () => {
       expect(row.finishedAt).toMatch(/9 Mar 2024/);
     }
     expect(periodLabel).toBe("Today");
-    expect(stats).toMatchObject({ completed: 3, avg: 78, open: 1 });
+    expect(stats).toMatchObject({ completed: 3, avg: 78, open: 1 }); // completed = total logEntries count for PDF export
   });
 
   it("clicking CSV export calls exportReportingCsv", () => {
@@ -452,8 +492,11 @@ describe("ReportingTab", () => {
 
   // ── Empty state ────────────────────────────────────────────────────
 
-  it("shows 'No logs recorded for this period.' when no logs and no active filters", () => {
+  it("shows 'No logs recorded for this period.' when no logs, no active filters, and no checklists", () => {
+    // Need both no logs AND no checklists to see the empty state
+    // (when there are checklists, they show as unstarted rows instead)
     mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: false });
+    mockUseChecklists.mockReturnValueOnce({ data: [], isLoading: false });
     render(<ReportingTab />, { wrapper });
     expect(screen.getByText("No logs recorded for this period.")).toBeInTheDocument();
   });
@@ -475,10 +518,10 @@ describe("ReportingTab", () => {
     expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
   });
 
-  it("shows 'none' sub-label in Entries stat card when no entries", () => {
+  it("shows 'none' sub-label in stat cards when counts are 0", () => {
     mockUseChecklistLogs.mockReturnValueOnce({ data: [], isLoading: false });
     render(<ReportingTab />, { wrapper });
-    // "none" label appears in one or more stat cards when counts are 0
+    // "none" label appears in stat cards when counts are 0
     const noneLabels = screen.getAllByText("none");
     expect(noneLabels.length).toBeGreaterThanOrEqual(1);
   });
@@ -777,11 +820,50 @@ describe("ReportingTab", () => {
 
   // ── Open Actions stat card ──────────────────────────────────────────
 
-  it("Open Actions stat card is rendered", () => {
+  it("Open Actions stat card is rendered with correct count", () => {
     render(<ReportingTab />, { wrapper });
-    const statCards = document.querySelectorAll(".grid.grid-cols-3 .text-2xl");
-    expect(statCards[2]).toBeTruthy();
-    // With MOCK_ACTIONS having 1 open action, count should be 1
-    expect(statCards[2]).toHaveTextContent("1");
+    const openActionsCard = screen.getByText("Open Actions").closest(".rounded-2xl");
+    expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
+  });
+
+  // ── Unstarted checklists ────────────────────────────────────────────
+
+  it("shows UNSTARTED badge in completion log when status filter is 'all'", () => {
+    render(<ReportingTab />, { wrapper });
+    // Safety Walk (c3) has no log in MOCK_LOGS — should show as UNSTARTED
+    expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
+  });
+
+  it("status filter 'unstarted' shows only unstarted checklists", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
+    expect(screen.queryByText("PASS")).not.toBeInTheDocument();
+    expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
+  });
+
+  it("status filter 'unstarted' shows the unstarted checklist name", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    expect(screen.getByText("Safety Walk")).toBeInTheDocument();
+  });
+
+  it("status filter 'unstarted' shows 'Showing N unstarted checklists' count", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    expect(screen.getByText(/Showing 1 unstarted checklist/)).toBeInTheDocument();
+  });
+
+  it("shows 'All checklists have been started' when unstarted filter and all are started", () => {
+    // Provide logs for both c1 and c3 (Safety Walk) so nothing is unstarted
+    const allStartedLogs = [
+      ...MOCK_LOGS,
+      { id: "l4", checklist_id: "c3", checklist_title: "Safety Walk", completed_by: "Eve", score: 100, type: "opening", answers: [], created_at: "2024-03-09T10:00:00Z", started_at: "2024-03-09T09:00:00Z", location_id: "loc-1" },
+    ];
+    mockUseChecklistLogs.mockImplementation(() => ({ data: allStartedLogs, isLoading: false }));
+    render(<ReportingTab />, { wrapper });
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    expect(screen.getByText("All checklists have been started this period.")).toBeInTheDocument();
   });
 });
+
