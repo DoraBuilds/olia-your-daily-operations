@@ -782,10 +782,11 @@ describe("Kiosk — PIN Entry Modal", () => {
     expect(screen.getByText("Insert PIN")).toBeInTheDocument();
   });
 
-  it("PIN modal shows the current helper subtitle", async () => {
+  it("PIN modal uses unified shell style with no subtitle", async () => {
     const opened = await openPinModal();
     if (!opened) return;
-    expect(screen.getByText(/You're doing great/i)).toBeInTheDocument();
+    expect(screen.queryByText(/You're doing great/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
   });
 
   it("PIN modal shows numpad with digit '1'", async () => {
