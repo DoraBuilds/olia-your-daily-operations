@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BookOpen, ChevronLeft, FileText, Folder } from "lucide-react";
+import { BookOpen, FileText, Folder } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
@@ -120,17 +120,15 @@ export function KioskLibrary({
   return (
     <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       {/* Header */}
-      <div className="px-5 pt-6 pb-4 border-b border-border flex items-center gap-3">
-        <button
-          data-testid="library-back-btn"
-          onClick={handleBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors shrink-0"
-          aria-label="Back"
-        >
-          <ChevronLeft size={20} className="text-muted-foreground" />
-        </button>
+      <div className="px-5 pt-6 pb-4 border-b border-border flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">← {backLabel}</p>
+          <button
+            data-testid="library-back-btn"
+            onClick={handleBack}
+            className="text-xs text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"
+          >
+            ← {backLabel}
+          </button>
           <h1 className="font-display text-xl italic text-foreground leading-tight truncate">
             {selectedDoc
               ? selectedDoc.title
@@ -139,7 +137,7 @@ export function KioskLibrary({
                 : "Staff Library"}
           </h1>
         </div>
-        <p className="text-xs text-muted-foreground shrink-0">{memberName}</p>
+        <p className="text-xs text-muted-foreground shrink-0 pl-3">{memberName}</p>
       </div>
 
       {/* Content */}
@@ -192,7 +190,7 @@ function RootFolders({
     );
   }
   return (
-    <>
+    <div className="grid grid-cols-2 gap-3">
       {folders.map(folder => {
         const count = docsInFolder(folder.id).length;
         return (
@@ -200,21 +198,21 @@ function RootFolders({
             key={folder.id}
             data-testid={`library-folder-${folder.id}`}
             onClick={() => onFolderSelect(folder.id)}
-            className="w-full text-left card-surface p-4 flex items-center gap-3 hover:border-sage/30 transition-colors active:scale-[0.99]"
+            className="card-surface aspect-square flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
           >
-            <div className="w-10 h-10 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
-              <Folder size={18} className="text-sage-deep" />
+            <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
+              <Folder size={20} className="text-sage-deep" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">{folder.name}</p>
-              <p className="text-xs text-muted-foreground">
+            <div className="w-full">
+              <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {count} document{count !== 1 ? "s" : ""}
               </p>
             </div>
           </button>
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -234,19 +232,23 @@ function FolderContents({
   }
   return (
     <>
-      {subFolders.map(folder => (
-        <button
-          key={folder.id}
-          data-testid={`library-folder-${folder.id}`}
-          onClick={() => onFolderSelect(folder.id)}
-          className="w-full text-left card-surface p-4 flex items-center gap-3 hover:border-sage/30 transition-colors active:scale-[0.99]"
-        >
-          <div className="w-10 h-10 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
-            <Folder size={18} className="text-sage-deep" />
-          </div>
-          <p className="text-sm font-medium text-foreground">{folder.name}</p>
-        </button>
-      ))}
+      {subFolders.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {subFolders.map(folder => (
+            <button
+              key={folder.id}
+              data-testid={`library-folder-${folder.id}`}
+              onClick={() => onFolderSelect(folder.id)}
+              className="card-surface aspect-square flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
+            >
+              <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
+                <Folder size={20} className="text-sage-deep" />
+              </div>
+              <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
       {docs.map(doc => (
         <button
           key={doc.id}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,96 @@ export async function verifyKioskToken(locationId: string, kioskToken: string | 
   return Boolean(data);
 }
 
-// ─── AdminLoginModal (centered) ───────────────────────────────────────────────
+// ─── KioskPinShell ────────────────────────────────────────────────────────────
+// Shared visual wrapper used by all three PIN dialogs. Matches Admin PIN style.
+interface KioskPinShellProps {
+  title: string;
+  onClose: () => void;
+  pin: string;
+  error?: string;
+  validating?: boolean;
+  lockedUntil?: number | null;
+  lockSecondsLeft?: number;
+  onDigit: (d: string) => void;
+  onBackspace: () => void;
+  ctaLabel?: string;
+  ctaId?: string;
+  ctaTestId?: string;
+  ctaDisabled?: boolean;
+  onCta?: () => void;
+  secondsLeft?: number | null;
+  onCancelCountdown?: () => void;
+  footer?: ReactNode;
+}
+
+export function KioskPinShell({
+  title, onClose, pin, error, validating, lockedUntil, lockSecondsLeft = 0,
+  onDigit, onBackspace, ctaLabel, ctaId, ctaTestId, ctaDisabled, onCta,
+  secondsLeft, onCancelCountdown, footer,
+}: KioskPinShellProps) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg text-foreground">{title}</h2>
+          <button onClick={onClose} className="btn-icon" aria-label="Close">
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <PinDots count={pin.length} />
+
+        {error && !validating && (
+          <p className="text-center text-xs text-status-error">{error}</p>
+        )}
+        {validating && (
+          <p className="text-center text-xs text-muted-foreground">Checking PIN…</p>
+        )}
+
+        {lockedUntil ? (
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">
+              Try again in <span className="font-bold text-foreground">{lockSecondsLeft}s</span>
+            </p>
+          </div>
+        ) : (
+          <NumberPad onDigit={onDigit} onBackspace={onBackspace} />
+        )}
+
+        {ctaLabel && (
+          <button
+            id={ctaId}
+            data-testid={ctaTestId}
+            onClick={onCta}
+            disabled={ctaDisabled}
+            className={cn(
+              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
+              !ctaDisabled
+                ? "bg-sage text-white hover:bg-sage-deep"
+                : "bg-muted text-muted-foreground cursor-not-allowed",
+            )}
+          >
+            {ctaLabel}
+          </button>
+        )}
+
+        {footer}
+      </div>
+
+      {secondsLeft !== null && secondsLeft !== undefined && (
+        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
+          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
+          <button onClick={onCancelCountdown} className="text-sm font-semibold underline">Stay</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AdminLoginModal ───────────────────────────────────────────────────────────
 export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => void; kioskLocationId?: string | null }) {
   const navigate = useNavigate();
   const { teamMember } = useAuth();
@@ -211,25 +300,15 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-foreground">Admin PIN</h2>
-          <button onClick={onClose} className="btn-icon">
-            <X size={18} className="text-muted-foreground" />
-          </button>
-        </div>
-
-        <PinDots count={pin.length} />
-
-        {error && <p className="text-center text-xs text-status-error">{error}</p>}
-        {loading && <p className="text-center text-xs text-muted-foreground">Checking…</p>}
-
-        <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
-
+    <KioskPinShell
+      title="Admin PIN"
+      onClose={onClose}
+      pin={pin}
+      error={error}
+      validating={loading}
+      onDigit={handleDigit}
+      onBackspace={handleBackspace}
+      footer={
         <p className="text-center text-xs text-muted-foreground pt-1">
           Forgot your PIN?{" "}
           <button
@@ -239,8 +318,8 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
             Log out and sign in again
           </button>
         </p>
-      </div>
-    </div>
+      }
+    />
   );
 }
 
@@ -420,66 +499,23 @@ export function PinEntryModal({
   const canStart = pin.length >= 4 && !validating && !lockedUntil;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 backdrop-blur-md">
-      <div className="bg-white w-full max-w-[320px] mx-4 rounded-3xl p-6 space-y-4 animate-fade-in shadow-xl relative">
-        {/* Close button */}
-        <button
-          onClick={onCancel}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
-          aria-label="Close"
-        >
-          <X size={16} />
-        </button>
-
-        {/* Title */}
-        <div className="text-center pt-1 space-y-1">
-          <h2 className="font-display text-3xl italic text-foreground">Insert PIN</h2>
-          <p className="text-xs text-muted-foreground">You're doing great — let's get started.</p>
-        </div>
-
-        <PinDots count={pin.length} />
-
-        {error && !validating && (
-          <p className="text-xs text-center text-status-error font-medium">{error}</p>
-        )}
-        {validating && (
-          <p className="text-xs text-center text-muted-foreground">Checking PIN…</p>
-        )}
-
-        {lockedUntil ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
-              Try again in <span className="font-bold text-foreground">{lockSecondsLeft}s</span>
-            </p>
-          </div>
-        ) : (
-          <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
-        )}
-
-        <button
-          id="pin-start-btn"
-          onClick={() => canStart && validate(pin)}
-          disabled={!canStart}
-          className={cn(
-            "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
-            canStart
-              ? "bg-sage text-white hover:bg-sage-deep"
-              : "bg-muted text-muted-foreground cursor-not-allowed",
-          )}
-        >
-          START
-        </button>
-      </div>
-
-      {secondsLeft !== null && (
-        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
-          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
-          <button onClick={cancelCountdown} className="text-sm font-semibold underline">
-            Stay
-          </button>
-        </div>
-      )}
-    </div>
+    <KioskPinShell
+      title="Insert PIN"
+      onClose={onCancel}
+      pin={pin}
+      error={error}
+      validating={validating}
+      lockedUntil={lockedUntil}
+      lockSecondsLeft={lockSecondsLeft}
+      onDigit={handleDigit}
+      onBackspace={handleBackspace}
+      ctaLabel="START"
+      ctaId="pin-start-btn"
+      ctaDisabled={!canStart}
+      onCta={() => canStart && validate(pin)}
+      secondsLeft={secondsLeft}
+      onCancelCountdown={cancelCountdown}
+    />
   );
 }
 
@@ -610,61 +646,22 @@ export function LibraryPinModal({
   const canSubmit = pin.length >= 4 && !validating && !lockedUntil;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/30 backdrop-blur-md">
-      <div className="bg-white w-full max-w-[320px] mx-4 rounded-3xl p-6 space-y-4 animate-fade-in shadow-xl relative">
-        <button
-          onClick={onCancel}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors text-muted-foreground"
-          aria-label="Close"
-        >
-          <X size={16} />
-        </button>
-
-        <div className="text-center pt-1 space-y-1">
-          <h2 className="font-display text-3xl italic text-foreground">Staff Library</h2>
-          <p className="text-xs text-muted-foreground">Enter your PIN to access training documents.</p>
-        </div>
-
-        <PinDots count={pin.length} />
-
-        {error && !validating && (
-          <p className="text-xs text-center text-status-error font-medium">{error}</p>
-        )}
-        {validating && (
-          <p className="text-xs text-center text-muted-foreground">Checking PIN…</p>
-        )}
-
-        {lockedUntil ? (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
-              Try again in <span className="font-bold text-foreground">{lockSecondsLeft}s</span>
-            </p>
-          </div>
-        ) : (
-          <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
-        )}
-
-        <button
-          data-testid="library-pin-access-btn"
-          onClick={() => canSubmit && validate(pin)}
-          disabled={!canSubmit}
-          className={cn(
-            "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
-            canSubmit
-              ? "bg-sage text-white hover:bg-sage-deep"
-              : "bg-muted text-muted-foreground cursor-not-allowed",
-          )}
-        >
-          ACCESS
-        </button>
-      </div>
-
-      {secondsLeft !== null && (
-        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
-          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
-          <button onClick={cancelCountdown} className="text-sm font-semibold underline">Stay</button>
-        </div>
-      )}
-    </div>
+    <KioskPinShell
+      title="Staff Library"
+      onClose={onCancel}
+      pin={pin}
+      error={error}
+      validating={validating}
+      lockedUntil={lockedUntil}
+      lockSecondsLeft={lockSecondsLeft}
+      onDigit={handleDigit}
+      onBackspace={handleBackspace}
+      ctaLabel="ACCESS"
+      ctaTestId="library-pin-access-btn"
+      ctaDisabled={!canSubmit}
+      onCta={() => canSubmit && validate(pin)}
+      secondsLeft={secondsLeft}
+      onCancelCountdown={cancelCountdown}
+    />
   );
 }
