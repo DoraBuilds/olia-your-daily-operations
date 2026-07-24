@@ -502,7 +502,7 @@ describe("Admin page", () => {
     fireEvent.click(editButtons[0] as HTMLElement);
 
     await waitFor(() => {
-      expect(screen.getByAltText("Location map preview")).toBeInTheDocument();
+      expect(screen.getByTitle("Location map preview")).toBeInTheDocument();
       expect(screen.getByText("Official place selected from maps")).toBeInTheDocument();
     });
   });

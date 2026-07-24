@@ -254,20 +254,19 @@ interface StaticMapPreviewProps {
 export function StaticMapPreview({ lat, lng, className }: StaticMapPreviewProps) {
   if (!API_KEY) return null;
 
-  // Midnight Blue marker (#1A2A47) encoded as 0x1A2A47
-  const src =
-    `https://maps.googleapis.com/maps/api/staticmap` +
-    `?center=${lat},${lng}&zoom=15&size=600x200&scale=2` +
-    `&markers=color:0x1A2A47%7C${lat},${lng}` +
-    `&key=${API_KEY}`;
-
   return (
-    <div className={cn("rounded-xl overflow-hidden border border-border", className)}>
-      <img
-        src={src}
-        alt="Location map preview"
-        className="w-full h-auto block"
+    <div className={cn("rounded-xl overflow-hidden border border-border", className)} style={{ height: 160 }}>
+      <iframe
+        title="Location map preview"
+        src={
+          `https://www.google.com/maps/embed/v1/view` +
+          `?key=${API_KEY}` +
+          `&center=${lat},${lng}` +
+          `&zoom=15&maptype=roadmap`
+        }
+        className="w-full h-full border-0"
         loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
   );

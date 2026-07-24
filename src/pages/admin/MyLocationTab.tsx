@@ -1,6 +1,6 @@
 // ─── MyLocationTab ────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   MapPin, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
   ChevronDown, Search, Tablet,
@@ -52,10 +52,6 @@ export function MyLocationTab({
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
 
   const currentLocation = locations.find(l => l.id === currentLocationId) ?? locations[0];
-  const [mapError, setMapError] = useState(false);
-
-  // Reset map error when switching locations so the new map gets a fresh attempt
-  useEffect(() => { setMapError(false); }, [currentLocationId]);
 
   const canEditLocation = !permissions || permissions.edit_location_details;
   const canEditThreshold = !permissions || permissions.override_inactivity_threshold;
@@ -167,41 +163,43 @@ export function MyLocationTab({
 
         {/* Right — map thumbnail + kiosk CTA */}
         <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2 h-full">
-          {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY && !mapError ? (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-80 transition-opacity block"
+          {currentLocation.lat != null && currentLocation.lng != null ? (
+            <div
+              className="rounded-2xl overflow-hidden border border-border shadow-sm"
               style={{ height: 120 }}
-              title="Open in Google Maps"
             >
-              <img
-                src={
-                  `https://maps.googleapis.com/maps/api/staticmap` +
-                  `?center=${currentLocation.lat},${currentLocation.lng}&zoom=15&size=300x300&scale=2` +
-                  `&markers=color:0x1A2A47%7C${currentLocation.lat},${currentLocation.lng}` +
-                  `&key=${MAPS_API_KEY}`
-                }
-                alt="Open in Google Maps"
-                className="w-full h-full object-cover block"
-                loading="lazy"
-                onError={() => setMapError(true)}
-              />
-            </a>
+              {MAPS_API_KEY ? (
+                <iframe
+                  title="Location map"
+                  src={
+                    `https://www.google.com/maps/embed/v1/view` +
+                    `?key=${MAPS_API_KEY}` +
+                    `&center=${currentLocation.lat},${currentLocation.lng}` +
+                    `&zoom=15&maptype=roadmap`
+                  }
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              ) : (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full h-full flex items-center justify-center bg-muted hover:opacity-80 transition-opacity"
+                  title="Open in Google Maps"
+                >
+                  <MapPin size={18} className="text-muted-foreground" />
+                </a>
+              )}
+            </div>
           ) : (
-            <a
-              href={currentLocation.lat != null && currentLocation.lng != null
-                ? `https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`
-                : "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-2xl border border-border bg-muted flex items-center justify-center hover:opacity-80 transition-opacity"
+            <div
+              className="rounded-2xl border border-border bg-muted flex items-center justify-center"
               style={{ height: 120 }}
-              title="Open in Google Maps"
             >
               <MapPin size={18} className="text-muted-foreground" />
-            </a>
+            </div>
           )}
           <button
             onClick={onLaunchKiosk}
