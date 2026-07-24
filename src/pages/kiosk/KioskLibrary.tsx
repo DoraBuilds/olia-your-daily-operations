@@ -198,7 +198,7 @@ function RootFolders({
             key={folder.id}
             data-testid={`library-folder-${folder.id}`}
             onClick={() => onFolderSelect(folder.id)}
-            className="card-surface aspect-square flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
+            className="card-surface h-36 flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
           >
             <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
               <Folder size={20} className="text-sage-deep" />
@@ -239,7 +239,7 @@ function FolderContents({
               key={folder.id}
               data-testid={`library-folder-${folder.id}`}
               onClick={() => onFolderSelect(folder.id)}
-              className="card-surface aspect-square flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
+              className="card-surface h-36 flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
             >
               <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
                 <Folder size={20} className="text-sage-deep" />
