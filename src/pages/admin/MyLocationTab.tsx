@@ -1,6 +1,6 @@
 // ─── MyLocationTab ────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
   ChevronDown, Search, Tablet,
@@ -52,6 +52,10 @@ export function MyLocationTab({
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
 
   const currentLocation = locations.find(l => l.id === currentLocationId) ?? locations[0];
+  const [mapError, setMapError] = useState(false);
+
+  // Reset map error when switching locations so the new map gets a fresh attempt
+  useEffect(() => { setMapError(false); }, [currentLocationId]);
 
   const canEditLocation = !permissions || permissions.edit_location_details;
   const canEditThreshold = !permissions || permissions.override_inactivity_threshold;
@@ -163,7 +167,7 @@ export function MyLocationTab({
 
         {/* Right — map thumbnail + kiosk CTA */}
         <div className="flex flex-col justify-between w-[35%] shrink-0 gap-2 h-full">
-          {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY ? (
+          {currentLocation.lat != null && currentLocation.lng != null && MAPS_API_KEY && !mapError ? (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
               target="_blank"
@@ -182,12 +186,22 @@ export function MyLocationTab({
                 alt="Open in Google Maps"
                 className="w-full h-full object-cover block"
                 loading="lazy"
+                onError={() => setMapError(true)}
               />
             </a>
           ) : (
-            <div className="rounded-2xl border border-border bg-muted flex items-center justify-center" style={{ height: 120 }}>
+            <a
+              href={currentLocation.lat != null && currentLocation.lng != null
+                ? `https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`
+                : "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-2xl border border-border bg-muted flex items-center justify-center hover:opacity-80 transition-opacity"
+              style={{ height: 120 }}
+              title="Open in Google Maps"
+            >
               <MapPin size={18} className="text-muted-foreground" />
-            </div>
+            </a>
           )}
           <button
             onClick={onLaunchKiosk}

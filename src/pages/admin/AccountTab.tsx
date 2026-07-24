@@ -91,6 +91,9 @@ export function AccountTab({
   const [showNewPin, setShowNewPin] = useState(false);
   const [savedPin, setSavedPin] = useState<string | null>(null);
   const [showSavedPin, setShowSavedPin] = useState(false);
+  const [revealedPin, setRevealedPin] = useState<string | null>(null);
+  const [showRevealedPin, setShowRevealedPin] = useState(false);
+  const [revealLoading, setRevealLoading] = useState(false);
 
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);

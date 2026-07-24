@@ -51,7 +51,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: memberRow, error: memberErr } = await admin
     .from("team_members")
     .select("organization_id, role")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .maybeSingle();
   if (memberErr || !memberRow) {
     return json({ error: "No team_members row found for caller" }, 403);
