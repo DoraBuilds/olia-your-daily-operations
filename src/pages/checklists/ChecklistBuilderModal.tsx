@@ -126,7 +126,27 @@ export function ChecklistBuilderModal({
   const footerPublishRef = useRef<HTMLButtonElement>(null);
   const [footerPublishVisible, setFooterPublishVisible] = useState(false);
 
-  const hasContent = !!(title.trim() || description.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
+  // Serialise all schedule/location/visibility settings into one comparable string
+  const settingsSnapshot = () => JSON.stringify({
+    startDate: startDate ? format(startDate, "yyyy-MM-dd") : null,
+    schedule,
+    customRecurrence: schedule === "custom" ? customRecurrence : null,
+    visibilityWindowEnabled,
+    visibilityFrom: visibilityWindowEnabled ? visibilityFrom : null,
+    visibilityUntil: visibilityWindowEnabled ? visibilityUntil : null,
+    locationMode,
+    selectedLocationIds: locationMode === "specific" ? [...selectedLocationIds].sort() : [],
+  });
+
+  const hasContent = !!(
+    title.trim() ||
+    description.trim() ||
+    sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())) ||
+    startDate != null ||
+    schedule !== "none" ||
+    visibilityWindowEnabled ||
+    locationMode === "specific"
+  );
 
   // Snapshot the actual initial state values (not the raw props) so that
   // null/undefined initialSections that fall back to the default section
@@ -134,6 +154,7 @@ export function ChecklistBuilderModal({
   const initialTitleRef = useRef(title);
   const initialDescriptionRef = useRef(description);
   const initialSectionsRef = useRef(JSON.stringify(sections));
+  const initialSettingsRef = useRef(settingsSnapshot());
 
   // Intercept Exit/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
@@ -141,7 +162,8 @@ export function ChecklistBuilderModal({
     const warnForEdit = !!savedId && (
       title !== initialTitleRef.current ||
       description !== initialDescriptionRef.current ||
-      JSON.stringify(sections) !== initialSectionsRef.current
+      JSON.stringify(sections) !== initialSectionsRef.current ||
+      settingsSnapshot() !== initialSettingsRef.current
     );
     if (warnForNew || warnForEdit) {
       setShowDiscardConfirm(true);
@@ -172,10 +194,16 @@ export function ChecklistBuilderModal({
   useEffect(() => {
     if (!onDirtyChange) return;
     const dirty = !savedId
-      ? !!(title.trim() || description.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())))
-      : title !== initialTitleRef.current || description !== initialDescriptionRef.current || JSON.stringify(sections) !== initialSectionsRef.current;
+      ? hasContent
+      : (title !== initialTitleRef.current ||
+         description !== initialDescriptionRef.current ||
+         JSON.stringify(sections) !== initialSectionsRef.current ||
+         settingsSnapshot() !== initialSettingsRef.current);
     onDirtyChange(dirty);
-  }, [title, description, sections, savedId, onDirtyChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, sections, startDate, schedule, customRecurrence,
+      visibilityWindowEnabled, visibilityFrom, visibilityUntil,
+      locationMode, selectedLocationIds, savedId, onDirtyChange]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -412,6 +440,7 @@ export function ChecklistBuilderModal({
       initialTitleRef.current = title;
       initialDescriptionRef.current = description;
       initialSectionsRef.current = JSON.stringify(sections);
+      initialSettingsRef.current = settingsSnapshot();
       onDirtyChange?.(false);
       setLastPublishedAt(new Date());
       toast.success(isFirstPublish ? "Checklist published!" : "Changes saved!");
