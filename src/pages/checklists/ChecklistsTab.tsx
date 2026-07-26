@@ -165,24 +165,35 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     onBuilderTitleChange?.(null);
   }, [onBuilderTitleChange]);
 
-  // Show a discard-confirm when the user clicks any nav tab while the builder has unsaved changes.
-  // useBlocker handles cross-route navigation; this state handles same-route (Checklists tab) clicks.
+  // Show a discard-confirm when the user navigates away with unsaved changes.
+  // We use two complementary mechanisms:
+  //   1. A capture-phase click listener intercepts same-route nav clicks (Checklists tab) that
+  //      React Router treats as no-ops and therefore never triggers useBlocker for.
+  //   2. useBlocker handles genuine cross-route navigation (Dashboard, Admin, etc.).
   const [showNavExitConfirm, setShowNavExitConfirm] = useState(false);
   const location = useLocation();
-  const prevLocationKeyRef = useRef(location.key);
-  useEffect(() => {
-    if (prevLocationKeyRef.current === location.key) return;
-    prevLocationKeyRef.current = location.key;
-    if (!showBuilder) return;
-    // Read from ref — always the live value, never stale from a render closure
-    if (isBuilderDirtyRef.current) {
-      setShowNavExitConfirm(true);
-    } else {
-      discardAndClose();
-    }
-  }, [location.key, showBuilder, discardAndClose]);
 
-  // Function form so the router always reads the live ref value, not a render-time snapshot
+  useEffect(() => {
+    if (!showBuilder) return;
+    const handleNavClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") ?? "";
+      // Only intercept internal same-route links — cross-route is handled by useBlocker
+      if (!href.startsWith("/") || href !== location.pathname) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (isBuilderDirtyRef.current) {
+        setShowNavExitConfirm(true);
+      } else {
+        discardAndClose();
+      }
+    };
+    window.addEventListener("click", handleNavClick, true);
+    return () => window.removeEventListener("click", handleNavClick, true);
+  }, [showBuilder, location.pathname, discardAndClose]);
+
+  // useBlocker handles cross-route navigation; reads from ref so the check is always current
   const blocker = useBlocker(() => showBuilder && isBuilderDirtyRef.current);
 
   // Warn the browser when the user tries to leave the tab/app entirely while the builder has unsaved changes
