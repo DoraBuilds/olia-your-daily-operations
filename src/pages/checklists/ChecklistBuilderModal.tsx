@@ -371,7 +371,7 @@ export function ChecklistBuilderModal({
     const isAllLocations = locationMode === "all";
     const payload: Partial<ChecklistItem> = {
       title: title.trim(),
-      description: description.trim() || undefined,
+      description: description.trim() || null,
       questionsCount: totalQuestions,
       schedule: savedSchedule,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
