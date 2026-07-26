@@ -155,7 +155,8 @@ describe("ChecklistBuilderModal - new checklist", () => {
     fireEvent.change(titleInput, { target: { value: "New Checklist" } });
     fireEvent.click(screen.getAllByText("Publish")[0]);
     await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: "New Checklist" })));
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    // After publishing, the builder stays open — onClose is NOT called
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("close button calls onClose", () => {

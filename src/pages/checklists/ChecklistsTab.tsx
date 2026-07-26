@@ -222,7 +222,7 @@ export function ChecklistsTab() {
         asPage
         onClose={discardAndClose}
         onAdd={async item => {
-          await saveChecklistMut.mutateAsync({
+          const data = await saveChecklistMut.mutateAsync({
             title: item.title,
             folder_id: currentFolder,
             location_id: item.location_id ?? null,
@@ -235,6 +235,7 @@ export function ChecklistsTab() {
             visibility_from: item.visibility_from ?? null,
             visibility_until: item.visibility_until ?? null,
           });
+          return (data as any)?.id as string | undefined;
         }}
         onUpdate={async (id, updates) => {
           const orig = dbChecklists.find(c => c.id === id);

@@ -55,7 +55,7 @@ const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
 
 interface ChecklistBuilderModalProps {
   onClose: () => void;
-  onAdd: (item: ChecklistItem) => Promise<void>;
+  onAdd: (item: ChecklistItem) => Promise<string | void>;
   onUpdate?: (id: string, item: Partial<ChecklistItem>) => Promise<void>;
   initialTitle?: string;
   initialSections?: SectionDef[];
@@ -114,6 +114,8 @@ export function ChecklistBuilderModal({
     }]
   );
 
+  const [lastPublishedAt, setLastPublishedAt] = useState<Date | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(editId ?? null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
@@ -131,10 +133,10 @@ export function ChecklistBuilderModal({
   const initialTitleRef = useRef(title);
   const initialSectionsRef = useRef(JSON.stringify(sections));
 
-  // Intercept Back/X when there's unsaved content — show a confirmation first
+  // Intercept Exit/X when there's unsaved content — show a confirmation first
   const handleRequestClose = () => {
-    const warnForNew = !editId && hasContent;
-    const warnForEdit = !!editId && (
+    const warnForNew = !savedId && hasContent;
+    const warnForEdit = !!savedId && (
       title !== initialTitleRef.current ||
       JSON.stringify(sections) !== initialSectionsRef.current
     );
@@ -166,11 +168,11 @@ export function ChecklistBuilderModal({
 
   useEffect(() => {
     if (!onDirtyChange) return;
-    const dirty = !editId
+    const dirty = !savedId
       ? !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())))
       : title !== initialTitleRef.current || JSON.stringify(sections) !== initialSectionsRef.current;
     onDirtyChange(dirty);
-  }, [title, sections, editId, onDirtyChange]);
+  }, [title, sections, savedId, onDirtyChange]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -390,19 +392,24 @@ export function ChecklistBuilderModal({
 
     setIsSaving(true);
     try {
-      if (editId && onUpdate) {
-        await onUpdate(editId, payload);
+      const isFirstPublish = !savedId;
+      if (savedId && onUpdate) {
+        await onUpdate(savedId, payload);
       } else {
-        await onAdd({
+        const result = await onAdd({
           id: `cl-${Date.now()}`,
           ...payload,
           type: "checklist",
           folderId: null,
           createdAt: new Date().toISOString().slice(0, 10),
         } as any);
+        if (result) setSavedId(result as string);
       }
       clearChecklistDraft();
-      onClose();
+      initialTitleRef.current = title;
+      initialSectionsRef.current = JSON.stringify(sections);
+      setLastPublishedAt(new Date());
+      toast.success(isFirstPublish ? "Checklist published!" : "Changes saved!");
     } catch (err) {
       toastRlsError(err);
     } finally {
@@ -457,7 +464,7 @@ export function ChecklistBuilderModal({
       <div className="p-5 space-y-5">
         {asPage && (
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={16} /> Exit
           </button>
         )}
         {/* Locations */}
@@ -1284,6 +1291,11 @@ export function ChecklistBuilderModal({
           )}>
           {isSaving ? "Publishing…" : "Publish"}
         </button>
+        {lastPublishedAt && (
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Last published at {format(lastPublishedAt, "h:mm a")}
+          </p>
+        )}
       </div>
     </>
   );
@@ -1360,7 +1372,7 @@ export function ChecklistBuilderModal({
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
         <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
-        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you go back.</p>
+        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you exit.</p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDiscardConfirm(false)}
@@ -1389,19 +1401,28 @@ export function ChecklistBuilderModal({
         {subModals}
         {discardConfirmDialog}
         {createPortal(
-          <button
-            disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-            onClick={handleCreate}
-            className={cn(
-              "fixed top-20 right-4 z-30 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150",
-              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
-              !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
+          <div className={cn(
+            "fixed top-20 right-4 z-30 flex flex-col items-end gap-1 transition-all duration-150",
+            footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+          )}>
+            <button
+              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+              onClick={handleCreate}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+                !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              {isSaving ? "Publishing…" : "Publish"}
+            </button>
+            {lastPublishedAt && (
+              <span className="text-[10px] text-muted-foreground">
+                Saved {format(lastPublishedAt, "h:mm a")}
+              </span>
             )}
-          >
-            {isSaving ? "Publishing…" : "Publish"}
-          </button>,
+          </div>,
           document.body
         )}
       </>
