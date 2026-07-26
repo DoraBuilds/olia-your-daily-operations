@@ -14,6 +14,7 @@ export interface ChecklistItem {
   id: string;
   organization_id?: string;
   title: string;
+  description?: string | null;
   folder_id: string | null;
   location_id: string | null;
   location_ids?: string[] | null;
@@ -98,7 +99,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, organization_id, title, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
+        .select("id, organization_id, title, description, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
         .order("title");
       if (error) throw error;
       return ((data ?? []) as ChecklistItem[]).filter(
