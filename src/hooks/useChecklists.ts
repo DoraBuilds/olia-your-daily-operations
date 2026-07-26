@@ -114,17 +114,18 @@ export function useSaveChecklist() {
   return useMutation({
     mutationFn: async (checklist: Partial<ChecklistItem> & { id?: string }) => {
       const { data, error } = await supabase.rpc("save_checklist", {
-        p_id:              checklist.id || null,
-        p_title:           checklist.title ?? "",
-        p_folder_id:       checklist.folder_id ?? null,
-        p_location_id:     checklist.location_id ?? null,
-        p_location_ids:    checklist.location_ids ?? null,
-        p_start_date:      checklist.start_date ?? null,
-        p_schedule:        checklist.schedule ?? null,
-        p_sections:        checklist.sections ?? [],
-        p_time_of_day:     "anytime",
-        p_due_time:        checklist.due_time ?? null,
-        p_visibility_from: checklist.visibility_from ?? null,
+        p_id:               checklist.id || null,
+        p_title:            checklist.title ?? "",
+        p_description:      checklist.description ?? null,
+        p_folder_id:        checklist.folder_id ?? null,
+        p_location_id:      checklist.location_id ?? null,
+        p_location_ids:     checklist.location_ids ?? null,
+        p_start_date:       checklist.start_date ?? null,
+        p_schedule:         checklist.schedule ?? null,
+        p_sections:         checklist.sections ?? [],
+        p_time_of_day:      "anytime",
+        p_due_time:         checklist.due_time ?? null,
+        p_visibility_from:  checklist.visibility_from ?? null,
         p_visibility_until: checklist.visibility_until ?? null,
       });
       if (error) throw error;
