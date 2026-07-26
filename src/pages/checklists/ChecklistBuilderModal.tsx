@@ -1402,9 +1402,14 @@ export function ChecklistBuilderModal({
         {discardConfirmDialog}
         {createPortal(
           <div className={cn(
-            "fixed top-20 right-4 z-30 flex flex-col items-end gap-1 transition-all duration-150",
+            "fixed top-20 right-4 z-30 flex flex-row items-center gap-2 transition-all duration-150",
             footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
           )}>
+            {lastPublishedAt && (
+              <span className="text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
+                Saved {format(lastPublishedAt, "h:mm a")}
+              </span>
+            )}
             <button
               disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
               onClick={handleCreate}
@@ -1417,11 +1422,6 @@ export function ChecklistBuilderModal({
             >
               {isSaving ? "Publishing…" : "Publish"}
             </button>
-            {lastPublishedAt && (
-              <span className="text-[10px] text-muted-foreground">
-                Saved {format(lastPublishedAt, "h:mm a")}
-              </span>
-            )}
           </div>,
           document.body
         )}
