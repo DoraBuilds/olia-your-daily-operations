@@ -29,7 +29,7 @@ import { linkableInfohubResources } from "@/lib/infohub-catalog";
 
 const DRAFT_KEY = "olia_checklist_draft";
 
-function loadDraft(): { title: string; sections: SectionDef[] } | null {
+function loadDraft(): { title: string; description?: string; sections: SectionDef[] } | null {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -59,6 +59,7 @@ interface ChecklistBuilderModalProps {
   onUpdate?: (id: string, item: Partial<ChecklistItem>) => Promise<void>;
   initialTitle?: string;
   initialSections?: SectionDef[];
+  initialDescription?: string;
   initialLocationIds?: string[] | null;
   initialSchedule?: string | null;
   initialStartDate?: string | null;
@@ -73,7 +74,7 @@ interface ChecklistBuilderModalProps {
 }
 
 export function ChecklistBuilderModal({
-  onClose, onAdd, onUpdate, initialTitle, initialSections, initialLocationIds,
+  onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
   initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const createAlert = useCreateAlert();
@@ -88,7 +89,7 @@ export function ChecklistBuilderModal({
   const draft = isNewChecklist ? loadDraft() : null;
 
   const [title, setTitle] = useState(draft?.title ?? initialTitle ?? "");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(draft?.description ?? initialDescription ?? "");
   const [startDate, setStartDate] = useState<Date | undefined>(
     initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
   );
@@ -125,12 +126,13 @@ export function ChecklistBuilderModal({
   const footerPublishRef = useRef<HTMLButtonElement>(null);
   const [footerPublishVisible, setFooterPublishVisible] = useState(false);
 
-  const hasContent = !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
+  const hasContent = !!(title.trim() || description.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())));
 
   // Snapshot the actual initial state values (not the raw props) so that
   // null/undefined initialSections that fall back to the default section
   // still compare equal to the state React actually initialised.
   const initialTitleRef = useRef(title);
+  const initialDescriptionRef = useRef(description);
   const initialSectionsRef = useRef(JSON.stringify(sections));
 
   // Intercept Exit/X when there's unsaved content — show a confirmation first
@@ -138,6 +140,7 @@ export function ChecklistBuilderModal({
     const warnForNew = !savedId && hasContent;
     const warnForEdit = !!savedId && (
       title !== initialTitleRef.current ||
+      description !== initialDescriptionRef.current ||
       JSON.stringify(sections) !== initialSectionsRef.current
     );
     if (warnForNew || warnForEdit) {
@@ -150,8 +153,8 @@ export function ChecklistBuilderModal({
   // Autosave draft to sessionStorage while editing a new checklist
   useEffect(() => {
     if (!isNewChecklist) return;
-    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title, sections })); } catch { /* ignore */ }
-  }, [title, sections, isNewChecklist]);
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ title, description, sections })); } catch { /* ignore */ }
+  }, [title, description, sections, isNewChecklist]);
 
   // Hide the top Publish button when the footer Publish button scrolls into view
   useEffect(() => {
@@ -169,10 +172,10 @@ export function ChecklistBuilderModal({
   useEffect(() => {
     if (!onDirtyChange) return;
     const dirty = !savedId
-      ? !!(title.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())))
-      : title !== initialTitleRef.current || JSON.stringify(sections) !== initialSectionsRef.current;
+      ? !!(title.trim() || description.trim() || sections.some(s => s.name.trim() || s.questions.some(q => q.text.trim())))
+      : title !== initialTitleRef.current || description !== initialDescriptionRef.current || JSON.stringify(sections) !== initialSectionsRef.current;
     onDirtyChange(dirty);
-  }, [title, sections, savedId, onDirtyChange]);
+  }, [title, description, sections, savedId, onDirtyChange]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -407,6 +410,7 @@ export function ChecklistBuilderModal({
       }
       clearChecklistDraft();
       initialTitleRef.current = title;
+      initialDescriptionRef.current = description;
       initialSectionsRef.current = JSON.stringify(sections);
       setLastPublishedAt(new Date());
       toast.success(isFirstPublish ? "Checklist published!" : "Changes saved!");

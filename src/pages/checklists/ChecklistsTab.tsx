@@ -1,6 +1,6 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams, useBlocker } from "react-router-dom";
+import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
@@ -144,6 +144,33 @@ export function ChecklistsTab() {
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
+  // Hoist discardAndClose so it can be used both in the builder branch and in effects below
+  const discardAndClose = useCallback(() => {
+    try { sessionStorage.removeItem("olia_checklist_draft"); } catch { /* ignore */ }
+    setShowBuilder(false);
+    setPrefillTitle("");
+    setPrefillSections(undefined);
+    setPrefillLocationIds(undefined);
+    setEditingChecklistId(null);
+    setIsBuilderDirty(false);
+  }, []);
+
+  // Show a discard-confirm when the user clicks any nav tab while the builder has unsaved changes.
+  // useBlocker handles cross-route navigation; this state handles same-route (Checklists tab) clicks.
+  const [showNavExitConfirm, setShowNavExitConfirm] = useState(false);
+  const location = useLocation();
+  const prevLocationKeyRef = useRef(location.key);
+  useEffect(() => {
+    if (prevLocationKeyRef.current === location.key) return;
+    prevLocationKeyRef.current = location.key;
+    if (!showBuilder) return;
+    if (isBuilderDirty) {
+      setShowNavExitConfirm(true);
+    } else {
+      discardAndClose();
+    }
+  }, [location.key, showBuilder, isBuilderDirty, discardAndClose]);
+
   const blocker = useBlocker(showBuilder && isBuilderDirty);
 
   // Warn the browser when the user tries to leave the tab/app entirely while the builder has unsaved changes
@@ -205,16 +232,6 @@ export function ChecklistsTab() {
 
   // ── Page-mode builder: takes over the whole content area ──────────────────
   if (showBuilder) {
-    const discardAndClose = () => {
-      try { sessionStorage.removeItem("olia_checklist_draft"); } catch { /* ignore */ }
-      setShowBuilder(false);
-      setPrefillTitle("");
-      setPrefillSections(undefined);
-      setPrefillLocationIds(undefined);
-      setEditingChecklistId(null);
-      setIsBuilderDirty(false);
-    };
-
     return (
       <>
       <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 rounded-xl bg-sage animate-pulse" /></div>}>
@@ -224,6 +241,7 @@ export function ChecklistsTab() {
         onAdd={async item => {
           const data = await saveChecklistMut.mutateAsync({
             title: item.title,
+            description: item.description ?? null,
             folder_id: currentFolder,
             location_id: item.location_id ?? null,
             location_ids: item.location_ids ?? null,
@@ -243,6 +261,7 @@ export function ChecklistsTab() {
           await saveChecklistMut.mutateAsync({
             ...orig,
             title: updates.title ?? orig.title,
+            description: updates.description !== undefined ? updates.description : (orig as any).description ?? null,
             sections: updates.sections ?? orig.sections,
             schedule: updates.schedule ?? orig.schedule,
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
@@ -255,6 +274,7 @@ export function ChecklistsTab() {
           });
         }}
         initialTitle={prefillTitle}
+        initialDescription={(editingChecklist as any)?.description ?? undefined}
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
         initialSchedule={editingChecklist?.schedule ?? null}
@@ -265,20 +285,20 @@ export function ChecklistsTab() {
         onDirtyChange={setIsBuilderDirty}
       />
       </Suspense>
-      {blocker.state === "blocked" && createPortal(
+      {(blocker.state === "blocked" || showNavExitConfirm) && createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
             <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
-            <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you leave this page.</p>
+            <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you exit.</p>
             <div className="flex gap-3">
               <button
-                onClick={() => blocker.reset()}
+                onClick={() => { setShowNavExitConfirm(false); if (blocker.state === "blocked") blocker.reset(); }}
                 className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
               >
                 Keep editing
               </button>
               <button
-                onClick={() => { discardAndClose(); blocker.proceed(); }}
+                onClick={() => { discardAndClose(); setShowNavExitConfirm(false); if (blocker.state === "blocked") blocker.proceed(); }}
                 className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
               >
                 Discard changes
