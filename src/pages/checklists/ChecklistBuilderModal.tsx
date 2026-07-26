@@ -412,6 +412,7 @@ export function ChecklistBuilderModal({
       initialTitleRef.current = title;
       initialDescriptionRef.current = description;
       initialSectionsRef.current = JSON.stringify(sections);
+      onDirtyChange?.(false);
       setLastPublishedAt(new Date());
       toast.success(isFirstPublish ? "Checklist published!" : "Changes saved!");
     } catch (err) {
