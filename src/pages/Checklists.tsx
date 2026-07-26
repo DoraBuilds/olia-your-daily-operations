@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { ChecklistsTab } from "./checklists/ChecklistsTab";
@@ -6,6 +6,7 @@ import { ChecklistsTab } from "./checklists/ChecklistsTab";
 export default function Checklists() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [builderTitle, setBuilderTitle] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get("tab") !== "reporting") return;
@@ -23,9 +24,15 @@ export default function Checklists() {
     );
   }, [navigate, searchParams]);
 
+  const subtitle = builderTitle !== null
+    ? builderTitle
+      ? `Editing: ${builderTitle}`
+      : "New checklist"
+    : "Manage your checklists & inspections";
+
   return (
-    <Layout title="Olia" subtitle="Manage your checklists & inspections">
-      <ChecklistsTab />
+    <Layout title="Olia" subtitle={subtitle}>
+      <ChecklistsTab onBuilderTitleChange={setBuilderTitle} />
     </Layout>
   );
 }

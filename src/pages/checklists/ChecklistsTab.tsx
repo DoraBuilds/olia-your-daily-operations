@@ -32,7 +32,7 @@ function checklistAppliesToLocation(
   return assignedIds.includes(locationId);
 }
 
-export function ChecklistsTab() {
+export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
   const { data: dbLocations = [] } = useLocations();
@@ -153,7 +153,8 @@ export function ChecklistsTab() {
     setPrefillLocationIds(undefined);
     setEditingChecklistId(null);
     setIsBuilderDirty(false);
-  }, []);
+    onBuilderTitleChange?.(null);
+  }, [onBuilderTitleChange]);
 
   // Show a discard-confirm when the user clicks any nav tab while the builder has unsaved changes.
   // useBlocker handles cross-route navigation; this state handles same-route (Checklists tab) clicks.
@@ -210,6 +211,7 @@ export function ChecklistsTab() {
         setPrefillSections(cl.sections);
         setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
         setShowBuilder(true);
+        onBuilderTitleChange?.(cl.title);
       }
     } else if (action === "move") {
       setMoveTarget(contextMenu);
@@ -261,7 +263,7 @@ export function ChecklistsTab() {
           await saveChecklistMut.mutateAsync({
             ...orig,
             title: updates.title ?? orig.title,
-            description: updates.description !== undefined ? updates.description : (orig as any).description ?? null,
+            description: updates.description ?? (orig as any).description ?? null,
             sections: updates.sections ?? orig.sections,
             schedule: updates.schedule ?? orig.schedule,
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
@@ -412,6 +414,7 @@ export function ChecklistsTab() {
                 setPrefillSections(cl.sections);
                 setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
                 setShowBuilder(true);
+                onBuilderTitleChange?.(cl.title);
               }}
                 className="flex-1 flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
@@ -446,7 +449,7 @@ export function ChecklistsTab() {
       {showCreateMenu && (
         <CreateMenuSheet
           onClose={() => setShowCreateMenu(false)}
-          onBuildOwn={() => setShowBuilder(true)}
+          onBuildOwn={() => { setShowBuilder(true); onBuilderTitleChange?.(""); }}
           onConvertFile={() => {
             if (!can("fileConvert")) { setUpgradeFeature("File conversion"); return; }
             setShowConvertFile(true);
@@ -464,11 +467,13 @@ export function ChecklistsTab() {
           setPrefillTitle("Converted checklist");
           setPrefillSections(sections);
           setShowBuilder(true);
+          onBuilderTitleChange?.("");
         }} />}
         {showBuildAI && <BuildWithAIModal onClose={() => setShowBuildAI(false)} onGenerate={(title, sections) => {
           setPrefillTitle(title);
           setPrefillSections(sections);
           setShowBuilder(true);
+          onBuilderTitleChange?.("");
         }} />}
         {previewChecklist && (
           <ChecklistPreviewModal checklist={previewChecklist} onClose={() => setPreviewChecklist(null)}
@@ -478,6 +483,7 @@ export function ChecklistsTab() {
               setPrefillSections(previewChecklist.sections);
               setPreviewChecklist(null);
               setShowBuilder(true);
+              onBuilderTitleChange?.(previewChecklist.title);
             }}
           />
         )}
