@@ -77,7 +77,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           <SidebarNav />
 
           {/* Only this column scrolls */}
-          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto pb-24 pt-5 animate-fade-in md:pb-8">
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 pt-5 animate-fade-in md:pb-8">
             <div className={cn(contentWidthClass, "min-w-0 space-y-4")}>
               {children}
             </div>
