@@ -144,9 +144,18 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
 
+  // Mirror isBuilderDirty into a ref so useBlocker and the location-key effect
+  // always read the *current* value synchronously — no render cycle needed.
+  const isBuilderDirtyRef = useRef(false);
+  const handleDirtyChange = useCallback((dirty: boolean) => {
+    isBuilderDirtyRef.current = dirty;
+    setIsBuilderDirty(dirty);
+  }, []);
+
   // Hoist discardAndClose so it can be used both in the builder branch and in effects below
   const discardAndClose = useCallback(() => {
     try { sessionStorage.removeItem("olia_checklist_draft"); } catch { /* ignore */ }
+    isBuilderDirtyRef.current = false;
     setShowBuilder(false);
     setPrefillTitle("");
     setPrefillSections(undefined);
@@ -165,14 +174,16 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     if (prevLocationKeyRef.current === location.key) return;
     prevLocationKeyRef.current = location.key;
     if (!showBuilder) return;
-    if (isBuilderDirty) {
+    // Read from ref — always the live value, never stale from a render closure
+    if (isBuilderDirtyRef.current) {
       setShowNavExitConfirm(true);
     } else {
       discardAndClose();
     }
-  }, [location.key, showBuilder, isBuilderDirty, discardAndClose]);
+  }, [location.key, showBuilder, discardAndClose]);
 
-  const blocker = useBlocker(showBuilder && isBuilderDirty);
+  // Function form so the router always reads the live ref value, not a render-time snapshot
+  const blocker = useBlocker(() => showBuilder && isBuilderDirtyRef.current);
 
   // Warn the browser when the user tries to leave the tab/app entirely while the builder has unsaved changes
   useEffect(() => {
@@ -284,7 +295,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
         editId={editingChecklistId || undefined}
-        onDirtyChange={setIsBuilderDirty}
+        onDirtyChange={handleDirtyChange}
       />
       </Suspense>
       {(blocker.state === "blocked" || showNavExitConfirm) && createPortal(
