@@ -274,7 +274,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           await saveChecklistMut.mutateAsync({
             ...orig,
             title: updates.title ?? orig.title,
-            description: updates.description ?? (orig as any).description ?? null,
+            description: updates.description ?? orig.description ?? null,
             sections: updates.sections ?? orig.sections,
             schedule: updates.schedule ?? orig.schedule,
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
@@ -287,7 +287,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           });
         }}
         initialTitle={prefillTitle}
-        initialDescription={(editingChecklist as any)?.description ?? undefined}
+        initialDescription={editingChecklist?.description ?? undefined}
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
         initialSchedule={editingChecklist?.schedule ?? null}
