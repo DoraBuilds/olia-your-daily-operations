@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { StaffProfile } from "@/lib/admin-repository";
+import { writeAuditLog } from "@/hooks/useAuditLog";
 
 /** Hash a raw PIN using SHA-256 via the Web Crypto API. */
 export async function hashPin(raw: string): Promise<string> {
@@ -73,6 +74,11 @@ export function useSaveStaffProfile() {
         if (sp.rawPin) {
           await supabase.rpc("vault_staff_pin", { p_profile_id: sp.id, p_pin: sp.rawPin });
         }
+        writeAuditLog(
+          { action: "update_staff_profile", entity_type: "staff_profile", entity_id: sp.id,
+            details: { first_name: sp.first_name, last_name: sp.last_name, role: sp.role } },
+          teamMember,
+        );
       } else {
         // ── Creating a new profile: explicit INSERT ─────────────────────────
         if (!sp.rawPin) {
@@ -93,6 +99,11 @@ export function useSaveStaffProfile() {
         const newId = inserted?.[0]?.id as string | undefined;
         if (newId) {
           await supabase.rpc("vault_staff_pin", { p_profile_id: newId, p_pin: sp.rawPin });
+          writeAuditLog(
+            { action: "create_staff_profile", entity_type: "staff_profile", entity_id: newId,
+              details: { first_name: sp.first_name, last_name: sp.last_name, role: sp.role } },
+            teamMember,
+          );
         }
       }
     },
@@ -102,6 +113,7 @@ export function useSaveStaffProfile() {
 
 export function useArchiveStaffProfile() {
   const qc = useQueryClient();
+  const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
       // Use .select("id") so we can detect the silent 0-row case (RLS blocked
@@ -115,6 +127,7 @@ export function useArchiveStaffProfile() {
       if (!updated || updated.length === 0) {
         throw new Error("Could not archive this profile. Please refresh and try again.");
       }
+      if (teamMember) writeAuditLog({ action: "archive_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });
@@ -122,6 +135,7 @@ export function useArchiveStaffProfile() {
 
 export function useRestoreStaffProfile() {
   const qc = useQueryClient();
+  const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
       const { data: updated, error } = await supabase
@@ -133,6 +147,7 @@ export function useRestoreStaffProfile() {
       if (!updated || updated.length === 0) {
         throw new Error("Could not restore this profile. Please refresh and try again.");
       }
+      if (teamMember) writeAuditLog({ action: "restore_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });
@@ -140,10 +155,12 @@ export function useRestoreStaffProfile() {
 
 export function useDeleteStaffProfile() {
   const qc = useQueryClient();
+  const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("staff_profiles").delete().eq("id", id);
       if (error) throw error;
+      if (teamMember) writeAuditLog({ action: "delete_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),
   });

@@ -143,7 +143,8 @@ describe("useSaveStaffProfile — INSERT (new profile)", () => {
       } as any);
     });
 
-    expect(insertFn).toHaveBeenCalledTimes(1);
+    // insertFn is called twice: once for staff_profiles, once for audit_log (fire-and-forget)
+    expect(insertFn).toHaveBeenCalledTimes(2);
     const payload = insertFn.mock.calls[0][0];
     // Pin must be stored hashed, not as the raw "1234"
     expect(payload.pin).toBeTruthy();
