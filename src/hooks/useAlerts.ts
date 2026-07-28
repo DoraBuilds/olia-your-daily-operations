@@ -34,8 +34,11 @@ export function useCreateAlert() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (alert: Omit<AlertRecord, "id" | "dismissed_at" | "created_at">) => {
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+      }
       const { error } = await supabase.from("alerts").insert({
-        organization_id: teamMember!.organization_id,
+        organization_id: teamMember.organization_id,
         type: alert.type,
         message: alert.message,
         area: alert.area ?? null,

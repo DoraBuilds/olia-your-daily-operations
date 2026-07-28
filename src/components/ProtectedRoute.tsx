@@ -1,8 +1,20 @@
-import { Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, setupError, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  // Navigate first, then sign out. Calling signOut first fires SIGNED_OUT
+  // synchronously, which sets user=null and causes ProtectedRoute to render
+  // <Navigate to="/login"> before this redirect can happen.
+  useEffect(() => {
+    if (setupError) {
+      navigate("/signup?reason=account-reset", { replace: true });
+      void signOut();
+    }
+  }, [setupError, navigate, signOut]);
 
   if (loading) {
     return (
@@ -14,6 +26,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (setupError) {
+    return null;
   }
 
   return <>{children}</>;

@@ -118,8 +118,11 @@ export function useDeleteTeamMember() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("team_members").delete().eq("id", id);
+      const { data: deleted, error } = await supabase.from("team_members").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("Could not remove this team member. Please refresh and try again.");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });

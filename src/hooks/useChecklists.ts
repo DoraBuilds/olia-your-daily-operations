@@ -51,9 +51,12 @@ export function useSaveFolder() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (folder: Partial<FolderItem> & { id?: string }) => {
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+      }
       const { error } = await supabase.from("folders").upsert({
         id: folder.id || undefined,
-        organization_id: teamMember!.organization_id,
+        organization_id: teamMember.organization_id,
         name: folder.name,
         parent_id: folder.parent_id ?? null,
         location_id: folder.location_id ?? null,

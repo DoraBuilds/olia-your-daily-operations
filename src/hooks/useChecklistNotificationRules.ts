@@ -33,10 +33,13 @@ export function useSaveChecklistNotificationRules() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (rules: Omit<ChecklistNotificationRules, "id" | "organization_id">) => {
+      if (!teamMember) {
+        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+      }
       const { error } = await supabase
         .from("checklist_notification_rules")
         .upsert({
-          organization_id: teamMember!.organization_id,
+          organization_id: teamMember.organization_id,
           enabled: rules.enabled,
           recipient_email: rules.recipient_email,
           notify_unstarted: rules.notify_unstarted,
