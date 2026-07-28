@@ -173,7 +173,9 @@ describe("AuthContext", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.setupError).toMatch(/could not be completed safely/i);
     expect(result.current.teamMember).toBeNull();
-    expect(mockRpc).not.toHaveBeenCalled();
+    // accept_invite is always tried first (email-based invite fallback), but
+    // setup_new_organization must never be reached without onboarding data.
+    expect(mockRpc).not.toHaveBeenCalledWith("setup_new_organization", expect.anything());
   });
 
   it("uses stored onboarding data when creating the org for a fresh sign-in", async () => {
@@ -184,22 +186,28 @@ describe("AuthContext", () => {
 
     // No existing row — triggers setup.
     mockTeamMemberSingle.mockResolvedValue({ data: null, error: null });
-    // RPC returns the team_member row directly (no re-fetch needed).
-    mockRpc.mockResolvedValueOnce({
-      data: {
-        team_member: {
-          id: "user-1",
-          organization_id: "org-new-1",
-          name: "Sarah Johnson",
-          email: "sarah@acme.com",
-          role: "Owner",
-          location_ids: [],
-          permissions: {},
-          pin_reset_required: true,
-        },
-        existed: false,
-      },
-      error: null,
+    // RPC returns the team_member row directly (no re-fetch needed). Keyed by
+    // function name since accept_invite (invite fallback) is called first.
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "setup_new_organization") {
+        return {
+          data: {
+            team_member: {
+              id: "user-1",
+              organization_id: "org-new-1",
+              name: "Sarah Johnson",
+              email: "sarah@acme.com",
+              role: "Owner",
+              location_ids: [],
+              permissions: {},
+              pin_reset_required: true,
+            },
+            existed: false,
+          },
+          error: null,
+        };
+      }
+      return { data: {}, error: null };
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper });

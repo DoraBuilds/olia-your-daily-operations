@@ -78,27 +78,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Step 3: First-time invite acceptance — token stored in localStorage by AcceptInvite page
+    // Step 3: Invite acceptance.
+    // Prefer the token AcceptInvite.tsx stashes in localStorage right before the
+    // OTP round trip, but that token only survives if the same browser/tab/app
+    // completes the whole flow — it's lost across devices, across an in-app
+    // browser hop (WhatsApp, etc.), or if the invitee signs in via /login or
+    // /signup instead of /accept-invite. So always fall back to resolving any
+    // open invite by the caller's own email (accept_invite with no token) —
+    // this makes acceptance work no matter how the invitee got here.
     const pendingInviteToken = localStorage.getItem("olia_pending_invite_token");
-    if (pendingInviteToken) {
-      localStorage.removeItem("olia_pending_invite_token");
-      const { data: acceptResult } = await supabase.rpc("accept_invite", {
-        p_token: pendingInviteToken,
-      });
-      if (acceptResult?.success) {
-        const { data: linked } = await supabase
-          .from("team_members")
-          .select("*")
-          .eq("auth_user_id", userId)
-          .single();
-        if (linked) {
-          setTeamMember(linked as TeamMemberProfile);
-          setLoading(false);
-          supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
-          return;
-        }
+    if (pendingInviteToken) localStorage.removeItem("olia_pending_invite_token");
+
+    let acceptResult: { success?: boolean } | null = null;
+    try {
+      if (pendingInviteToken) {
+        const { data } = await supabase.rpc("accept_invite", { p_token: pendingInviteToken });
+        acceptResult = data;
       }
-      // Token was invalid or email mismatch — fall through to show setupError below
+      if (!acceptResult?.success) {
+        const { data } = await supabase.rpc("accept_invite");
+        acceptResult = data;
+      }
+    } catch (err) {
+      // A network/RPC failure here should not crash the whole lookup — treat
+      // it as "no invite found" and fall through to the branches below.
+      console.error("[AuthContext] accept_invite RPC threw:", err);
+      acceptResult = null;
+    }
+
+    if (acceptResult?.success) {
+      const { data: linked } = await supabase
+        .from("team_members")
+        .select("*")
+        .eq("auth_user_id", userId)
+        .single();
+      if (linked) {
+        setTeamMember(linked as TeamMemberProfile);
+        setLoading(false);
+        supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
+        return;
+      }
+    }
+
+    if (pendingInviteToken) {
+      // A token was present but neither it nor an email-based match worked.
       setSetupError(
         "Your invitation link is invalid or has already been used. Please ask your admin to send a new invitation.",
       );
@@ -106,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
+    // No token and no open invite for this email — fall through to Step 4
+    // (treat as a brand-new owner signup).
 
     // Step 4: Row does not exist — resolve setup data for new owner signup
     let businessName: string | undefined;
