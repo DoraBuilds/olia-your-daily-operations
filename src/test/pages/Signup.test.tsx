@@ -377,3 +377,51 @@ describe("Signup page — account-deleted guard", () => {
     expect(mockNavigate).not.toHaveBeenCalledWith("/admin", expect.anything());
   });
 });
+
+describe("Signup page — invite failure vs generic setup failure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ user: null, session: null, teamMember: null, loading: false, signOut: vi.fn() });
+  });
+
+  it("shows a dedicated invite-recovery screen instead of the signup form when the reason is invite-related", () => {
+    const detail = encodeURIComponent(
+      "Your invitation link is invalid or has already been used. Please ask your admin to send a new invitation.",
+    );
+    render(
+      <MemoryRouter initialEntries={[`/signup?reason=account-reset&detail=${detail}`]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("We couldn't verify your invitation")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your invitation link is invalid or has already been used/i),
+    ).toBeInTheDocument();
+    // Must never suggest creating a new account — that creates an unrelated org.
+    expect(screen.queryByText(/Create your account/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Sign in instead/i })).toHaveAttribute("href", "/login");
+  });
+
+  it("shows the generic setup-failure banner (and the signup form) for a non-invite reason", () => {
+    const detail = encodeURIComponent("Your account setup is not complete. Please refresh the page and try again.");
+    render(
+      <MemoryRouter initialEntries={[`/signup?reason=account-reset&detail=${detail}`]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Your account setup didn't finish.")).toBeInTheDocument();
+    expect(screen.getByText("Your account setup is not complete. Please refresh the page and try again.")).toBeInTheDocument();
+    // The signup form should still be usable — this genuinely is the correct recovery path.
+    expect(screen.getByText("Create your account")).toBeInTheDocument();
+  });
+
+  it("falls back to default copy when no detail param is present", () => {
+    render(
+      <MemoryRouter initialEntries={["/signup?reason=account-reset"]} future={routerFutureFlags}>
+        <Signup />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Your account setup didn't finish.")).toBeInTheDocument();
+    expect(screen.getByText("Please create your account again to get started.")).toBeInTheDocument();
+  });
+});

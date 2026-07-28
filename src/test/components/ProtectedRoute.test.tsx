@@ -1,5 +1,5 @@
 import { screen, render } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { renderWithProviders } from "../test-utils";
 
@@ -81,5 +81,29 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
     expect(screen.queryByText("Signup screen")).toBeInTheDocument();
     expect(mockSignOut).toHaveBeenCalled();
+  });
+
+  it("carries the setupError reason through as a URL-encoded detail param", () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: "user-1" },
+      loading: false,
+      setupError: "Your invitation link is invalid or has already been used.",
+      signOut: vi.fn().mockResolvedValue(undefined),
+    });
+    function SignupProbe() {
+      return <p>search:{useLocation().search}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/dashboard" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+          <Route path="/signup" element={<SignupProbe />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/reason=account-reset/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/detail=Your%20invitation%20link%20is%20invalid/),
+    ).toBeInTheDocument();
   });
 });

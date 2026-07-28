@@ -11,7 +11,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // <Navigate to="/login"> before this redirect can happen.
   useEffect(() => {
     if (setupError) {
-      navigate("/signup?reason=account-reset", { replace: true });
+      // Carry the specific reason through so Signup.tsx can show accurate
+      // copy instead of a generic message that tells every failure mode
+      // (including a broken invite) to "create a new account".
+      const detail = encodeURIComponent(setupError);
+      navigate(`/signup?reason=account-reset&detail=${detail}`, { replace: true });
       void signOut();
     }
   }, [setupError, navigate, signOut]);
