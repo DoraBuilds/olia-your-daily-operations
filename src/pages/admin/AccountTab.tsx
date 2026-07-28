@@ -52,7 +52,8 @@ export interface AccountTabProps {
   onDeleteLocation: (id: string) => void;
   onSaveActiveLocations: (locationIds: string[]) => Promise<unknown>;
   savingActiveLocations: boolean;
-  pendingInviteIds: Set<string>;
+  /** team_member_id -> whether their outstanding invite has expired */
+  pendingInviteStatus: Map<string, boolean>;
   onInviteMember: () => void;
   onEditMember: (m: TeamMember) => void;
   onDeleteMember: (m: TeamMember) => void;
@@ -84,7 +85,7 @@ export function AccountTab({
   onSaveAccount, departments, setDepartments, auditLog, authAccount, authMemberId, authUserEmail, authUserName,
   billingUnavailable, locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
-  pendingInviteIds, onInviteMember, onEditMember, onDeleteMember, section,
+  pendingInviteStatus, onInviteMember, onEditMember, onDeleteMember, section,
 }: AccountTabProps) {
   const navigate = useNavigate();
   const { plan, planStatus, isActive } = usePlan();
@@ -660,6 +661,8 @@ export function AccountTab({
           {[...teamMembers].sort((a, b) => a.role === "Owner" ? -1 : b.role === "Owner" ? 1 : 0).map(member => {
             const isExpanded = expandedMemberId === member.id;
             const mp = pendingPerms[member.id] ?? member.permissions;
+            const inviteExpired = pendingInviteStatus.get(member.id);
+            const hasPendingInvite = inviteExpired !== undefined;
             return (
               <div key={member.id}>
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -669,10 +672,10 @@ export function AccountTab({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{member.name}</p>
                     <p className="text-xs text-muted-foreground">{member.email}</p>
-                    {pendingInviteIds.has(member.id) ? (
-                      <p className="text-xs text-status-warn flex items-center gap-1">
+                    {hasPendingInvite ? (
+                      <p className={cn("text-xs flex items-center gap-1", inviteExpired ? "text-muted-foreground" : "text-status-warn")}>
                         <MailCheck size={11} />
-                        Invite pending
+                        {inviteExpired ? "Invite expired" : "Invite pending"}
                       </p>
                     ) : member.last_seen_at ? (
                       <p className="text-xs text-muted-foreground/60" title={daysAgoTooltip(member.last_seen_at)}>
@@ -686,7 +689,7 @@ export function AccountTab({
                   )}>
                     {member.role}
                   </span>
-                  {pendingInviteIds.has(member.id) && (
+                  {hasPendingInvite && (
                     <button
                       onClick={() => {
                         sendInvite.mutate(member.id, {

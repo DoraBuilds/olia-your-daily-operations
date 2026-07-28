@@ -149,11 +149,14 @@ export function useTeamMemberInvites() {
   return useQuery({
     queryKey: ["team_member_invites", teamMember?.organization_id ?? null],
     queryFn: async () => {
+      // No expires_at filter here — an expired-but-unaccepted invite still
+      // needs to show up (as "expired", with a resend option) rather than
+      // silently vanishing from the Users tab with no way to tell "expired"
+      // from "never invited".
       const { data, error } = await supabase
         .from("team_member_invites")
         .select("id, team_member_id, email, accepted_at, expires_at, created_at")
         .is("accepted_at", null)
-        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as { id: string; team_member_id: string; email: string; accepted_at: string | null; expires_at: string; created_at: string }[];

@@ -119,6 +119,9 @@ const { mockSaveTeamMember } = vi.hoisted(() => ({
     mutateAsync: vi.fn().mockResolvedValue({}),
   },
 }));
+const { mockUseTeamMemberInvites } = vi.hoisted(() => ({
+  mockUseTeamMemberInvites: vi.fn(() => ({ data: [] as unknown[], isLoading: false })),
+}));
 mockUseLocations.mockReturnValue({
   data: mockLocations,
   allLocations: mockLocations,
@@ -151,7 +154,7 @@ vi.mock("@/hooks/useTeamMembers", () => ({
   useSaveTeamMember: () => mockSaveTeamMember,
   useDeleteTeamMember: () => ({ mutate: vi.fn() }),
   useSaveAdminPin: () => ({ mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
-  useTeamMemberInvites: () => ({ data: [], isLoading: false }),
+  useTeamMemberInvites: () => mockUseTeamMemberInvites(),
   useSendInvite: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}), isPending: false }),
 }));
 
@@ -408,6 +411,62 @@ describe("Admin page", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Sarah Owner").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Mike Manager").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // 23a. Users tab distinguishes a pending invite from an expired one
+  describe("Users tab — pending vs expired invite status", () => {
+    afterEach(() => {
+      // renderWithProviders re-renders across async data loads, so a plain
+      // hook mock (not *Once) must be used and reset back to the file's
+      // default afterward or later tests in this suite lose their invites.
+      mockUseTeamMemberInvites.mockReturnValue({ data: [], isLoading: false });
+    });
+
+    it("shows 'Invite expired' (not 'pending') for a past-due invite, with resend still available", async () => {
+      mockUseTeamMemberInvites.mockReturnValue({
+        data: [
+          {
+            id: "inv-expired",
+            team_member_id: "tm2",
+            email: "mike@example.com",
+            accepted_at: null,
+            expires_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        isLoading: false,
+      });
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+
+      await waitFor(() => {
+        expect(screen.getByText("Invite expired")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("Invite pending")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Resend invite to Mike Manager/i })).toBeInTheDocument();
+    });
+
+    it("shows 'Invite pending' for an outstanding, non-expired invite", async () => {
+      mockUseTeamMemberInvites.mockReturnValue({
+        data: [
+          {
+            id: "inv-pending",
+            team_member_id: "tm2",
+            email: "mike@example.com",
+            accepted_at: null,
+            expires_at: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(),
+          },
+        ],
+        isLoading: false,
+      });
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+
+      await waitFor(() => {
+        expect(screen.getByText("Invite pending")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("Invite expired")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Resend invite to Mike Manager/i })).toBeInTheDocument();
     });
   });
 

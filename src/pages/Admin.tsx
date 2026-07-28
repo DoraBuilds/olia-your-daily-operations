@@ -390,7 +390,9 @@ export default function Admin() {
               onDeleteLocation: deleteLocation,
               onSaveActiveLocations: (locationIds: any) => saveActiveLocationsMut.mutateAsync(locationIds),
               savingActiveLocations: saveActiveLocationsMut.isPending,
-              pendingInviteIds: new Set(pendingInvites.map(i => i.team_member_id)),
+              pendingInviteStatus: new Map(
+                pendingInvites.map(i => [i.team_member_id, new Date(i.expires_at) <= new Date()]),
+              ),
               onInviteMember: () => setMemberModal("new"),
               onEditMember: (m: any) => setMemberModal(m),
               onDeleteMember: deleteMember,
