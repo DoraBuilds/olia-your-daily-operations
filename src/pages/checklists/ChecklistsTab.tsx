@@ -89,7 +89,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     });
   };
 
-  // Local drag-drop order state (visual only — no DB ordering column yet)
+  // Local drag-drop order state — mirrors DB sort_order, persisted via useReorderFolders on drop
   const [folderOrder, setFolderOrder] = useState<string[]>([]);
   useEffect(() => { setFolderOrder(dbFolders.map(f => f.id)); }, [dbFolders]);
 

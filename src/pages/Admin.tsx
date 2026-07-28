@@ -5,10 +5,10 @@ import { MapPin, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
-  type AuditLogEntry,
   staffDisplayName, getInitials,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
@@ -98,7 +98,7 @@ export default function Admin() {
   // Local state (not persisted to DB yet)
   const { departments, setDepartments } = useDepartments();
   const staffRoleOptions = departments.map(d => d.name);
-  const auditLog: AuditLogEntry[] = [];
+  const { data: auditLog = [] } = useAuditLog();
 
   // UI state
   const routeTab: "location" | "users" | "account" | "billing" | "notifications" =

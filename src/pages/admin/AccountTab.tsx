@@ -11,10 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
-  type AuditLogEntry, type StaffDepartment,
+  type StaffDepartment,
   DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS,
   getInitials, daysAgoTooltip,
 } from "@/lib/admin-repository";
+import type { AuditLogRow } from "@/hooks/useAuditLog";
 import { usePlan } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
@@ -34,7 +35,7 @@ export interface AccountTabProps {
   onSaveAccount: (member: Partial<TeamMember> & { id: string; rawPin?: string }) => Promise<unknown>;
   departments: StaffDepartment[];
   setDepartments: React.Dispatch<React.SetStateAction<StaffDepartment[]>>;
-  auditLog: AuditLogEntry[];
+  auditLog: AuditLogRow[];
   authAccount: TeamMember | null;
   authMemberId: string | undefined;
   authUserEmail: string | undefined;
@@ -57,6 +58,25 @@ export interface AccountTabProps {
   onDeleteMember: (m: TeamMember) => void;
   /** Which section to display. Defaults to showing all (legacy). */
   section?: "account" | "locations" | "users" | "billing";
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  create_staff_profile: "Added staff member",
+  update_staff_profile: "Updated staff member",
+  archive_staff_profile: "Archived staff member",
+  restore_staff_profile: "Restored staff member",
+  delete_staff_profile: "Deleted staff member",
+  create_team_member: "Added team member",
+  update_team_member: "Updated team member",
+  delete_team_member: "Removed team member",
+};
+
+function formatAuditAction(action: string, details: Record<string, any> | null): string {
+  const label = ACTION_LABELS[action] ?? action.replace(/_/g, " ");
+  const name = details?.first_name
+    ? `${details.first_name} ${details.last_name ?? ""}`.trim()
+    : (details?.name ?? null);
+  return name ? `${label}: ${name}` : label;
 }
 
 export function AccountTab({
@@ -867,6 +887,30 @@ export function AccountTab({
               </button>
             )}
           </div>
+        </div>
+      </section>}
+
+      {/* Activity log */}
+      {show("account") && <section>
+        <p className="section-label mb-3">Activity log</p>
+        <div className="card-surface divide-y divide-border">
+          {auditLog.length === 0 ? (
+            <p className="px-4 py-4 text-sm text-muted-foreground">No activity recorded yet.</p>
+          ) : (
+            auditLog.map(entry => (
+              <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground truncate">{formatAuditAction(entry.action, entry.details)}</p>
+                  {entry.actor_name && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{entry.actor_name}</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground shrink-0">
+                  {new Date(entry.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </section>}
 

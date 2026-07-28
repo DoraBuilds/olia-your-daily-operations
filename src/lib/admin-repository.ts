@@ -102,11 +102,12 @@ export interface TeamMember {
 
 export interface AuditLogEntry {
   id: string;
-  user: string;
   action: string;
-  location_id: string | null;
-  location_name: string | null;
-  timestamp: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  details: Record<string, any> | null;
+  created_at: string;
+  actor_name: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

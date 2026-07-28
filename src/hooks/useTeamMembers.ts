@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TeamMember, ManagerPermissions } from "@/lib/admin-repository";
 import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
+import { writeAuditLog } from "@/hooks/useAuditLog";
 
 export function useTeamMembers() {
   const { teamMember } = useAuth();
@@ -63,6 +64,11 @@ export function useSaveTeamMember() {
         if (!updated || updated.length === 0) {
           throw new Error("Account update failed. Please refresh the page and try again.");
         }
+        writeAuditLog(
+          { action: "update_team_member", entity_type: "team_member", entity_id: tm.id,
+            details: { name: tm.name, role: tm.role } },
+          teamMember,
+        );
         return;
       }
 
@@ -85,7 +91,15 @@ export function useSaveTeamMember() {
         .select("id")
         .single();
       if (error) throw error;
-      return inserted?.id as string | undefined;
+      const newId = inserted?.id as string | undefined;
+      if (newId) {
+        writeAuditLog(
+          { action: "create_team_member", entity_type: "team_member", entity_id: newId,
+            details: { name: tm.name, role: tm.role } },
+          teamMember,
+        );
+      }
+      return newId;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
@@ -116,6 +130,7 @@ export function useSaveAdminPin() {
 
 export function useDeleteTeamMember() {
   const qc = useQueryClient();
+  const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
       const { data: deleted, error } = await supabase.from("team_members").delete().eq("id", id).select("id");
@@ -123,6 +138,7 @@ export function useDeleteTeamMember() {
       if (!deleted || deleted.length === 0) {
         throw new Error("Could not remove this team member. Please refresh and try again.");
       }
+      if (teamMember) writeAuditLog({ action: "delete_team_member", entity_type: "team_member", entity_id: id }, teamMember);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
