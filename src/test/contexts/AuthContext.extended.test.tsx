@@ -188,7 +188,11 @@ describe("AuthContext extended — RPC error path", () => {
   });
 
   it("sets setupError when setup_new_organization RPC throws", async () => {
-    mockRpc.mockRejectedValueOnce(new Error("RPC function not found"));
+    // Keyed by function name since accept_invite (invite fallback) runs first.
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "setup_new_organization") throw new Error("RPC function not found");
+      return { data: {}, error: null };
+    });
 
     localStorage.setItem(
       "olia_pending_onboarding",
@@ -217,7 +221,13 @@ describe("AuthContext extended — RPC error path", () => {
   it("sets setupError when setup_new_organization RPC returns an error object (non-throwing)", async () => {
     // Supabase JS v2 returns { data: null, error: {...} } for PostgreSQL RAISE EXCEPTION — it does NOT throw.
     // Before this fix, the error was silently ignored and the re-fetch returned null with no setupError set.
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: "duplicate key value violates unique constraint" } });
+    // Keyed by function name since accept_invite (invite fallback) runs first.
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "setup_new_organization") {
+        return { data: null, error: { message: "duplicate key value violates unique constraint" } };
+      }
+      return { data: {}, error: null };
+    });
 
     localStorage.setItem(
       "olia_pending_onboarding",
@@ -248,21 +258,27 @@ describe("AuthContext extended — RPC error path", () => {
     );
 
     // RPC now returns the team_member row directly — no re-fetch needed.
-    mockRpc.mockResolvedValueOnce({
-      data: {
-        team_member: {
-          id: "user-ok",
-          organization_id: "org-ok",
-          name: "Happy User",
-          email: "happy@test.com",
-          role: "Owner",
-          location_ids: [],
-          permissions: {},
-          pin_reset_required: false,
-        },
-        existed: false,
-      },
-      error: null,
+    // Keyed by function name since accept_invite (invite fallback) runs first.
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "setup_new_organization") {
+        return {
+          data: {
+            team_member: {
+              id: "user-ok",
+              organization_id: "org-ok",
+              name: "Happy User",
+              email: "happy@test.com",
+              role: "Owner",
+              location_ids: [],
+              permissions: {},
+              pin_reset_required: false,
+            },
+            existed: false,
+          },
+          error: null,
+        };
+      }
+      return { data: {}, error: null };
     });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -318,7 +334,10 @@ describe("AuthContext extended — missing ownerName branch", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.setupError).toMatch(/could not be completed safely/i);
     expect(result.current.teamMember).toBeNull();
-    expect(mockRpc).not.toHaveBeenCalled();
+    // accept_invite is always tried first (email-based invite fallback), but
+    // setup_new_organization must never be reached without an owner name.
+    expect(mockRpc).toHaveBeenCalledWith("accept_invite");
+    expect(mockRpc).not.toHaveBeenCalledWith("setup_new_organization", expect.anything());
   });
 });
 
@@ -414,6 +433,132 @@ describe("AuthContext extended — malformed localStorage JSON", () => {
       p_business_name: "Meta Corp",
       p_owner_name: "Meta User",
     });
+  });
+});
+
+describe("AuthContext extended — invite acceptance fallback", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authStateCallback = null;
+    teamMemberRow = null;
+    mockOnAuthStateChange.mockImplementation((callback) => {
+      authStateCallback = callback;
+      callback("INITIAL_SESSION", null);
+      return { data: { subscription: { unsubscribe: vi.fn() } } };
+    });
+    localStorage.clear();
+  });
+
+  it("links the team member via the localStorage token when present", async () => {
+    localStorage.setItem("olia_pending_invite_token", "token-abc");
+    mockRpc.mockImplementation(async (fn: string, args?: Record<string, unknown>) => {
+      if (fn === "accept_invite" && args?.p_token === "token-abc") {
+        return { data: { success: true }, error: null };
+      }
+      return { data: {}, error: null };
+    });
+    mockTeamMemberSingle
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 1: by id
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 2: by auth_user_id
+      .mockResolvedValueOnce({
+        data: {
+          id: "tm-1",
+          organization_id: "org-1",
+          name: "Bárbara",
+          email: "barbara@example.com",
+          role: "Manager",
+          location_ids: [],
+          permissions: {},
+        },
+        error: null,
+      }); // re-fetch after accept_invite success
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", { user: { id: "user-invited", user_metadata: {} } });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.teamMember?.name).toBe("Bárbara");
+    expect(result.current.setupError).toBeNull();
+    expect(localStorage.getItem("olia_pending_invite_token")).toBeNull();
+    expect(mockRpc).toHaveBeenCalledWith("accept_invite", { p_token: "token-abc" });
+  });
+
+  it("links the team member by email when no localStorage token exists (cross-device/cross-browser acceptance)", async () => {
+    // No olia_pending_invite_token set — e.g. invitee signed in via /login
+    // or on a different device than the one that opened /accept-invite.
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "accept_invite") return { data: { success: true }, error: null };
+      return { data: {}, error: null };
+    });
+    mockTeamMemberSingle
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 1
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 2
+      .mockResolvedValueOnce({
+        data: {
+          id: "tm-2",
+          organization_id: "org-2",
+          name: "Bárbara",
+          email: "barbara@example.com",
+          role: "Manager",
+          location_ids: [],
+          permissions: {},
+        },
+        error: null,
+      });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", { user: { id: "user-cross-device", user_metadata: {} } });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.teamMember?.name).toBe("Bárbara");
+    expect(result.current.setupError).toBeNull();
+    expect(mockRpc).toHaveBeenCalledWith("accept_invite");
+  });
+
+  it("sets a specific setupError when the localStorage token exists but neither it nor the email match", async () => {
+    localStorage.setItem("olia_pending_invite_token", "stale-token");
+    mockRpc.mockResolvedValue({ data: { success: false, reason: "Invalid or expired invite token" }, error: null });
+    mockTeamMemberSingle.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", { user: { id: "user-stale", user_metadata: {} } });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.setupError).toMatch(/invitation link is invalid/i);
+    expect(result.current.teamMember).toBeNull();
+  });
+
+  it("falls through to Step 4 without crashing when accept_invite throws", async () => {
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "accept_invite") throw new Error("network error");
+      return { data: {}, error: null };
+    });
+    mockTeamMemberSingle.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", { user: { id: "user-rpc-down", user_metadata: {} } });
+    });
+
+    // No pending onboarding data either — should fail closed via Step 4,
+    // not hang or throw an unhandled rejection.
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.setupError).toMatch(/could not be completed safely/i);
+    expect(result.current.teamMember).toBeNull();
   });
 });
 
