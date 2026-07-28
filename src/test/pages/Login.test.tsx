@@ -169,7 +169,9 @@ describe("Login page", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/No Olia account was found/i)).toBeInTheDocument();
-      expect(screen.getByText(/create one first/i)).toBeInTheDocument();
+      // Points invitees back to their invite email instead of just "create one" —
+      // creating a new account here would spin up an unrelated organisation.
+      expect(screen.getByText(/use the invite link from that email instead/i)).toBeInTheDocument();
       expect(screen.queryByText(/signups not allowed for otp/i)).not.toBeInTheDocument();
     });
   });

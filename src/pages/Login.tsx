@@ -26,7 +26,12 @@ function isMissingAccount(message: string | null | undefined) {
 
 function getFriendlyAuthError(message: string | null | undefined) {
   if (isMissingAccount(message)) {
-    return "No Olia account was found for that email yet. Please create one first.";
+    // A first-time invitee lands here if they sign in before ever accepting
+    // their invite (no auth account exists yet). Point them back to the
+    // invite email rather than just "create one" — creating a new account
+    // here would spin up an unrelated organisation instead of joining the
+    // team they were invited to.
+    return "No Olia account was found for that email yet. If someone invited you to their team, use the invite link from that email instead — or create your own account below.";
   }
 
   return message ?? "Something went wrong. Please try again.";
