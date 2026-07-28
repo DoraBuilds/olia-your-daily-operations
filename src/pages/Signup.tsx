@@ -20,6 +20,13 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const accountReset = searchParams.get("reason") === "account-reset";
   const accountDeleted = searchParams.get("reason") === "account-deleted";
+  const resetDetail = searchParams.get("detail");
+  // Invite failures must never tell the user to "create a new account" — doing
+  // so creates an unrelated new organisation instead of joining the one they
+  // were invited to. Detect this case from the specific setupError reason
+  // (see AuthContext's accept_invite failure message) and show a distinct
+  // recovery path instead of the generic signup form.
+  const isInviteFailure = accountReset && !!resetDetail && /invit/i.test(resetDetail);
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [businessName, setBusinessName] = useState("");
@@ -156,6 +163,28 @@ export default function Signup() {
     }
   };
 
+  if (isInviteFailure) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 text-center">
+        <div className="w-full max-w-sm space-y-4">
+          <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto" />
+          <h1 className="font-display text-2xl text-foreground">We couldn't verify your invitation</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">{resetDetail}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Ask the person who invited you to resend it from Admin → Users, then open the new link they send —
+            or try signing in again if you've accepted an invite before.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block text-sm text-sage font-medium underline underline-offset-2"
+          >
+            Sign in instead
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "code") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
@@ -243,11 +272,15 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm space-y-8">
-        {/* Account-reset notice — shown when redirected from a broken auth state */}
+        {/* Account-reset notice — shown when redirected from a broken auth state.
+            isInviteFailure returns its own screen above, so this only covers
+            genuine setup failures (e.g. a new owner's org creation didn't finish). */}
         {accountReset && (
           <div className="rounded-xl bg-status-warn/10 border border-status-warn/20 px-4 py-3 text-sm text-foreground leading-relaxed">
-            <p className="font-medium mb-0.5">Your account data was not found.</p>
-            <p className="text-muted-foreground text-xs">Please create a new account to get started.</p>
+            <p className="font-medium mb-0.5">Your account setup didn't finish.</p>
+            <p className="text-muted-foreground text-xs">
+              {resetDetail ?? "Please create your account again to get started."}
+            </p>
           </div>
         )}
 
