@@ -59,9 +59,12 @@ export function useSaveAction() {
           .eq("id", action.id);
         if (error) throw error;
       } else {
+        if (!teamMember) {
+          throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        }
         // organization_id is required — RLS will reject rows without it
         const { error } = await supabase.from("actions").insert({
-          organization_id: teamMember!.organization_id,
+          organization_id: teamMember.organization_id,
           title: action.title,
           checklist_id: action.checklist_id ?? null,
           checklist_title: action.checklist_title ?? null,
@@ -80,8 +83,11 @@ export function useDeleteAction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("actions").delete().eq("id", id);
+      const { data: deleted, error } = await supabase.from("actions").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error("Could not delete this action. It may have already been removed, or your session has expired — please refresh and try again.");
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["actions"] }),
   });

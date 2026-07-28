@@ -49,7 +49,7 @@ describe("ProtectedRoute", () => {
   });
 
   it("navigates to /login when no user and not loading", () => {
-    mockUseAuth.mockReturnValue({ user: null, loading: false });
+    mockUseAuth.mockReturnValue({ user: null, loading: false, setupError: null, signOut: vi.fn() });
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <Routes>
@@ -60,5 +60,26 @@ describe("ProtectedRoute", () => {
     );
     expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
     expect(screen.queryByText("Login screen")).toBeInTheDocument();
+  });
+
+  it("navigates to /signup and calls signOut when setupError is set", () => {
+    const mockSignOut = vi.fn().mockResolvedValue(undefined);
+    mockUseAuth.mockReturnValue({
+      user: { id: "user-1" },
+      loading: false,
+      setupError: "Account setup failed",
+      signOut: mockSignOut,
+    });
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/dashboard" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+          <Route path="/signup" element={<p>Signup screen</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+    expect(screen.queryByText("Signup screen")).toBeInTheDocument();
+    expect(mockSignOut).toHaveBeenCalled();
   });
 });
