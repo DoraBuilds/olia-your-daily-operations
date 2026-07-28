@@ -560,6 +560,53 @@ describe("AuthContext extended — invite acceptance fallback", () => {
     expect(result.current.setupError).toMatch(/could not be completed safely/i);
     expect(result.current.teamMember).toBeNull();
   });
+
+  it("links an invited email to its org instead of silently creating a new one, even with onboarding data present", async () => {
+    // Regression guard for the case where an invitee ends up on the generic
+    // signup path (e.g. via /login's "create one" link) with a business name
+    // already staged in localStorage — setup_new_organization must never run
+    // when an open invite exists for this email.
+    localStorage.setItem(
+      "olia_pending_onboarding",
+      JSON.stringify({ businessName: "Someone Else's Café", ownerName: "Confused Signup" }),
+    );
+    mockRpc.mockImplementation(async (fn: string) => {
+      if (fn === "accept_invite") return { data: { success: true }, error: null };
+      return { data: {}, error: null };
+    });
+    mockTeamMemberSingle
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 1
+      .mockResolvedValueOnce({ data: null, error: null }) // Step 2
+      .mockResolvedValueOnce({
+        data: {
+          id: "tm-invited",
+          organization_id: "org-jay",
+          name: "Bárbara",
+          email: "barbara@example.com",
+          role: "Manager",
+          location_ids: [],
+          permissions: {},
+        },
+        error: null,
+      }); // re-fetch after accept_invite success
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      authStateCallback?.("SIGNED_IN", {
+        user: {
+          id: "user-invited-via-signup",
+          user_metadata: { business_name: "Someone Else's Café", full_name: "Confused Signup" },
+        },
+      });
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.teamMember?.organization_id).toBe("org-jay");
+    expect(result.current.setupError).toBeNull();
+    expect(mockRpc).not.toHaveBeenCalledWith("setup_new_organization", expect.anything());
+  });
 });
 
 describe("AuthContext extended — INITIAL_SESSION with a live session", () => {
