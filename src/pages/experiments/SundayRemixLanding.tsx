@@ -102,11 +102,15 @@ const css = `
   .rx-hero h1 { font-size: clamp(44px, 5.4vw, 68px); letter-spacing: -0.01em; margin-bottom: 20px; }
   .rx-hero h1 .rx-hl {
     font-style: italic; color: var(--ink);
-    background: var(--neon);
-    padding: 2px 6px;
-    border-radius: 3px;
+    background: rgba(51,255,122,0.6);
+    padding: 0 4px;
+    margin: 0 -4px;
+    line-height: 0.86;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
+    border-radius: 60% 8px 60% 8px / 20% 60% 20% 60%;
+    display: inline;
+    transform: rotate(-1deg);
   }
   .rx-hero-sub { font-size: 17.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
   .rx-hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
