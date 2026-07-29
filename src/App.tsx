@@ -12,6 +12,7 @@ import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
 
 const Landing = lazy(() => import("./pages/Landing"));
+const SundayRemixLanding = lazy(() => import("./pages/experiments/SundayRemixLanding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Checklists = lazy(() => import("./pages/Checklists"));
 const Reporting = lazy(() => import("./pages/Reporting"));
@@ -56,6 +57,7 @@ const router = createBrowserRouter(
       element: <RootLayout />,
       children: [
         { path: "/", element: <Landing /> },
+        { path: "/experiments/sunday-remix", element: <SundayRemixLanding /> },
         { path: "/privacy", element: <Privacy /> },
         { path: "/terms", element: <Terms /> },
         { path: "/cookies", element: <Cookies /> },
