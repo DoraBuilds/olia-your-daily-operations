@@ -102,7 +102,11 @@ const css = `
   .rx-hero h1 { font-size: clamp(44px, 5.4vw, 68px); letter-spacing: -0.01em; margin-bottom: 20px; }
   .rx-hero h1 .rx-hl {
     font-style: italic; color: var(--ink);
-    background: linear-gradient(180deg, transparent 62%, var(--neon) 62%);
+    background: var(--neon);
+    padding: 2px 6px;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
   .rx-hero-sub { font-size: 17.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
   .rx-hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
