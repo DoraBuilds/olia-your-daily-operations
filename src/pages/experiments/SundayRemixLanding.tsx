@@ -100,7 +100,7 @@ const css = `
     max-width: 1180px; margin: 0 auto; padding: 0 40px; position: relative;
   }
   .rx-hero h1 { font-size: clamp(44px, 5.4vw, 68px); letter-spacing: -0.01em; margin-bottom: 20px; }
-  .rx-hero h1 .rx-hl {
+  .rx-hl {
     font-style: italic; color: var(--ink);
     background: rgba(51,255,122,0.6);
     padding: 0 4px;
@@ -110,6 +110,19 @@ const css = `
     -webkit-box-decoration-break: clone;
     border-radius: 60% 8px 60% 8px / 20% 60% 20% 60%;
     display: inline;
+    transform: rotate(-1deg);
+  }
+
+  /* Smaller inline USP marker for body copy / list items */
+  .rx-mark {
+    font-style: inherit; color: inherit; font-weight: 700;
+    background: rgba(51,255,122,0.6);
+    padding: 0 4px;
+    margin: 0 -4px;
+    white-space: nowrap;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    border-radius: 50% 6px 50% 6px / 16% 50% 16% 50%;
     transform: rotate(-1deg);
   }
   .rx-hero-sub { font-size: 17.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
@@ -355,13 +368,13 @@ const showcase = [
 
 const steps = [
   { num: "01", title: "Set up your routines", desc: "Build opening, closing, and compliance checklists for your venue — or start from templates. Takes about an hour.", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M8 8h8M8 16h5"/></svg> },
-  { num: "02", title: "Staff complete tasks on the kiosk", desc: "Staff tap through their tasks on a tablet in your venue. No app to download, no account to log in, no training required.", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="m9 12 2 2 4-4"/><path d="M9 17h6"/></svg> },
+  { num: "02", title: "Staff complete tasks on the kiosk", desc: <>Staff tap through their tasks on a tablet in your venue. <span className="rx-mark">No app to download</span>, no account to log in, no training required.</>, icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="m9 12 2 2 4-4"/><path d="M9 17h6"/></svg> },
   { num: "03", title: "Managers see what's happening", desc: "Every completion is timestamped and logged. Check in from your phone, office, or across all your locations in real time.", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg> },
 ];
 
 const features = [
   { title: "Daily checklists", desc: "Opening, closing, and mid-shift routines built for your venue, fully customisable by your team.", icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="m9 7 2 2 4-4"/><path d="M9 13h6M9 17h4"/></svg> },
-  { title: "Compliance logs", desc: "Allergen checks, fridge temperature records, all timestamped. Downloadable and audit-ready.", icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> },
+  { title: "Compliance logs", desc: <>Allergen checks, fridge temperature records, all timestamped. Downloadable and <span className="rx-mark">audit-ready</span>.</>, icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg> },
   { title: "Issue reporting", desc: "Managers get notified directly in the app. Issues are tracked to resolution.", icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
   { title: "SOP & training hub", desc: "Procedures, recipes, cleaning standards in one place. New starters get up to speed fast.", icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h5"/></svg> },
   { title: "Reporting & analytics", desc: "Completion rates, recurring issues, training history — surfaced automatically. No manual logging.", icon: <svg className="rx-feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></svg> },
@@ -465,7 +478,7 @@ export default function SundayRemixLanding() {
               <Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link>
               <a href="#" className="rx-btn-hero-ghost" onClick={openDemo}>Book a demo</a>
             </div>
-            <p className="rx-hero-note">Starter from €49 · per location · no per-user fees</p>
+            <p className="rx-hero-note">Starter from €49 · per location · <span className="rx-mark">no per-user fees</span></p>
           </div>
           <div>
             <div className="rx-kiosk-card">
@@ -587,7 +600,7 @@ export default function SundayRemixLanding() {
             </div>
             <div className="rx-team-content rx-fade rx-d2">
               <div className="rx-badge">Team adoption</div>
-              <h2>Your team won't fight this.</h2>
+              <h2>Your team <span className="rx-hl">won't fight this</span>.</h2>
               <p>Staff aren't asked to download anything, create accounts, or learn new software. They find the app on a tablet in your venue, tap through tasks, and move on with their shift.</p>
               <ul className="rx-bullets">
                 {["No app to download. No account to create.", "Staff log through tasks on a tablet already in your venue.", "Nothing to learn. Nothing to remember. Just show up and do the shift.", "New starters are operational on day one."].map((b) => (
@@ -677,7 +690,7 @@ export default function SundayRemixLanding() {
           <div className="rx-section-header rx-fade">
             <div className="rx-badge centered"><span className="rx-badge-dot" />Pricing</div>
             <h2>Simple pricing per location.</h2>
-            <p>No per user. Unlimited staff. Cancel anytime.</p>
+            <p>No per user. <span className="rx-mark">Unlimited staff</span>. Cancel anytime.</p>
           </div>
           <div className="rx-pricing-grid">
             <div className="rx-pcard rx-fade">
