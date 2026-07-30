@@ -82,11 +82,22 @@ const css = `
   }
   .rx-btn-ghost:hover { border-color: var(--ink); background: rgba(11,15,12,0.03); }
   .rx-btn-neon {
-    font-size: 13px; font-weight: 700; color: var(--ink); background: var(--neon);
-    border: 1.5px solid var(--neon); padding: 8px 18px; border-radius: 8px;
-    cursor: pointer; text-decoration: none; transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+    display: block; font-size: 13px; font-weight: 700; color: #fff; background: var(--ink);
+    border: none; padding: 8px 18px; border-radius: 8px;
+    cursor: pointer; text-decoration: none; transition: transform 0.15s, background 0.2s;
   }
-  .rx-btn-neon:hover { background: #40ECD9; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,229,204,0.35); }
+  .rx-btn-neon:hover { background: #000; transform: translateY(-1px); }
+
+  /* SHINE BORDER — a rotating comet of light traces the edge of primary CTAs */
+  .rx-shine-wrap { position: relative; display: inline-block; padding: 2px; border-radius: 12px; overflow: hidden; }
+  .rx-shine-wrap::before {
+    content: ''; position: absolute; inset: -60%;
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 265deg, rgba(0,229,204,0.2) 288deg, var(--neon) 302deg, #ffffff 312deg, var(--neon) 322deg, rgba(0,229,204,0.2) 336deg, transparent 355deg, transparent 360deg);
+    animation: rx-shine-spin 3.6s linear infinite;
+  }
+  .rx-shine-wrap > * { position: relative; z-index: 1; }
+  .rx-shine-wrap.block { display: block; width: 100%; }
+  @keyframes rx-shine-spin { to { transform: rotate(360deg); } }
 
   /* HERO */
   .rx-hero { padding: 128px 0 64px; background: var(--white); position: relative; }
@@ -128,12 +139,15 @@ const css = `
   .rx-hero-sub { font-size: 17.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.65; max-width: 460px; margin-bottom: 30px; }
   .rx-hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
   .rx-btn-hero {
-    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 700;
-    color: var(--ink); background: var(--neon); border: 1.5px solid var(--neon);
+    display: block; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 700;
+    color: #fff; background: var(--ink); border: none;
     padding: 13px 26px; border-radius: 9px; text-decoration: none;
-    transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+    transition: transform 0.15s, background 0.2s;
   }
-  .rx-btn-hero:hover { background: #40ECD9; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,229,204,0.4); }
+  .rx-btn-hero:hover { background: #000; transform: translateY(-2px); }
+  /* On dark sections (e.g. the closing CTA banner) invert to a white pill so it still reads against the black panel */
+  .rx-cta .rx-btn-hero { background: #fff; color: var(--ink); }
+  .rx-cta .rx-btn-hero:hover { background: #f2f2f2; }
   .rx-btn-hero-ghost {
     font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400;
     color: var(--ink); background: transparent; border: 1.5px solid var(--line-mid);
@@ -286,8 +300,8 @@ const css = `
   .rx-pbtn { display: block; width: 100%; text-align: center; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 700; padding: 12px 20px; border-radius: 8px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
   .rx-pbtn-outline { color: var(--ink); background: transparent; border: 1.5px solid var(--line-mid); }
   .rx-pbtn-outline:hover { border-color: var(--ink); background: rgba(11,15,12,0.04); }
-  .rx-pbtn-neon { color: var(--ink); background: var(--neon); border: 1.5px solid var(--neon); }
-  .rx-pbtn-neon:hover { background: #40ECD9; }
+  .rx-pbtn-neon { color: var(--ink); background: #fff; border: none; }
+  .rx-pbtn-neon:hover { background: #f2f2f2; }
   .rx-pricing-note { text-align: center; font-size: 12px; color: var(--ink-faint); margin-top: 20px; }
 
   /* CTA */
@@ -463,7 +477,7 @@ export default function SundayRemixLanding() {
           <div className="rx-nav-actions">
             <Link to="/login" className="rx-signin">Sign in</Link>
             <a href="#" className="rx-btn-ghost" onClick={openDemo}>Book a demo</a>
-            <Link to="/signup" className="rx-btn-neon">Get started</Link>
+            <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-neon">Get started</Link></span>
           </div>
         </div>
       </nav>
@@ -475,7 +489,7 @@ export default function SundayRemixLanding() {
             <h1>Run every shift<br />the same way — <span className="rx-hl">every time.</span></h1>
             <p className="rx-hero-sub">Olia replaces paper checklists and WhatsApp chasing with a simple system your team actually uses.</p>
             <div className="rx-hero-ctas">
-              <Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link>
+              <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link></span>
               <a href="#" className="rx-btn-hero-ghost" onClick={openDemo}>Book a demo</a>
             </div>
             <p className="rx-hero-note">Starter from €49 · per location · <span className="rx-mark">no per-user fees</span></p>
@@ -712,7 +726,7 @@ export default function SundayRemixLanding() {
               <ul className="rx-pfeats">
                 {["Unlimited checklists", "Full compliance suite", "Issue tracking", "Reporting & analytics", "Multi-location dashboard (up to 10)", "12-month data retention", "Priority support"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
-              <Link to="/signup" className="rx-pbtn rx-pbtn-neon">Start with Growth</Link>
+              <span className="rx-shine-wrap block"><Link to="/signup" className="rx-pbtn rx-pbtn-neon">Start with Growth</Link></span>
             </div>
             <div className="rx-pcard rx-fade rx-d2">
               <div className="rx-pname">Enterprise</div>
@@ -735,7 +749,7 @@ export default function SundayRemixLanding() {
           <h2 className="rx-fade">Ready to stop chasing<br />your team on WhatsApp?</h2>
           <p className="rx-cta-sub rx-fade">Set up your first checklist today. Most venues are running in under an hour.</p>
           <div className="rx-cta-btns rx-fade">
-            <Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link>
+            <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link></span>
             <a href="#" className="rx-btn-outline-light" onClick={openDemo}>Book a demo</a>
           </div>
           <p className="rx-cta-fine rx-fade">No long-term contract. No setup fee.</p>
