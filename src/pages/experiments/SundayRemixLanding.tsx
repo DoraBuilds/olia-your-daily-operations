@@ -88,12 +88,12 @@ const css = `
   }
   .rx-btn-neon:hover { background: #000; transform: translateY(-1px); }
 
-  /* SHINE BORDER — a rotating comet of light traces the edge of primary CTAs */
-  .rx-shine-wrap { position: relative; display: inline-block; padding: 2px; border-radius: 12px; overflow: hidden; }
+  /* SHINE BORDER — a constant teal ring with a brighter comet of light rotating around it */
+  .rx-shine-wrap { position: relative; display: inline-block; padding: 3px; border-radius: 13px; overflow: hidden; background: rgba(0,229,204,0.55); }
   .rx-shine-wrap::before {
     content: ''; position: absolute; inset: -60%;
-    background: conic-gradient(from 0deg, transparent 0deg, transparent 265deg, rgba(0,229,204,0.2) 288deg, var(--neon) 302deg, #ffffff 312deg, var(--neon) 322deg, rgba(0,229,204,0.2) 336deg, transparent 355deg, transparent 360deg);
-    animation: rx-shine-spin 3.6s linear infinite;
+    background: conic-gradient(from 0deg, transparent 0deg, transparent 220deg, rgba(0,229,204,0.5) 255deg, var(--neon) 285deg, #ffffff 300deg, var(--neon) 315deg, rgba(0,229,204,0.5) 345deg, transparent 360deg);
+    animation: rx-shine-spin 2.8s linear infinite;
   }
   .rx-shine-wrap > * { position: relative; z-index: 1; }
   .rx-shine-wrap.block { display: block; width: 100%; }
