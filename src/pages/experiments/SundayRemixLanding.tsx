@@ -76,17 +76,17 @@ const css = `
   .rx-signin { font-size: 13.5px; color: var(--ink-soft); text-decoration: none; transition: color 0.2s; }
   .rx-signin:hover { color: var(--ink); }
   .rx-btn-ghost {
-    font-size: 13px; font-weight: 500; color: var(--ink); background: transparent;
+    font-size: 13px; font-weight: 500; color: var(--ink); background: #fff;
     border: 1.5px solid var(--line-mid); padding: 8px 18px; border-radius: 8px;
     cursor: pointer; text-decoration: none; transition: border-color 0.2s, background 0.2s;
   }
-  .rx-btn-ghost:hover { border-color: var(--ink); background: rgba(11,15,12,0.03); }
+  .rx-btn-ghost:hover { border-color: var(--ink); background: #f2f2f2; }
   .rx-btn-neon {
-    display: block; font-size: 13px; font-weight: 700; color: #fff; background: var(--ink);
-    border: none; padding: 8px 18px; border-radius: 8px;
+    display: block; font-size: 13px; font-weight: 700; color: var(--ink); background: #fff;
+    border: 1.5px solid var(--line-mid); padding: 8px 18px; border-radius: 8px;
     cursor: pointer; text-decoration: none; transition: transform 0.15s, background 0.2s;
   }
-  .rx-btn-neon:hover { background: #000; transform: translateY(-1px); }
+  .rx-btn-neon:hover { background: #f2f2f2; transform: translateY(-1px); }
 
   /* SHINE BORDER — a constant teal ring with a brighter comet of light rotating around it */
   .rx-shine-wrap { position: relative; display: inline-block; padding: 3px; border-radius: 13px; overflow: hidden; background: rgba(0,229,204,0.55); }
@@ -140,20 +140,20 @@ const css = `
   .rx-hero-ctas { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
   .rx-btn-hero {
     display: block; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 700;
-    color: #fff; background: var(--ink); border: none;
+    color: var(--ink); background: #fff; border: 1.5px solid var(--line-mid);
     padding: 13px 26px; border-radius: 9px; text-decoration: none;
     transition: transform 0.15s, background 0.2s;
   }
-  .rx-btn-hero:hover { background: #000; transform: translateY(-2px); }
-  /* On dark sections (e.g. the closing CTA banner) invert to a white pill so it still reads against the black panel */
-  .rx-cta .rx-btn-hero { background: #fff; color: var(--ink); }
+  .rx-btn-hero:hover { background: #f2f2f2; transform: translateY(-2px); }
+  /* On dark sections (e.g. the closing CTA banner) drop the border — white already reads against the black panel */
+  .rx-cta .rx-btn-hero { background: #fff; color: var(--ink); border: none; }
   .rx-cta .rx-btn-hero:hover { background: #f2f2f2; }
   .rx-btn-hero-ghost {
     font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400;
-    color: var(--ink); background: transparent; border: 1.5px solid var(--line-mid);
+    color: var(--ink); background: #fff; border: 1.5px solid var(--line-mid);
     padding: 13px 26px; border-radius: 9px; text-decoration: none; transition: border-color 0.2s, background 0.2s;
   }
-  .rx-btn-hero-ghost:hover { border-color: var(--ink); background: rgba(11,15,12,0.03); }
+  .rx-btn-hero-ghost:hover { border-color: var(--ink); background: #f2f2f2; }
   .rx-hero-note { font-size: 12px; color: var(--ink-faint); letter-spacing: 0.01em; }
 
   /* KIOSK CARD */
@@ -298,8 +298,8 @@ const css = `
   .rx-pcheck { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; color: var(--neon-deep); }
   .rx-pcard.featured .rx-pcheck { color: var(--neon); }
   .rx-pbtn { display: block; width: 100%; text-align: center; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 700; padding: 12px 20px; border-radius: 8px; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-  .rx-pbtn-outline { color: var(--ink); background: transparent; border: 1.5px solid var(--line-mid); }
-  .rx-pbtn-outline:hover { border-color: var(--ink); background: rgba(11,15,12,0.04); }
+  .rx-pbtn-outline { color: var(--ink); background: #fff; border: 1.5px solid var(--line-mid); }
+  .rx-pbtn-outline:hover { border-color: var(--ink); background: #f2f2f2; }
   .rx-pbtn-neon { color: var(--ink); background: #fff; border: none; }
   .rx-pbtn-neon:hover { background: #f2f2f2; }
   .rx-pricing-note { text-align: center; font-size: 12px; color: var(--ink-faint); margin-top: 20px; }
@@ -310,8 +310,8 @@ const css = `
   .rx-cta h2 { color: var(--white); font-size: clamp(32px, 4.2vw, 54px); max-width: 600px; margin: 0 auto 18px; line-height: 1.15; position: relative; }
   .rx-cta-sub { font-size: 16px; font-weight: 300; color: rgba(255,255,255,0.55); max-width: 440px; margin: 0 auto 28px; line-height: 1.6; position: relative; }
   .rx-cta-btns { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 18px; position: relative; }
-  .rx-btn-outline-light { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400; color: rgba(255,255,255,0.78); background: transparent; border: 1.5px solid rgba(255,255,255,0.22); padding: 13px 26px; border-radius: 9px; text-decoration: none; transition: all 0.2s; }
-  .rx-btn-outline-light:hover { border-color: rgba(255,255,255,0.55); color: var(--white); }
+  .rx-btn-outline-light { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 14.5px; font-weight: 400; color: var(--ink); background: #fff; border: 1.5px solid transparent; padding: 13px 26px; border-radius: 9px; text-decoration: none; transition: all 0.2s; }
+  .rx-btn-outline-light:hover { background: #f2f2f2; }
   .rx-cta-fine { font-size: 11.5px; color: rgba(255,255,255,0.32); position: relative; }
 
   /* FOOTER */
