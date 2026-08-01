@@ -1,9 +1,9 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation } from "react-router-dom";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -33,6 +33,16 @@ const Cookies = lazy(() => import("./pages/Cookies"));
 const AvisoLegal = lazy(() => import("./pages/AvisoLegal"));
 
 function RootLayout() {
+  const location = useLocation();
+
+  // iOS Safari paints the plain <body> background in the elastic-overscroll
+  // area above fixed content (and behind the notch/status bar with
+  // viewport-fit=cover) — keep it in sync with whichever design is showing
+  // instead of leaving it on the old app's default ivory.
+  useEffect(() => {
+    document.body.style.backgroundColor = isNewDesignPath(location.pathname) ? "#ffffff" : "";
+  }, [location.pathname]);
+
   return (
     <>
       <Outlet />
