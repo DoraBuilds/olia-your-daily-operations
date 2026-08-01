@@ -126,8 +126,16 @@ export default function Kiosk() {
   const { user, teamMember, loading } = useAuth();
   const { allLocations = [], isFetched: locationsFetched } = useLocations();
 
-  const [locationId, setLocationId] = useState<string | null>(null);
-  const [locationName, setLocationName] = useState<string>("");
+  // Hydrate straight from localStorage on mount so a properly-configured
+  // kiosk keeps working even when there is no live auth session yet (or
+  // ever again) — see the ownership-tracking effect below for why the
+  // session's presence must not gate this.
+  const [locationId, setLocationId] = useState<string | null>(
+    () => localStorage.getItem("kiosk_location_id"),
+  );
+  const [locationName, setLocationName] = useState<string>(
+    () => localStorage.getItem("kiosk_location_name") ?? "",
+  );
   const [screen, setScreen] = useState<KioskScreen>("grid");
   const [selectedChecklist, setSelectedChecklist] = useState<KioskChecklist | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
@@ -145,26 +153,23 @@ export default function Kiosk() {
   const [libraryMemberName, setLibraryMemberName] = useState("");
 
   useEffect(() => {
+    if (loading) return;
+
+    // No live auth session on this device. That's the normal state for a
+    // kiosk most of the time (it runs on the anon key), and it's also what
+    // a silently expired/failed-to-refresh JWT looks like (Safari ITP
+    // evicting localStorage after ~7 days with no top-level interaction, a
+    // long offline stretch, etc). The kiosk's location binding lives in
+    // kiosk_location_id/kiosk_token, independent of the auth session, so
+    // leave it alone here — only a genuinely re-authenticated owner whose
+    // account doesn't match the stored one (below) should ever reset it.
+    if (!user?.id) return;
+
     const ownerKey = "kiosk_owner_user_id";
     const ownerOrgKey = "kiosk_owner_org_id";
     const storedOwnerId = localStorage.getItem(ownerKey);
     const storedOwnerOrgId = localStorage.getItem(ownerOrgKey);
-    const hasStoredLocation = Boolean(_kioskLocationId ?? localStorage.getItem("kiosk_location_id"));
     const currentOrgId = teamMember?.organization_id ?? null;
-
-    if (loading) return;
-
-    if (!user?.id) {
-      if (storedOwnerId || hasStoredLocation) {
-        clearKioskLocationSelection();
-        clearKioskOwnership();
-        setLocationId(null);
-        setLocationName("");
-        setScreen("grid");
-        setKioskChecklists([]);
-      }
-      return;
-    }
 
     if (
       !storedOwnerId

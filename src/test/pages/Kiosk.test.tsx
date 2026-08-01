@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { renderWithProviders } from "../test-utils";
 
@@ -395,7 +395,8 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
   });
 
-  it("clears stale kiosk location state when no kiosk owner is stored for the signed-in account", async () => {
+  it("clears stale kiosk location state when a signed-in owner has no kiosk owner stored yet", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
     localStorage.setItem("kiosk_location_name", "Terrace");
     renderWithProviders(<Kiosk />);
@@ -408,7 +409,8 @@ describe("Kiosk — Grid Screen", () => {
     expect(localStorage.getItem("kiosk_location_name")).toBeNull();
   });
 
-  it("does not restore a stored kiosk location from another organization", async () => {
+  it("does not restore a stored kiosk location from another organization once a real owner signs in", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.setItem("kiosk_location_id", "foreign-location");
     localStorage.setItem("kiosk_location_name", "Little Fern Bakery");
     localStorage.setItem("kiosk_owner_user_id", "u1");
@@ -423,6 +425,25 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.queryByText("Little Fern Bakery")).not.toBeInTheDocument();
     expect(localStorage.getItem("kiosk_location_id")).toBeNull();
     expect(localStorage.getItem("kiosk_location_name")).toBeNull();
+  });
+
+  it("keeps a configured kiosk on the grid screen when the auth session disappears (session expiry, not a sign-out)", async () => {
+    // Simulates the bug Jay reported: the kiosk was configured while an owner
+    // was logged in, then the underlying Supabase session silently expired
+    // (JWT refresh failure, storage eviction, etc). Losing `user` must not
+    // wipe the kiosk's location binding — only a genuinely different signed-in
+    // owner should ever reset it.
+    await renderGridScreen();
+    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    cleanup(); // simulate a full page reload, not just an in-app re-render
+
+    mockUseAuth.mockReturnValue({ user: null, teamMember: null, session: null, loading: false, signOut: vi.fn() });
+    renderWithProviders(<Kiosk />);
+
+    await screen.findByText(/What's on the agenda/i);
+    expect(screen.queryByText(/Select a location to launch/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
+    expect(localStorage.getItem("kiosk_owner_user_id")).toBe("u1");
   });
 
   it("grid screen shows checklist cards for Terrace location", async () => {
