@@ -8,6 +8,7 @@ import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
 
@@ -54,6 +55,7 @@ const router = createBrowserRouter(
   [
     {
       element: <RootLayout />,
+      errorElement: <RouteErrorBoundary />,
       children: [
         { path: "/", element: <Landing /> },
         { path: "/privacy", element: <Privacy /> },
