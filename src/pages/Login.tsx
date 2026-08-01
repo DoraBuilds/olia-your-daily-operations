@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
+import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 
 type Step = "email" | "code";
 
@@ -144,7 +145,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12" style={legalTheme}>
+      <style>{legalLinkStyle}</style>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
@@ -183,7 +185,10 @@ export default function Login() {
           )}
 
           {info && (
-            <p className="text-xs text-sage-deep bg-sage/10 border border-sage/20 rounded-xl px-3 py-2">
+            <p
+              className="text-xs rounded-xl px-3 py-2 border"
+              style={{ color: "#007E70", background: "rgba(0,229,204,0.08)", borderColor: "rgba(0,229,204,0.25)" }}
+            >
               {info}
             </p>
           )}
@@ -201,7 +206,8 @@ export default function Login() {
                 setInfo(emailValue ? `Enter the most recent code sent to ${emailValue}.` : "Enter the most recent code sent to your email.");
               }}
               disabled={!emailValue || loading}
-              className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
+              className="text-xs font-medium hover:underline disabled:opacity-50"
+              style={{ color: "#007E70" }}
             >
               I already have a code
             </button>
@@ -211,9 +217,9 @@ export default function Login() {
             type="submit"
             disabled={loading || !emailValue || (step === "code" && code.trim().length < 6)}
             className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+              "w-full py-3 rounded-full text-sm font-semibold transition-colors",
               !loading && emailValue && (step === "email" || code.trim().length >= 6)
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                ? "bg-[#0B0F0C] text-white hover:bg-[#151A16]"
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
@@ -227,7 +233,8 @@ export default function Login() {
               type="button"
               onClick={handleResend}
               disabled={resending || loading || !emailValue}
-              className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
+              className="text-xs font-medium hover:underline disabled:opacity-50"
+              style={{ color: "#007E70" }}
             >
               {resending ? "Resending…" : "Resend code"}
             </button>

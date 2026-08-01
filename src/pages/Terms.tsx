@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,7 +12,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background legal-scope" style={legalTheme}>
+      <style>{legalLinkStyle}</style>
       <div className="max-w-2xl mx-auto px-6 py-12 space-y-10">
 
         {/* Back */}

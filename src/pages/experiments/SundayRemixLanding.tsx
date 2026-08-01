@@ -473,6 +473,7 @@ export default function SundayRemixLanding() {
             <li><a href="#how">How it works</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="#pricing">Pricing</a></li>
+            <li><Link to="/experiments/sunday-remix-about">About</Link></li>
           </ul>
           <div className="rx-nav-actions">
             <Link to="/login" className="rx-signin">Sign in</Link>
@@ -769,6 +770,7 @@ export default function SundayRemixLanding() {
             <a href="#how">How it works</a>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
+            <Link to="/experiments/sunday-remix-about">About</Link>
             <a href="#" onClick={openDemo}>Book a demo</a>
             <Link to="/login">Sign in</Link>
             <a href="#">Privacy</a>
