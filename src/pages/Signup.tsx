@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
+import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 
 type Step = "form" | "code";
 
@@ -14,6 +15,19 @@ function isEmailRateLimited(message: string | null | undefined) {
 }
 
 const DEFAULT_ADMIN_PIN_NOTICE_KEY = "olia_default_admin_pin_notice";
+
+function SignupHeader() {
+  return (
+    <Link
+      to="/"
+      className="fixed top-6 left-6 flex items-center gap-2 text-lg hover:opacity-70 transition-opacity"
+      style={{ fontFamily: "var(--font-display)", fontStyle: "italic", color: "hsl(var(--foreground))" }}
+    >
+      <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-6 h-6" />
+      Olia
+    </Link>
+  );
+}
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -165,7 +179,9 @@ export default function Signup() {
 
   if (isInviteFailure) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12 text-center" style={legalTheme}>
+        <style>{legalLinkStyle}</style>
+        <SignupHeader />
         <div className="w-full max-w-sm space-y-4">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto" />
           <h1 className="font-display text-2xl text-foreground">We couldn't verify your invitation</h1>
@@ -187,10 +203,15 @@ export default function Signup() {
 
   if (step === "code") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6" style={legalTheme}>
+        <style>{legalLinkStyle}</style>
+        <SignupHeader />
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center mx-auto text-3xl">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl"
+              style={{ background: "rgba(0,229,204,0.1)" }}
+            >
               #
             </div>
             <div>
@@ -226,9 +247,9 @@ export default function Signup() {
               type="submit"
               disabled={loading || code.trim().length < 6}
               className={cn(
-                "w-full py-3 rounded-xl text-sm font-semibold transition-colors",
+                "w-full py-3 rounded-full text-sm font-semibold transition-colors",
                 !loading && code.trim().length >= 6
-                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                  ? "bg-[#0B0F0C] text-white hover:bg-[#151A16]"
                   : "bg-muted text-muted-foreground cursor-not-allowed",
               )}
             >
@@ -241,7 +262,8 @@ export default function Signup() {
               type="button"
               onClick={handleResendCode}
               disabled={resending || loading}
-              className="text-xs font-medium text-sage hover:underline disabled:opacity-50"
+              className="text-xs font-medium hover:underline disabled:opacity-50"
+              style={{ color: "#007E70" }}
             >
               {resending ? "Resending…" : "Resend code"}
             </button>
@@ -270,7 +292,9 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12" style={legalTheme}>
+      <style>{legalLinkStyle}</style>
+      <SignupHeader />
       <div className="w-full max-w-sm space-y-8">
         {/* Account-reset notice — shown when redirected from a broken auth state.
             isInviteFailure returns its own screen above, so this only covers
@@ -368,9 +392,9 @@ export default function Signup() {
             type="submit"
             disabled={loading || !isFormValid}
             className={cn(
-              "w-full py-3 rounded-xl text-sm font-semibold transition-colors mt-2",
+              "w-full py-3 rounded-full text-sm font-semibold transition-colors mt-2",
               !loading && isFormValid
-                ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                ? "bg-[#0B0F0C] text-white hover:bg-[#151A16]"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >

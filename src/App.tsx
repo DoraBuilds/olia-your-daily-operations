@@ -11,8 +11,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
+import { isNewDesignPath } from "@/lib/legal-theme";
 
-const Landing = lazy(() => import("./pages/Landing"));
+const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Checklists = lazy(() => import("./pages/Checklists"));
 const Reporting = lazy(() => import("./pages/Reporting"));
@@ -41,6 +42,19 @@ function RootLayout() {
 }
 
 function RouteLoadingFallback() {
+  // Rendered outside RouterProvider (the Suspense boundary wraps it), so
+  // useLocation() isn't available yet — read the path straight off window.
+  if (isNewDesignPath(window.location.pathname)) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 rounded-full mx-auto animate-pulse" style={{ background: "#00E5CC" }} />
+          <p className="text-sm" style={{ fontFamily: "'Hanken Grotesk', system-ui, sans-serif", color: "#4B564F" }}>Loading Olia…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6">
       <div className="text-center space-y-2">
@@ -57,7 +71,8 @@ const router = createBrowserRouter(
       element: <RootLayout />,
       errorElement: <RouteErrorBoundary />,
       children: [
-        { path: "/", element: <Landing /> },
+        { path: "/", element: <SundayRemixSite /> },
+        { path: "/experiments/sunday-remix-site", element: <SundayRemixSite /> },
         { path: "/privacy", element: <Privacy /> },
         { path: "/terms", element: <Terms /> },
         { path: "/cookies", element: <Cookies /> },
