@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { DemoModal } from "@/components/landing/DemoModal";
 
 /**
@@ -54,7 +55,7 @@ const css = `
     height: 68px; display: flex; align-items: center; padding: 0 40px;
     transition: background 0.3s, box-shadow 0.3s;
   }
-  .rx-nav.scrolled { background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 1px 0 var(--line); }
+  .rx-nav.scrolled, .rx-nav.menu-open { background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 1px 0 var(--line); }
   .rx-nav-inner { display: flex; align-items: center; width: 100%; max-width: 1180px; margin: 0 auto; }
   .rx-logo {
     display: flex; align-items: center; gap: 9px;
@@ -68,6 +69,33 @@ const css = `
   .rx-nav-actions { margin-left: auto; display: flex; align-items: center; gap: 16px; }
   .rx-signin { font-size: 13.5px; color: var(--ink-soft); text-decoration: none; transition: color 0.2s; }
   .rx-signin:hover { color: var(--ink); }
+  .rx-shine-wrap.rx-cta-mobile { display: none; }
+
+  /* MOBILE MENU (hamburger) */
+  .rx-menu-btn {
+    display: none; align-items: center; justify-content: center;
+    width: 40px; height: 40px; margin: -8px 0 -8px -8px; border: none; background: none;
+    color: var(--ink); cursor: pointer; flex-shrink: 0;
+  }
+  .rx-mobile-menu {
+    position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 998; background: var(--white);
+    display: flex; flex-direction: column; border-top: 1px solid var(--line);
+    opacity: 0; visibility: hidden; transform: translateY(-8px);
+    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
+  }
+  .rx-mobile-menu.open {
+    opacity: 1; visibility: visible; transform: translateY(0);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .rx-mobile-menu-links { display: flex; flex-direction: column; padding: 20px 24px 12px; gap: 4px; }
+  .rx-mobile-menu-links a {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 30px; font-weight: 500;
+    color: var(--ink); text-decoration: none; padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .rx-mobile-menu-actions { margin-top: auto; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 12px; }
+  .rx-mobile-menu-signin {
+    text-align: center; font-size: 14.5px; color: var(--ink-soft); text-decoration: none; padding: 14px 0;
+  }
   .rx-btn-neon {
     display: block; font-size: 13px; font-weight: 700; color: #fff; background: var(--black-panel);
     border: 1.5px solid var(--black-panel); padding: 8px 18px; border-radius: 8px;
@@ -393,6 +421,11 @@ const css = `
     .rx-nav { padding: 0 20px; height: 56px; }
     .rx-nav-links { display: none; }
     .rx-signin { display: none; }
+    .rx-menu-btn { display: flex; }
+    .rx-nav-inner { position: relative; justify-content: space-between; }
+    .rx-logo { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; }
+    .rx-shine-wrap.rx-cta-desktop { display: none; }
+    .rx-shine-wrap.rx-cta-mobile { display: inline-block; }
     .rx-container { padding: 0 20px; }
     .olia-remix .rx-hero { padding: 88px 0 24px; }
     .rx-hero-inner { gap: 36px; }
@@ -555,8 +588,16 @@ export default function SundayRemixSite() {
   const [floatVisible, setFloatVisible] = useState(false);
   const [floatMsgIndex, setFloatMsgIndex] = useState(0);
   const [showcaseActive, setShowcaseActive] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const openDemo = (e: React.MouseEvent) => { e.preventDefault(); setDemoOpen(true); };
+  const closeMobileMenu = () => setMobileMenuOpen(false);
   const total = KIOSK_TASKS.length;
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    navRef.current?.classList.toggle("menu-open", mobileMenuOpen);
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const nav = navRef.current;
@@ -638,6 +679,15 @@ export default function SundayRemixSite() {
 
       <nav className="rx-nav" ref={navRef}>
         <div className="rx-nav-inner">
+          <button
+            type="button"
+            className="rx-menu-btn"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((v) => !v)}
+          >
+            {mobileMenuOpen ? <X size={22} strokeWidth={1.8} /> : <Menu size={22} strokeWidth={1.8} />}
+          </button>
           <a href="#home" className="rx-logo">
             <img src="/brand/logo/olia-mark-dark.svg" alt="" className="rx-logo-mark" />
             Olia
@@ -650,10 +700,26 @@ export default function SundayRemixSite() {
           </ul>
           <div className="rx-nav-actions">
             <Link to="/login" className="rx-signin">Sign in</Link>
-            <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-neon">Get started</Link></span>
+            <span className="rx-shine-wrap rx-cta-desktop"><Link to="/signup" className="rx-btn-neon">Get started</Link></span>
+            <span className="rx-shine-wrap rx-cta-mobile"><Link to="/login" className="rx-btn-neon">Sign in</Link></span>
           </div>
         </div>
       </nav>
+
+      <div className={`rx-mobile-menu${mobileMenuOpen ? " open" : ""}`} aria-hidden={!mobileMenuOpen}>
+        <nav className="rx-mobile-menu-links" aria-label="Primary">
+          <a href="#home" onClick={closeMobileMenu}>Home</a>
+          <a href="#features" onClick={closeMobileMenu}>Features</a>
+          <a href="#who-we-are" onClick={closeMobileMenu}>Who we are</a>
+          <a href="#pricing" onClick={closeMobileMenu}>Pricing</a>
+        </nav>
+        <div className="rx-mobile-menu-actions">
+          <span className="rx-shine-wrap block">
+            <Link to="/signup" className="rx-btn-neon" onClick={closeMobileMenu} style={{ textAlign: "center" }}>Get started</Link>
+          </span>
+          <Link to="/login" className="rx-mobile-menu-signin" onClick={closeMobileMenu}>Sign in</Link>
+        </div>
+      </div>
 
       <section className="rx-hero" id="home">
         <div className="rx-hero-inner">
