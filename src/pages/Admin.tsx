@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { MapPin, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import {
   staffDisplayName, getInitials,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
+import { readKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
@@ -38,33 +39,19 @@ import {
 export default function Admin() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const fromKiosk = searchParams.get("from") === "kiosk";
   const { user, teamMember: authMember } = useAuth();
 
-  // Resolve the kiosk-authenticated userId from sessionStorage (one-time use token).
-  // If from=kiosk is in the URL but the token is missing or expired, redirect back to kiosk.
-  const [userId] = useState<string | null>(() => {
-    if (!fromKiosk) return null;
-    const raw = sessionStorage.getItem("kiosk_admin_session");
-    if (!raw) return null;
-    try {
-      const session = JSON.parse(raw) as { userId: string; locationId: string; expiresAt: number };
-      sessionStorage.removeItem("kiosk_admin_session");
-      if (!session.userId || Date.now() >= session.expiresAt) return null;
-      return session.userId;
-    } catch {
-      sessionStorage.removeItem("kiosk_admin_session");
-      return null;
-    }
-  });
-
-  // Redirect back to kiosk if session token was invalid or expired
-  useEffect(() => {
-    if (fromKiosk && userId === null) {
-      navigate("/kiosk", { replace: true });
-    }
-  }, [fromKiosk, userId, navigate]);
+  // Resolve the kiosk-authenticated userId from the shared session grant.
+  // Read once at mount (not from the "?from=kiosk" query param, which the
+  // tab-switcher below drops on every navigate) so the PIN-granted session —
+  // and the userId/permission scoping derived from it — survives switching
+  // between My Location / Users / Account / Billing / Notifications.
+  // ProtectedRoute already guarantees a kiosk device can't reach this page
+  // at all without a live grant, so there's no separate "invalid token"
+  // redirect to handle here.
+  const [kioskAdminSession] = useState(() => readKioskAdminSession());
+  const userId = kioskAdminSession?.userId ?? null;
+  const isKioskAdminSession = kioskAdminSession !== null;
   const { plan, billingUnavailable } = usePlan();
   const isNative = useIsNativeApp();
 
@@ -138,13 +125,17 @@ export default function Admin() {
   }, [isOwner, navigate, routeTab]);
   const permissions: ManagerPermissions | null = isOwner ? null : (activeUser?.permissions ?? null);
 
-  // Inactivity timer — when from kiosk, redirect back after 90s idle
+  // Inactivity timer — for a kiosk-PIN admin session, redirect back after 90s
+  // idle and revoke the grant so it can't be replayed by direct navigation.
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!fromKiosk) return;
+    if (!isKioskAdminSession) return;
     const reset = () => {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = setTimeout(() => navigate("/kiosk"), 90000);
+      inactivityTimerRef.current = setTimeout(() => {
+        clearKioskAdminSession();
+        navigate("/kiosk");
+      }, 90000);
     };
     const events = ["mousemove", "keydown", "touchstart", "click"] as const;
     events.forEach(e => window.addEventListener(e, reset));
@@ -153,7 +144,7 @@ export default function Admin() {
       events.forEach(e => window.removeEventListener(e, reset));
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  }, [fromKiosk, navigate]);
+  }, [isKioskAdminSession, navigate]);
 
   // Restrict manager to their first assigned location
   useEffect(() => {
@@ -325,9 +316,12 @@ export default function Admin() {
       <Layout
         title="Olia"
         subtitle={userLabel}
-        headerLeft={fromKiosk ? (
+        headerLeft={isKioskAdminSession ? (
           <button
-            onClick={() => navigate("/kiosk")}
+            onClick={() => {
+              clearKioskAdminSession();
+              navigate("/kiosk");
+            }}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={14} /> Kiosk

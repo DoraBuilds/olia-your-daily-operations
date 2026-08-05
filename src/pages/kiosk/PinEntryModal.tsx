@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocations } from "@/hooks/useLocations";
+import { grantKioskAdminSession } from "@/lib/kiosk-admin-session";
 import type { KioskChecklist } from "./types";
 import { useInactivityTimer } from "./hooks";
 
@@ -230,11 +231,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       return;
     }
 
-    sessionStorage.setItem("kiosk_admin_session", JSON.stringify({
-      userId: data[0].id,
-      locationId: locationId,
-      expiresAt: Date.now() + 5 * 60 * 1000,
-    }));
+    grantKioskAdminSession(data[0].id, locationId);
     navigate("/admin?from=kiosk");
   };
 
@@ -283,11 +280,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         setLoading(false);
         if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? "Too many failed attempts. Please wait 5 minutes before trying again." : "Could not verify PIN. Please try again."); setPin(""); return; }
         if (!data || data.length === 0) { setError("Invalid PIN."); setPin(""); return; }
-        sessionStorage.setItem("kiosk_admin_session", JSON.stringify({
-          userId: data[0].id,
-          locationId,
-          expiresAt: Date.now() + 5 * 60 * 1000,
-        }));
+        grantKioskAdminSession(data[0].id, locationId);
         navigate("/admin?from=kiosk");
       })();
     }

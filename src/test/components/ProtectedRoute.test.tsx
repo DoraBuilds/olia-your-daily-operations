@@ -1,6 +1,7 @@
 import { screen, render } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { grantKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
 
 vi.mock("@/lib/supabase", () => ({
@@ -27,6 +28,11 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 describe("ProtectedRoute", () => {
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
   it("shows loading spinner text when loading=true", () => {
     mockUseAuth.mockReturnValue({ user: null, loading: true });
     renderWithProviders(
@@ -105,5 +111,68 @@ describe("ProtectedRoute", () => {
     expect(
       screen.getByText(/detail=Your%20invitation%20link%20is%20invalid/),
     ).toBeInTheDocument();
+  });
+
+  describe("on a configured kiosk device", () => {
+    beforeEach(() => {
+      localStorage.setItem("kiosk_location_id", "location-1");
+      // A lingering owner session is exactly what makes the kiosk's own PIN
+      // hop into /admin possible — and exactly what a direct-navigation
+      // exploit would otherwise ride on for every other protected route.
+      mockUseAuth.mockReturnValue({ user: { id: "owner-1" }, loading: false, setupError: null, signOut: vi.fn() });
+    });
+
+    it("redirects /dashboard back to /kiosk even though a live session exists", () => {
+      render(
+        <MemoryRouter initialEntries={["/dashboard"]}>
+          <Routes>
+            <Route path="/dashboard" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+            <Route path="/kiosk" element={<p>Kiosk screen</p>} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+      expect(screen.getByText("Kiosk screen")).toBeInTheDocument();
+    });
+
+    it("redirects /admin/location back to /kiosk when there is no PIN-granted session", () => {
+      render(
+        <MemoryRouter initialEntries={["/admin/location"]}>
+          <Routes>
+            <Route path="/admin/location" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+            <Route path="/kiosk" element={<p>Kiosk screen</p>} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+      expect(screen.getByText("Kiosk screen")).toBeInTheDocument();
+    });
+
+    it("lets /admin/location through with a live PIN-granted kiosk admin session", () => {
+      grantKioskAdminSession("staff-1", "location-1");
+      render(
+        <MemoryRouter initialEntries={["/admin/location"]}>
+          <Routes>
+            <Route path="/admin/location" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+            <Route path="/kiosk" element={<p>Kiosk screen</p>} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.getByText("Protected content")).toBeInTheDocument();
+    });
+
+    it("still redirects /dashboard to /kiosk even with a live PIN-granted session (PIN only ever authorizes /admin)", () => {
+      grantKioskAdminSession("staff-1", "location-1");
+      render(
+        <MemoryRouter initialEntries={["/dashboard"]}>
+          <Routes>
+            <Route path="/dashboard" element={<ProtectedRoute><p>Protected content</p></ProtectedRoute>} />
+            <Route path="/kiosk" element={<p>Kiosk screen</p>} />
+          </Routes>
+        </MemoryRouter>
+      );
+      expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+      expect(screen.getByText("Kiosk screen")).toBeInTheDocument();
+    });
   });
 });
