@@ -1,9 +1,10 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -22,9 +23,23 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   const shellWidthClass = "mx-auto w-full max-w-[1240px]";
   const contentWidthClass = "w-full min-w-0 max-w-[920px] xl:max-w-[900px]";
 
+  // Every authenticated page renders through here, so this is the one place
+  // that has to know about a kiosk-PIN admin session (see
+  // kiosk-admin-session.ts / ProtectedRoute.tsx): it swaps the real
+  // "Log out" action for "Back to Kiosk" (the real sign-out would kill the
+  // lingering owner session the kiosk device's PIN flow depends on) and
+  // runs the 90s inactivity timer that returns to /kiosk — wherever in the
+  // app that inactivity happens, not just on the admin page.
+  const isKioskAdminSession = hasActiveKioskAdminSession();
+
   const handleLogout = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleBackToKiosk = () => {
+    clearKioskAdminSession();
+    navigate("/kiosk");
   };
 
   useEffect(() => {
@@ -33,6 +48,25 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       mainRef.current.scrollTop = 0;
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isKioskAdminSession) return;
+    let inactivityTimer: ReturnType<typeof setTimeout> | undefined;
+    const reset = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        clearKioskAdminSession();
+        navigate("/kiosk");
+      }, 90000);
+    };
+    const events = ["mousemove", "keydown", "touchstart", "click"] as const;
+    events.forEach(e => window.addEventListener(e, reset));
+    reset();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, reset));
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+    };
+  }, [isKioskAdminSession, navigate]);
 
   return (
     <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
@@ -53,7 +87,14 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
               {headerRight && (
                 <div className="flex items-center gap-2">{headerRight}</div>
               )}
-              {user ? (
+              {isKioskAdminSession ? (
+                <button
+                  onClick={handleBackToKiosk}
+                  className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                >
+                  <ArrowLeft size={14} /> Kiosk
+                </button>
+              ) : user ? (
                 <button
                   onClick={handleLogout}
                   aria-label="Log out"

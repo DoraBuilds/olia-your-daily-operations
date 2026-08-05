@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import { MapPin, ArrowLeft } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   staffDisplayName, getInitials,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
-import { readKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { readKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
@@ -51,7 +51,6 @@ export default function Admin() {
   // redirect to handle here.
   const [kioskAdminSession] = useState(() => readKioskAdminSession());
   const userId = kioskAdminSession?.userId ?? null;
-  const isKioskAdminSession = kioskAdminSession !== null;
   const { plan, billingUnavailable } = usePlan();
   const isNative = useIsNativeApp();
 
@@ -124,27 +123,6 @@ export default function Admin() {
     setActiveTab(routeTab);
   }, [isOwner, navigate, routeTab]);
   const permissions: ManagerPermissions | null = isOwner ? null : (activeUser?.permissions ?? null);
-
-  // Inactivity timer — for a kiosk-PIN admin session, redirect back after 90s
-  // idle and revoke the grant so it can't be replayed by direct navigation.
-  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!isKioskAdminSession) return;
-    const reset = () => {
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      inactivityTimerRef.current = setTimeout(() => {
-        clearKioskAdminSession();
-        navigate("/kiosk");
-      }, 90000);
-    };
-    const events = ["mousemove", "keydown", "touchstart", "click"] as const;
-    events.forEach(e => window.addEventListener(e, reset));
-    reset();
-    return () => {
-      events.forEach(e => window.removeEventListener(e, reset));
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    };
-  }, [isKioskAdminSession, navigate]);
 
   // Restrict manager to their first assigned location
   useEffect(() => {
@@ -316,17 +294,6 @@ export default function Admin() {
       <Layout
         title="Olia"
         subtitle={userLabel}
-        headerLeft={isKioskAdminSession ? (
-          <button
-            onClick={() => {
-              clearKioskAdminSession();
-              navigate("/kiosk");
-            }}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft size={14} /> Kiosk
-          </button>
-        ) : undefined}
       >
         <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
           {/* Sub-tab pill toggle */}

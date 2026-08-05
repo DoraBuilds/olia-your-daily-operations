@@ -1,5 +1,6 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
+import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
 
 // ─── Hoist mock vars ──────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ describe("Layout", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    sessionStorage.clear();
+    vi.useRealTimers();
   });
 
   it("renders children content", () => {
@@ -117,5 +120,54 @@ describe("Layout", () => {
       expect(mockSignOut).toHaveBeenCalledTimes(1);
       expect(mockNavigate).toHaveBeenCalledWith("/");
     });
+  });
+
+  describe("with a live kiosk-PIN admin session", () => {
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
+      grantKioskAdminSession("staff-1", "location-1");
+    });
+
+    it("shows 'Back to Kiosk' instead of the real Log out button — signing out the real session would break the kiosk's PIN flow for everyone", () => {
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+      expect(screen.getByText(/back to kiosk|kiosk/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /log out/i })).toBeNull();
+    });
+
+    it("revokes the grant and navigates to /kiosk when 'Back to Kiosk' is clicked", () => {
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+      fireEvent.click(screen.getByText(/kiosk/i));
+      expect(mockNavigate).toHaveBeenCalledWith("/kiosk");
+      expect(hasActiveKioskAdminSession()).toBe(false);
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it("auto-returns to /kiosk and revokes the grant after 90s of inactivity", () => {
+      vi.useFakeTimers();
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+
+      vi.advanceTimersByTime(90000);
+
+      expect(mockNavigate).toHaveBeenCalledWith("/kiosk");
+      expect(hasActiveKioskAdminSession()).toBe(false);
+    });
+
+    it("resets the 90s timer on user activity instead of bouncing early", () => {
+      vi.useFakeTimers();
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+
+      vi.advanceTimersByTime(60000);
+      fireEvent.mouseMove(window);
+      vi.advanceTimersByTime(60000);
+
+      expect(mockNavigate).not.toHaveBeenCalledWith("/kiosk");
+      expect(hasActiveKioskAdminSession()).toBe(true);
+    });
+  });
+
+  it("shows the real Log out button (not 'Back to Kiosk') for a normal authenticated session with no kiosk grant", () => {
+    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
+    renderWithProviders(<Layout title="T"><span /></Layout>);
+    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
   });
 });
