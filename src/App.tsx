@@ -1,9 +1,9 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -12,6 +12,7 @@ import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
 import { isNewDesignPath } from "@/lib/legal-theme";
+import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
 
 const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -34,6 +35,7 @@ const AvisoLegal = lazy(() => import("./pages/AvisoLegal"));
 
 function RootLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // iOS Safari paints the plain <body> background in the elastic-overscroll
   // area above fixed content (and behind the notch/status bar with
@@ -42,6 +44,14 @@ function RootLayout() {
   useEffect(() => {
     document.body.style.backgroundColor = isNewDesignPath(location.pathname) ? "#ffffff" : "";
   }, [location.pathname]);
+
+  // Runs before paint (see kiosk-guard.ts) so a configured kiosk device
+  // never actually flashes the landing/login page it's being redirected away from.
+  useLayoutEffect(() => {
+    if (shouldRedirectToKiosk(location.pathname, Boolean(localStorage.getItem("kiosk_location_id")))) {
+      navigate("/kiosk", { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <>
