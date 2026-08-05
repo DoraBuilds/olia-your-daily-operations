@@ -161,7 +161,7 @@ describe("ProtectedRoute", () => {
       expect(screen.getByText("Protected content")).toBeInTheDocument();
     });
 
-    it("still redirects /dashboard to /kiosk even with a live PIN-granted session (PIN only ever authorizes /admin)", () => {
+    it("also lets /dashboard through with a live PIN-granted session — the grant unlocks the whole app, not just /admin", () => {
       grantKioskAdminSession("staff-1", "location-1");
       render(
         <MemoryRouter initialEntries={["/dashboard"]}>
@@ -171,8 +171,7 @@ describe("ProtectedRoute", () => {
           </Routes>
         </MemoryRouter>
       );
-      expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
-      expect(screen.getByText("Kiosk screen")).toBeInTheDocument();
+      expect(screen.getByText("Protected content")).toBeInTheDocument();
     });
   });
 });
