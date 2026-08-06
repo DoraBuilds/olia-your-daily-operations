@@ -3,8 +3,9 @@ import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { renderWithProviders } from "../test-utils";
 
 const mockNavigate = vi.fn();
-const { mockUseAuth } = vi.hoisted(() => ({
+const { mockUseAuth, mockUseLocations } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
+  mockUseLocations: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -149,10 +150,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 vi.mock("@/hooks/useLocations", () => ({
-  useLocations: () => ({
-    allLocations: mockLocations,
-    isFetched: true,
-  }),
+  useLocations: () => mockUseLocations(),
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -272,6 +270,11 @@ beforeEach(() => {
     session: null,
     loading: false,
     signOut: vi.fn(),
+  });
+  mockUseLocations.mockReturnValue({
+    allLocations: mockLocations,
+    isFetched: true,
+    isError: false,
   });
 });
 
@@ -1696,5 +1699,68 @@ describe("Kiosk — URL param locationId", () => {
     });
     await screen.findByText(/What's on the agenda/i);
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+  });
+});
+
+describe("Kiosk — survives a transient locations-fetch error", () => {
+  // useLocations().isFetched is true after a FAILED fetch too (react-query
+  // marks a query "fetched" on error, not just success), so allLocations
+  // being empty during an errored fetch looks identical to "this location
+  // was deleted." A device must not wipe its kiosk config over a network
+  // blip — it should just wait for the next successful refetch.
+  it("keeps the stored kiosk location instead of clearing it when the locations query errors", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+    mockUseLocations.mockReturnValue({ allLocations: [], isFetched: true, isError: true });
+    await renderGridScreen({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+
+    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
+  });
+
+  it("keeps the stored kiosk location on an anonymous device when the location re-check query errors", async () => {
+    // The anonymous kiosk path (no live session — the normal state for a
+    // wall-mounted device) re-verifies its location via a raw supabase call,
+    // independent of useLocations. It used to destructure only `data` and
+    // ignore `error`, so a failed request looked identical to "row not
+    // found" and wiped the kiosk's config.
+    const { supabase } = await import("@/lib/supabase");
+    mockUseAuth.mockReturnValue({ user: null, teamMember: null, session: null, loading: false, signOut: vi.fn() });
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    localStorage.setItem("kiosk_location_name", "Terrace");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
+
+    (supabase.from as any).mockImplementationOnce((table: string) => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue(
+        table === "locations"
+          ? { data: null, error: { message: "network error" } }
+          : { data: null, error: null },
+      ),
+    }));
+
+    renderWithProviders(<Kiosk />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    });
+    expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
+  });
+
+  it("still clears the kiosk location when the locations query succeeds but genuinely no longer contains it", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+    mockUseLocations.mockReturnValue({ allLocations: [], isFetched: true, isError: false });
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    localStorage.setItem("kiosk_location_name", "Terrace");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
+    renderWithProviders(<Kiosk />);
+
+    await waitFor(() => {
+      expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+    });
   });
 });
