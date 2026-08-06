@@ -124,7 +124,7 @@ export default function Kiosk() {
   const [searchParams] = useSearchParams();
   const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
-  const { allLocations = [], isFetched: locationsFetched } = useLocations();
+  const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
 
   // Hydrate straight from localStorage on mount so a properly-configured
   // kiosk keeps working even when there is no live auth session yet (or
@@ -196,6 +196,11 @@ export default function Kiosk() {
     if (urlLocationId) {
       const matchedUrlLocation = allLocations.find((location) => location.id === urlLocationId);
       if (!matchedUrlLocation) {
+        // A failed fetch also leaves allLocations empty (isFetched is true on
+        // error too), which looks identical to "this location was deleted."
+        // Treat an errored fetch as "don't know yet" and retry later instead
+        // of wiping a device's kiosk config over a transient network blip.
+        if (locationsErrored) return;
         clearKioskLocationSelection();
         clearKioskOwnership();
         setLocationId(null);
@@ -249,6 +254,9 @@ export default function Kiosk() {
 
     const matchedStoredLocation = allLocations.find((location) => location.id === storedLocationId);
     if (!matchedStoredLocation) {
+      // Same reasoning as the urlLocationId branch above: don't tear down a
+      // working kiosk's configuration just because this one fetch errored.
+      if (locationsErrored) return;
       clearKioskLocationSelection();
       clearKioskOwnership();
       setLocationId(null);
@@ -266,6 +274,7 @@ export default function Kiosk() {
   }, [
     allLocations,
     loading,
+    locationsErrored,
     locationsFetched,
     teamMember?.organization_id,
     urlLocationId,
@@ -273,7 +282,7 @@ export default function Kiosk() {
   ]);
 
   useEffect(() => {
-    if (!locationId || !teamMember?.organization_id || !locationsFetched) return;
+    if (!locationId || !teamMember?.organization_id || !locationsFetched || locationsErrored) return;
 
     const locationStillAccessible = allLocations.some((location) => location.id === locationId);
     if (!locationStillAccessible) {
@@ -284,7 +293,7 @@ export default function Kiosk() {
       setScreen("grid");
       setKioskChecklists([]);
     }
-  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id]);
+  }, [allLocations, locationId, locationsErrored, locationsFetched, teamMember?.organization_id]);
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -393,7 +402,7 @@ export default function Kiosk() {
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user?.id || !locationId) return;
+    if (loading || !user?.id || !locationId || !locationsFetched || locationsErrored) return;
     const matchedLocation = allLocations.find((location) => location.id === locationId);
     if (matchedLocation) {
       if (matchedLocation.name !== locationName) {
@@ -409,7 +418,7 @@ export default function Kiosk() {
     setLocationId(null);
     setLocationName("");
     setKioskChecklists([]);
-  }, [allLocations, loading, locationId, locationName, user?.id]);
+  }, [allLocations, loading, locationId, locationName, locationsErrored, locationsFetched, user?.id]);
 
   useEffect(() => {
     if (loading || user?.id || !locationId) return;
@@ -420,7 +429,7 @@ export default function Kiosk() {
       .select("id, name")
       .eq("id", locationId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (cancelled) return;
         if (data?.id) {
           if (data.name && data.name !== locationName) {
@@ -430,6 +439,13 @@ export default function Kiosk() {
           }
           return;
         }
+        // A failed request (network blip, transient Supabase error) surfaces
+        // here as data:null too — indistinguishable from "this location was
+        // really deleted" unless we check `error`. This is the anonymous
+        // kiosk's own periodic re-check (no live session, so it can't rely
+        // on useLocations' org-scoped list), so a wrong guess here silently
+        // logs a real, working kiosk device out to the marketing homepage.
+        if (error) return;
         clearKioskLocationSelection();
         setLocationId(null);
         setLocationName("");

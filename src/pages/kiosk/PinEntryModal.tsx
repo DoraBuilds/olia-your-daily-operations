@@ -172,7 +172,7 @@ export function KioskPinShell({
 export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => void; kioskLocationId?: string | null }) {
   const navigate = useNavigate();
   const { teamMember } = useAuth();
-  const { allLocations = [], isFetched: locationsFetched } = useLocations();
+  const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -189,7 +189,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       return;
     }
 
-    if (teamMember?.organization_id && locationsFetched) {
+    if (teamMember?.organization_id && locationsFetched && !locationsErrored) {
       const locationStillAccessible = allLocations.some((location) => location.id === locationId);
       if (!locationStillAccessible) {
         clearKioskLocationSelectionForModal();
@@ -255,7 +255,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         setLoading(true);
         const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
         if (!locationId) { setLoading(false); setError("Select a kiosk location first."); setPin(""); return; }
-        if (teamMember?.organization_id && locationsFetched) {
+        if (teamMember?.organization_id && locationsFetched && !locationsErrored) {
           if (!allLocations.some(l => l.id === locationId)) {
             clearKioskLocationSelectionForModal();
             setLoading(false);
