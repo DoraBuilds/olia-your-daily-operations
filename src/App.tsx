@@ -11,7 +11,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
-import { ThemePreviewToggle } from "@/components/ThemePreviewToggle";
 import { isNewDesignPath } from "@/lib/legal-theme";
 import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
 import { restoreGitHubPagesRoute } from "@/lib/github-pages-routing";
@@ -72,7 +71,6 @@ function RootLayout() {
     <>
       <Outlet />
       <CookieBanner />
-      {import.meta.env.DEV && !isNewDesignPath(location.pathname) && <ThemePreviewToggle />}
     </>
   );
 }
