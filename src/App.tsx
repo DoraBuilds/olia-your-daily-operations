@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -61,11 +61,28 @@ function RootLayout() {
 
   // Runs before paint (see kiosk-guard.ts) so a configured kiosk device
   // never actually flashes the landing/login page it's being redirected away from.
+  //
+  // Deliberately checked once, on the app's initial mount, not on every
+  // subsequent pathname change: the exploit this guards against (#574) is a
+  // *fresh page load* landing on "/"/"/login"/"/signup" with a lingering
+  // session — a hard refresh, a bookmark, the GitHub Pages 404 fallback.
+  // ProtectedRoute independently (and unconditionally, on every render)
+  // blocks a configured kiosk device from reaching any actual protected
+  // route without a PIN grant, so the security boundary doesn't depend on
+  // this effect re-running. Re-running it on every in-app navigation instead
+  // bounced a browser that had ever completed kiosk setup — e.g. an owner
+  // testing kiosk mode on their own laptop — to the kiosk picker any time
+  // they clicked back to the homepage from an ordinary marketing page like
+  // /privacy, which has nothing to do with an actual kiosk device.
+  const kioskMountCheckDone = useRef(false);
   useLayoutEffect(() => {
+    if (kioskMountCheckDone.current) return;
+    kioskMountCheckDone.current = true;
     if (shouldRedirectToKiosk(location.pathname, Boolean(localStorage.getItem("kiosk_location_id")))) {
       navigate("/kiosk", { replace: true });
     }
-  }, [location.pathname, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
