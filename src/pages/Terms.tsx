@@ -24,7 +24,7 @@ export default function Terms() {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="font-display text-4xl text-foreground">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: 21 July 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: 21 July 2026 (Section 9 updated 6 August 2026)</p>
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -119,7 +119,33 @@ export default function Terms() {
           </p>
         </Section>
 
-        <Section title="9. Limitation of liability">
+        <Section title="9. Software &quot;as is&quot;; assumption of risk; limitation of liability">
+          <p className="font-semibold text-foreground">9.1 As Is</p>
+          <p>
+            Olia is provided "as is" and "as available." Software of any kind may contain bugs,
+            errors, or defects. We do not guarantee uninterrupted, error-free, or fully accurate
+            operation of the Service, including checklists, reminders, notifications, alerts, or
+            any other automated feature.
+          </p>
+          <p className="font-semibold text-foreground">9.2 Assumption of Risk</p>
+          <p>
+            By using Olia, you acknowledge that you are using an automated software tool to
+            support, not replace, your own operational, compliance, food safety, and regulatory
+            processes. You remain solely responsible for your business's compliance with
+            applicable laws, health and safety regulations, and industry standards, regardless of
+            whether Olia's checklists, alerts, or notifications function as expected at any given
+            time.
+          </p>
+          <p className="font-semibold text-foreground">9.3 Waiver of Claims</p>
+          <p>
+            To the maximum extent permitted by applicable law, you waive and release Olia, its
+            founders, employees, and affiliates from any claim, cause of action, or right to bring
+            legal proceedings against us arising from software bugs, errors, downtime, missed or
+            failed notifications, or data inaccuracies. This waiver does not apply to claims
+            arising from our gross negligence, willful misconduct, or fraud, or where a waiver is
+            not permitted under mandatory consumer protection law applicable to you.
+          </p>
+          <p className="font-semibold text-foreground">9.4 Limitation of Liability</p>
           <p>
             To the maximum extent permitted by law, Olia is not liable for indirect, incidental,
             special, or consequential damages arising from your use of the service, including loss

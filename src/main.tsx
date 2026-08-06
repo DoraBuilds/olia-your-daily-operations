@@ -10,24 +10,13 @@ import { StatusBar, Style } from "@capacitor/status-bar";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
-import { restoreGitHubPagesRoute as restoreGitHubPagesRoutePath } from "@/lib/github-pages-routing";
 
 // ── Sentry error monitoring ───────────────────────────────────────────────────
 // Only initialises when VITE_SENTRY_DSN is set AND the user has accepted cookies.
 initSentryIfConsented();
 
-function restoreGitHubPagesRoute() {
-  const targetRoute = restoreGitHubPagesRoutePath(
-    window.location.search,
-    import.meta.env.BASE_URL,
-    window.location.hash,
-  );
-  if (targetRoute) {
-    window.history.replaceState(null, "", targetRoute);
-  }
-}
-
-restoreGitHubPagesRoute();
+// GitHub Pages deep-link restoration now happens in App.tsx, before the
+// router is created (see comment there) — importing App below already runs it.
 
 if (Capacitor.isNativePlatform()) {
   // Status bar: light background (alabaster) with dark icons

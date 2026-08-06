@@ -11,8 +11,23 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
+import { ThemePreviewToggle } from "@/components/ThemePreviewToggle";
 import { isNewDesignPath } from "@/lib/legal-theme";
 import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
+import { restoreGitHubPagesRoute } from "@/lib/github-pages-routing";
+
+// Must run before `createBrowserRouter` below reads window.location. GitHub
+// Pages' 404.html fallback redirects deep links (e.g. /privacy) to
+// `/?p=/privacy` before this module ever loads, so the router would otherwise
+// snapshot the wrong path and render the landing page instead.
+const restoredGitHubPagesPath = restoreGitHubPagesRoute(
+  window.location.search,
+  import.meta.env.BASE_URL,
+  window.location.hash,
+);
+if (restoredGitHubPagesPath) {
+  window.history.replaceState(null, "", restoredGitHubPagesPath);
+}
 
 const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -57,6 +72,7 @@ function RootLayout() {
     <>
       <Outlet />
       <CookieBanner />
+      {import.meta.env.DEV && !isNewDesignPath(location.pathname) && <ThemePreviewToggle />}
     </>
   );
 }
