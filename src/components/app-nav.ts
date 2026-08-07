@@ -8,20 +8,23 @@ import {
 } from "lucide-react";
 
 export interface AppNavItem {
+  /** Stable, non-translated — used for DOM ids (`nav-${id}`), never rendered. */
+  id: string;
   to: string;
-  label: string;
+  /** i18n key (common namespace) for the displayed label. */
+  labelKey: string;
   icon: LucideIcon;
   children?: Array<{
     to: string;
-    label: string;
+    labelKey: string;
     ownerOnly?: boolean;
   }>;
 }
 
 export const appNavItems: AppNavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/checklists", label: "Checklists", icon: ClipboardList },
-  { to: "/reporting", label: "Reporting", icon: BarChart3 },
-  { to: "/infohub", label: "Infohub", icon: BookOpen },
-  { to: "/admin", label: "Admin", icon: ShieldCheck },
+  { id: "dashboard", to: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { id: "checklists", to: "/checklists", labelKey: "nav.checklists", icon: ClipboardList },
+  { id: "reporting", to: "/reporting", labelKey: "nav.reporting", icon: BarChart3 },
+  { id: "infohub", to: "/infohub", labelKey: "nav.infohub", icon: BookOpen },
+  { id: "admin", to: "/admin", labelKey: "nav.admin", icon: ShieldCheck },
 ];

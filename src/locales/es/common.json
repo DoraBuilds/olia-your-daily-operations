@@ -1,5 +1,17 @@
 {
   "language": {
     "label": "Idioma"
+  },
+  "nav": {
+    "sectionLabel": "Navegar",
+    "dashboard": "Panel",
+    "checklists": "Listas de verificación",
+    "reporting": "Informes",
+    "infohub": "Infohub",
+    "admin": "Admin"
+  },
+  "layout": {
+    "backToKiosk": "Kiosco",
+    "logOut": "Cerrar sesión"
   }
 }

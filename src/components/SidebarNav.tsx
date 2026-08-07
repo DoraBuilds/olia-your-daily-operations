@@ -1,10 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { appNavItems } from "./app-nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function SidebarNav() {
   const location = useLocation();
+  const { t } = useTranslation();
   const { teamMember } = useAuth();
   const isOwner = teamMember?.role === "Owner";
 
@@ -16,11 +18,12 @@ export function SidebarNav() {
           <span className="font-display italic text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
         </div>
         <p className="px-3 pt-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          Navigate
+          {t("nav.sectionLabel")}
         </p>
         <nav aria-label="Primary" className="space-y-1">
-          {appNavItems.map(({ to, label, icon: Icon, children }) => {
+          {appNavItems.map(({ to, labelKey, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);
+            const label = t(labelKey);
             const visibleChildren = children?.filter((child) => {
               if (child.ownerOnly && !isOwner) return false;
               return true;
@@ -62,7 +65,7 @@ export function SidebarNav() {
                               : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                           )}
                         >
-                          {child.label}
+                          {t(child.labelKey)}
                         </NavLink>
                       );
                     })}

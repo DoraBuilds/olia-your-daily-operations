@@ -1,20 +1,23 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { appNavItems } from "./app-nav";
 
 export function BottomNav() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card shadow-sm safe-area-pb md:hidden">
       <div className="mx-auto flex items-stretch w-full max-w-[1200px] px-2 sm:px-4">
-        {appNavItems.map(({ to, label, icon: Icon }) => {
+        {appNavItems.map(({ id, to, labelKey, icon: Icon }) => {
           const active = location.pathname.startsWith(to);
+          const label = t(labelKey);
           return (
             <NavLink
               key={to}
               to={to}
-              id={`nav-${label.toLowerCase()}`}
+              id={`nav-${id}`}
               className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2 px-2 text-xs font-medium transition-colors min-h-[58px] select-none"
             >
               <span

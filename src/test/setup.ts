@@ -1,6 +1,11 @@
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+// Initializes the i18next singleton for every test file (react-i18next's
+// useTranslation() renders raw keys instead of translated text without an
+// initialized instance, and each test file gets a fresh module registry —
+// see #594).
+import "@/lib/i18n";
 
 afterEach(() => {
   cleanup();
