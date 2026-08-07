@@ -178,7 +178,7 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
   localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
   renderWithProviders(<Kiosk />);
 
-  if (!screen.queryByText(/What's on the agenda/i)) {
+  if (!screen.queryByTestId("kiosk-tab-due")) {
     await waitFor(() => {
       expect(document.getElementById("location-select")).not.toBeNull();
     });
@@ -190,7 +190,7 @@ async function renderGridScreen(authOverride?: { user: any; teamMember: any; ses
     }
   }
 
-  await screen.findByText(/What's on the agenda/i);
+  await screen.findByTestId("kiosk-tab-due");
 }
 
 async function openRunnerWithQuestions(questions: any[]) {
@@ -397,7 +397,7 @@ describe("Kiosk — Setup Screen", () => {
       fireEvent.click(btn);
     });
     await waitFor(() => {
-      expect(screen.queryByText(/What's on the agenda/i)).toBeInTheDocument();
+      expect(screen.queryByTestId("kiosk-tab-due")).toBeInTheDocument();
     });
   });
 });
@@ -405,9 +405,9 @@ describe("Kiosk — Setup Screen", () => {
 // ─── Grid Screen tests ────────────────────────────────────────────────────────
 
 describe("Kiosk — Grid Screen", () => {
-  it("grid screen shows 'What's on the agenda' heading", async () => {
+  it("grid screen heading shows the kiosk's location name", async () => {
     await renderGridScreen();
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Terrace" })).toBeInTheDocument();
   });
 
   it("shows a device-scoped language picker defaulting to English", async () => {
@@ -471,13 +471,13 @@ describe("Kiosk — Grid Screen", () => {
     // wipe the kiosk's location binding — only a genuinely different signed-in
     // owner should ever reset it.
     await renderGridScreen();
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
     cleanup(); // simulate a full page reload, not just an in-app re-render
 
     mockUseAuth.mockReturnValue({ user: null, teamMember: null, session: null, loading: false, signOut: vi.fn() });
     renderWithProviders(<Kiosk />);
 
-    await screen.findByText(/What's on the agenda/i);
+    await screen.findByTestId("kiosk-tab-due");
     expect(screen.queryByText(/Select a location to launch/i)).not.toBeInTheDocument();
     expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
     expect(localStorage.getItem("kiosk_owner_user_id")).toBe("u1");
@@ -1013,12 +1013,12 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
 
   async function renderGrandBallroomGrid() {
     renderWithProviders(<Kiosk />);
-    await screen.findByText(/What's on the agenda/i);
+    await screen.findByTestId("kiosk-tab-due");
   }
 
   it("renders grid screen for Grand Ballroom with heading", async () => {
     await renderGrandBallroomGrid();
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
   });
 
   it("Grand Ballroom has Opening Checklist (morning) or Closing Checklist (evening)", async () => {
@@ -1051,7 +1051,7 @@ describe("Kiosk — Completion Screen", () => {
     // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
     localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
     renderWithProviders(<Kiosk />);
-    await screen.findByText(/What's on the agenda/i);
+    await screen.findByTestId("kiosk-tab-due");
 
     // Open PIN modal
     const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
@@ -1068,7 +1068,7 @@ describe("Kiosk — Completion Screen", () => {
       expect(screen.queryByText("Insert PIN")).not.toBeInTheDocument();
     });
     // Back on grid screen
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
   });
 
   it("renders in Spanish when the active language is es", async () => {
@@ -1752,8 +1752,8 @@ describe("Kiosk — URL param locationId", () => {
     renderWithProviders(<Kiosk />, {
       initialEntries: ["/kiosk?locationId=00000000-0000-0000-0000-000000000011"],
     });
-    await screen.findByText(/What's on the agenda/i);
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    await screen.findByTestId("kiosk-tab-due");
+    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
   });
 });
 
@@ -1768,7 +1768,7 @@ describe("Kiosk — survives a transient locations-fetch error", () => {
     mockUseLocations.mockReturnValue({ allLocations: [], isFetched: true, isError: true });
     await renderGridScreen({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
 
-    expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
     expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
   });
 
@@ -1799,7 +1799,7 @@ describe("Kiosk — survives a transient locations-fetch error", () => {
     renderWithProviders(<Kiosk />);
 
     await waitFor(() => {
-      expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+      expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
     });
     expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
   });
