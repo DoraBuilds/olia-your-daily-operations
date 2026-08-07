@@ -43,7 +43,11 @@ jobs:
 
       - name: Setup Supabase CLI
         if: steps.check.outputs.changed == 'true'
-        run: npm install -g supabase
+        # Pinned to 2.111.0: v2.112.0 regressed `link` with a schema-validation
+        # error on the api-keys `inserted_at` timestamp, breaking every CI
+        # pipeline that runs `link` + `db push` (supabase/cli#6115). Bump this
+        # once that's fixed upstream.
+        run: npm install -g supabase@2.111.0
 
       - name: Link Supabase project
         if: steps.check.outputs.changed == 'true'
