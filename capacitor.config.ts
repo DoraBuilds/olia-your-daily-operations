@@ -8,12 +8,12 @@ const config: CapacitorConfig = {
   // iOS-specific
   ios: {
     contentInset: "automatic",   // respects safe areas automatically
-    backgroundColor: "#FDFAF7",  // alabaster white — matches --background
+    backgroundColor: "#FFFFFF",  // white — matches --background
   },
 
   // Android-specific
   android: {
-    backgroundColor: "#FDFAF7",
+    backgroundColor: "#FFFFFF",
     allowMixedContent: false,
   },
 
@@ -21,7 +21,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      backgroundColor: "#1A2A47",      // midnight blue
+      backgroundColor: "#0B0F0C",      // near-black — matches --sage
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
@@ -29,8 +29,8 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      style: "DARK",              // dark icons on light (alabaster) background
-      backgroundColor: "#FDFAF7",
+      style: "DARK",              // dark icons on light (white) background
+      backgroundColor: "#FFFFFF",
       overlaysWebView: false,
     },
     Keyboard: {

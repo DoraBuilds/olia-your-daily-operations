@@ -10,9 +10,9 @@ export function SidebarNav() {
 
   return (
     <aside className="hidden md:flex md:w-[224px] md:shrink-0 pt-5 pb-8">
-      <div className="w-full h-fit rounded-[28px] border border-border bg-card/92 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-sm">
+      <div className="w-full h-fit rounded-[28px] border border-border bg-card/92 p-3 shadow-panel backdrop-blur-sm">
         <div className="flex items-center gap-2.5 px-3 pt-1 pb-3 mb-1 border-b border-border/60">
-          <img src="/brand/logo/olia-mark-navy.svg" alt="" className="w-7 h-7 shrink-0" />
+          <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-7 h-7 shrink-0" />
           <span className="font-display italic text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
         </div>
         <p className="px-3 pt-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -33,13 +33,13 @@ export function SidebarNav() {
                   className={cn(
                     "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
                     active
-                      ? "bg-sage text-white shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-[hsl(var(--nav-active-bg))] text-[hsl(var(--nav-active-icon))] shadow-nav-active"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground hover:shadow-sm",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-2xl transition-colors",
+                      "flex h-10 w-10 items-center justify-center rounded-2xl transition-colors shadow-inset",
                       active ? "bg-white/16" : "bg-muted text-muted-foreground group-hover:bg-card",
                     )}
                   >

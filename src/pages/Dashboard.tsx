@@ -214,13 +214,13 @@ export default function Dashboard() {
 
           {/* Quick stats strip */}
           <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-card border border-border rounded-2xl p-3 text-center">
-              <p className="text-xl font-bold text-foreground">
+            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
+              <p className="text-xl font-bold text-[hsl(var(--powder-blue-deep))]">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Checklists</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-3 text-center">
+            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
               <p className={cn("text-xl font-bold",
                 allAlerts.length === 0 ? "text-status-ok" : "text-status-error"
               )}>
@@ -228,7 +228,7 @@ export default function Dashboard() {
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Alerts</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-3 text-center">
+            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
               <p className={cn("text-xl font-bold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>

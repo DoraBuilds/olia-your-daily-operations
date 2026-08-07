@@ -103,6 +103,8 @@ export default {
         md:    "var(--shadow-md)",
         lg:    "var(--shadow-lg)",       // modals, bottom sheets
         inset: "var(--shadow-inset)",    // inputs, pressed states
+        panel: "var(--shadow-panel)",       // sidebar nav panel
+        "nav-active": "var(--nav-active-shadow)", // active bottom-nav / sidebar pill
       },
       transitionDuration: {
         instant: "var(--duration-instant)",  // 50ms

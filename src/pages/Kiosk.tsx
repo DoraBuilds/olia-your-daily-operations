@@ -792,7 +792,7 @@ export default function Kiosk() {
 
         {/* Center: brand mark + name */}
         <div className="flex items-center justify-center gap-2.5">
-          <img src="/brand/logo/olia-mark-navy.svg" alt="Olia" className="w-10 h-10 shrink-0" />
+          <img src="/brand/logo/olia-mark-dark.svg" alt="Olia" className="w-10 h-10 shrink-0" />
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
             <p className="text-xs text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">

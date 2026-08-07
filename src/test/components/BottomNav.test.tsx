@@ -36,21 +36,21 @@ describe("BottomNav", () => {
     expect(links).toHaveLength(5);
   });
 
-  it("active nav item (Dashboard) icon span has bg-sage class", () => {
+  it("active nav item (Dashboard) icon span has the nav-active-bg token class", () => {
     renderBottomNav();
     const dashLink = document.getElementById("nav-dashboard");
     expect(dashLink).not.toBeNull();
-    // The icon wrapper span should have bg-sage class when active
+    // The icon wrapper span should carry the nav-active-bg token when active
     const iconSpan = dashLink?.querySelector("span");
-    expect(iconSpan?.className).toContain("bg-sage");
+    expect(iconSpan?.className).toContain("bg-[hsl(var(--nav-active-bg))]");
   });
 
-  it("inactive nav items do not have bg-sage on icon span", () => {
+  it("inactive nav items do not have the nav-active-bg token on icon span", () => {
     renderBottomNav();
     const checklistsLink = document.getElementById("nav-checklists");
     const iconSpan = checklistsLink?.querySelector("span");
-    // Should not contain bg-sage since it's not active
-    expect(iconSpan?.className).not.toContain("bg-sage");
+    // Should not carry the active token since it's not active
+    expect(iconSpan?.className).not.toContain("bg-[hsl(var(--nav-active-bg))]");
   });
 
   it("links point to correct hrefs", () => {

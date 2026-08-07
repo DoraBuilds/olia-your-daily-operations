@@ -59,12 +59,12 @@ describe("SidebarNav", () => {
   it("marks Dashboard as active when on /dashboard", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).toContain("bg-sage");
+    expect(dashLink.className).toContain("bg-[hsl(var(--nav-active-bg))]");
   });
 
   it("marks Admin as active when on an /admin/* route", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
     const adminLink = screen.getByRole("link", { name: "Admin" });
-    expect(adminLink.className).toContain("bg-sage");
+    expect(adminLink.className).toContain("bg-[hsl(var(--nav-active-bg))]");
   });
 });

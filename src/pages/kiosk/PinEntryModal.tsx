@@ -111,7 +111,7 @@ export function KioskPinShell({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in">
+      <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in shadow-lg">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">{title}</h2>
           <button onClick={onClose} className="btn-icon" aria-label="Close">
@@ -145,9 +145,9 @@ export function KioskPinShell({
             onClick={onCta}
             disabled={ctaDisabled}
             className={cn(
-              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-colors active:scale-[0.98]",
+              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-all active:scale-[0.98]",
               !ctaDisabled
-                ? "bg-sage text-white hover:bg-sage-deep"
+                ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
@@ -342,7 +342,7 @@ export function NumberPad({
         if (key === "⌫") return (
           <button
             key={i} type="button" onClick={onBackspace}
-            className="h-16 w-16 mx-auto rounded-full bg-muted text-muted-foreground text-base flex items-center justify-center transition-all active:scale-95 active:bg-muted/60"
+            className="h-16 w-16 mx-auto rounded-full bg-muted text-muted-foreground text-base flex items-center justify-center transition-all shadow-card active:scale-95 active:shadow-inset active:bg-muted/60"
           >
             ⌫
           </button>
@@ -350,7 +350,7 @@ export function NumberPad({
         return (
           <button
             key={i} type="button" onClick={() => onDigit(key)}
-            className="h-16 w-16 mx-auto rounded-full bg-white border border-border text-2xl font-light text-foreground transition-all active:scale-95 active:bg-muted shadow-sm"
+            className="h-16 w-16 mx-auto rounded-full bg-white border border-border text-2xl font-light text-foreground transition-all shadow-card active:scale-95 active:shadow-inset active:bg-muted"
           >
             {key}
           </button>
