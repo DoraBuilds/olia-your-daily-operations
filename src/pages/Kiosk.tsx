@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocations } from "@/hooks/useLocations";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import i18n, { resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 import type { KioskChecklist, KioskScreen } from "./kiosk/types";
@@ -158,6 +160,22 @@ export default function Kiosk() {
   const [showLibraryPin, setShowLibraryPin] = useState(false);
   const [libraryMemberId, setLibraryMemberId] = useState<string | null>(null);
   const [libraryMemberName, setLibraryMemberName] = useState("");
+
+  // Device-scoped, not tied to any account: a kiosk isn't logged in, and per
+  // #594 the last language a guest picked on this device should stick for
+  // the next guest rather than resetting on idle/session end.
+  const [kioskLanguage, setKioskLanguage] = useState<SupportedLanguage>(
+    () => resolveSupportedLanguage(localStorage.getItem("kiosk_language")),
+  );
+
+  useEffect(() => {
+    i18n.changeLanguage(kioskLanguage);
+  }, [kioskLanguage]);
+
+  const handleKioskLanguageChange = (language: SupportedLanguage) => {
+    setKioskLanguage(language);
+    localStorage.setItem("kiosk_language", language);
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -808,8 +826,9 @@ export default function Kiosk() {
           </div>
         </div>
 
-        {/* Right: library + admin */}
+        {/* Right: language + library + admin */}
         <div className="flex justify-end items-center gap-2">
+          <LanguageSwitcher variant="pill" value={kioskLanguage} onChange={handleKioskLanguageChange} />
           <button
             id="library-btn"
             onClick={() => setShowLibraryPin(true)}
