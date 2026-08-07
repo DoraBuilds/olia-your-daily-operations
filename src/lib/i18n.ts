@@ -2,19 +2,21 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import enCommon from "@/locales/en/common.json";
 import esCommon from "@/locales/es/common.json";
+import enKiosk from "@/locales/en/kiosk.json";
+import esKiosk from "@/locales/es/kiosk.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
 const resources = {
-  en: { common: enCommon },
-  es: { common: esCommon },
+  en: { common: enCommon, kiosk: enKiosk },
+  es: { common: esCommon, kiosk: esKiosk },
 };
 
 // Namespaces are added here as each app area is translated (dashboard,
-// checklists, settings, kiosk, admin, billing, ...) — see issue #594.
-const NAMESPACES = ["common"];
+// checklists, settings, admin, billing, ...) — see issue #594.
+const NAMESPACES = ["common", "kiosk"];
 
 // Picks a supported language from a raw BCP-47 tag (e.g. "es-MX" -> "es"),
 // falling back to DEFAULT_LANGUAGE for anything unsupported/unset. Kept as a

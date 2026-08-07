@@ -1,0 +1,16 @@
+{
+  "systemOnline": "Sistema en línea",
+  "setup": {
+    "title": "Olia Kiosk",
+    "subtitle": "Selecciona una ubicación para iniciar",
+    "loadingLocations": "Cargando ubicaciones…",
+    "noLocations": "No hay ubicaciones disponibles. Pide a un administrador que añada una antes de iniciar el kiosco.",
+    "launchButton": "Iniciar kiosco"
+  },
+  "completion": {
+    "title": "¡Muy bien!",
+    "subtitle": "Cada lista de verificación completada mantiene al equipo funcionando sin problemas.",
+    "doneButton": "Listo",
+    "returningIn": "Volviendo al inicio en {{count}}s"
+  }
+}

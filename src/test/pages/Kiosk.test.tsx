@@ -1,5 +1,7 @@
 import { screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
+import { CompletionScreen } from "@/pages/kiosk/CompletionScreen";
+import i18n from "@/lib/i18n";
 import { renderWithProviders } from "../test-utils";
 
 const mockNavigate = vi.fn();
@@ -305,6 +307,16 @@ describe("Kiosk — Setup Screen", () => {
     await waitFor(() => {
       expect(screen.getByText(/System Online/i)).toBeInTheDocument();
     });
+  });
+
+  it("renders in Spanish when the device's stored kiosk_language is es", async () => {
+    localStorage.clear();
+    localStorage.setItem("kiosk_language", "es");
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => {
+      expect(screen.getByText("Selecciona una ubicación para iniciar")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Sistema en línea")).toBeInTheDocument();
   });
 
   it("'Launch Kiosk' button appears", async () => {
@@ -1057,6 +1069,27 @@ describe("Kiosk — Completion Screen", () => {
     });
     // Back on grid screen
     expect(screen.getByText(/What's on the agenda/i)).toBeInTheDocument();
+  });
+
+  it("renders in Spanish when the active language is es", async () => {
+    await i18n.changeLanguage("es");
+    try {
+      await act(async () => {
+        renderWithProviders(
+          <CompletionScreen
+            checklist={{ id: "c1", title: "Opening Checklist" } as any}
+            staffName="Sarah"
+            completedAt={new Date("2026-08-07T10:00:00Z")}
+            onDone={vi.fn()}
+          />,
+        );
+      });
+      expect(screen.getByText("¡Muy bien!")).toBeInTheDocument();
+      expect(screen.getByText("Listo")).toBeInTheDocument();
+      expect(screen.getByText(/Volviendo al inicio en \d+s/)).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });
 
