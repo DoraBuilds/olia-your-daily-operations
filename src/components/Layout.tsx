@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
@@ -17,6 +18,7 @@ interface LayoutProps {
 
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
   const { user, signOut } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
@@ -92,12 +94,12 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
                   onClick={handleBackToKiosk}
                   className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
                 >
-                  <ArrowLeft size={14} /> Kiosk
+                  <ArrowLeft size={14} /> {t("layout.backToKiosk")}
                 </button>
               ) : user ? (
                 <button
                   onClick={handleLogout}
-                  aria-label="Log out"
+                  aria-label={t("layout.logOut")}
                   className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 >
                   <LogOut size={16} />
