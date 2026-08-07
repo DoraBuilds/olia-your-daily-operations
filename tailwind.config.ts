@@ -11,9 +11,14 @@ export default {
       screens: { sm: "480px", md: "768px", lg: "1024px" },
     },
     extend: {
+      // display/body reference the CSS custom properties (index.css) rather than
+      // hardcoding a typeface, so changing --font-display/--font-body in one
+      // place actually takes effect everywhere the font-display/font-body
+      // utility classes are used — previously these were hardcoded literals
+      // disconnected from the CSS variables, silently ignoring any change.
       fontFamily: {
-        display: ["Cormorant Garamond", "Georgia", "serif"],
-        body: ["Hanken Grotesk", "system-ui", "sans-serif"],
+        display: ["var(--font-display)"],
+        body: ["var(--font-body)"],
         mono: ["IBM Plex Mono", "Courier New", "monospace"],
       },
       fontSize: {

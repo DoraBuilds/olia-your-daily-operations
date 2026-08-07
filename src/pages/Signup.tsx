@@ -21,7 +21,7 @@ function SignupHeader() {
     <Link
       to="/"
       className="fixed top-6 left-6 flex items-center gap-2 text-lg hover:opacity-70 transition-opacity"
-      style={{ fontFamily: "var(--font-display)", fontStyle: "italic", color: "hsl(var(--foreground))" }}
+      style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 600, color: "hsl(var(--foreground))" }}
     >
       <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-6 h-6" />
       Olia
