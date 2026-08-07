@@ -944,7 +944,7 @@ export function AccountTab({
           <div className="flex items-start justify-between gap-2 px-4 py-4">
             <div>
               <p className="text-xs text-muted-foreground font-medium mb-0.5">Current plan</p>
-              <p className="font-display text-xl text-foreground leading-tight">Olia {PLAN_LABELS[plan]}</p>
+              <p className="font-display font-semibold text-xl text-foreground leading-tight">Olia {PLAN_LABELS[plan]}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {PLAN_PRICES[plan].monthly === 0
                   ? "Free · No billing required"

@@ -159,7 +159,7 @@ html { font-size: 16px; }                        /* mobile / default        */
     --sidebar-ring:                173 100% 45%;
 
     /* Typography */
-    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-display: 'Switzer', system-ui, sans-serif;
     --font-body: 'Switzer', 'Hanken Grotesk', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 
@@ -194,10 +194,18 @@ html { font-size: 16px; }                        /* mobile / default        */
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Display and body now share one typeface (Switzer) — weight is what
+     separates a headline from body text, so headings get a deliberate bump
+     over the 400 body baseline: h1 heaviest (600, page-defining moments),
+     h2-h4 one step down (500, section/modal titles). */
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     line-height: var(--leading-tight);
     letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+  h1 {
+    font-weight: 600;
   }
 }
 
