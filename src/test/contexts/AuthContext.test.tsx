@@ -2,6 +2,8 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import i18n from "@/lib/i18n";
 
 const { mockSignOut, mockOnAuthStateChange, mockRpc, mockQueryClientClear, mockTeamMemberSingle } = vi.hoisted(() => ({
   mockSignOut: vi.fn().mockResolvedValue({}),
@@ -290,5 +292,77 @@ describe("AuthContext", () => {
 
     expect(mockRpc).not.toHaveBeenCalled();
     expect(mockQueryClientClear).toHaveBeenCalledTimes(1);
+  });
+
+  describe("language preference (#594)", () => {
+    beforeEach(() => {
+      teamMemberRow = {
+        id: "user-1",
+        organization_id: "org-1",
+        name: "Sarah Johnson",
+        email: "sarah@acme.com",
+        role: "Owner",
+        location_ids: [],
+        permissions: {},
+        language: "en",
+      };
+    });
+
+    async function signInUser1(result: { current: ReturnType<typeof useAuth> }) {
+      await act(async () => {
+        authStateCallback?.("SIGNED_IN", { user: { id: "user-1", user_metadata: {} } });
+      });
+      await waitFor(() => expect(result.current.teamMember?.id).toBe("user-1"));
+    }
+
+    it("syncs i18n to the signed-in team member's saved language", async () => {
+      teamMemberRow!.language = "es";
+      const changeLanguageSpy = vi.spyOn(i18n, "changeLanguage");
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await signInUser1(result);
+
+      expect(result.current.teamMember?.language).toBe("es");
+      expect(changeLanguageSpy).toHaveBeenCalledWith("es");
+    });
+
+    it("updateLanguage persists the new language and updates local state", async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await signInUser1(result);
+
+      await act(async () => {
+        await result.current.updateLanguage("es");
+      });
+
+      expect(result.current.teamMember?.language).toBe("es");
+      expect(vi.mocked(supabase.from)).toHaveBeenCalledWith("team_members");
+    });
+
+    it("rolls back local state and rethrows when the persist fails", async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await signInUser1(result);
+
+      vi.mocked(supabase.from).mockReturnValueOnce({
+        update: () => ({ eq: () => Promise.resolve({ error: new Error("network down") }) }),
+      } as any);
+
+      await expect(
+        act(async () => {
+          await result.current.updateLanguage("es");
+        }),
+      ).rejects.toThrow("network down");
+
+      expect(result.current.teamMember?.language).toBe("en");
+    });
+
+    it("updateLanguage throws when there is no signed-in team member", async () => {
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await expect(result.current.updateLanguage("es")).rejects.toThrow("Not signed in");
+    });
   });
 });
