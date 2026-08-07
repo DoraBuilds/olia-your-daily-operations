@@ -821,12 +821,7 @@ export default function Kiosk() {
         {/* Center: brand mark + name */}
         <div className="flex items-center justify-center gap-2.5">
           <img src="/brand/logo/olia-mark-dark.svg" alt="Olia" className="w-10 h-10 shrink-0" />
-          <div>
-            <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
-            <p className="text-xs text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
-              {locationName || t("grid.kioskFallbackName")}
-            </p>
-          </div>
+          <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
         </div>
 
         {/* Right: language + library + admin */}
@@ -852,7 +847,7 @@ export default function Kiosk() {
       {/* Agenda heading */}
       <div className="px-5 pt-6 pb-2">
         <h1 className="font-display text-3xl italic text-foreground leading-tight text-center">
-          {t("grid.agendaHeadingLine1")}<br />{t("grid.agendaHeadingLine2")}
+          {locationName || t("grid.kioskFallbackName")}
         </h1>
 
         {/* Stat strip — DUE / OVERDUE / UPCOMING / DONE */}

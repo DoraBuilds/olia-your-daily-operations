@@ -18,8 +18,6 @@
     "kioskFallbackName": "Kiosco",
     "library": "Biblioteca",
     "admin": "Admin",
-    "agendaHeadingLine1": "¿Qué hay en la agenda",
-    "agendaHeadingLine2": "de hoy?",
     "stats": {
       "dueNow": "Vence ahora",
       "overdue": "Atrasado",
