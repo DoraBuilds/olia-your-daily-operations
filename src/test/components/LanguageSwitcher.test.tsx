@@ -32,4 +32,20 @@ describe("LanguageSwitcher", () => {
     render(<LanguageSwitcher value="en" onChange={vi.fn()} className="custom-class" />);
     expect(screen.getByRole("combobox")).toHaveClass("custom-class");
   });
+
+  describe("pill variant (Kiosk header)", () => {
+    it("shows a short code instead of the full endonym", () => {
+      render(<LanguageSwitcher value="en" onChange={vi.fn()} variant="pill" />);
+      expect(screen.getByRole("combobox")).toHaveTextContent("EN");
+      expect(screen.queryByText("English")).not.toBeInTheDocument();
+    });
+
+    it("still lists full endonyms in the dropdown and calls onChange on selection", () => {
+      const onChange = vi.fn();
+      render(<LanguageSwitcher value="en" onChange={onChange} variant="pill" />);
+      fireEvent.click(screen.getByRole("combobox"));
+      fireEvent.click(screen.getByText("Español"));
+      expect(onChange).toHaveBeenCalledWith("es");
+    });
+  });
 });
