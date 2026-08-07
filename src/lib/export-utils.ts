@@ -7,13 +7,13 @@
  */
 
 // ─── Brand colours (RGB) ─────────────────────────────────────────────────────
-// Primary: Midnight Blue #1A2A47  · Background: Alabaster White #FDFAF7
-const SAGE: [number, number, number] = [26, 42, 71];     // midnight blue #1A2A47
+// Primary: near-black #0B0F0C  · Background: white #FFFFFF
+const SAGE: [number, number, number] = [11, 15, 12];     // near-black #0B0F0C
 const OK: [number, number, number] = [58, 107, 79];      // forest green
 const WARN: [number, number, number] = [196, 133, 74];   // warm amber
 const ERR: [number, number, number] = [142, 47, 62];     // deep rose
-const GRAY: [number, number, number] = [133, 123, 114];  // warm gray (muted-foreground)
-const LIGHT_BG: [number, number, number] = [253, 250, 247]; // warm white (card surface)
+const GRAY: [number, number, number] = [76, 87, 80];     // muted-foreground
+const LIGHT_BG: [number, number, number] = [255, 255, 255]; // white (card surface)
 
 function scoreRgb(score: number): [number, number, number] {
   return score >= 85 ? OK : score >= 65 ? WARN : ERR;

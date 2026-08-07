@@ -49,17 +49,19 @@ html { font-size: 16px; }                        /* mobile / default        */
     --space-section-gap: var(--space-6);   /* vertical between sections */
     --space-page-inset:  var(--space-4);   /* page horizontal padding   */
 
-    /* ── Elevation — four levels using espresso base hsl(17 30% 9%)
+    /* ── Elevation — four levels, layered ambient + contact shadow on a
+       near-black base for a lifted, 3D card feel.
        Level 0: flat (no shadow)  →  Level 3: modal / bottom sheet
        ──────────────────────────────────────────────────────────────────── */
-    --shadow-sm:    0 1px 3px 0 hsl(17 30% 9% / 0.06),
-                    0 1px 2px -1px hsl(17 30% 9% / 0.04);   /* level 1 — subtle lift    */
-    --shadow-card:  0 2px 8px 0 hsl(17 30% 9% / 0.06);     /* level 2 — cards          */
-    --shadow-md:    0 4px 12px 0 hsl(17 30% 9% / 0.07),
-                    0 2px 6px -2px hsl(17 30% 9% / 0.05);   /* level 3 — popovers       */
-    --shadow-lg:    0 8px 24px 0 hsl(17 30% 9% / 0.10),
-                    0 4px 12px -2px hsl(17 30% 9% / 0.08);  /* level 4 — modals, sheets */
-    --shadow-inset: inset 0 1px 3px 0 hsl(17 30% 9% / 0.08); /* inputs, pressed states */
+    --shadow-sm:    0 1px 2px hsl(135 15% 5% / 0.08),
+                    0 1px 1px hsl(135 15% 5% / 0.06);        /* level 1 — subtle lift    */
+    --shadow-card:  0 1px 3px hsl(135 15% 5% / 0.08),
+                    0 10px 24px -8px hsl(135 15% 5% / 0.18); /* level 2 — cards          */
+    --shadow-md:    0 2px 6px hsl(135 15% 5% / 0.10),
+                    0 16px 32px -8px hsl(135 15% 5% / 0.20); /* level 3 — popovers       */
+    --shadow-lg:    0 4px 10px hsl(135 15% 5% / 0.12),
+                    0 28px 56px -16px hsl(135 15% 5% / 0.28); /* level 4 — modals, sheets */
+    --shadow-inset: inset 0 1px 3px hsl(135 15% 5% / 0.10);  /* inputs, pressed states */
 
     /* ── Motion — duration + easing tokens
        Use var(--duration-*) + var(--ease-*) in transition/animation declarations.
@@ -75,43 +77,44 @@ html { font-size: 16px; }                        /* mobile / default        */
     --ease-inout:  cubic-bezier(0.4, 0.0, 0.2, 1.0);  /* symmetric — repositioning   */
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* slight bounce — playful UX  */
 
-    /* Olia Brand Colors — all HSL */
-    --sage:            222 49% 16%;   /* ink #15213E */
-    --sage-deep:       222 55% 11%;   /* ink deep #0E1830 */
-    --sage-light:      222 40% 93%;   /* light ink tint for badges */
+    /* Olia Brand Colors — all HSL. White / near-black / bright teal,
+       matching the landing page's Sunday-inspired rebrand (see legal-theme.ts). */
+    --sage:            135 15% 5%;    /* near-black ink */
+    --sage-deep:       135 15% 2%;    /* ink deep */
+    --sage-light:      173 55% 93%;   /* light teal tint for badges */
 
-    --lavender:        273 24% 72%;   /* dusty lavender #B8A5C8 */
-    --lavender-deep:   273 32% 50%;   /* WCAG AA on lavender-light */
-    --lavender-light:  273 20% 93%;   /* light lavender tint */
+    --lavender:        0 0% 60%;      /* neutral gray secondary accent */
+    --lavender-deep:   0 0% 25%;      /* WCAG AA on lavender-light */
+    --lavender-light:  0 0% 95%;      /* light neutral tint */
 
-    --powder-blue:       210 44% 78%;   /* structural #B0C8E0 */
-    --powder-blue-deep:  210 52% 42%;
-    --powder-blue-light: 210 35% 93%;
+    --powder-blue:       173 100% 45%;  /* bright teal #00E5CC accent */
+    --powder-blue-deep:  173 100% 25%;  /* darker teal #007E70-ish for text/links */
+    --powder-blue-light: 173 55% 93%;
 
-    --background:      39 43% 93%;   /* ivory #F4EFE5 */
-    --foreground:      17 30% 9%;    /* espresso #1E1410 */
+    --background:      0 0% 100%;    /* white */
+    --foreground:      135 15% 5%;   /* near-black */
 
     --card:            0 0% 100%;    /* pure white #FFFFFF */
-    --card-foreground: 17 30% 9%;
+    --card-foreground: 135 15% 5%;
 
     --popover:         0 0% 100%;
-    --popover-foreground: 17 30% 9%;
+    --popover-foreground: 135 15% 5%;
 
-    --primary:         219 46% 19%;  /* midnight blue */
+    --primary:         135 15% 5%;   /* near-black */
     --primary-foreground: 0 0% 100%;
 
-    --secondary:       273 24% 72%;
-    --secondary-foreground: 17 30% 9%;
+    --secondary:       173 100% 45%; /* bright teal */
+    --secondary-foreground: 135 15% 5%;
 
-    --muted:           37 20% 95%;
-    --muted-foreground: 0 0% 50%;    /* warm gray #857B72 approx */
+    --muted:           0 0% 95%;
+    --muted-foreground: 142 7% 32%;
 
-    --accent:          219 40% 93%;  /* light midnight tint */
-    --accent-foreground: 219 46% 19%;
+    --accent:          173 60% 93%;  /* light teal tint */
+    --accent-foreground: 173 100% 20%;
 
-    --border:          37 13% 83%;   /* warm stone #DDD5C8 */
-    --input:           37 13% 83%;
-    --ring:            219 46% 19%;
+    --border:          0 0% 88%;
+    --input:           0 0% 88%;
+    --ring:            173 100% 45%;
 
     /* Status — semantically distinct from brand primary */
     --status-ok:       147 56% 42%;  /* service green #2FA86A */
@@ -123,19 +126,31 @@ html { font-size: 16px; }                        /* mobile / default        */
 
     --radius: 0.875rem;
 
-    --sidebar-background:          30 30% 97%;   /* near-alabaster sidebar */
-    --sidebar-foreground:          17 30% 9%;
-    --sidebar-primary:             219 46% 19%;  /* midnight blue */
+    --sidebar-background:          0 0% 100%;    /* white sidebar */
+    --sidebar-foreground:          135 15% 5%;
+    --sidebar-primary:             135 15% 5%;   /* near-black */
     --sidebar-primary-foreground:  0 0% 100%;
-    --sidebar-accent:              219 40% 93%;
-    --sidebar-accent-foreground:   219 46% 19%;
-    --sidebar-border:              37 13% 83%;
-    --sidebar-ring:                219 46% 19%;
+    --sidebar-accent:              173 60% 93%;  /* light teal tint */
+    --sidebar-accent-foreground:   173 100% 20%;
+    --sidebar-border:              0 0% 88%;
+    --sidebar-ring:                173 100% 45%;
 
     /* Typography */
     --font-display: 'Cormorant Garamond', Georgia, serif;
     --font-body: 'Hanken Grotesk', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+
+    /* Bottom nav / sidebar "active" indicator — bright teal fill, deep
+       readable teal label, mirroring how the landing page uses the accent
+       as a pop of color on an otherwise black/white UI. */
+    --nav-active-bg:    var(--powder-blue);
+    --nav-active-icon:  var(--foreground);
+    --nav-active-label: var(--powder-blue-deep);
+    --nav-active-shadow: 0 6px 16px hsl(var(--powder-blue) / 0.35);
+
+    /* Sidebar panel — deeper, layered elevation for a lifted, 3D feel */
+    --shadow-panel: 0 2px 6px hsl(135 15% 5% / 0.08),
+                    0 24px 60px -12px hsl(135 15% 5% / 0.22);
   }
 }
 

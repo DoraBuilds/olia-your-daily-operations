@@ -20,7 +20,7 @@ export function BottomNav() {
               <span
                 className={cn(
                   "flex items-center justify-center w-10 h-6 rounded-full transition-colors",
-                  active ? "bg-sage" : ""
+                  active ? "bg-[hsl(var(--nav-active-bg))] shadow-nav-active" : ""
                 )}
               >
                 <Icon
@@ -28,14 +28,14 @@ export function BottomNav() {
                   strokeWidth={active ? 2 : 1.5}
                   className={cn(
                     "transition-colors",
-                    active ? "text-white" : "text-muted-foreground"
+                    active ? "text-[hsl(var(--nav-active-icon))]" : "text-muted-foreground"
                   )}
                 />
               </span>
               <span
                 className={cn(
                   "transition-colors tracking-wide",
-                  active ? "text-sage font-semibold" : "text-muted-foreground"
+                  active ? "text-[hsl(var(--nav-active-label))] font-semibold" : "text-muted-foreground"
                 )}
               >
                 {label}

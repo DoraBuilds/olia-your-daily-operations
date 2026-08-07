@@ -19,9 +19,9 @@ initSentryIfConsented();
 // router is created (see comment there) — importing App below already runs it.
 
 if (Capacitor.isNativePlatform()) {
-  // Status bar: light background (alabaster) with dark icons
+  // Status bar: white background with dark icons
   StatusBar.setStyle({ style: Style.Light });
-  StatusBar.setBackgroundColor({ color: "#FDFAF7" });
+  StatusBar.setBackgroundColor({ color: "#FFFFFF" });
 
   // Hide splash screen after app is ready
   SplashScreen.hide({ fadeOutDuration: 300 });
