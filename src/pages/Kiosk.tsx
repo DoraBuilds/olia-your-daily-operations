@@ -68,14 +68,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
     "linear-gradient(135deg, hsl(var(--powder-blue-light)), hsl(var(--lavender-light)))",
     "linear-gradient(135deg, hsl(var(--muted)), hsl(var(--sage-light)))",
   ];
-  const icons = [
-    "/icons/checklist/hot_beverage.svg",
-    "/icons/checklist/herb.svg",
-    "/icons/checklist/clipboard.svg",
-    "/icons/checklist/key.svg",
-    "/icons/checklist/sparkles.svg",
-    "/icons/checklist/package.svg",
-  ];
+  const icons = ["☕", "🌿", "📋", "🔑", "✨", "📦"];
 
   const formatDueTime = (t: string) => {
     const [h, m] = t.split(":").map(Number);
@@ -103,7 +96,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
         className="w-full h-20 rounded-xl flex items-center justify-center"
         style={{ background: gradients[idx % 4] }}
       >
-        <img src={icons[idx % 6]} alt="" className="w-11 h-11" />
+        <span className="text-2xl opacity-50">{icons[idx % 6]}</span>
       </div>
       <div>
         <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
