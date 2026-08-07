@@ -251,7 +251,7 @@ export function ChecklistRunner({
                           "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5",
                           q.required ? "border-sage/50" : "border-muted-foreground/30",
                         )} />
-                        <p className="text-sm font-semibold text-foreground leading-snug flex-1">
+                        <p className="text-sm font-normal text-foreground leading-snug flex-1">
                           {q.text}
                           {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
                         </p>

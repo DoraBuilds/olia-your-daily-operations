@@ -402,7 +402,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       <div className="grid grid-cols-3 gap-2">
         <div data-testid="stat-completed" className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Completed</p>
-          <p className="text-2xl font-bold text-status-ok">{isLoading ? "—" : completedCount}</p>
+          <p className="text-2xl font-semibold text-status-ok">{isLoading ? "—" : completedCount}</p>
           {!isLoading && completedCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
@@ -412,7 +412,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </div>
         <div data-testid="stat-unfinished" className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Unfinished</p>
-          <p className={cn("text-2xl font-bold", unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground")}>
+          <p className={cn("text-2xl font-semibold", unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground")}>
             {isLoading ? "—" : unfinishedCount}
           </p>
           {!isLoading && unfinishedCount === 0 && (
@@ -424,7 +424,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </div>
         <div data-testid="stat-unstarted" className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Unstarted</p>
-          <p className={cn("text-2xl font-bold", unstartedCount > 0 ? "text-status-error" : "text-muted-foreground")}>
+          <p className={cn("text-2xl font-semibold", unstartedCount > 0 ? "text-status-error" : "text-muted-foreground")}>
             {isLoading ? "—" : unstartedCount}
           </p>
           {!isLoading && unstartedCount === 0 && (
@@ -440,7 +440,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Avg Score</p>
-          <p className={cn("text-2xl font-bold",
+          <p className={cn("text-2xl font-semibold",
             avgScore == null ? "text-muted-foreground" :
             avgScoreValue >= 85 ? "text-status-ok" :
             avgScoreValue >= 65 ? "text-status-warn" :
@@ -461,7 +461,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </div>
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
           <p className="section-label mb-1">Open Actions</p>
-          <p className={cn("text-2xl font-bold", openActionsCount > 0 ? "text-status-error" : "text-status-ok")}>
+          <p className={cn("text-2xl font-semibold", openActionsCount > 0 ? "text-status-error" : "text-status-ok")}>
             {openActionsCount}
           </p>
           {openActionsCount === 0 && (

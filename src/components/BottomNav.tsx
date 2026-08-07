@@ -35,7 +35,7 @@ export function BottomNav() {
               <span
                 className={cn(
                   "transition-colors tracking-wide",
-                  active ? "text-[hsl(var(--nav-active-label))] font-semibold" : "text-muted-foreground"
+                  active ? "text-[hsl(var(--nav-active-label))] font-medium" : "text-muted-foreground"
                 )}
               >
                 {label}
