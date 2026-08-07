@@ -14,6 +14,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { isNewDesignPath } from "@/lib/legal-theme";
 import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
 import { restoreGitHubPagesRoute } from "@/lib/github-pages-routing";
+import "@/lib/i18n";
 
 // Must run before `createBrowserRouter` below reads window.location. GitHub
 // Pages' 404.html fallback redirects deep links (e.g. /privacy) to
