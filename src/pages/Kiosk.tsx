@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { X, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -62,6 +63,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
   onSelect: (cl: KioskChecklist) => void;
   dim?: boolean;
 }) {
+  const { t } = useTranslation("kiosk");
   const gradients = [
     "linear-gradient(135deg, hsl(var(--sage-light)), hsl(var(--powder-blue-light)))",
     "linear-gradient(135deg, hsl(var(--lavender-light)), hsl(var(--sage-light)))",
@@ -84,10 +86,10 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
     return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
   };
   const formatWindow = (from: string | null, until: string | null) => {
-    if (!from && !until) return "Visible all day";
-    if (from && until) return `Visible ${formatDueTime(from)} - ${formatDueTime(until)}`;
-    if (from) return `Visible from ${formatDueTime(from)}`;
-    return `Visible until ${formatDueTime(until!)}`;
+    if (!from && !until) return t("grid.visibleAllDay");
+    if (from && until) return t("grid.visibleRange", { from: formatDueTime(from), until: formatDueTime(until) });
+    if (from) return t("grid.visibleFrom", { from: formatDueTime(from) });
+    return t("grid.visibleUntil", { until: formatDueTime(until!) });
   };
 
   return (
@@ -108,7 +110,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
       <div>
         <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {cl.questions.length} item{cl.questions.length !== 1 ? "s" : ""}
+          {t("grid.itemCount", { count: cl.questions.length })}
         </p>
         {(cl.visibility_from || cl.visibility_until) ? (
           <p className="text-xs text-muted-foreground/70 mt-0.5">
@@ -116,11 +118,11 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
           </p>
         ) : cl.due_time ? (
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            Due {formatDueTime(cl.due_time)}
+            {t("grid.dueAt", { time: formatDueTime(cl.due_time) })}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground/70 mt-0.5">
-            Visible all day
+            {t("grid.visibleAllDay")}
           </p>
         )}
       </div>
@@ -130,6 +132,7 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
 
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
+  const { t } = useTranslation("kiosk");
   const [searchParams] = useSearchParams();
   const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
@@ -811,7 +814,7 @@ export default function Kiosk() {
       <div className="px-5 pt-6 pb-4 grid grid-cols-3 items-center border-b border-border">
         {/* Left: current status */}
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">Current Status</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest">{t("grid.currentStatus")}</p>
           <p className="text-sm font-semibold text-foreground">{dateStr} · {timeStr}</p>
         </div>
 
@@ -821,7 +824,7 @@ export default function Kiosk() {
           <div>
             <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
             <p className="text-xs text-sage uppercase tracking-wide leading-none mt-0.5 font-semibold">
-              {locationName || "Kiosk"}
+              {locationName || t("grid.kioskFallbackName")}
             </p>
           </div>
         </div>
@@ -834,14 +837,14 @@ export default function Kiosk() {
             onClick={() => setShowLibraryPin(true)}
             className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
           >
-            Library
+            {t("grid.library")}
           </button>
           <button
             id="admin-btn"
             onClick={handleAdminButtonClick}
             className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
           >
-            Admin
+            {t("grid.admin")}
           </button>
         </div>
       </div>
@@ -849,7 +852,7 @@ export default function Kiosk() {
       {/* Agenda heading */}
       <div className="px-5 pt-6 pb-2">
         <h1 className="font-display text-3xl italic text-foreground leading-tight text-center">
-          What's on the agenda<br />for today?
+          {t("grid.agendaHeadingLine1")}<br />{t("grid.agendaHeadingLine2")}
         </h1>
 
         {/* Stat strip — DUE / OVERDUE / UPCOMING / DONE */}
@@ -862,7 +865,7 @@ export default function Kiosk() {
               kioskTab === "due" ? "border-status-error/50 ring-1 ring-status-error/20" : "border-border",
             )}
           >
-            <p className="section-label mb-1">Due now</p>
+            <p className="section-label mb-1">{t("grid.stats.dueNow")}</p>
             <p className="text-xl font-semibold text-status-error">{dueChecklists.length}</p>
           </button>
           <button
@@ -873,7 +876,7 @@ export default function Kiosk() {
               kioskTab === "overdue" ? "border-status-error/50 ring-1 ring-status-error/20" : "border-border",
             )}
           >
-            <p className="section-label mb-1">Overdue</p>
+            <p className="section-label mb-1">{t("grid.stats.overdue")}</p>
             <p className="text-xl font-semibold text-status-error">{overdueChecklists.length}</p>
           </button>
           <button
@@ -884,7 +887,7 @@ export default function Kiosk() {
               kioskTab === "upcoming" ? "border-status-warn/50 ring-1 ring-status-warn/20" : "border-border",
             )}
           >
-            <p className="section-label mb-1">Upcoming</p>
+            <p className="section-label mb-1">{t("grid.stats.upcoming")}</p>
             <p className="text-xl font-semibold text-status-warn">{upcomingChecklists.length}</p>
           </button>
           <button
@@ -895,7 +898,7 @@ export default function Kiosk() {
               kioskTab === "done" ? "border-status-ok/50 ring-1 ring-status-ok/20" : "border-border",
             )}
           >
-            <p className="section-label mb-1">Done</p>
+            <p className="section-label mb-1">{t("grid.stats.done")}</p>
             <p className="text-xl font-semibold text-status-ok">{doneChecklists.length}</p>
           </button>
         </div>
@@ -918,7 +921,7 @@ export default function Kiosk() {
         {checklistsLoading ? (
           <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
             <Loader2 size={16} className="animate-spin" />
-            <p className="text-sm">Loading checklists…</p>
+            <p className="text-sm">{t("grid.loadingChecklists")}</p>
           </div>
         ) : checklistsError ? (
           <div className="text-center py-12 px-4 space-y-3">
@@ -931,18 +934,18 @@ export default function Kiosk() {
                   .then((data) => {
                     setKioskChecklists(data);
                   })
-                  .catch(() => setChecklistsError("Retry failed. Check your connection."))
+                  .catch(() => setChecklistsError(t("grid.retryFailedHint")))
                   .finally(() => setChecklistsLoading(false));
               }}
               className="px-4 py-2 text-xs font-semibold rounded-xl border border-border hover:bg-muted transition-colors"
             >
-              Retry
+              {t("grid.retry")}
             </button>
           </div>
         ) : visibleChecklists.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-sm text-muted-foreground">No checklists found for this location.</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">An admin needs to create checklists and assign them here.</p>
+            <p className="text-sm text-muted-foreground">{t("grid.noChecklists")}</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">{t("grid.noChecklistsHint")}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -950,7 +953,7 @@ export default function Kiosk() {
               <>
                 {dueChecklists.length > 0 ? (
                   <div>
-                    <p className="section-label mb-2 text-status-error">Due now</p>
+                    <p className="section-label mb-2 text-status-error">{t("grid.stats.dueNow")}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {dueChecklists.map((cl, idx) => (
                         <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} />
@@ -959,13 +962,13 @@ export default function Kiosk() {
                   </div>
                 ) : (
                   <div className="text-center py-10">
-                    <p className="text-sm text-status-ok font-semibold">Nothing due right now ✓</p>
+                    <p className="text-sm text-status-ok font-semibold">{t("grid.nothingDueNow")}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {overdueChecklists.length > 0
-                        ? `${overdueChecklists.length} checklist${overdueChecklists.length > 1 ? "s are" : " is"} overdue — tap Overdue to review them.`
+                        ? t("grid.overdueHint", { count: overdueChecklists.length })
                         : upcomingChecklists.length > 0
-                        ? `${upcomingChecklists.length} checklist${upcomingChecklists.length > 1 ? "s" : ""} coming up — tap Upcoming to see them.`
-                        : "Tap Done above to review completed checklists."}
+                        ? t("grid.upcomingHint", { count: upcomingChecklists.length })
+                        : t("grid.allDoneHint")}
                     </p>
                   </div>
                 )}
@@ -974,7 +977,7 @@ export default function Kiosk() {
               <>
                 {overdueChecklists.length > 0 ? (
                   <div>
-                    <p className="section-label mb-2 text-status-error">Overdue</p>
+                    <p className="section-label mb-2 text-status-error">{t("grid.stats.overdue")}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {overdueChecklists.map((cl, idx) => (
                         <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} />
@@ -983,7 +986,7 @@ export default function Kiosk() {
                   </div>
                 ) : (
                   <div className="text-center py-10">
-                    <p className="text-sm text-muted-foreground">No overdue checklists.</p>
+                    <p className="text-sm text-muted-foreground">{t("grid.noOverdueChecklists")}</p>
                   </div>
                 )}
               </>
@@ -991,7 +994,7 @@ export default function Kiosk() {
               <>
                 {upcomingChecklists.length > 0 ? (
                   <div>
-                    <p className="section-label mb-2">Upcoming today</p>
+                    <p className="section-label mb-2">{t("grid.upcomingTodayHeading")}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {upcomingChecklists.map((cl, idx) => (
                         <ChecklistCard key={cl.id} cl={cl} idx={idx} onSelect={handleChecklistSelect} dim />
@@ -1000,7 +1003,7 @@ export default function Kiosk() {
                   </div>
                 ) : (
                   <div className="text-center py-10">
-                    <p className="text-sm text-muted-foreground">No upcoming checklists.</p>
+                    <p className="text-sm text-muted-foreground">{t("grid.noUpcomingChecklists")}</p>
                   </div>
                 )}
               </>
@@ -1008,11 +1011,11 @@ export default function Kiosk() {
               /* DONE TODAY section */
               doneChecklists.length === 0 ? (
                 <div className="text-center py-10">
-                  <p className="text-sm text-muted-foreground">No completions yet today.</p>
+                  <p className="text-sm text-muted-foreground">{t("grid.noCompletionsYet")}</p>
                 </div>
               ) : (
                 <div>
-                  <p className="section-label mb-2 text-status-ok">Completed today</p>
+                  <p className="section-label mb-2 text-status-ok">{t("grid.completedTodayHeading")}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {doneChecklists.map((cl, idx) => (
                       <button
@@ -1025,9 +1028,9 @@ export default function Kiosk() {
                         </div>
                         <p className="text-sm font-semibold text-foreground leading-snug">{cl.title}</p>
                         <p className="text-xs text-status-ok mt-1 font-medium">
-                          {completedSubmissions.get(cl.id)?.contributors.join(", ") ?? "Completed"}
+                          {completedSubmissions.get(cl.id)?.contributors.join(", ") ?? t("grid.completedFallback")}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Tap to edit</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("grid.tapToEdit")}</p>
                       </button>
                     ))}
                   </div>
@@ -1042,9 +1045,9 @@ export default function Kiosk() {
       <div className="px-5 py-3 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">System Online</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{t("systemOnline")}</p>
         </div>
-        <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">Olia Operations</p>
+        <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">{t("grid.footerBrand")}</p>
       </div>
 
       {/* PinEntryModal (Screen 2) */}
