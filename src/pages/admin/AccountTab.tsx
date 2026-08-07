@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { SupportedLanguage } from "@/lib/i18n";
 import {
   type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
   type StaffDepartment,
@@ -88,6 +91,7 @@ export function AccountTab({
   pendingInviteStatus, onInviteMember, onEditMember, onDeleteMember, section,
 }: AccountTabProps) {
   const navigate = useNavigate();
+  const { teamMember: authTeamMember, updateLanguage } = useAuth();
   const { plan, planStatus, isActive } = usePlan();
   const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
@@ -182,6 +186,15 @@ export function AccountTab({
       toast.error(err instanceof Error ? err.message : "Could not save account profile");
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleLanguageChange = async (language: SupportedLanguage) => {
+    try {
+      await updateLanguage(language);
+      toast.success("Language updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update language");
     }
   };
 
@@ -341,6 +354,13 @@ export function AccountTab({
                 value={profileEmail}
                 onChange={e => setProfileEmail(e.target.value)}
                 className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-xs text-muted-foreground font-medium">Language</span>
+              <LanguageSwitcher
+                value={authTeamMember?.language ?? "en"}
+                onChange={handleLanguageChange}
               />
             </label>
             <button

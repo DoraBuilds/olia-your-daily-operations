@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
+import i18n, { type SupportedLanguage } from "@/lib/i18n";
 
 interface TeamMemberProfile {
   id: string;
@@ -12,6 +13,7 @@ interface TeamMemberProfile {
   location_ids: string[];
   permissions: Record<string, boolean>;
   pin_reset_required?: boolean;
+  language: SupportedLanguage;
 }
 
 interface AuthContextValue {
@@ -22,6 +24,7 @@ interface AuthContextValue {
   setupError: string | null;   // set when setup_new_organization fails
   retrySetup: () => void;      // lets the UI offer a "Try again" button
   signOut: () => Promise<void>;
+  updateLanguage: (language: SupportedLanguage) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -32,6 +35,7 @@ const AuthContext = createContext<AuthContextValue>({
   setupError: null,
   retrySetup: () => {},
   signOut: async () => {},
+  updateLanguage: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -259,6 +263,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // fetchTeamMember uses only supabase (module-level) and stable state setters.
   }, []);
 
+  // Keeps the app's active i18n language in sync with the signed-in user's
+  // saved preference — covers both the initial load and updateLanguage()
+  // below (which writes teamMember.language optimistically, then this
+  // effect picks up the change rather than calling i18n directly, so
+  // rollback-on-failure only needs to touch teamMember state).
+  useEffect(() => {
+    if (teamMember?.language) {
+      i18n.changeLanguage(teamMember.language);
+    }
+  }, [teamMember?.language]);
+
+  const updateLanguage = async (language: SupportedLanguage) => {
+    if (!teamMember) throw new Error("Not signed in");
+    const previous = teamMember.language;
+    setTeamMember((current) => (current ? { ...current, language } : current));
+
+    const { error } = await supabase.from("team_members").update({ language }).eq("id", teamMember.id);
+    if (error) {
+      setTeamMember((current) => (current ? { ...current, language: previous } : current));
+      throw error;
+    }
+  };
+
   const retrySetup = () => {
     if (!user) return;
     setLoading(true);
@@ -273,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut }}>
+    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut, updateLanguage }}>
       {children}
     </AuthContext.Provider>
   );
