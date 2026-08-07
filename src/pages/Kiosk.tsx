@@ -839,7 +839,7 @@ export default function Kiosk() {
 
       {/* Agenda heading */}
       <div className="px-5 pt-6 pb-2">
-        <h1 className="font-display text-3xl italic text-foreground leading-tight text-center">
+        <h1 className="font-display text-3xl text-foreground leading-tight text-center">
           {locationName || t("grid.kioskFallbackName")}
         </h1>
 
