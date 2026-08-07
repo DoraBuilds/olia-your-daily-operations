@@ -844,7 +844,7 @@ export default function Kiosk() {
             )}
           >
             <p className="section-label mb-1">Due now</p>
-            <p className="text-xl font-bold text-status-error">{dueChecklists.length}</p>
+            <p className="text-xl font-semibold text-status-error">{dueChecklists.length}</p>
           </button>
           <button
             data-testid="kiosk-tab-overdue"
@@ -855,7 +855,7 @@ export default function Kiosk() {
             )}
           >
             <p className="section-label mb-1">Overdue</p>
-            <p className="text-xl font-bold text-status-error">{overdueChecklists.length}</p>
+            <p className="text-xl font-semibold text-status-error">{overdueChecklists.length}</p>
           </button>
           <button
             data-testid="kiosk-tab-upcoming"
@@ -866,7 +866,7 @@ export default function Kiosk() {
             )}
           >
             <p className="section-label mb-1">Upcoming</p>
-            <p className="text-xl font-bold text-status-warn">{upcomingChecklists.length}</p>
+            <p className="text-xl font-semibold text-status-warn">{upcomingChecklists.length}</p>
           </button>
           <button
             data-testid="kiosk-tab-done"
@@ -877,7 +877,7 @@ export default function Kiosk() {
             )}
           >
             <p className="section-label mb-1">Done</p>
-            <p className="text-xl font-bold text-status-ok">{doneChecklists.length}</p>
+            <p className="text-xl font-semibold text-status-ok">{doneChecklists.length}</p>
           </button>
         </div>
       </div>

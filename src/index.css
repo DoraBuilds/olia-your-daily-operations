@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Switzer — body font. 400 body text/checklist items, 500 section headers/
+   active states, 600 dashboard headers/key numbers/alerts. No 700 weight
+   file yet, so avoid font-bold on Switzer-rendered text (browser will
+   synthesize a fake bold instead of using a real weight). */
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Switzer';
+  src: url('/fonts/switzer/Switzer-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+}
+
 /* ── Responsive type root ──────────────────────────────────────────────────
    All rem values across the app scale automatically with the html font-size.
    Mobile-first: 16px base. Laptop: slightly denser at 14px. Wide desktop: 18px.
@@ -137,7 +160,7 @@ html { font-size: 16px; }                        /* mobile / default        */
 
     /* Typography */
     --font-display: 'Cormorant Garamond', Georgia, serif;
-    --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+    --font-body: 'Switzer', 'Hanken Grotesk', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
 
     /* Bottom nav / sidebar "active" indicator — bright teal fill, deep
@@ -364,7 +387,7 @@ html { font-size: 16px; }                        /* mobile / default        */
   .section-label {
     font-family: var(--font-body);
     font-size: var(--text-caption);
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));

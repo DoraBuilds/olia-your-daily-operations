@@ -215,13 +215,13 @@ export default function Dashboard() {
           {/* Quick stats strip */}
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
-              <p className="text-xl font-bold text-[hsl(var(--powder-blue-deep))]">
+              <p className="text-xl font-semibold text-[hsl(var(--powder-blue-deep))]">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Checklists</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
-              <p className={cn("text-xl font-bold",
+              <p className={cn("text-xl font-semibold",
                 allAlerts.length === 0 ? "text-status-ok" : "text-status-error"
               )}>
                 {allAlerts.length}
@@ -229,7 +229,7 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Alerts</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
-              <p className={cn("text-xl font-bold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
+              <p className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Overdue</p>
@@ -297,7 +297,7 @@ export default function Dashboard() {
                   onClick={() => { setComplianceTab(tab); setPage(0); }}
                   className={cn(
                     "relative px-2.5 py-1 rounded-full transition-colors capitalize whitespace-nowrap",
-                    complianceTab === tab ? "bg-card text-foreground shadow-sm font-semibold" : "text-muted-foreground"
+                    complianceTab === tab ? "bg-card text-foreground shadow-sm font-medium" : "text-muted-foreground"
                   )}
                 >
                   {tab}
@@ -334,7 +334,7 @@ export default function Dashboard() {
                     >
                       <div className="relative" style={{ width: 72, height: 72 }}>
                         <ScoreRing score={loc.avgScore} size={72} />
-                        <span className={cn("absolute inset-0 flex items-center justify-center text-sm font-bold", healthClass)}>
+                        <span className={cn("absolute inset-0 flex items-center justify-center text-sm font-semibold", healthClass)}>
                           {loc.avgScore}%
                         </span>
                       </div>
