@@ -416,9 +416,17 @@ describe("Kiosk — Grid Screen", () => {
   });
 
   it("restores a previously chosen kiosk language from localStorage on load", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.setItem("kiosk_language", "es");
-    await renderGridScreen();
-    expect(screen.getByRole("combobox")).toHaveTextContent("ES");
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    localStorage.setItem("kiosk_location_name", "Terrace");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
+    renderWithProviders(<Kiosk />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveTextContent("ES");
+    });
   });
 
   it("persists the chosen language to localStorage so it sticks for the next guest", async () => {
