@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import type { KioskChecklist } from "./types";
 
@@ -11,6 +12,7 @@ export function CompletionScreen({
   completedAt: Date;
   onDone: () => void;
 }) {
+  const { t } = useTranslation("kiosk");
   const [countdown, setCountdown] = useState(10);
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
@@ -34,8 +36,8 @@ export function CompletionScreen({
       <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center mb-6">
         <Check size={36} className="text-sage" />
       </div>
-      <h2 className="font-display text-4xl italic text-foreground mb-1">Well done!</h2>
-      <p className="text-sm italic text-muted-foreground mb-5">Every completed checklist keeps the team running smoothly.</p>
+      <h2 className="font-display text-4xl italic text-foreground mb-1">{t("completion.title")}</h2>
+      <p className="text-sm italic text-muted-foreground mb-5">{t("completion.subtitle")}</p>
       <p className="text-base font-medium text-foreground mb-1">{checklist.title}</p>
       <p className="text-sm text-muted-foreground mb-1">{staffName}</p>
       <p className="text-xs text-muted-foreground/70 mb-8">{dateStr} · {timeStr}</p>
@@ -43,9 +45,9 @@ export function CompletionScreen({
         onClick={onDone}
         className="w-full max-w-xs py-3 rounded-xl text-sm font-semibold bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
       >
-        Done
+        {t("completion.doneButton")}
       </button>
-      <p className="text-xs text-muted-foreground/60 mt-4">Returning to home in {countdown}s</p>
+      <p className="text-xs text-muted-foreground/60 mt-4">{t("completion.returningIn", { count: countdown })}</p>
     </div>
   );
 }

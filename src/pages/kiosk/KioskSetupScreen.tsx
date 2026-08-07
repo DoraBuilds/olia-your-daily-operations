@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -9,6 +10,7 @@ export function KioskSetupScreen({
   onSetup: (locationId: string, locationName: string) => void;
   presetLocations?: { id: string; name: string }[];
 }) {
+  const { t } = useTranslation("kiosk");
   const [locations, setLocations] = useState<{ id: string; name: string }[]>(presetLocations ?? []);
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(!presetLocations);
@@ -43,16 +45,16 @@ export function KioskSetupScreen({
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-16 h-16 mx-auto mb-5" />
-          <h1 className="font-display text-3xl italic text-foreground tracking-tight">Olia Kiosk</h1>
-          <p className="section-label mt-2 tracking-widest">Select a location to launch</p>
+          <h1 className="font-display text-3xl italic text-foreground tracking-tight">{t("setup.title")}</h1>
+          <p className="section-label mt-2 tracking-widest">{t("setup.subtitle")}</p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
           <div>
             {loading ? (
-              <p className="text-sm text-muted-foreground py-3 text-center">Loading locations…</p>
+              <p className="text-sm text-muted-foreground py-3 text-center">{t("setup.loadingLocations")}</p>
             ) : locations.length === 0 ? (
               <p className="text-sm text-muted-foreground py-3 text-center">
-                No locations available. Please ask an admin to add one before launching the kiosk.
+                {t("setup.noLocations")}
               </p>
             ) : (
               <select
@@ -78,13 +80,13 @@ export function KioskSetupScreen({
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
-            Launch Kiosk
+            {t("setup.launchButton")}
           </button>
         </div>
         <p className="text-center text-xs text-muted-foreground mt-6">
           <span className="inline-flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-status-ok inline-block" />
-            System Online
+            {t("systemOnline")}
           </span>
         </p>
       </div>

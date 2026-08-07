@@ -1,0 +1,16 @@
+{
+  "systemOnline": "System Online",
+  "setup": {
+    "title": "Olia Kiosk",
+    "subtitle": "Select a location to launch",
+    "loadingLocations": "Loading locations…",
+    "noLocations": "No locations available. Please ask an admin to add one before launching the kiosk.",
+    "launchButton": "Launch Kiosk"
+  },
+  "completion": {
+    "title": "Well done!",
+    "subtitle": "Every completed checklist keeps the team running smoothly.",
+    "doneButton": "Done",
+    "returningIn": "Returning to home in {{count}}s"
+  }
+}
