@@ -10,9 +10,9 @@
  *
  * Checks:
  *  1. App root loads (HTTP 200, page has content)
- *  2. /kiosk loads and shows "What's on the agenda"
- *  3. Protected route /dashboard redirects to /kiosk (not a 404)
- *  4. Protected route /admin redirects to /kiosk (not a 404)
+ *  2. /kiosk loads and shows the kiosk setup screen
+ *  3. Protected route /dashboard redirects to /login (not a 404)
+ *  4. Protected route /admin redirects to /login (not a 404)
  *  5. No uncaught JavaScript errors on the home page
  */
 
@@ -53,31 +53,47 @@ test.describe("Smoke: app root", () => {
   });
 });
 
+// A fresh Playwright browser context has no localStorage, so it never has a
+// "kiosk_location_id" set — Kiosk.tsx's `!locationId` branch means every
+// anonymous visit to /kiosk lands on KioskSetupScreen ("Olia Kiosk" / "Select
+// a location to launch"), never the agenda grid. Assert on that, not on
+// agenda-grid content that only a previously-configured device would see —
+// asserting the grid text here could never pass against a real stateless
+// visit (see #597-adjacent investigation: this is why /kiosk had never
+// actually passed in this workflow's history, independent of the CLI/deps
+// issues fixed in #598 and the smoke.yml dependency-install fix alongside
+// this change).
 test.describe("Smoke: /kiosk", () => {
-  test("loads and shows 'What's on the agenda'", async ({ page }) => {
+  test("loads and shows the kiosk setup screen", async ({ page }) => {
     await page.goto(url("/kiosk"));
-    await expect(page.getByText(/what's on the agenda/i)).toBeVisible({
+    await expect(page.getByText(/select a location to launch/i)).toBeVisible({
       timeout: 15_000,
     });
   });
 });
 
-test.describe("Smoke: protected routes redirect to /kiosk", () => {
-  test("/dashboard redirects to /kiosk — not a 404", async ({ page }) => {
+// ProtectedRoute only redirects to /kiosk for a device that's already
+// configured as a kiosk (localStorage "kiosk_location_id" set) — see
+// src/components/ProtectedRoute.tsx. A fresh Playwright context has no such
+// state, so for this visitor ProtectedRoute falls through to its `!user`
+// branch and redirects to /login instead. That's the real, correct behavior
+// to check here; asserting a /kiosk landing (as this suite originally did)
+// doesn't match how an anonymous visitor's browser actually behaves.
+test.describe("Smoke: protected routes redirect to /login", () => {
+  test("/dashboard redirects to /login — not a 404", async ({ page }) => {
     await page.goto(url("/dashboard"));
     await page.waitForLoadState("networkidle");
 
-    // The app should land on /kiosk (ProtectedRoute behaviour), not a blank/404
-    await expect(page.getByText(/what's on the agenda/i)).toBeVisible({
+    await expect(page.getByText(/sign in/i)).toBeVisible({
       timeout: 15_000,
     });
   });
 
-  test("/admin redirects to /kiosk — not a 404", async ({ page }) => {
+  test("/admin redirects to /login — not a 404", async ({ page }) => {
     await page.goto(url("/admin"));
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByText(/what's on the agenda/i)).toBeVisible({
+    await expect(page.getByText(/sign in/i)).toBeVisible({
       timeout: 15_000,
     });
   });
