@@ -82,5 +82,39 @@
     "unknownError": "Unknown error",
     "am": "am",
     "pm": "pm"
+  },
+  "myLocationTab": {
+    "onboarding": {
+      "heading": "Add your first location",
+      "body": "Locations are where your team works. Set up your first one to start creating checklists, managing staff, and using the kiosk.",
+      "cta": "Add your first location"
+    },
+    "locationLabel": "Location",
+    "locationDetails": "Location details",
+    "edit": "Edit",
+    "noAlertEmail": "No alert email — tap Edit to add one.",
+    "mapTitle": "Location map",
+    "kiosk": "Kiosk",
+    "staffProfiles": "Staff profiles",
+    "add": "Add",
+    "searchStaff": "Search staff…",
+    "active": "Active",
+    "archived": "Archived",
+    "noArchivedProfiles": "No archived profiles.",
+    "noActiveProfiles": "No active profiles.",
+    "editAria": "Edit",
+    "archiveAria": "Archive",
+    "restoreAria": "Restore",
+    "deletePermanentlyAria": "Delete permanently",
+    "autoArchiveThreshold": "Auto-archive threshold",
+    "autoArchiveDescription": "Staff profiles inactive for this many days are automatically archived.",
+    "days": "days",
+    "save": "Save",
+    "enterNumberAtLeastOne": "Enter a number ≥ 1",
+    "assignedChecklists": "Assigned checklists",
+    "assignedChecklistsWithCount": "Assigned checklists ({{count}})",
+    "noChecklistsAssigned": "No checklists assigned to this location yet.",
+    "neverUsed": "Never used",
+    "lastUsed": "Last used: {{day}}, {{time}}"
   }
 }
