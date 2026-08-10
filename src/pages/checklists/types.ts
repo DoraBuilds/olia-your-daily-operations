@@ -112,19 +112,6 @@ export interface SectionDef {
 
 export type ScheduleType = "daily" | "weekday" | "weekly" | "monthly" | "yearly" | "custom" | "none";
 
-// Kept as English-only literals for ChecklistBuilderModal's schedule picker,
-// which hasn't been extracted to i18n yet (see #594) — getScheduleLabel()
-// below is the translated path used everywhere the *saved* schedule is
-// displayed (checklist list rows, preview modal).
-export const SCHEDULE_LABELS: Record<Exclude<ScheduleType, "custom">, string> = {
-  none: "Once",
-  daily: "Every day",
-  weekday: "Every weekday",
-  weekly: "Every week",
-  monthly: "Every month",
-  yearly: "Every year",
-};
-
 export function parseScheduleType(schedule?: string | null): ScheduleType {
   if (!schedule) return "none";
   const normalized = schedule.trim().toLowerCase();

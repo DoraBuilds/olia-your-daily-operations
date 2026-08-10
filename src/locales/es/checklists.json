@@ -335,5 +335,117 @@
       "replaceImage": "Reemplazar imagen",
       "uploadImage": "Subir imagen"
     }
+  },
+  "builder": {
+    "exit": "Salir",
+    "locations": {
+      "heading": "Ubicaciones",
+      "selectSpecific": "Seleccionar ubicaciones específicas",
+      "selectAll": "Seleccionar todas",
+      "searchPlaceholder": "Buscar ubicaciones o dirección",
+      "noMatch": "Ninguna ubicación coincide con tu búsqueda.",
+      "appearEverywhere": "Esta lista aparecerá en todas las ubicaciones.",
+      "chooseOneOrMore": "Elige una o más ubicaciones.",
+      "selectedOne": "Seleccionada: {{name}}",
+      "selectedCount": "{{count}} ubicaciones seleccionadas",
+      "specificSelectedOne": "Ubicación específica seleccionada",
+      "specificSelectedCount": "{{count}} ubicaciones específicas seleccionadas",
+      "oneSpecificSelectedFooter": "Se ha seleccionado una ubicación específica.",
+      "specificSelectedCountFooter": "Se han seleccionado {{count}} ubicaciones específicas.",
+      "selectAtLeastOne": "Selecciona al menos una ubicación o vuelve a todas las ubicaciones."
+    },
+    "title": {
+      "label": "Título",
+      "placeholder": "p. ej. Lista de apertura matutina"
+    },
+    "description": {
+      "label": "Descripción",
+      "placeholder": "Descripción opcional"
+    },
+    "schedule": {
+      "heading": "Horario",
+      "startDate": "Fecha de inicio",
+      "selectStartDate": "Seleccionar fecha de inicio",
+      "visibilityWindow": "Ventana de visibilidad",
+      "visibilityOptional": "Opcional. Déjala desactivada y la lista estará visible todo el día.",
+      "on": "Activada",
+      "off": "Desactivada",
+      "from": "Desde",
+      "until": "Hasta",
+      "visibleWindowNotice": "Esta lista solo estará visible en el kiosco de {{from}} a {{to}}.",
+      "noWindowNotice": "No se configuró ventana de visibilidad. La lista estará visible todo el día programado hasta completarse.",
+      "repeat": "Repetir",
+      "customOption": "Personalizado",
+      "editCustomRecurrence": "Editar repetición personalizada →",
+      "scheduledOnce": "Programada una vez el {{date}}.",
+      "firstScheduleStarts": "La primera vez será el {{date}}, y luego se {{repeat}}.",
+      "repeatDaily": "repetirá todos los días",
+      "repeatWeekday": "repetirá cada día laborable",
+      "repeatWeeklyOn": "repetirá cada {{weekday}}",
+      "repeatMonthly": "repetirá cada mes",
+      "repeatYearly": "repetirá cada año",
+      "repeatWeekOn": "repetirá cada semana los {{days}}",
+      "repeatWeeksOn": "repetirá cada {{interval}} semanas los {{days}}",
+      "repeatUnit": "repetirá cada {{unit}}",
+      "repeatUnits": "repetirá cada {{interval}} {{unit}}(s)",
+      "weekdays": {
+        "mon": "lunes", "tue": "martes", "wed": "miércoles", "thu": "jueves",
+        "fri": "viernes", "sat": "sábado", "sun": "domingo"
+      }
+    },
+    "question": {
+      "label": "P{{n}}",
+      "textPlaceholder": "Escribe tu pregunta aquí",
+      "instructionTitlePlaceholder": "Título / encabezado de la instrucción",
+      "sectionNamePlaceholder": "Nombre de la sección",
+      "uncertainWarningDefault": "Tipo de respuesta incierto — revisa y elige el correcto abajo.",
+      "dismissWarning": "Descartar advertencia"
+    },
+    "number": {
+      "heading": "Respuesta numérica",
+      "description": "Activa el modo temperatura para fijar un rango aceptable y mostrar un control deslizante en el kiosco.",
+      "modeNumber": "Número",
+      "modeTemperature": "Temperatura",
+      "singleModeNotice": "El personal ingresará un número. Usa las reglas de lógica de abajo para activar acciones según el valor.",
+      "min": "Mín",
+      "max": "Máx",
+      "to": "a",
+      "unit": "Unidad"
+    },
+    "multipleChoice": {
+      "selectionMode": "Modo de selección"
+    },
+    "instruction": {
+      "invalidImageUrl": "La URL de imagen no está permitida. Sube un archivo de imagen o usa un enlace de tu almacenamiento de Supabase.",
+      "removeInvalidImageUrl": "Eliminar URL de imagen no válida",
+      "changeInfohubLink": "Cambiar enlace de Infohub",
+      "linkInfohubContent": "Vincular contenido de Infohub",
+      "removeLinkedContent": "Eliminar contenido vinculado de Infohub",
+      "searchLibraryTraining": "Buscar en biblioteca o capacitación",
+      "filterAll": "Todo",
+      "filterLibrary": "Biblioteca",
+      "filterTraining": "Capacitación",
+      "noInfohubMatch": "Ningún contenido de Infohub coincide con esa búsqueda."
+    },
+    "insert": {
+      "ariaLabel": "Insertar pregunta o sección",
+      "questionOption": "Pregunta",
+      "sectionOption": "Sección"
+    },
+    "footer": {
+      "publishing": "Publicando…",
+      "publish": "Publicar",
+      "lastPublishedAt": "Última publicación: {{time}}",
+      "savedAt": "Guardado {{time}}"
+    },
+    "discardConfirm": {
+      "discard": "Descartar"
+    },
+    "toast": {
+      "planLimitError": "No se pudo guardar — es posible que hayas alcanzado el límite de listas de tu plan. Elimina listas sin usar para liberar espacio.",
+      "genericSaveError": "No se pudo guardar la lista — inténtalo de nuevo.",
+      "published": "¡Lista publicada!",
+      "changesSaved": "¡Cambios guardados!"
+    }
   }
 }

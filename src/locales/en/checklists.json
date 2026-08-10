@@ -335,5 +335,117 @@
       "replaceImage": "Replace image",
       "uploadImage": "Upload image"
     }
+  },
+  "builder": {
+    "exit": "Exit",
+    "locations": {
+      "heading": "Locations",
+      "selectSpecific": "Select specific locations",
+      "selectAll": "Select all",
+      "searchPlaceholder": "Search locations or address",
+      "noMatch": "No locations match your search.",
+      "appearEverywhere": "This checklist will appear at every location.",
+      "chooseOneOrMore": "Choose one or more locations.",
+      "selectedOne": "Selected: {{name}}",
+      "selectedCount": "{{count}} locations selected",
+      "specificSelectedOne": "Specific location selected",
+      "specificSelectedCount": "{{count}} specific locations selected",
+      "oneSpecificSelectedFooter": "One specific location is selected.",
+      "specificSelectedCountFooter": "{{count}} specific locations are selected.",
+      "selectAtLeastOne": "Select at least one location or switch back to all locations."
+    },
+    "title": {
+      "label": "Title",
+      "placeholder": "e.g. Morning Opening Checklist"
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Optional description"
+    },
+    "schedule": {
+      "heading": "Schedule",
+      "startDate": "Start date",
+      "selectStartDate": "Select start date",
+      "visibilityWindow": "Visibility window",
+      "visibilityOptional": "Optional. Leave it off and the checklist stays visible all day.",
+      "on": "On",
+      "off": "Off",
+      "from": "From",
+      "until": "Until",
+      "visibleWindowNotice": "This checklist will only be visible on the kiosk from {{from}} to {{to}}.",
+      "noWindowNotice": "No visibility window set. The checklist will be visible for the full scheduled day until completed.",
+      "repeat": "Repeat",
+      "customOption": "Custom",
+      "editCustomRecurrence": "Edit custom recurrence →",
+      "scheduledOnce": "Scheduled once on {{date}}.",
+      "firstScheduleStarts": "First schedule starts on {{date}}, and will {{repeat}}.",
+      "repeatDaily": "repeat every day",
+      "repeatWeekday": "repeat every weekday",
+      "repeatWeeklyOn": "repeat every following {{weekday}}",
+      "repeatMonthly": "repeat every month",
+      "repeatYearly": "repeat every year",
+      "repeatWeekOn": "repeat every week on {{days}}",
+      "repeatWeeksOn": "repeat every {{interval}} weeks on {{days}}",
+      "repeatUnit": "repeat every {{unit}}",
+      "repeatUnits": "repeat every {{interval}} {{unit}}s",
+      "weekdays": {
+        "mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday",
+        "fri": "Friday", "sat": "Saturday", "sun": "Sunday"
+      }
+    },
+    "question": {
+      "label": "Q{{n}}",
+      "textPlaceholder": "Write your question here",
+      "instructionTitlePlaceholder": "Instruction title / heading",
+      "sectionNamePlaceholder": "Section name",
+      "uncertainWarningDefault": "Response type uncertain — please review and choose the correct one below.",
+      "dismissWarning": "Dismiss warning"
+    },
+    "number": {
+      "heading": "Number response",
+      "description": "Enable temperature mode to set an acceptable range and show a slider in kiosk.",
+      "modeNumber": "Number",
+      "modeTemperature": "Temperature",
+      "singleModeNotice": "Staff will enter one number. Use logic rules below to trigger actions based on the value.",
+      "min": "Min",
+      "max": "Max",
+      "to": "to",
+      "unit": "Unit"
+    },
+    "multipleChoice": {
+      "selectionMode": "Selection mode"
+    },
+    "instruction": {
+      "invalidImageUrl": "Image URL is not allowed. Upload an image file or use a link from your Supabase storage.",
+      "removeInvalidImageUrl": "Remove invalid image URL",
+      "changeInfohubLink": "Change Infohub link",
+      "linkInfohubContent": "Link Infohub content",
+      "removeLinkedContent": "Remove linked Infohub content",
+      "searchLibraryTraining": "Search library or training",
+      "filterAll": "All",
+      "filterLibrary": "Library",
+      "filterTraining": "Training",
+      "noInfohubMatch": "No Infohub content matches that search."
+    },
+    "insert": {
+      "ariaLabel": "Insert question or section",
+      "questionOption": "Question",
+      "sectionOption": "Section"
+    },
+    "footer": {
+      "publishing": "Publishing…",
+      "publish": "Publish",
+      "lastPublishedAt": "Last published at {{time}}",
+      "savedAt": "Saved {{time}}"
+    },
+    "discardConfirm": {
+      "discard": "Discard"
+    },
+    "toast": {
+      "planLimitError": "Could not save — you may have reached your plan's checklist limit. Delete unused checklists to free up space.",
+      "genericSaveError": "Could not save checklist — please try again.",
+      "published": "Checklist published!",
+      "changesSaved": "Changes saved!"
+    }
   }
 }
