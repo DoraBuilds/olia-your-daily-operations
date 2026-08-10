@@ -1,0 +1,8 @@
+{
+  "subtitle": "Alertas operativas activas",
+  "backAriaLabel": "Atrás",
+  "dismissAriaLabel": "Descartar alerta",
+  "clearAll": "Borrar todo",
+  "count_one": "{{count}} alerta",
+  "count_other": "{{count}} alertas"
+}
