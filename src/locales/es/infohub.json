@@ -1,0 +1,161 @@
+{
+  "subtitleLibrary": "Documentos y procedimientos",
+  "subtitleTraining": "Módulos de capacitación del personal",
+  "searchLibraryPlaceholder": "Buscar documentos y carpetas…",
+  "searchTrainingPlaceholder": "Buscar capacitación y carpetas…",
+  "addContent": "Agregar contenido",
+  "tabs": {
+    "library": "Biblioteca",
+    "training": "Capacitación"
+  },
+  "folders": "Carpetas",
+  "documents": "Documentos",
+  "modules": "Módulos",
+  "restricted": "Restringido",
+  "docCount_one": "{{count}} documento",
+  "docCount_other": "{{count}} documentos",
+  "subfolderCount_one": "{{count}} subcarpeta",
+  "subfolderCount_other": "{{count}} subcarpetas",
+  "moduleCount": "{{count}} módulos",
+  "durationSteps": "{{duration}} · {{count}} pasos",
+  "done": "Hecho",
+  "openAiTools": "Abrir herramientas de IA para {{title}}",
+  "emptyState": {
+    "noMatchLibrary": "No hay elementos de biblioteca que coincidan.",
+    "noMatchTraining": "No hay elementos de capacitación que coincidan.",
+    "folderEmpty": "Esta carpeta está vacía.",
+    "noFolders": "Aún no hay carpetas.",
+    "tapToCreate": "Toca para crear una carpeta o documento."
+  },
+  "archived": "Archivados ({{count}})",
+  "restore": "Restaurar",
+  "actions": {
+    "moveToFolder": "Mover a carpeta",
+    "renameFolder": "Renombrar carpeta",
+    "manageAccess": "Gestionar acceso",
+    "archiveFolder": "Archivar carpeta",
+    "downloadFile": "Descargar archivo",
+    "archiveFile": "Archivar archivo"
+  },
+  "aiSheet": {
+    "libraryDocument": "documento de biblioteca",
+    "trainingModule": "módulo de capacitación",
+    "heading": "Herramientas de IA",
+    "generateFrom": "Genera material de estudio para \"{{title}}\" a partir del contenido de {{source}}.",
+    "notEnoughContent": "Este documento no tiene suficiente contenido para la generación con IA.",
+    "unexpectedResponse": "Respuesta inesperada de la IA. Inténtalo de nuevo.",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "summary": {
+      "title": "Generar resumen",
+      "description": "Puntos clave generados por IA a partir de este contenido",
+      "sectionLabel": "Resumen",
+      "takeawayLabel": "Conclusión"
+    },
+    "flashcards": {
+      "title": "Crear tarjetas de estudio",
+      "description": "Convierte el contenido en tarjetas de repaso",
+      "sectionLabel": "Tarjetas de estudio",
+      "front": "Frente",
+      "back": "Reverso"
+    },
+    "quiz": {
+      "title": "Generar cuestionario",
+      "description": "Evalúa la comprensión con preguntas generadas automáticamente",
+      "sectionLabel": "Cuestionario"
+    }
+  },
+  "shared": {
+    "moveToFolder": {
+      "heading": "Mover a carpeta",
+      "searchPlaceholder": "Buscar carpetas",
+      "rootOption": "Raíz (sin carpeta)",
+      "noFoldersFound": "No se encontraron carpetas."
+    },
+    "newFolder": {
+      "heading": "Nueva carpeta",
+      "nameLabel": "Nombre de la carpeta",
+      "namePlaceholder": "p. ej. Salud y Seguridad",
+      "create": "Crear carpeta"
+    },
+    "renameFolder": {
+      "heading": "Renombrar carpeta",
+      "nameLabel": "Nombre de la carpeta",
+      "save": "Renombrar"
+    },
+    "newDocument": {
+      "heading": "Nuevo documento",
+      "titleLabel": "Título",
+      "titlePlaceholder": "p. ej. Procedimiento de seguridad contra incendios",
+      "folderLabel": "Carpeta",
+      "tagsLabel": "Etiquetas",
+      "tagsHint": "(separadas por comas, opcional)",
+      "tagsPlaceholder": "p. ej. Seguridad, Semanal, Cocina",
+      "create": "Crear documento"
+    },
+    "filePreview": {
+      "download": "Descargar",
+      "closePreview": "Cerrar vista previa",
+      "cannotPreview": "Este tipo de archivo no se puede previsualizar en el navegador.",
+      "downloadToOpen": "Descargar para abrir"
+    },
+    "upload": {
+      "heading": "Subir archivo",
+      "fileTooLarge": "El archivo es demasiado grande. El tamaño máximo es 20 MB.",
+      "notSignedIn": "No has iniciado sesión.",
+      "uploadFailed": "Error al subir el archivo. Inténtalo de nuevo.",
+      "dragDropPrefix": "Arrastra y suelta o",
+      "browse": "explora",
+      "fileTypesHint": "PDF, DOC, DOCX, imágenes · máx. 20 MB",
+      "uploading": "Subiendo…",
+      "upload": "Subir archivo"
+    },
+    "plusMenu": {
+      "heading": "Crear nuevo",
+      "newDocumentTitle": "Nuevo documento",
+      "newDocumentDesc": "Crea un nuevo documento desde cero",
+      "uploadFileTitle": "Subir archivo",
+      "uploadFileDesc": "Sube un PDF, DOC o imagen",
+      "newFolderTitle": "Nueva carpeta",
+      "newFolderDesc": "Organiza documentos en una carpeta"
+    },
+    "manageAccess": {
+      "heading": "Gestionar acceso",
+      "orgWideTitle": "Acceso para toda la organización",
+      "orgWideDesc": "Todos en la organización pueden ver este elemento.",
+      "restrictedTitle": "Acceso restringido",
+      "restrictedDesc": "Limita la visibilidad por persona, rol o ubicación.",
+      "teamMembers": "Miembros del equipo",
+      "roles": "Roles",
+      "locations": "Ubicaciones",
+      "save": "Guardar acceso"
+    },
+    "searchOverlay": {
+      "placeholder": "Buscar en todos los documentos...",
+      "startTyping": "Empieza a escribir para buscar en Biblioteca y Capacitación.",
+      "noResults": "No se encontraron resultados.",
+      "library": "Biblioteca",
+      "training": "Capacitación",
+      "durationSteps": "{{duration}} · {{count}} pasos"
+    },
+    "breadcrumbAllFolders": "Todas las carpetas",
+    "noResponseProvided": "No se proporcionó respuesta"
+  },
+  "docViews": {
+    "editingDocument": "Editando documento",
+    "updatedOn": "Actualizado el {{date}}",
+    "openAiTools": "Abrir herramientas de IA",
+    "titleLabel": "Título",
+    "summaryLabel": "Resumen",
+    "contentLabel": "Contenido",
+    "tagsLabel": "Etiquetas (separadas por comas)",
+    "tagsPlaceholder": "p. ej. Servicio, Seguridad, Semanal",
+    "saveChanges": "Guardar cambios",
+    "fileFallback": "Archivo",
+    "tapToAddContent": "Toca para agregar contenido",
+    "durationStepsProgress": "{{duration}} · {{completed}}/{{total}} pasos",
+    "step": "Paso {{n}}",
+    "moduleComplete": "Módulo completado.",
+    "moduleCompleteNotice": "Bien hecho. Este módulo se ha marcado como completado.",
+    "markIncomplete": "Marcar como incompleto"
+  }
+}
