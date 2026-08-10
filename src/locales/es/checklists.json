@@ -238,5 +238,50 @@
     "responseTypeFallback": "Tipo de respuesta",
     "nestedTriggersEnabled": "{{responseType}} y disparadores anidados habilitados",
     "structuralPreviewNotice": "Esta es una vista previa estructural. El personal verá e interactuará con esta lista desde el Kiosco."
+  },
+  "logicRules": {
+    "comparators": {
+      "lessThan": "Menor que",
+      "lessThanOrEqual": "Menor o igual que",
+      "equalTo": "Igual a",
+      "notEqualTo": "Distinto de",
+      "greaterThanOrEqual": "Mayor o igual que",
+      "greaterThan": "Mayor que",
+      "between": "Entre",
+      "notBetween": "No entre",
+      "notProvided": "No proporcionado",
+      "is": "Es",
+      "isNot": "No es"
+    },
+    "triggers": {
+      "askQuestion": "Hacer pregunta",
+      "notify": "Notificar (correo)",
+      "requireNote": "Requerir nota",
+      "requireMedia": "Requerir multimedia"
+    },
+    "addLogic": "Agregar lógica",
+    "heading": "Reglas de lógica",
+    "ifAnswer": "Si la respuesta",
+    "noResponseProvided": "No se proporcionó respuesta",
+    "and": "y",
+    "then": "entonces",
+    "valuePlaceholder": "Valor",
+    "textPlaceholder": "Texto",
+    "buildFollowUp": "Crear pregunta de seguimiento",
+    "followUpLabel": "Pregunta de seguimiento",
+    "followUpPrefix": "Seguimiento: {{question}}",
+    "noRecipients": "No se encontraron miembros del equipo con correo. Agrega miembros del equipo en Admin.",
+    "selectRecipient": "Selecciona destinatario…",
+    "emailSubjectPlaceholder": "Asunto del correo (opcional — auto: \"{{question}}: [respuesta]\")",
+    "genericQuestionFallback": "pregunta",
+    "actionTitlePlaceholder": "Título de la acción/tarea",
+    "assignTo": "Asignar a",
+    "actionAlertNote": "Aparece como una alerta operativa en el panel",
+    "addTrigger": "disparador",
+    "addAnotherRule": "Agregar otra regla",
+    "leftUnanswered": "quedó sin responder",
+    "answeredSimple": "respondió {{comparator}} {{value}}",
+    "answeredBetween": "respondió {{comparator}} {{value}} y {{valueTo}}",
+    "actionRequiredTitle": "Acción requerida: \"{{question}}\" {{condition}}"
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, AlertTriangle, Mail, User } from "lucide-react";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import type { LogicRule, LogicComparator, LogicTrigger, LogicTriggerType, ResponseType } from "./types";
@@ -21,34 +22,42 @@ interface LogicRulesEditorProps {
   notifyRecipients: NotifyRecipient[];
 }
 
-const NUMERIC_COMPARATORS: { key: LogicComparator; label: string }[] = [
-  { key: "lt", label: "Less than" },
-  { key: "lte", label: "Less than or equal to" },
-  { key: "eq", label: "Equal to" },
-  { key: "neq", label: "Not equal to" },
-  { key: "gte", label: "Greater than or equal to" },
-  { key: "gt", label: "Greater than" },
-  { key: "between", label: "Between" },
-  { key: "not_between", label: "Not between" },
-  { key: "unanswered", label: "Not provided" },
-];
-const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
-  { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
-];
-const TEXT_COMPARATORS: { key: LogicComparator; label: string }[] = [
-  { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
-];
+function useComparatorOptions(t: (key: string) => string) {
+  const NUMERIC_COMPARATORS: { key: LogicComparator; label: string }[] = [
+    { key: "lt", label: t("logicRules.comparators.lessThan") },
+    { key: "lte", label: t("logicRules.comparators.lessThanOrEqual") },
+    { key: "eq", label: t("logicRules.comparators.equalTo") },
+    { key: "neq", label: t("logicRules.comparators.notEqualTo") },
+    { key: "gte", label: t("logicRules.comparators.greaterThanOrEqual") },
+    { key: "gt", label: t("logicRules.comparators.greaterThan") },
+    { key: "between", label: t("logicRules.comparators.between") },
+    { key: "not_between", label: t("logicRules.comparators.notBetween") },
+    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
+  ];
+  const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
+    { key: "is", label: t("logicRules.comparators.is") },
+    { key: "is_not", label: t("logicRules.comparators.isNot") },
+    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
+  ];
+  const TEXT_COMPARATORS = CHOICE_COMPARATORS;
+  return { NUMERIC_COMPARATORS, CHOICE_COMPARATORS, TEXT_COMPARATORS };
+}
 
-const TRIGGER_OPTIONS: { key: LogicTriggerType; label: string; icon: React.ElementType }[] = [
-  { key: "ask_question", label: "Ask question", icon: MessageSquare },
-  { key: "notify", label: "Notify (email)", icon: Bell },
-  { key: "require_note", label: "Require note", icon: FileText },
-  { key: "require_media", label: "Require media", icon: Image },
-];
+function useTriggerOptions(t: (key: string) => string): { key: LogicTriggerType; label: string; icon: React.ElementType }[] {
+  return [
+    { key: "ask_question", label: t("logicRules.triggers.askQuestion"), icon: MessageSquare },
+    { key: "notify", label: t("logicRules.triggers.notify"), icon: Bell },
+    { key: "require_note", label: t("logicRules.triggers.requireNote"), icon: FileText },
+    { key: "require_media", label: t("logicRules.triggers.requireMedia"), icon: Image },
+  ];
+}
 
 export function LogicRulesEditor({
   rules, onRulesChange, responseType, choices, questionText, questionIndex, notifyRecipients,
 }: LogicRulesEditorProps) {
+  const { t } = useTranslation("checklists");
+  const { NUMERIC_COMPARATORS, CHOICE_COMPARATORS, TEXT_COMPARATORS } = useComparatorOptions(t);
+  const TRIGGER_OPTIONS = useTriggerOptions(t);
   const showLogic = rules.length > 0;
   // openDropdown tracks which rule's "add trigger" dropdown is open.
   // group-focus-within doesn't fire on button click in Safari, so we use state.
@@ -70,12 +79,12 @@ export function LogicRulesEditor({
   const comparators = isNumericType ? NUMERIC_COMPARATORS : isMcType ? CHOICE_COMPARATORS : TEXT_COMPARATORS;
 
   const describeCondition = (rule: LogicRule) => {
-    if (rule.comparator === "unanswered") return "left unanswered";
+    if (rule.comparator === "unanswered") return t("logicRules.leftUnanswered");
     const label = comparators.find(c => c.key === rule.comparator)?.label || rule.comparator;
-    if (rule.comparator === "between" || rule.comparator === "not_between") {
-      return `answered ${label.toLowerCase()} ${rule.value}${rule.valueTo ? ` and ${rule.valueTo}` : ""}`;
+    if ((rule.comparator === "between" || rule.comparator === "not_between") && rule.valueTo) {
+      return t("logicRules.answeredBetween", { comparator: label.toLowerCase(), value: rule.value, valueTo: rule.valueTo });
     }
-    return `answered ${label.toLowerCase()} ${rule.value}`;
+    return t("logicRules.answeredSimple", { comparator: label.toLowerCase(), value: rule.value });
   };
 
   const addRule = () => {
@@ -105,8 +114,8 @@ export function LogicRulesEditor({
       triggerConfig.followUpQuestion = createDefaultFollowUpQuestion("");
     }
     if (triggerType === "require_action") {
-      const qLabel = questionText || `Question ${questionIndex + 1}`;
-      triggerConfig.actionTitle = `Action required: "${qLabel}" ${describeCondition(rule)}`;
+      const qLabel = questionText || t("preview.questionFallback", { n: questionIndex + 1 });
+      triggerConfig.actionTitle = t("logicRules.actionRequiredTitle", { question: qLabel, condition: describeCondition(rule) });
     }
     updateRule(ri, { triggers: [...rule.triggers, { type: triggerType, config: triggerConfig }] });
   };
@@ -128,19 +137,19 @@ export function LogicRulesEditor({
           className="flex items-center gap-1.5 text-xs text-sage hover:text-sage-deep transition-colors"
         >
           <GitBranch size={12} />
-          <span>Add logic</span>
+          <span>{t("logicRules.addLogic")}</span>
         </button>
       )}
       {showLogic && (
         <div className="bg-muted/50 rounded-lg p-3 space-y-3">
           <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-            <GitBranch size={12} /> Logic rules
+            <GitBranch size={12} /> {t("logicRules.heading")}
           </p>
           {rules.map((rule, ri) => (
             <div key={rule.id} className="border border-border rounded-lg p-3 space-y-3 bg-background">
               {/* Condition row */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs text-muted-foreground">If answer</span>
+                <span className="text-xs text-muted-foreground">{t("logicRules.ifAnswer")}</span>
                 <select
                   value={rule.comparator}
                   onChange={e => {
@@ -159,7 +168,7 @@ export function LogicRulesEditor({
                 </select>
                 {rule.comparator === "unanswered" ? (
                   <span className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-muted-foreground">
-                    No response provided
+                    {t("logicRules.noResponseProvided")}
                   </span>
                 ) : isMcType ? (
                   <select
@@ -175,17 +184,17 @@ export function LogicRulesEditor({
                       type={isNumericType ? "number" : "text"}
                       value={rule.value}
                       onChange={e => updateRule(ri, { value: e.target.value })}
-                      placeholder={isNumericType ? "Value" : "Text"}
+                      placeholder={isNumericType ? t("logicRules.valuePlaceholder") : t("logicRules.textPlaceholder")}
                       className="w-20 text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                     {(rule.comparator === "between" || rule.comparator === "not_between") && (
                       <>
-                        <span className="text-xs text-muted-foreground">and</span>
+                        <span className="text-xs text-muted-foreground">{t("logicRules.and")}</span>
                         <input
                           type="number"
                           value={rule.valueTo ?? ""}
                           onChange={e => updateRule(ri, { valueTo: e.target.value })}
-                          placeholder="Value"
+                          placeholder={t("logicRules.valuePlaceholder")}
                           className="w-20 text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </>
@@ -202,7 +211,7 @@ export function LogicRulesEditor({
 
               {/* Triggers */}
               <div className="space-y-2">
-                <span className="text-xs text-muted-foreground">then</span>
+                <span className="text-xs text-muted-foreground">{t("logicRules.then")}</span>
                 {rule.triggers.map((trigger, ti) => (
                   <div key={ti} className="flex items-start gap-2 bg-muted/60 rounded-lg px-3 py-2">
                     <div className="flex-1 space-y-2">
@@ -226,19 +235,24 @@ export function LogicRulesEditor({
                                 followUpQuestion: next,
                               })}
                               notifyRecipients={notifyRecipients}
-                              label="Follow-up question"
+                              label={t("logicRules.followUpLabel")}
                               depth={1}
                             />
                           ) : (
                             <button
                               type="button"
-                              onClick={() => updateTriggerConfig(ri, ti, {
-                                questionText: `Follow-up: ${questionText || `Question ${questionIndex + 1}`}`,
-                                followUpQuestion: createDefaultFollowUpQuestion(`Follow-up: ${questionText || `Question ${questionIndex + 1}`}`),
-                              })}
+                              onClick={() => {
+                                const followUpText = t("logicRules.followUpPrefix", {
+                                  question: questionText || t("preview.questionFallback", { n: questionIndex + 1 }),
+                                });
+                                updateTriggerConfig(ri, ti, {
+                                  questionText: followUpText,
+                                  followUpQuestion: createDefaultFollowUpQuestion(followUpText),
+                                });
+                              }}
                               className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                             >
-                              <Plus size={11} /> Build follow-up question
+                              <Plus size={11} /> {t("logicRules.buildFollowUp")}
                             </button>
                           )}
                         </div>
@@ -250,7 +264,7 @@ export function LogicRulesEditor({
                             <Mail size={11} className="text-muted-foreground shrink-0" />
                             {notifyRecipients.length === 0 ? (
                               <span className="flex-1 text-xs text-muted-foreground italic px-2 py-1.5">
-                                No team members with email found. Add team members in Admin.
+                                {t("logicRules.noRecipients")}
                               </span>
                             ) : (
                               <select
@@ -258,7 +272,7 @@ export function LogicRulesEditor({
                                 onChange={e => updateTriggerConfig(ri, ti, { notifyUser: e.target.value })}
                                 className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                               >
-                                <option value="">Select recipient…</option>
+                                <option value="">{t("logicRules.selectRecipient")}</option>
                                 {notifyRecipients.map(m => (
                                   <option key={m.id} value={m.email}>
                                     {m.name}{m.role ? ` — ${m.role}` : ""} ({m.email})
@@ -269,7 +283,7 @@ export function LogicRulesEditor({
                           </div>
                           <input
                             type="text"
-                            placeholder={`Email subject (optional — auto: "${questionText || "question"}: [answer]")`}
+                            placeholder={t("logicRules.emailSubjectPlaceholder", { question: questionText || t("logicRules.genericQuestionFallback") })}
                             value={trigger.config?.notifyMessage || ""}
                             onChange={e => updateTriggerConfig(ri, ti, { notifyMessage: e.target.value })}
                             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -281,7 +295,7 @@ export function LogicRulesEditor({
                         <div className="space-y-2">
                           <input
                             type="text"
-                            placeholder="Action / task title"
+                            placeholder={t("logicRules.actionTitlePlaceholder")}
                             value={trigger.config?.actionTitle || ""}
                             onChange={e => updateTriggerConfig(ri, ti, { actionTitle: e.target.value })}
                             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -290,7 +304,7 @@ export function LogicRulesEditor({
                             <User size={11} className="text-muted-foreground shrink-0" />
                             <input
                               type="text"
-                              placeholder="Assign to"
+                              placeholder={t("logicRules.assignTo")}
                               value={trigger.config?.actionAssignee || ""}
                               onChange={e => updateTriggerConfig(ri, ti, { actionAssignee: e.target.value })}
                               className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -301,7 +315,7 @@ export function LogicRulesEditor({
                               <AlertTriangle size={11} className="text-status-warn mt-0.5 shrink-0" />
                               <div>
                                 <p className="text-[11px] font-medium text-foreground leading-snug">{trigger.config.actionTitle}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{t("logicRules.actionAlertNote")}</p>
                               </div>
                             </div>
                           )}
@@ -322,7 +336,7 @@ export function LogicRulesEditor({
                     onClick={() => setOpenDropdown(openDropdown === ri ? null : ri)}
                     className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                   >
-                    <Plus size={11} /> trigger
+                    <Plus size={11} /> {t("logicRules.addTrigger")}
                   </button>
                   {openDropdown === ri && (
                     <div className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
@@ -349,7 +363,7 @@ export function LogicRulesEditor({
             onClick={addRule}
             className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
           >
-            <Plus size={11} /> Add another rule
+            <Plus size={11} /> {t("logicRules.addAnotherRule")}
           </button>
         </div>
       )}

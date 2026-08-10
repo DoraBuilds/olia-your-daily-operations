@@ -238,5 +238,50 @@
     "responseTypeFallback": "Response type",
     "nestedTriggersEnabled": "{{responseType}} and nested triggers enabled",
     "structuralPreviewNotice": "This is a structural preview. Staff will see and interact with this checklist from the Kiosk."
+  },
+  "logicRules": {
+    "comparators": {
+      "lessThan": "Less than",
+      "lessThanOrEqual": "Less than or equal to",
+      "equalTo": "Equal to",
+      "notEqualTo": "Not equal to",
+      "greaterThanOrEqual": "Greater than or equal to",
+      "greaterThan": "Greater than",
+      "between": "Between",
+      "notBetween": "Not between",
+      "notProvided": "Not provided",
+      "is": "Is",
+      "isNot": "Is not"
+    },
+    "triggers": {
+      "askQuestion": "Ask question",
+      "notify": "Notify (email)",
+      "requireNote": "Require note",
+      "requireMedia": "Require media"
+    },
+    "addLogic": "Add logic",
+    "heading": "Logic rules",
+    "ifAnswer": "If answer",
+    "noResponseProvided": "No response provided",
+    "and": "and",
+    "then": "then",
+    "valuePlaceholder": "Value",
+    "textPlaceholder": "Text",
+    "buildFollowUp": "Build follow-up question",
+    "followUpLabel": "Follow-up question",
+    "followUpPrefix": "Follow-up: {{question}}",
+    "noRecipients": "No team members with email found. Add team members in Admin.",
+    "selectRecipient": "Select recipient…",
+    "emailSubjectPlaceholder": "Email subject (optional — auto: \"{{question}}: [answer]\")",
+    "genericQuestionFallback": "question",
+    "actionTitlePlaceholder": "Action / task title",
+    "assignTo": "Assign to",
+    "actionAlertNote": "Appears as an operational alert on the dashboard",
+    "addTrigger": "trigger",
+    "addAnotherRule": "Add another rule",
+    "leftUnanswered": "left unanswered",
+    "answeredSimple": "answered {{comparator}} {{value}}",
+    "answeredBetween": "answered {{comparator}} {{value}} and {{valueTo}}",
+    "actionRequiredTitle": "Action required: \"{{question}}\" {{condition}}"
   }
 }
