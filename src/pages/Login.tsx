@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -32,13 +34,14 @@ function getFriendlyAuthError(message: string | null | undefined) {
     // invite email rather than just "create one" — creating a new account
     // here would spin up an unrelated organisation instead of joining the
     // team they were invited to.
-    return "No Olia account was found for that email yet. If someone invited you to their team, use the invite link from that email instead — or create your own account below.";
+    return i18n.t("login.missingAccountError", { ns: "auth" });
   }
 
-  return message ?? "Something went wrong. Please try again.";
+  return message ?? i18n.t("login.genericError", { ns: "auth" });
 }
 
 export default function Login() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("email");
@@ -76,14 +79,14 @@ export default function Login() {
     if (authError) {
       if (isEmailRateLimited(authError.message)) {
         setStep("code");
-        setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
+        setInfo(t("login.rateLimitedInfo"));
       }
       setError(getFriendlyAuthError(authError.message));
       return;
     }
 
     setStep("code");
-    setInfo(`We sent an 8-digit code to ${emailValue}.`);
+    setInfo(t("login.codeSentInfo", { email: emailValue }));
   };
 
   const verifyCode = async () => {
@@ -103,7 +106,7 @@ export default function Login() {
     if (authError) {
       if (isEmailRateLimited(authError.message)) {
         setStep("code");
-        setInfo("Too many email attempts. If you already received a recent code, enter it below. Otherwise wait a minute before requesting another one.");
+        setInfo(t("login.rateLimitedInfo"));
       }
       setError(getFriendlyAuthError(authError.message));
       return;
@@ -141,7 +144,7 @@ export default function Login() {
       return;
     }
 
-    setInfo(`We sent a fresh 8-digit code to ${emailValue}.`);
+    setInfo(t("login.freshCodeSentInfo", { email: emailValue }));
   };
 
   return (
@@ -150,19 +153,19 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-foreground">Sign in</h1>
-          <p className="text-sm text-muted-foreground mt-1">Use the one-time code from your inbox.</p>
+          <h1 className="font-display text-2xl text-foreground">{t("login.heading")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("login.subheading")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("login.email")}</label>
             <input
               autoFocus
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@yourbusiness.com"
+              placeholder={t("login.emailPlaceholder")}
               required
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
@@ -170,7 +173,7 @@ export default function Login() {
 
           {step === "code" && (
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">One-time code</label>
+              <label className="text-xs text-muted-foreground mb-1 block">{t("login.oneTimeCode")}</label>
               <input
                 autoFocus
                 type="text"
@@ -178,7 +181,7 @@ export default function Login() {
                 autoComplete="one-time-code"
                 value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="Enter the code from your email"
+                placeholder={t("login.codePlaceholder")}
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
@@ -203,13 +206,13 @@ export default function Login() {
               onClick={() => {
                 setStep("code");
                 setError(null);
-                setInfo(emailValue ? `Enter the most recent code sent to ${emailValue}.` : "Enter the most recent code sent to your email.");
+                setInfo(emailValue ? t("login.enterRecentCode", { email: emailValue }) : t("login.enterRecentCodeGeneric"));
               }}
               disabled={!emailValue || loading}
               className="text-xs font-medium hover:underline disabled:opacity-50"
               style={{ color: "#007E70" }}
             >
-              I already have a code
+              {t("login.alreadyHaveCode")}
             </button>
           )}
 
@@ -223,7 +226,7 @@ export default function Login() {
                 : "bg-muted text-muted-foreground cursor-not-allowed",
             )}
           >
-            {loading ? (step === "email" ? "Sending code…" : "Verifying…") : (step === "email" ? "Send code" : "Verify code")}
+            {loading ? (step === "email" ? t("login.sendingCode") : t("login.verifying")) : (step === "email" ? t("login.sendCode") : t("login.verifyCode"))}
           </button>
         </form>
 
@@ -236,7 +239,7 @@ export default function Login() {
               className="text-xs font-medium hover:underline disabled:opacity-50"
               style={{ color: "#007E70" }}
             >
-              {resending ? "Resending…" : "Resend code"}
+              {resending ? t("login.resending") : t("login.resendCode")}
             </button>
             <button
               type="button"
@@ -248,15 +251,15 @@ export default function Login() {
               }}
               className="text-xs font-medium text-muted-foreground hover:text-foreground"
             >
-              Change email
+              {t("login.changeEmail")}
             </button>
           </div>
         )}
 
         <p className="text-center text-xs text-muted-foreground">
-          Need an account first?{" "}
+          {t("login.needAccount")}{" "}
           <Link to="/signup" className="text-sage font-medium hover:underline">
-            Create one
+            {t("login.createOne")}
           </Link>
         </p>
       </div>
