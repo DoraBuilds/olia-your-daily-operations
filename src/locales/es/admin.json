@@ -82,5 +82,39 @@
     "unknownError": "Error desconocido",
     "am": "a. m.",
     "pm": "p. m."
+  },
+  "myLocationTab": {
+    "onboarding": {
+      "heading": "Agrega tu primera ubicación",
+      "body": "Las ubicaciones son donde trabaja tu equipo. Configura la primera para empezar a crear listas de verificación, gestionar al personal y usar el kiosco.",
+      "cta": "Agregar tu primera ubicación"
+    },
+    "locationLabel": "Ubicación",
+    "locationDetails": "Detalles de la ubicación",
+    "edit": "Editar",
+    "noAlertEmail": "Sin correo de alertas — toca Editar para agregar uno.",
+    "mapTitle": "Mapa de la ubicación",
+    "kiosk": "Kiosco",
+    "staffProfiles": "Perfiles de personal",
+    "add": "Agregar",
+    "searchStaff": "Buscar personal…",
+    "active": "Activo",
+    "archived": "Archivado",
+    "noArchivedProfiles": "No hay perfiles archivados.",
+    "noActiveProfiles": "No hay perfiles activos.",
+    "editAria": "Editar",
+    "archiveAria": "Archivar",
+    "restoreAria": "Restaurar",
+    "deletePermanentlyAria": "Eliminar permanentemente",
+    "autoArchiveThreshold": "Umbral de archivado automático",
+    "autoArchiveDescription": "Los perfiles de personal inactivos por esta cantidad de días se archivan automáticamente.",
+    "days": "días",
+    "save": "Guardar",
+    "enterNumberAtLeastOne": "Ingresa un número ≥ 1",
+    "assignedChecklists": "Listas asignadas",
+    "assignedChecklistsWithCount": "Listas asignadas ({{count}})",
+    "noChecklistsAssigned": "Aún no hay listas asignadas a esta ubicación.",
+    "neverUsed": "Nunca usado",
+    "lastUsed": "Último uso: {{day}}, {{time}}"
   }
 }

@@ -1,6 +1,8 @@
 // ─── Admin Data Types & Mock Repository ─────────────────────────────────────
 // Isolated data access layer — swap to DB later without rewriting UI.
 
+import i18n from "@/lib/i18n";
+
 export type AccountRole = "Owner" | "Manager" | "Member";
 export type StaffStatus = "active" | "archived";
 
@@ -129,11 +131,11 @@ export function getInitials(name: string): string {
 }
 
 export function daysAgo(isoDate: string | null): string {
-  if (!isoDate) return "Never used";
+  if (!isoDate) return i18n.t("myLocationTab.neverUsed", { ns: "admin" });
   const d = new Date(isoDate);
   const day = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); // "23 Mar"
   const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); // "14:39"
-  return `Last used: ${day}, ${time}`;
+  return i18n.t("myLocationTab.lastUsed", { ns: "admin", day, time });
 }
 
 /** Full timestamp with seconds — used as tooltip title */

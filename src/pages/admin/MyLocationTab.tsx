@@ -1,6 +1,7 @@
 // ─── MyLocationTab ────────────────────────────────────────────────────────────
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   MapPin, Mail, Phone, Plus, Pencil, Trash2, Archive, RotateCcw,
   ChevronDown, Search, Tablet,
@@ -44,6 +45,7 @@ export function MyLocationTab({
   onAddLocation, onEditLocation, onUpdateLocation, onAddStaff, onEditStaff, onArchiveStaff, onRestoreStaff, onDeleteStaff,
   onLaunchKiosk,
 }: MyLocationTabProps) {
+  const { t } = useTranslation("admin");
   const [staffSearch, setStaffSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   // Local state for archive threshold — string so the user can clear the field
@@ -73,10 +75,9 @@ export function MyLocationTab({
           <MapPin size={28} className="text-sage" />
         </div>
         <div className="space-y-2">
-          <h2 className="font-display text-xl text-foreground">Add your first location</h2>
+          <h2 className="font-display text-xl text-foreground">{t("myLocationTab.onboarding.heading")}</h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-            Locations are where your team works. Set up your first one to start
-            creating checklists, managing staff, and using the kiosk.
+            {t("myLocationTab.onboarding.body")}
           </p>
         </div>
         <button
@@ -84,7 +85,7 @@ export function MyLocationTab({
           className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
         >
           <Plus size={15} />
-          Add your first location
+          {t("myLocationTab.onboarding.cta")}
         </button>
       </div>
     );
@@ -97,7 +98,7 @@ export function MyLocationTab({
       {/* Location picker */}
       {isOwner ? (
         <div>
-          <p className="section-label mb-2">Location</p>
+          <p className="section-label mb-2">{t("myLocationTab.locationLabel")}</p>
           <div className="relative">
             <select
               value={currentLocationId}
@@ -124,13 +125,13 @@ export function MyLocationTab({
         {/* Left — location details */}
         <div className="card-surface p-4 flex-1 space-y-3 min-w-0">
           <div className="flex items-center justify-between">
-            <p className="section-label">Location details</p>
+            <p className="section-label">{t("myLocationTab.locationDetails")}</p>
             {canEditLocation && (
               <button
                 onClick={() => onEditLocation(currentLocation)}
                 className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
               >
-                <Pencil size={12} /> Edit
+                <Pencil size={12} /> {t("myLocationTab.edit")}
               </button>
             )}
           </div>
@@ -149,7 +150,7 @@ export function MyLocationTab({
             ) : (
               <div className="flex items-start gap-2 rounded-xl border border-status-warn/40 bg-status-warn/10 px-3 py-2">
                 <Mail size={13} className="text-status-warn mt-0.5 shrink-0" />
-                <p className="text-xs text-status-warn font-medium">No alert email — tap Edit to add one.</p>
+                <p className="text-xs text-status-warn font-medium">{t("myLocationTab.noAlertEmail")}</p>
               </div>
             )}
             {currentLocation.contact_phone && (
@@ -172,7 +173,7 @@ export function MyLocationTab({
               style={{ height: 120 }}
             >
               <iframe
-                title="Location map"
+                title={t("myLocationTab.mapTitle")}
                 src={
                   `https://www.openstreetmap.org/export/embed.html` +
                   `?bbox=${currentLocation.lng - 0.003},${currentLocation.lat - 0.002},${currentLocation.lng + 0.003},${currentLocation.lat + 0.002}` +
@@ -194,7 +195,7 @@ export function MyLocationTab({
             onClick={onLaunchKiosk}
             className="w-full rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-row items-center justify-center gap-2 shadow-md px-2 py-3"
           >
-            <span>Kiosk</span>
+            <span>{t("myLocationTab.kiosk")}</span>
             <Tablet size={14} />
           </button>
         </div>
@@ -204,13 +205,13 @@ export function MyLocationTab({
       {/* Staff Profiles */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <p className="section-label">Staff profiles</p>
+          <p className="section-label">{t("myLocationTab.staffProfiles")}</p>
           {canManageStaff && (
             <button
               onClick={onAddStaff}
               className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
             >
-              <Plus size={12} /> Add
+              <Plus size={12} /> {t("myLocationTab.add")}
             </button>
           )}
         </div>
@@ -221,7 +222,7 @@ export function MyLocationTab({
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text" value={staffSearch} onChange={e => setStaffSearch(e.target.value)}
-              placeholder="Search staff…"
+              placeholder={t("myLocationTab.searchStaff")}
               className="w-full border border-border rounded-xl pl-8 pr-4 py-2 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
@@ -235,9 +236,9 @@ export function MyLocationTab({
             )}
           >
             {showArchived ? (
-              <><RotateCcw size={11} /> Active</>
+              <><RotateCcw size={11} /> {t("myLocationTab.active")}</>
             ) : (
-              <><Archive size={11} /> Archived</>
+              <><Archive size={11} /> {t("myLocationTab.archived")}</>
             )}
           </button>
         </div>
@@ -246,7 +247,7 @@ export function MyLocationTab({
           {filteredStaff.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                {showArchived ? "No archived profiles." : "No active profiles."}
+                {showArchived ? t("myLocationTab.noArchivedProfiles") : t("myLocationTab.noActiveProfiles")}
               </p>
             </div>
           ) : filteredStaff.map(sp => {
@@ -270,7 +271,7 @@ export function MyLocationTab({
                     {canManageStaff && (
                       <button
                         onClick={() => onEditStaff(sp)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Edit"
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label={t("myLocationTab.editAria")}
                       >
                         <Pencil size={14} className="text-muted-foreground" />
                       </button>
@@ -278,7 +279,7 @@ export function MyLocationTab({
                     {canManageStaff && (
                       <button
                         onClick={() => onArchiveStaff(sp)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Archive"
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label={t("myLocationTab.archiveAria")}
                       >
                         <Archive size={14} className="text-muted-foreground" />
                       </button>
@@ -288,14 +289,14 @@ export function MyLocationTab({
                   <>
                     <button
                       onClick={() => onRestoreStaff(sp.id)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Restore"
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label={t("myLocationTab.restoreAria")}
                     >
                       <RotateCcw size={14} className="text-sage" />
                     </button>
                     {canManageStaff && (
                       <button
                         onClick={() => onDeleteStaff(sp)}
-                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label="Delete permanently"
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors" aria-label={t("myLocationTab.deletePermanentlyAria")}
                       >
                         <Trash2 size={14} className="text-status-error" />
                       </button>
@@ -311,9 +312,9 @@ export function MyLocationTab({
             where the setting is contextually relevant. Hidden in active view. */}
         {showArchived && canEditThreshold && (
           <div className="border border-border rounded-2xl px-4 py-3 bg-muted/30 mt-3">
-            <p className="section-label mb-1">Auto-archive threshold</p>
+            <p className="section-label mb-1">{t("myLocationTab.autoArchiveThreshold")}</p>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Staff profiles inactive for this many days are automatically archived.
+              {t("myLocationTab.autoArchiveDescription")}
             </p>
             {(() => {
               const parsedDraft = thresholdDraft !== null
@@ -340,7 +341,7 @@ export function MyLocationTab({
                       thresholdDraft !== null && !isDraftValid ? "border-status-error" : "border-border",
                     )}
                   />
-                  <span className="text-sm text-muted-foreground">days</span>
+                  <span className="text-sm text-muted-foreground">{t("myLocationTab.days")}</span>
                   {thresholdDraft !== null && (
                     isDraftValid ? (
                       isDraftChanged ? (
@@ -351,11 +352,11 @@ export function MyLocationTab({
                           }}
                           className="px-3 py-2 rounded-xl text-xs font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
                         >
-                          Save
+                          {t("myLocationTab.save")}
                         </button>
                       ) : null
                     ) : (
-                      <span className="text-xs text-status-error">Enter a number ≥ 1</span>
+                      <span className="text-xs text-status-error">{t("myLocationTab.enterNumberAtLeastOne")}</span>
                     )
                   )}
                 </div>
@@ -372,11 +373,13 @@ export function MyLocationTab({
           return (
             <>
               <p className="section-label mb-3">
-                Assigned checklists{locationChecklists.length > 0 ? ` (${locationChecklists.length})` : ""}
+                {locationChecklists.length > 0
+                  ? t("myLocationTab.assignedChecklistsWithCount", { count: locationChecklists.length })
+                  : t("myLocationTab.assignedChecklists")}
               </p>
               {locationChecklists.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No checklists assigned to this location yet.
+                  {t("myLocationTab.noChecklistsAssigned")}
                 </p>
               ) : (
                 <div className="space-y-2">
