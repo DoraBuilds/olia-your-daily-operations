@@ -16,19 +16,21 @@ import enAdmin from "@/locales/en/admin.json";
 import esAdmin from "@/locales/es/admin.json";
 import enBilling from "@/locales/en/billing.json";
 import esBilling from "@/locales/es/billing.json";
+import enAuth from "@/locales/en/auth.json";
+import esAuth from "@/locales/es/auth.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
 const resources = {
-  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications, checklists: enChecklists, infohub: enInfohub, admin: enAdmin, billing: enBilling },
-  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications, checklists: esChecklists, infohub: esInfohub, admin: esAdmin, billing: esBilling },
+  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications, checklists: enChecklists, infohub: enInfohub, admin: enAdmin, billing: enBilling, auth: enAuth },
+  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications, checklists: esChecklists, infohub: esInfohub, admin: esAdmin, billing: esBilling, auth: esAuth },
 };
 
-// Namespaces are added here as each app area is translated
-// (login/signup, ...) — see issue #594.
-const NAMESPACES = ["common", "kiosk", "dashboard", "notifications", "checklists", "infohub", "admin", "billing"];
+// This is the full namespace set — Phase 4 string-extraction sweep
+// (issue #594) is complete as of this namespace being added.
+const NAMESPACES = ["common", "kiosk", "dashboard", "notifications", "checklists", "infohub", "admin", "billing", "auth"];
 
 // Picks a supported language from a raw BCP-47 tag (e.g. "es-MX" -> "es"),
 // falling back to DEFAULT_LANGUAGE for anything unsupported/unset. Kept as a

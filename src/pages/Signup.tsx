@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ export default function Signup() {
   // (see AuthContext's accept_invite failure message) and show a distinct
   // recovery path instead of the generic signup form.
   const isInviteFailure = accountReset && !!resetDetail && /invit/i.test(resetDetail);
+  const { t } = useTranslation("auth");
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [businessName, setBusinessName] = useState("");
@@ -184,17 +186,16 @@ export default function Signup() {
         <SignupHeader />
         <div className="w-full max-w-sm space-y-4">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto" />
-          <h1 className="font-display text-2xl text-foreground">We couldn't verify your invitation</h1>
+          <h1 className="font-display text-2xl text-foreground">{t("signup.inviteFailureTitle")}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">{resetDetail}</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Ask the person who invited you to resend it from Admin → Users, then open the new link they send —
-            or try signing in again if you've accepted an invite before.
+            {t("signup.inviteFailureHint")}
           </p>
           <Link
             to="/login"
             className="inline-block text-sm text-sage font-medium underline underline-offset-2"
           >
-            Sign in instead
+            {t("signup.signInInstead")}
           </Link>
         </div>
       </div>
@@ -215,18 +216,18 @@ export default function Signup() {
               #
             </div>
             <div>
-              <h1 className="font-display text-2xl text-foreground">Enter your code</h1>
+              <h1 className="font-display text-2xl text-foreground">{t("signup.enterCodeTitle")}</h1>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                We sent an 8-digit code to{" "}
+                {t("signup.enterCodeBody")}{" "}
                 <span className="text-foreground font-medium">{email}</span>.
-                Enter it here to finish creating your account.
+                {t("signup.enterCodeSuffix")}
               </p>
             </div>
           </div>
 
           <form onSubmit={handleVerifyCode} className="space-y-4">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">One-time code</label>
+              <label className="text-xs text-muted-foreground mb-1 block">{t("signup.oneTimeCode")}</label>
               <input
                 autoFocus
                 type="text"
@@ -234,7 +235,7 @@ export default function Signup() {
                 autoComplete="one-time-code"
                 value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="Enter the code from your email"
+                placeholder={t("signup.codePlaceholder")}
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
@@ -253,7 +254,7 @@ export default function Signup() {
                   : "bg-muted text-muted-foreground cursor-not-allowed",
               )}
             >
-              {loading ? "Verifying…" : "Verify code"}
+              {loading ? t("signup.verifying") : t("signup.verifyCode")}
             </button>
           </form>
 
@@ -265,7 +266,7 @@ export default function Signup() {
               className="text-xs font-medium hover:underline disabled:opacity-50"
               style={{ color: "#007E70" }}
             >
-              {resending ? "Resending…" : "Resend code"}
+              {resending ? t("signup.resending") : t("signup.resendCode")}
             </button>
             <button
               type="button"
@@ -276,14 +277,14 @@ export default function Signup() {
               }}
               className="text-xs font-medium text-muted-foreground hover:text-foreground"
             >
-              Change email
+              {t("signup.changeEmail")}
             </button>
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            Already confirmed?{" "}
+            {t("signup.alreadyConfirmed")}{" "}
             <Link to="/login" className="text-sage font-medium hover:underline">
-              Sign in
+              {t("signup.signIn")}
             </Link>
           </p>
         </div>
@@ -301,9 +302,9 @@ export default function Signup() {
             genuine setup failures (e.g. a new owner's org creation didn't finish). */}
         {accountReset && (
           <div className="rounded-xl bg-status-warn/10 border border-status-warn/20 px-4 py-3 text-sm text-foreground leading-relaxed">
-            <p className="font-medium mb-0.5">Your account setup didn't finish.</p>
+            <p className="font-medium mb-0.5">{t("signup.accountSetupNotFinished")}</p>
             <p className="text-muted-foreground text-xs">
-              {resetDetail ?? "Please create your account again to get started."}
+              {resetDetail ?? t("signup.createAccountAgain")}
             </p>
           </div>
         )}
@@ -311,41 +312,41 @@ export default function Signup() {
         {/* Account-deleted notice */}
         {accountDeleted && (
           <div className="rounded-xl bg-muted border border-border px-4 py-3 text-sm text-foreground leading-relaxed">
-            <p className="font-medium mb-0.5">Your account has been deleted.</p>
-            <p className="text-muted-foreground text-xs">All data has been permanently removed. You can create a new account below.</p>
+            <p className="font-medium mb-0.5">{t("signup.accountDeleted")}</p>
+            <p className="text-muted-foreground text-xs">{t("signup.accountDeletedBody")}</p>
           </div>
         )}
 
         {/* Logo */}
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-foreground">Create your account</h1>
-          <p className="text-sm text-muted-foreground mt-1">Set up Olia for your business with a one-time code</p>
+          <h1 className="font-display text-2xl text-foreground">{t("signup.heading")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("signup.subheading")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Brand name */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Brand name</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("signup.brandNameLabel")}</label>
             <input
               autoFocus
               id="signup-business-name"
               type="text"
               value={businessName}
               onChange={e => setBusinessName(e.target.value)}
-              placeholder="e.g. The Crown Restaurant"
+              placeholder={t("signup.brandNamePlaceholder")}
               required
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              The name of your brand or restaurant.
+              {t("signup.brandNameHint")}
             </p>
           </div>
 
           {/* First name + Last name */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">First name</label>
+              <label className="text-xs text-muted-foreground mb-1 block">{t("signup.firstName")}</label>
               <input
                 id="signup-first-name"
                 type="text"
@@ -357,7 +358,7 @@ export default function Signup() {
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">Last name</label>
+              <label className="text-xs text-muted-foreground mb-1 block">{t("signup.lastName")}</label>
               <input
                 id="signup-last-name"
                 type="text"
@@ -371,13 +372,13 @@ export default function Signup() {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("signup.email")}</label>
             <input
               id="signup-email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@yourbusiness.com"
+              placeholder={t("signup.emailPlaceholder")}
               required
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
@@ -398,14 +399,14 @@ export default function Signup() {
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
-            {loading ? "Sending code…" : "Create account"}
+            {loading ? t("signup.sendingCode") : t("signup.createAccount")}
           </button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          Already have an account?{" "}
+          {t("signup.alreadyHaveAccount")}{" "}
           <Link to="/login" className="text-sage font-medium hover:underline">
-            Sign in
+            {t("signup.signInLink")}
           </Link>
         </p>
       </div>

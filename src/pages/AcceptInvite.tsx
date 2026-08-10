@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -19,6 +20,7 @@ function isEmailRateLimited(message: string | null | undefined) {
 }
 
 export default function AcceptInvite() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -82,16 +84,16 @@ export default function AcceptInvite() {
     if (authError) {
       if (isEmailRateLimited(authError.message)) {
         setStep("code");
-        setInfo("Too many email attempts. If you already received a code, enter it below.");
+        setInfo(t("acceptInvite.rateLimitedInfo"));
         return;
       }
       localStorage.removeItem("olia_pending_invite_token");
-      setError(authError.message ?? "Something went wrong. Please try again.");
+      setError(authError.message ?? t("acceptInvite.genericError"));
       return;
     }
 
     setStep("code");
-    setInfo(`We sent a verification code to ${invite.email}.`);
+    setInfo(t("acceptInvite.codeSentInfo", { email: invite.email }));
   };
 
   const verifyCode = async () => {
@@ -108,7 +110,7 @@ export default function AcceptInvite() {
     setLoading(false);
 
     if (authError) {
-      setError(authError.message ?? "That code didn't work. Please try again.");
+      setError(authError.message ?? t("acceptInvite.codeFailedError"));
       return;
     }
     // AuthContext.fetchTeamMember will pick up olia_pending_invite_token
@@ -129,15 +131,15 @@ export default function AcceptInvite() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-sm">
-          <h1 className="font-display text-2xl text-foreground mb-3">Invite not found</h1>
+          <h1 className="font-display text-2xl text-foreground mb-3">{t("acceptInvite.notFoundTitle")}</h1>
           <p className="text-muted-foreground text-sm mb-6">
-            This invitation link is invalid or has already been used. Ask your admin to send a new one.
+            {t("acceptInvite.notFoundBody")}
           </p>
           <button
             onClick={() => navigate("/login")}
             className="text-sm text-sage font-medium underline underline-offset-2"
           >
-            Sign in instead
+            {t("acceptInvite.signInInstead")}
           </button>
         </div>
       </div>
@@ -149,10 +151,10 @@ export default function AcceptInvite() {
       <div className="w-full max-w-sm space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
-          <h1 className="font-display text-3xl text-foreground">You're invited!</h1>
+          <h1 className="font-display text-3xl text-foreground">{t("acceptInvite.youAreInvited")}</h1>
           {invite && (
             <p className="text-muted-foreground text-sm">
-              Join <span className="font-medium text-foreground">{invite.organization_name}</span> on Olia
+              {t("acceptInvite.joinOrgPrefix")} <span className="font-medium text-foreground">{invite.organization_name}</span> {t("acceptInvite.joinOrgSuffix")}
             </p>
           )}
         </div>
@@ -164,7 +166,7 @@ export default function AcceptInvite() {
             <>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  We'll send a verification code to:
+                  {t("acceptInvite.willSendCode")}
                 </p>
                 <p className="text-sm font-medium text-foreground bg-muted/40 rounded-lg px-3 py-2 break-all">
                   {invite?.email}
@@ -181,7 +183,7 @@ export default function AcceptInvite() {
                 className="w-full py-3 px-4 rounded-2xl bg-sage text-white font-semibold text-sm
                            hover:bg-sage-deep disabled:opacity-50 transition-colors"
               >
-                {loading ? "Sending code…" : "Accept invitation"}
+                {loading ? t("acceptInvite.sendingCode") : t("acceptInvite.acceptInvitation")}
               </button>
             </>
           )}
@@ -194,13 +196,13 @@ export default function AcceptInvite() {
 
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Verification code
+                  {t("acceptInvite.verificationCode")}
                 </label>
                 <input
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="Enter your code"
+                  placeholder={t("acceptInvite.codePlaceholder")}
                   value={code}
                   onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
                   onKeyDown={e => e.key === "Enter" && verifyCode()}
@@ -222,7 +224,7 @@ export default function AcceptInvite() {
                 className="w-full py-3 px-4 rounded-2xl bg-sage text-white font-semibold text-sm
                            hover:bg-sage-deep disabled:opacity-50 transition-colors"
               >
-                {loading ? "Verifying…" : "Verify & sign in"}
+                {loading ? t("acceptInvite.verifying") : t("acceptInvite.verifyAndSignIn")}
               </button>
 
               <button
@@ -230,19 +232,19 @@ export default function AcceptInvite() {
                 disabled={loading}
                 className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
               >
-                Resend code
+                {t("acceptInvite.resendCode")}
               </button>
             </>
           )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Already have an account?{" "}
+          {t("acceptInvite.alreadyHaveAccount")}{" "}
           <button
             onClick={() => navigate("/login")}
             className="text-sage font-medium underline underline-offset-2"
           >
-            Sign in
+            {t("acceptInvite.signIn")}
           </button>
         </p>
       </div>
