@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X, Sparkles, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import type { SectionDef } from "./types";
 
 export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void; onGenerate: (title: string, sections: SectionDef[]) => void }) {
+  const { t } = useTranslation("checklists");
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,11 +25,11 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
       if (data?.error) throw new Error(data.error);
 
       const { title, sections } = data as { title: string; sections: SectionDef[] };
-      if (!title || !Array.isArray(sections)) throw new Error("Unexpected response from AI. Please try again.");
+      if (!title || !Array.isArray(sections)) throw new Error(t("buildAI.unexpectedResponse"));
       onGenerate(title, sections);
       onClose();
     } catch (e: any) {
-      setError(e?.message ?? "Something went wrong. Please try again.");
+      setError(e?.message ?? t("buildAI.genericError"));
     } finally {
       setGenerating(false);
     }
@@ -38,17 +40,17 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-5 animate-fade-in sm:max-w-2xl sm:rounded-2xl sm:pb-8">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground flex items-center gap-2">
-            Build with AI
+            {t("buildAI.heading")}
             <Sparkles size={16} className="text-lavender" />
           </h2>
           <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
-        <p className="text-sm text-muted-foreground">Describe the checklist you need and AI will generate it for you.</p>
+        <p className="text-sm text-muted-foreground">{t("buildAI.description")}</p>
         <textarea
           autoFocus
-          placeholder="e.g. Create a daily opening checklist for a restaurant kitchen with food safety, cleanliness, and equipment checks…"
+          placeholder={t("buildAI.promptPlaceholder")}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           rows={4}
@@ -68,7 +70,7 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
           )}
         >
           <Sparkles size={14} />
-          {generating ? "Generating…" : "Generate checklist"}
+          {generating ? t("buildAI.generating") : t("buildAI.generate")}
         </button>
       </div>
     </div>,
