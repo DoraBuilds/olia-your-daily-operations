@@ -1,0 +1,60 @@
+{
+  "tabs": {
+    "locations": "Locations",
+    "users": "Users",
+    "account": "Account",
+    "notifications": "Notifications",
+    "billing": "Billing"
+  },
+  "userLabelFallback": "Admin",
+  "toast": {
+    "locationUpdated": "Location updated",
+    "locationCreated": "Location created",
+    "growthLimitError": "Growth includes up to 10 locations. Contact us to move to Enterprise for unlimited locations.",
+    "bookADemo": "Book a demo",
+    "starterLimitError": "Starter includes {{max}} location. Upgrade to Growth to add more locations.",
+    "upgrade": "Upgrade",
+    "saveLocationFailed": "Failed to save location: {{error}}",
+    "locationDeleted": "Location deleted",
+    "deleteLocationFailed": "Failed to delete location: {{error}}",
+    "staffProfileUpdated": "Staff profile updated",
+    "staffProfileCreated": "Staff profile created",
+    "saveStaffFailed": "Failed to save staff profile: {{error}}",
+    "staffArchived": "{{name}} archived",
+    "archiveStaffFailed": "Could not archive: {{error}}",
+    "profileRestored": "Profile restored",
+    "restoreStaffFailed": "Could not restore: {{error}}",
+    "inviteSent": "Invite sent to {{email}}",
+    "inviteFailed": "Team member saved, but invite email failed. Try re-sending from the member row.",
+    "cannotRemoveSelf": "You cannot remove yourself from the team."
+  },
+  "confirm": {
+    "deleteLocationTitle": "Delete location",
+    "deleteLocationMessage": "This will permanently remove the location and cannot be undone.",
+    "delete": "Delete",
+    "archiveStaffTitle": "Archive staff profile",
+    "archiveStaffMessage": "will be archived and removed from active lists. They can be restored later.",
+    "archive": "Archive",
+    "deleteStaffTitle": "Delete staff profile",
+    "deleteStaffPrefix": "Permanently delete",
+    "deleteStaffSuffix": "? This cannot be undone.",
+    "deletePermanently": "Delete permanently",
+    "removeMemberTitle": "Remove team member",
+    "removeMemberPrefix": "Remove",
+    "removeMemberSuffix": "from the team? This cannot be undone.",
+    "remove": "Remove"
+  },
+  "locationLimit": {
+    "growthTitle": "Scale beyond 10 locations with Enterprise",
+    "growthBody": "Growth supports up to 10 locations. Enterprise is built for larger hospitality groups that need unlimited locations, a dedicated account manager, and custom onboarding.",
+    "currentPlan": "Current plan: {{plan}}",
+    "bookADemo": "Book a demo",
+    "notNow": "Not now",
+    "starterTitle": "Add more locations with Growth",
+    "starterBody": "Starter includes 1 location. Growth supports up to 10 locations so you can manage multiple venues and teams from one account.",
+    "growthPricePerMonth": "Growth — {{currency}}{{price}} / month",
+    "viewPlans": "View plans",
+    "upgradeAtOlia": "Upgrade at olia.app",
+    "upgradeToGrowth": "Upgrade to Growth"
+  }
+}

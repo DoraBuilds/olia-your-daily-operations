@@ -1,0 +1,60 @@
+{
+  "tabs": {
+    "locations": "Ubicaciones",
+    "users": "Usuarios",
+    "account": "Cuenta",
+    "notifications": "Notificaciones",
+    "billing": "Facturación"
+  },
+  "userLabelFallback": "Admin",
+  "toast": {
+    "locationUpdated": "Ubicación actualizada",
+    "locationCreated": "Ubicación creada",
+    "growthLimitError": "Growth incluye hasta 10 ubicaciones. Contáctanos para pasar a Enterprise y tener ubicaciones ilimitadas.",
+    "bookADemo": "Reservar una demo",
+    "starterLimitError": "Starter incluye {{max}} ubicación. Actualiza a Growth para agregar más ubicaciones.",
+    "upgrade": "Actualizar",
+    "saveLocationFailed": "No se pudo guardar la ubicación: {{error}}",
+    "locationDeleted": "Ubicación eliminada",
+    "deleteLocationFailed": "No se pudo eliminar la ubicación: {{error}}",
+    "staffProfileUpdated": "Perfil de personal actualizado",
+    "staffProfileCreated": "Perfil de personal creado",
+    "saveStaffFailed": "No se pudo guardar el perfil de personal: {{error}}",
+    "staffArchived": "{{name}} archivado",
+    "archiveStaffFailed": "No se pudo archivar: {{error}}",
+    "profileRestored": "Perfil restaurado",
+    "restoreStaffFailed": "No se pudo restaurar: {{error}}",
+    "inviteSent": "Invitación enviada a {{email}}",
+    "inviteFailed": "Miembro del equipo guardado, pero falló el correo de invitación. Intenta reenviarlo desde la fila del miembro.",
+    "cannotRemoveSelf": "No puedes eliminarte a ti mismo del equipo."
+  },
+  "confirm": {
+    "deleteLocationTitle": "Eliminar ubicación",
+    "deleteLocationMessage": "Esto eliminará permanentemente la ubicación y no se puede deshacer.",
+    "delete": "Eliminar",
+    "archiveStaffTitle": "Archivar perfil de personal",
+    "archiveStaffMessage": "será archivado y eliminado de las listas activas. Se puede restaurar más tarde.",
+    "archive": "Archivar",
+    "deleteStaffTitle": "Eliminar perfil de personal",
+    "deleteStaffPrefix": "¿Eliminar permanentemente a",
+    "deleteStaffSuffix": "? Esto no se puede deshacer.",
+    "deletePermanently": "Eliminar permanentemente",
+    "removeMemberTitle": "Quitar miembro del equipo",
+    "removeMemberPrefix": "¿Quitar a",
+    "removeMemberSuffix": "del equipo? Esto no se puede deshacer.",
+    "remove": "Quitar"
+  },
+  "locationLimit": {
+    "growthTitle": "Supera las 10 ubicaciones con Enterprise",
+    "growthBody": "Growth admite hasta 10 ubicaciones. Enterprise está diseñado para grupos hoteleros más grandes que necesitan ubicaciones ilimitadas, un gerente de cuenta dedicado y una incorporación personalizada.",
+    "currentPlan": "Plan actual: {{plan}}",
+    "bookADemo": "Reservar una demo",
+    "notNow": "Ahora no",
+    "starterTitle": "Agrega más ubicaciones con Growth",
+    "starterBody": "Starter incluye 1 ubicación. Growth admite hasta 10 ubicaciones para que puedas gestionar varios locales y equipos desde una sola cuenta.",
+    "growthPricePerMonth": "Growth — {{currency}}{{price}} / mes",
+    "viewPlans": "Ver planes",
+    "upgradeAtOlia": "Actualizar en olia.app",
+    "upgradeToGrowth": "Actualizar a Growth"
+  }
+}
