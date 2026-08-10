@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/sonner";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
   AlertTriangle, Upload, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
@@ -21,8 +22,8 @@ import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
   QuestionDef, ResponseType
 } from "./types";
-import { parseScheduleType, SCHEDULE_LABELS } from "./types";
-import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
+import { parseScheduleType } from "./types";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
@@ -40,18 +41,20 @@ export function clearChecklistDraft() {
   try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
 }
 
-const responseTypeLabel = (type: ResponseType) => RESPONSE_TYPES.find(r => r.key === type)?.label || "Multiple choice";
 const getQuestionChoices = (q: QuestionDef) => q.choices?.length
   ? q.choices
   : (q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId)?.choices ?? [] : []);
-const MC_COLOR_OPTIONS = [
-  { label: "Green", value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
-  { label: "Yellow", value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
-  { label: "Red", value: "bg-status-error/10 border-status-error/40 text-status-error" },
-  { label: "Blue", value: "bg-blue-100 border-blue-300 text-blue-700" },
-  { label: "Neutral", value: "bg-muted text-muted-foreground border-border" },
-];
-const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
+
+function useMcColorOptions(t: (key: string) => string) {
+  return [
+    { label: t("followUpEditor.multipleChoice.colors.green"), value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
+    { label: t("followUpEditor.multipleChoice.colors.yellow"), value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
+    { label: t("followUpEditor.multipleChoice.colors.red"), value: "bg-status-error/10 border-status-error/40 text-status-error" },
+    { label: t("followUpEditor.multipleChoice.colors.blue"), value: "bg-blue-100 border-blue-300 text-blue-700" },
+    { label: t("followUpEditor.multipleChoice.colors.neutral"), value: "bg-muted text-muted-foreground border-border" },
+  ];
+}
+const DEFAULT_MC_COLOR = "bg-muted text-muted-foreground border-border";
 
 interface ChecklistBuilderModalProps {
   onClose: () => void;
@@ -77,6 +80,10 @@ export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
   initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
+  const { t } = useTranslation("checklists");
+  const MC_COLOR_OPTIONS = useMcColorOptions(t);
+  const responseTypeLabel = (type: ResponseType) =>
+    RESPONSE_TYPES.find(r => r.key === type) ? getResponseTypeLabel(type) : t("preview.multipleChoiceFallback");
   const createAlert = useCreateAlert();
   const { user, teamMember: authTeamMember } = useAuth();
   const { data: dbLocations = [] } = useLocations();
@@ -227,13 +234,13 @@ export function ChecklistBuilderModal({
   const [instructionPickerQuestionId, setInstructionPickerQuestionId] = useState<string | null>(null);
 
   const SCHEDULE_OPTIONS: { key: ScheduleType; label: string }[] = [
-    { key: "none", label: SCHEDULE_LABELS.none },
-    { key: "daily", label: SCHEDULE_LABELS.daily },
-    { key: "weekday", label: SCHEDULE_LABELS.weekday },
-    { key: "weekly", label: SCHEDULE_LABELS.weekly },
-    { key: "monthly", label: SCHEDULE_LABELS.monthly },
-    { key: "yearly", label: SCHEDULE_LABELS.yearly },
-    { key: "custom", label: "Custom" },
+    { key: "none", label: t("schedule.none") },
+    { key: "daily", label: t("schedule.daily") },
+    { key: "weekday", label: t("schedule.weekday") },
+    { key: "weekly", label: t("schedule.weekly") },
+    { key: "monthly", label: t("schedule.monthly") },
+    { key: "yearly", label: t("schedule.yearly") },
+    { key: "custom", label: t("builder.schedule.customOption") },
   ];
 
   const addQuestion = (sectionIdx: number) => {
@@ -415,9 +422,9 @@ export function ChecklistBuilderModal({
     const toastRlsError = (err: unknown) => {
       const msg: string = err instanceof Error ? err.message : (err as any)?.message ?? "";
       if (msg.toLowerCase().includes("row-level security") || msg.toLowerCase().includes("rls")) {
-        toast.error("Could not save — you may have reached your plan's checklist limit. Delete unused checklists to free up space.");
+        toast.error(t("builder.toast.planLimitError"));
       } else {
-        toast.error(msg || "Could not save checklist — please try again.");
+        toast.error(msg || t("builder.toast.genericSaveError"));
       }
     };
 
@@ -443,7 +450,7 @@ export function ChecklistBuilderModal({
       initialSettingsRef.current = settingsSnapshot();
       onDirtyChange?.(false);
       setLastPublishedAt(new Date());
-      toast.success(isFirstPublish ? "Checklist published!" : "Changes saved!");
+      toast.success(isFirstPublish ? t("builder.toast.published") : t("builder.toast.changesSaved"));
     } catch (err) {
       toastRlsError(err);
     } finally {
@@ -459,7 +466,7 @@ export function ChecklistBuilderModal({
       <div className="relative flex justify-center py-0.5">
         <button
           type="button"
-          aria-label="Insert question or section"
+          aria-label={t("builder.insert.ariaLabel")}
           onClick={() => setInsertDropdown(isOpen ? null : { si, qi })}
           className="w-5 h-5 flex items-center justify-center rounded-full border border-dashed border-border text-muted-foreground hover:border-sage/60 hover:text-sage transition-colors"
         >
@@ -476,7 +483,7 @@ export function ChecklistBuilderModal({
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
             >
               <Plus size={11} className="text-sage shrink-0" />
-              <span className="text-xs text-foreground">Question</span>
+              <span className="text-xs text-foreground">{t("builder.insert.questionOption")}</span>
             </button>
             <button
               type="button"
@@ -484,7 +491,7 @@ export function ChecklistBuilderModal({
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
             >
               <Plus size={11} className="text-sage shrink-0" />
-              <span className="text-xs text-foreground">Section</span>
+              <span className="text-xs text-foreground">{t("builder.insert.sectionOption")}</span>
             </button>
           </div>
         )}
@@ -498,12 +505,12 @@ export function ChecklistBuilderModal({
       <div className="p-5 space-y-5">
         {asPage && (
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={16} /> Exit
+            <ArrowLeft size={16} /> {t("builder.exit")}
           </button>
         )}
         {/* Locations */}
         <div className="space-y-3">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Locations</label>
+          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.locations.heading")}</label>
           <div className="rounded-2xl border border-border bg-muted/40 p-3 space-y-3">
             <div className="flex items-center gap-2">
               <button
@@ -516,7 +523,7 @@ export function ChecklistBuilderModal({
                     : "border-border text-muted-foreground hover:border-sage/40",
                 )}
               >
-                All locations
+                {t("locations.all")}
               </button>
               <button
                 type="button"
@@ -528,7 +535,7 @@ export function ChecklistBuilderModal({
                     : "border-border text-muted-foreground hover:border-sage/40",
                 )}
               >
-                Select specific locations
+                {t("builder.locations.selectSpecific")}
               </button>
               {locationMode === "specific" && dbLocations.length > 0 && (
                 <button
@@ -536,7 +543,7 @@ export function ChecklistBuilderModal({
                   onClick={() => setSelectedLocationIds(dbLocations.map(loc => loc.id))}
                   className="ml-auto text-xs text-sage hover:text-sage-deep transition-colors"
                 >
-                  Select all
+                  {t("builder.locations.selectAll")}
                 </button>
               )}
             </div>
@@ -549,14 +556,14 @@ export function ChecklistBuilderModal({
                     type="text"
                     value={locationSearch}
                     onChange={e => setLocationSearch(e.target.value)}
-                    placeholder="Search locations or address"
+                    placeholder={t("builder.locations.searchPlaceholder")}
                     className="w-full border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                   {filteredLocations.length === 0 ? (
                     <p className="px-3 py-2 text-sm text-muted-foreground">
-                      No locations match your search.
+                      {t("builder.locations.noMatch")}
                     </p>
                   ) : filteredLocations.map(loc => {
                     const selected = selectedLocationIds.includes(loc.id);
@@ -595,18 +602,18 @@ export function ChecklistBuilderModal({
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-muted-foreground">
                 {locationMode === "all"
-                  ? "This checklist will appear at every location."
+                  ? t("builder.locations.appearEverywhere")
                   : selectedLocations.length === 0
-                    ? "Choose one or more locations."
+                    ? t("builder.locations.chooseOneOrMore")
                     : selectedLocations.length === 1
-                      ? `Selected: ${selectedLocations[0].name}`
-                      : `${selectedLocations.length} locations selected`}
+                      ? t("builder.locations.selectedOne", { name: selectedLocations[0].name })
+                      : t("builder.locations.selectedCount", { count: selectedLocations.length })}
               </p>
               {locationMode === "specific" && selectedLocations.length > 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
                   {selectedLocations.length === 1
-                    ? "Specific location selected"
-                    : `${selectedLocations.length} specific locations selected`}
+                    ? t("builder.locations.specificSelectedOne")
+                    : t("builder.locations.specificSelectedCount", { count: selectedLocations.length })}
                 </span>
               )}
             </div>
@@ -615,31 +622,31 @@ export function ChecklistBuilderModal({
 
         {/* Title */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Title <span className="text-status-error">*</span></label>
-          <input type="text" placeholder="e.g. Morning Opening Checklist" value={title}
+          <label className="text-xs text-muted-foreground mb-1 block">{t("builder.title.label")} <span className="text-status-error">*</span></label>
+          <input type="text" placeholder={t("builder.title.placeholder")} value={title}
             onChange={e => setTitle(e.target.value)}
             className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
 
         {/* Description */}
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Description</label>
-          <textarea placeholder="Optional description" value={description} onChange={e => setDescription(e.target.value)}
+          <label className="text-xs text-muted-foreground mb-1 block">{t("builder.description.label")}</label>
+          <textarea placeholder={t("builder.description.placeholder")} value={description} onChange={e => setDescription(e.target.value)}
             rows={2} className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted resize-none focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
 
         {/* Schedule */}
         <div className="space-y-4">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">Schedule</label>
+          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.schedule.heading")}</label>
 
           {/* Start date */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Start date</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("builder.schedule.startDate")}</label>
             <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
               <PopoverTrigger asChild>
                 <button className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted text-sm text-foreground hover:bg-muted/80 transition-colors">
                   <CalendarIcon size={14} className="text-muted-foreground shrink-0" />
-                  <span className="flex-1 text-left">{startDate ? format(startDate, "PPP") : "Select start date"}</span>
+                  <span className="flex-1 text-left">{startDate ? format(startDate, "PPP") : t("builder.schedule.selectStartDate")}</span>
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 z-[70]" align="start">
@@ -670,23 +677,23 @@ export function ChecklistBuilderModal({
               )}
             >
               <div>
-                <p className="text-sm font-medium text-foreground">Visibility window</p>
+                <p className="text-sm font-medium text-foreground">{t("builder.schedule.visibilityWindow")}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Optional. Leave it off and the checklist stays visible all day.
+                  {t("builder.schedule.visibilityOptional")}
                 </p>
               </div>
               <span className={cn(
                 "text-xs font-semibold px-2.5 py-1 rounded-full",
                 visibilityWindowEnabled ? "bg-sage text-primary-foreground" : "bg-muted text-muted-foreground",
               )}>
-                {visibilityWindowEnabled ? "On" : "Off"}
+                {visibilityWindowEnabled ? t("builder.schedule.on") : t("builder.schedule.off")}
               </span>
             </button>
 
             {visibilityWindowEnabled && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">From</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t("builder.schedule.from")}</label>
                   <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted">
                     <Clock size={14} className="text-muted-foreground shrink-0" />
                     <input
@@ -698,7 +705,7 @@ export function ChecklistBuilderModal({
               </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Until</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">{t("builder.schedule.until")}</label>
                   <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-muted">
                     <Clock size={14} className="text-muted-foreground shrink-0" />
                     <input
@@ -714,14 +721,14 @@ export function ChecklistBuilderModal({
 
             <p className="text-sm italic text-muted-foreground">
               {visibilityWindowEnabled
-                ? `This checklist will only be visible on the kiosk from ${formatTime12h(visibilityFrom)} to ${formatTime12h(visibilityUntil)}.`
-                : "No visibility window set. The checklist will be visible for the full scheduled day until completed."}
+                ? t("builder.schedule.visibleWindowNotice", { from: formatTime12h(visibilityFrom), to: formatTime12h(visibilityUntil) })
+                : t("builder.schedule.noWindowNotice")}
             </p>
           </div>
 
           {/* Repeat */}
           <div>
-            <label className="text-xs text-muted-foreground mb-2 block">Repeat</label>
+            <label className="text-xs text-muted-foreground mb-2 block">{t("builder.schedule.repeat")}</label>
             <div className="flex flex-wrap gap-2">
               {SCHEDULE_OPTIONS.map(opt => (
                 <button key={opt.key} onClick={() => {
@@ -738,7 +745,7 @@ export function ChecklistBuilderModal({
             {schedule === "custom" && (
               <button onClick={() => setShowCustomRecurrence(true)}
                 className="mt-2 text-xs text-sage hover:underline">
-                Edit custom recurrence →
+                {t("builder.schedule.editCustomRecurrence")}
               </button>
             )}
           </div>
@@ -748,27 +755,30 @@ export function ChecklistBuilderModal({
             <p className="text-sm italic text-muted-foreground">
               {(() => {
                 const dateStr = format(startDate, "dd/MM/yyyy");
-                if (schedule === "none") return `Scheduled once on ${dateStr}.`;
+                if (schedule === "none") return t("builder.schedule.scheduledOnce", { date: dateStr });
                 const repeatLabel = (() => {
                   switch (schedule) {
-                    case "daily": return "repeat every day";
-                    case "weekday": return "repeat every weekday";
-                    case "weekly": return `repeat every following ${format(startDate, "EEEE")}`;
-                    case "monthly": return "repeat every month";
-                    case "yearly": return "repeat every year";
+                    case "daily": return t("builder.schedule.repeatDaily");
+                    case "weekday": return t("builder.schedule.repeatWeekday");
+                    case "weekly": return t("builder.schedule.repeatWeeklyOn", { weekday: format(startDate, "EEEE") });
+                    case "monthly": return t("builder.schedule.repeatMonthly");
+                    case "yearly": return t("builder.schedule.repeatYearly");
                     case "custom": {
                       const { interval, unit, weekDays } = customRecurrence;
                       if (unit === "week" && weekDays.length > 0) {
-                        const dm: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
-                        const days = weekDays.map(d => dm[d] || d).join(", ");
-                        return interval === 1 ? `repeat every week on ${days}` : `repeat every ${interval} weeks on ${days}`;
+                        const days = weekDays.map(d => t(`builder.schedule.weekdays.${d}`)).join(", ");
+                        return interval === 1
+                          ? t("builder.schedule.repeatWeekOn", { days })
+                          : t("builder.schedule.repeatWeeksOn", { interval, days });
                       }
-                      return interval === 1 ? `repeat every ${unit}` : `repeat every ${interval} ${unit}s`;
+                      return interval === 1
+                        ? t("builder.schedule.repeatUnit", { unit })
+                        : t("builder.schedule.repeatUnits", { interval, unit });
                     }
                     default: return "";
                   }
                 })();
-                return `First schedule starts on ${dateStr}, and will ${repeatLabel}.`;
+                return t("builder.schedule.firstScheduleStarts", { date: dateStr, repeat: repeatLabel });
               })()}
             </p>
           )}
@@ -782,10 +792,10 @@ export function ChecklistBuilderModal({
               <div className="pt-2">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Section</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">{t("builder.insert.sectionOption")}</span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
-                <input type="text" placeholder="Section name" value={section.name}
+                <input type="text" placeholder={t("builder.question.sectionNamePlaceholder")} value={section.name}
                   onChange={e => setSections(prev => prev.map((s, i) => i === si ? { ...s, name: e.target.value } : s))}
                   className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring font-medium" />
               </div>
@@ -826,8 +836,8 @@ export function ChecklistBuilderModal({
                     {section.questions.length > 1 && (
                       <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
                     )}
-                    <span className="text-xs text-muted-foreground mt-2.5 shrink-0">Q{qi + 1}</span>
-                    <input type="text" placeholder={q.responseType === "instruction" ? "Instruction title / heading" : "Write your question here"} value={q.text}
+                    <span className="text-xs text-muted-foreground mt-2.5 shrink-0">{t("builder.question.label", { n: qi + 1 })}</span>
+                    <input type="text" placeholder={q.responseType === "instruction" ? t("builder.question.instructionTitlePlaceholder") : t("builder.question.textPlaceholder")} value={q.text}
                       onChange={e => updateQuestion(si, qi, { text: e.target.value })}
                       className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
                     <button onClick={() => removeQuestion(si, qi)} className="p-1 mt-1 text-muted-foreground hover:text-status-error transition-colors">
@@ -838,12 +848,12 @@ export function ChecklistBuilderModal({
                   {(q.uncertain || q.warning) && (
                     <div className="flex items-start gap-2 rounded-lg border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-status-warn">
                       <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                      <span className="flex-1">{q.warning ?? "Response type uncertain — please review and choose the correct one below."}</span>
+                      <span className="flex-1">{q.warning ?? t("builder.question.uncertainWarningDefault")}</span>
                       <button
                         type="button"
                         onClick={() => updateQuestion(si, qi, { uncertain: undefined, warning: undefined })}
                         className="shrink-0 p-0.5 rounded hover:bg-status-warn/20 transition-colors"
-                        aria-label="Dismiss warning"
+                        aria-label={t("builder.question.dismissWarning")}
                       >
                         <X size={12} />
                       </button>
@@ -863,7 +873,7 @@ export function ChecklistBuilderModal({
                     </button>
                     {/* Required toggle — Issue 4: use right-[3px] for ON state */}
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <span className="text-xs text-muted-foreground">Required</span>
+                      <span className="text-xs text-muted-foreground">{t("preview.required")}</span>
                       <button
                         type="button"
                         onClick={() => updateQuestion(si, qi, { required: !q.required })}
@@ -883,9 +893,9 @@ export function ChecklistBuilderModal({
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground">Number response</p>
+                          <p className="text-xs font-medium text-muted-foreground">{t("builder.number.heading")}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Enable temperature mode to set an acceptable range and show a slider in kiosk.
+                            {t("builder.number.description")}
                           </p>
                         </div>
                         <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
@@ -909,7 +919,7 @@ export function ChecklistBuilderModal({
                                   : "text-muted-foreground hover:text-foreground",
                               )}
                             >
-                              {mode === "single" ? "Number" : "Temperature"}
+                              {mode === "single" ? t("builder.number.modeNumber") : t("builder.number.modeTemperature")}
                             </button>
                           ))}
                         </div>
@@ -917,14 +927,14 @@ export function ChecklistBuilderModal({
 
                       {(cfg.numberMode ?? "single") === "single" ? (
                         <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                          Staff will enter one number. Use logic rules below to trigger actions based on the value.
+                          {t("builder.number.singleModeNotice")}
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
-                              placeholder="Min"
+                              placeholder={t("builder.number.min")}
                               value={cfg.numberMin ?? ""}
                               onChange={e => updateQuestion(si, qi, {
                                 config: {
@@ -935,10 +945,10 @@ export function ChecklistBuilderModal({
                               })}
                               className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                             />
-                            <span className="text-xs text-muted-foreground">to</span>
+                            <span className="text-xs text-muted-foreground">{t("builder.number.to")}</span>
                             <input
                               type="number"
-                              placeholder="Max"
+                              placeholder={t("builder.number.max")}
                               value={cfg.numberMax ?? ""}
                               onChange={e => updateQuestion(si, qi, {
                                 config: {
@@ -951,7 +961,7 @@ export function ChecklistBuilderModal({
                             />
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground shrink-0">Unit</span>
+                            <span className="text-xs text-muted-foreground shrink-0">{t("builder.number.unit")}</span>
                             <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
                               {(["C", "F"] as const).map(unit => (
                                 <button
@@ -967,7 +977,7 @@ export function ChecklistBuilderModal({
                                       : "text-muted-foreground hover:text-foreground",
                                   )}
                                 >
-                                  {unit === "C" ? "Celsius" : "Fahrenheit"}
+                                  {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
                                 </button>
                               ))}
                             </div>
@@ -979,36 +989,36 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "text" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Text answer preview</p>
+                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.text.heading")}</p>
                       <div className="relative">
-                        <input type="text" placeholder="Respondent types here…" maxLength={160} disabled
+                        <input type="text" placeholder={t("followUpEditor.text.placeholder")} maxLength={160} disabled
                           className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground" />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">max 160 chars</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{t("followUpEditor.text.maxChars")}</span>
                       </div>
                     </div>
                   )}
 
                   {q.responseType === "media" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Media capture</p>
+                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.media.heading")}</p>
                       <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors">
                         <Camera size={16} />
-                        Take photo
+                        {t("preview.takePhoto")}
                       </button>
-                      <p className="text-xs text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
+                      <p className="text-xs text-muted-foreground">{t("followUpEditor.media.notice")}</p>
                     </div>
                   )}
 
                   {q.responseType === "multiple_choice" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-muted-foreground">Multiple choice options</p>
+                        <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
                         {mcSet && (
                           <span className="text-xs text-muted-foreground">{mcSet.name}</span>
                         )}
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-muted-foreground">Selection mode</span>
+                        <span className="text-[11px] text-muted-foreground">{t("builder.multipleChoice.selectionMode")}</span>
                         <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
                           {(["single", "multiple"] as const).map(mode => (
                             <button
@@ -1022,7 +1032,7 @@ export function ChecklistBuilderModal({
                                   : "text-muted-foreground hover:text-foreground",
                               )}
                             >
-                              {mode === "single" ? "Single" : "Multiple"}
+                              {mode === "single" ? t("followUpEditor.multipleChoice.modeSingle") : t("followUpEditor.multipleChoice.modeMultiple")}
                             </button>
                           ))}
                         </div>
@@ -1079,7 +1089,7 @@ export function ChecklistBuilderModal({
                                   });
                                 }}
                                 className="p-2 text-muted-foreground hover:text-status-error transition-colors"
-                                aria-label={`Delete option ${choice}`}
+                                aria-label={t("followUpEditor.multipleChoice.deleteOption", { choice })}
                               >
                                 <X size={14} />
                               </button>
@@ -1088,18 +1098,18 @@ export function ChecklistBuilderModal({
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          Choose a preset to add answer options.
+                          {t("followUpEditor.multipleChoice.choosePreset")}
                         </p>
                       )}
                               <button
                                 type="button"
                                 onClick={() => updateQuestion(si, qi, {
-                                  choices: [...questionChoices, `Option ${questionChoices.length + 1}`],
+                                  choices: [...questionChoices, t("followUpEditor.multipleChoice.newOptionLabel", { n: questionChoices.length + 1 })],
                                   choiceColors: [...questionChoiceColors, DEFAULT_MC_COLOR],
                                 })}
                                 className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                               >
-                        <Plus size={11} /> Add option
+                        <Plus size={11} /> {t("followUpEditor.multipleChoice.addOption")}
                       </button>
                     </div>
                   )}
@@ -1109,8 +1119,8 @@ export function ChecklistBuilderModal({
                   {/* Issue 7: Instruction buttons — working image upload, remove dead "Link document" */}
                   {q.responseType === "instruction" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-                      <p className="text-xs font-medium text-muted-foreground">Instruction content</p>
-                      <textarea placeholder="Write your instruction text here…" rows={3}
+                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.instruction.heading")}</p>
+                      <textarea placeholder={t("followUpEditor.instruction.placeholder")} rows={3}
                         value={cfg.instructionText || ""}
                         onChange={e => updateQuestion(si, qi, { config: { ...cfg, instructionText: e.target.value } })}
                         className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-1 focus:ring-ring" />
@@ -1120,7 +1130,7 @@ export function ChecklistBuilderModal({
                         const safePreviewUrl = sanitizeImageUrl(cfg.instructionImageUrl);
                         return safePreviewUrl ? (
                           <div className="relative group">
-                            <img src={safePreviewUrl} alt="Instruction" className="w-full max-h-48 object-contain rounded-lg border border-border bg-muted" />
+                            <img src={safePreviewUrl} alt={t("followUpEditor.instruction.imageAlt")} className="w-full max-h-48 object-contain rounded-lg border border-border bg-muted" />
                             <button
                               onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
                               className="absolute top-1 right-1 p-1 bg-background/90 rounded-full text-muted-foreground hover:text-status-error transition-colors opacity-0 group-hover:opacity-100">
@@ -1130,13 +1140,13 @@ export function ChecklistBuilderModal({
                         ) : (
                           <div className="rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 flex items-start justify-between gap-3">
                             <p className="text-xs text-status-error">
-                              Image URL is not allowed. Upload an image file or use a link from your Supabase storage.
+                              {t("builder.instruction.invalidImageUrl")}
                             </p>
                             <button
                               type="button"
                               onClick={() => updateQuestion(si, qi, { config: { ...cfg, instructionImageUrl: undefined } })}
                               className="p-0.5 text-status-error hover:text-status-error/70 transition-colors shrink-0"
-                              aria-label="Remove invalid image URL"
+                              aria-label={t("builder.instruction.removeInvalidImageUrl")}
                             >
                               <X size={12} />
                             </button>
@@ -1167,7 +1177,7 @@ export function ChecklistBuilderModal({
                           onClick={() => imgInputRef.current[q.id]?.click()}
                           className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-sage/40 hover:text-foreground transition-colors">
                           <Upload size={13} />
-                          {cfg.instructionImageUrl ? "Replace image" : "Upload image"}
+                          {cfg.instructionImageUrl ? t("followUpEditor.instruction.replaceImage") : t("followUpEditor.instruction.uploadImage")}
                         </button>
                         <button
                           type="button"
@@ -1179,7 +1189,7 @@ export function ChecklistBuilderModal({
                           className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-sage/40 hover:text-foreground transition-colors"
                         >
                           <Link2 size={13} />
-                          {cfg.instructionLinkId ? "Change Infohub link" : "Link Infohub content"}
+                          {cfg.instructionLinkId ? t("builder.instruction.changeInfohubLink") : t("builder.instruction.linkInfohubContent")}
                         </button>
                       </div>
 
@@ -1200,7 +1210,7 @@ export function ChecklistBuilderModal({
                               },
                             })}
                             className="p-1.5 rounded-full text-muted-foreground hover:text-status-error transition-colors"
-                            aria-label="Remove linked Infohub content"
+                            aria-label={t("builder.instruction.removeLinkedContent")}
                           >
                             <X size={12} />
                           </button>
@@ -1215,15 +1225,15 @@ export function ChecklistBuilderModal({
                               type="text"
                               value={instructionResourceSearch}
                               onChange={e => setInstructionResourceSearch(e.target.value)}
-                              placeholder="Search library or training"
+                              placeholder={t("builder.instruction.searchLibraryTraining")}
                               className="flex-1 bg-transparent text-sm outline-none"
                             />
                           </div>
                           <div className="flex gap-2 flex-wrap">
                             {[
-                              { key: "all", label: "All" },
-                              { key: "library", label: "Library" },
-                              { key: "training", label: "Training" },
+                              { key: "all", label: t("builder.instruction.filterAll") },
+                              { key: "library", label: t("builder.instruction.filterLibrary") },
+                              { key: "training", label: t("builder.instruction.filterTraining") },
                             ].map(option => (
                               <button
                                 key={option.key}
@@ -1242,7 +1252,7 @@ export function ChecklistBuilderModal({
                           </div>
                           <div className="max-h-56 overflow-y-auto space-y-2">
                             {filteredInstructionResources.length === 0 ? (
-                              <p className="text-xs text-muted-foreground py-4 text-center">No Infohub content matches that search.</p>
+                              <p className="text-xs text-muted-foreground py-4 text-center">{t("builder.instruction.noInfohubMatch")}</p>
                             ) : filteredInstructionResources.map(resource => (
                               <button
                                 key={resource.id}
@@ -1285,7 +1295,7 @@ export function ChecklistBuilderModal({
                     rules={cfg.logicRules || []}
                     onRulesChange={rules => updateQuestion(si, qi, { config: { ...cfg, logicRules: rules } })}
                     responseType={q.responseType}
-                    choices={questionChoices.length > 0 ? questionChoices : ["Yes", "No", "N/A"]}
+                    choices={questionChoices.length > 0 ? questionChoices : [t("preview.yes"), t("preview.no"), t("preview.notApplicable")]}
                     questionText={q.text || ""}
                     questionIndex={qi}
                     notifyRecipients={notifyRecipients}
@@ -1307,13 +1317,13 @@ export function ChecklistBuilderModal({
           <p className="text-xs text-status-error mb-2 text-center">{requiredError}</p>
         )}
         {locationMode === "specific" && selectedLocationIds.length === 0 && (
-          <p className="text-xs text-status-error mb-2 text-center">Select at least one location or switch back to all locations.</p>
+          <p className="text-xs text-status-error mb-2 text-center">{t("builder.locations.selectAtLeastOne")}</p>
         )}
         {locationMode === "specific" && selectedLocationIds.length > 0 && (
           <p className="text-xs text-muted-foreground mb-2 text-center">
             {selectedLocationIds.length === 1
-              ? "One specific location is selected."
-              : `${selectedLocationIds.length} specific locations are selected.`}
+              ? t("builder.locations.oneSpecificSelectedFooter")
+              : t("builder.locations.specificSelectedCountFooter", { count: selectedLocationIds.length })}
           </p>
         )}
         <button
@@ -1323,11 +1333,11 @@ export function ChecklistBuilderModal({
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
             !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
-          {isSaving ? "Publishing…" : "Publish"}
+          {isSaving ? t("builder.footer.publishing") : t("builder.footer.publish")}
         </button>
         {lastPublishedAt && (
           <p className="text-xs text-center text-muted-foreground mt-2">
-            Last published at {format(lastPublishedAt, "h:mm a")}
+            {t("builder.footer.lastPublishedAt", { time: format(lastPublishedAt, "h:mm a") })}
           </p>
         )}
       </div>
@@ -1405,20 +1415,20 @@ export function ChecklistBuilderModal({
   const discardConfirmDialog = showDiscardConfirm ? createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
-        <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
-        <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you exit.</p>
+        <h3 className="font-display text-lg text-foreground">{t("unsavedExit.heading")}</h3>
+        <p className="text-sm text-muted-foreground">{t("unsavedExit.body")}</p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDiscardConfirm(false)}
             className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
-            Keep editing
+            {t("unsavedExit.keepEditing")}
           </button>
           <button
             onClick={() => { clearChecklistDraft(); onClose(); }}
             className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            Discard
+            {t("builder.discardConfirm.discard")}
           </button>
         </div>
       </div>
@@ -1441,7 +1451,7 @@ export function ChecklistBuilderModal({
           )}>
             {lastPublishedAt && (
               <span className="text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
-                Saved {format(lastPublishedAt, "h:mm a")}
+                {t("builder.footer.savedAt", { time: format(lastPublishedAt, "h:mm a") })}
               </span>
             )}
             <button
@@ -1454,7 +1464,7 @@ export function ChecklistBuilderModal({
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
-              {isSaving ? "Publishing…" : "Publish"}
+              {isSaving ? t("builder.footer.publishing") : t("builder.footer.publish")}
             </button>
           </div>,
           document.body
