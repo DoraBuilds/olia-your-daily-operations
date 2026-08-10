@@ -14,19 +14,21 @@ import enInfohub from "@/locales/en/infohub.json";
 import esInfohub from "@/locales/es/infohub.json";
 import enAdmin from "@/locales/en/admin.json";
 import esAdmin from "@/locales/es/admin.json";
+import enBilling from "@/locales/en/billing.json";
+import esBilling from "@/locales/es/billing.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
 const resources = {
-  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications, checklists: enChecklists, infohub: enInfohub, admin: enAdmin },
-  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications, checklists: esChecklists, infohub: esInfohub, admin: esAdmin },
+  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications, checklists: enChecklists, infohub: enInfohub, admin: enAdmin, billing: enBilling },
+  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications, checklists: esChecklists, infohub: esInfohub, admin: esAdmin, billing: esBilling },
 };
 
-// Namespaces are added here as each app area is translated (billing,
-// login/signup, ...) — see issue #594.
-const NAMESPACES = ["common", "kiosk", "dashboard", "notifications", "checklists", "infohub", "admin"];
+// Namespaces are added here as each app area is translated
+// (login/signup, ...) — see issue #594.
+const NAMESPACES = ["common", "kiosk", "dashboard", "notifications", "checklists", "infohub", "admin", "billing"];
 
 // Picks a supported language from a raw BCP-47 tag (e.g. "es-MX" -> "es"),
 // falling back to DEFAULT_LANGUAGE for anything unsupported/unset. Kept as a

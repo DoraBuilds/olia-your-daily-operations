@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Check, Loader2, AlertCircle, ExternalLink, Zap, MapPin, Building2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
@@ -24,50 +25,6 @@ const PRICE_IDS: Record<"starter" | "growth", { monthly: string; annual: string 
 
 const ENTERPRISE_SALES_EMAIL = "enterprise@olia.com";
 
-// ─── Plan descriptions — single line, operator-focused ───────────────────────
-const PLAN_DESCRIPTIONS: Record<Plan, string> = {
-  starter:    "For single-location restaurants getting started with digital operations.",
-  growth:     "For operators managing multiple venues and growing teams.",
-  enterprise: "For larger hospitality groups with complex operational needs.",
-};
-
-// ─── Feature bullets shown on each card ──────────────────────────────────────
-const PLAN_HIGHLIGHTS: Record<Plan, string[]> = {
-  starter: [
-    "1 location",
-    "Up to 15 staff profiles",
-    "Up to 10 checklists",
-    "Kiosk mode",
-    "SOP & training hub",
-    "PDF export",
-  ],
-  growth: [
-    "Up to 10 locations",
-    "Up to 200 staff profiles",
-    "Unlimited checklists",
-    "AI checklist builder",
-    "Multi-location oversight",
-    "Advanced reporting & charts",
-    "CSV + PDF export",
-    "File-to-checklist conversion",
-  ],
-  enterprise: [
-    "Unlimited locations & staff",
-    "Everything in Growth",
-    "Dedicated account manager",
-    "Custom onboarding & training",
-    "SLA-backed support",
-    "Custom integrations on request",
-  ],
-};
-
-// ─── Location limit hint shown directly on each card ─────────────────────────
-const PLAN_LOCATION_HINT: Record<Plan, string> = {
-  starter:    "1 location included",
-  growth:     "Up to 10 locations",
-  enterprise: "Unlimited locations",
-};
-
 // ─── Example location count used in the pricing illustration ─────────────────
 // Starter uses 1 (its only option); Growth uses 3 (a relatable multi-venue size)
 const PLAN_EXAMPLE_LOCATIONS: Partial<Record<Plan, number>> = {
@@ -82,33 +39,38 @@ type ComparisonRow =
   | { isHeader: true; label: string }
   | { isHeader?: false; label: string; starter: string; growth: string; enterprise: string };
 
-const COMPARISON_ROWS: ComparisonRow[] = [
-  // ── Usage limits ──────────────────────────────────────────────────────────
-  { isHeader: true, label: "Usage limits" },
-  { label: "Locations",      starter: "1",         growth: "Up to 10",  enterprise: "Unlimited" },
-  { label: "Staff profiles", starter: "Up to 15",  growth: "Up to 200", enterprise: "Unlimited" },
-  { label: "Checklists",     starter: "Up to 10",  growth: "Unlimited", enterprise: "Unlimited" },
-  // ── Core features ─────────────────────────────────────────────────────────
-  { isHeader: true, label: "Core features" },
-  { label: "Kiosk mode",          starter: "✓", growth: "✓", enterprise: "✓" },
-  { label: "Staff PIN check-in",  starter: "✓", growth: "✓", enterprise: "✓" },
-  { label: "Checklist builder",   starter: "✓", growth: "✓", enterprise: "✓" },
-  { label: "SOP & training hub",  starter: "✓", growth: "✓", enterprise: "✓" },
-  { label: "PDF export",          starter: "✓", growth: "✓", enterprise: "✓" },
-  // ── Growth features ───────────────────────────────────────────────────────
-  { isHeader: true, label: "Growth features" },
-  { label: "Multi-location view",      starter: "—", growth: "✓", enterprise: "✓" },
-  { label: "AI checklist builder",     starter: "—", growth: "✓", enterprise: "✓" },
-  { label: "File-to-checklist import", starter: "—", growth: "✓", enterprise: "✓" },
-  { label: "Advanced reporting",       starter: "—", growth: "✓", enterprise: "✓" },
-  { label: "CSV export",               starter: "—", growth: "✓", enterprise: "✓" },
-  // ── Enterprise features ───────────────────────────────────────────────────
-  { isHeader: true, label: "Enterprise" },
-  { label: "Dedicated account manager", starter: "—", growth: "—", enterprise: "✓" },
-  { label: "Custom onboarding",         starter: "—", growth: "—", enterprise: "✓" },
-  { label: "SLA-backed support",        starter: "—", growth: "—", enterprise: "✓" },
-  { label: "Custom integrations",       starter: "—", growth: "—", enterprise: "✓" },
-];
+function useComparisonRows(t: (key: string) => string): ComparisonRow[] {
+  const v = (key: string) => t(`comparison.values.${key}`);
+  const row = (key: string) => t(`comparison.rows.${key}`);
+  const section = (key: string) => t(`comparison.sections.${key}`);
+  return [
+    // ── Usage limits ──────────────────────────────────────────────────────────
+    { isHeader: true, label: section("usageLimits") },
+    { label: row("locations"),      starter: v("one"),    growth: v("upTo10"),  enterprise: v("unlimited") },
+    { label: row("staffProfiles"),  starter: v("upTo15"), growth: v("upTo200"), enterprise: v("unlimited") },
+    { label: row("checklists"),     starter: v("upTo10"), growth: v("unlimited"), enterprise: v("unlimited") },
+    // ── Core features ─────────────────────────────────────────────────────────
+    { isHeader: true, label: section("coreFeatures") },
+    { label: row("kioskMode"),         starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("staffPinCheckin"),   starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("checklistBuilder"),  starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("sopTrainingHub"),    starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("pdfExport"),         starter: "✓", growth: "✓", enterprise: "✓" },
+    // ── Growth features ───────────────────────────────────────────────────────
+    { isHeader: true, label: section("growthFeatures") },
+    { label: row("multiLocationView"),      starter: "—", growth: "✓", enterprise: "✓" },
+    { label: row("aiChecklistBuilder"),     starter: "—", growth: "✓", enterprise: "✓" },
+    { label: row("fileToChecklistImport"),  starter: "—", growth: "✓", enterprise: "✓" },
+    { label: row("advancedReporting"),      starter: "—", growth: "✓", enterprise: "✓" },
+    { label: row("csvExport"),              starter: "—", growth: "✓", enterprise: "✓" },
+    // ── Enterprise features ───────────────────────────────────────────────────
+    { isHeader: true, label: section("enterprise") },
+    { label: row("dedicatedAccountManager"), starter: "—", growth: "—", enterprise: "✓" },
+    { label: row("customOnboarding"),        starter: "—", growth: "—", enterprise: "✓" },
+    { label: row("slaBackedSupport"),        starter: "—", growth: "—", enterprise: "✓" },
+    { label: row("customIntegrations"),      starter: "—", growth: "—", enterprise: "✓" },
+  ];
+}
 
 // ─── Plan icons ───────────────────────────────────────────────────────────────
 const PLAN_ICONS: Record<Plan, React.ReactNode> = {
@@ -118,6 +80,8 @@ const PLAN_ICONS: Record<Plan, React.ReactNode> = {
 };
 
 export default function Billing() {
+  const { t } = useTranslation("billing");
+  const COMPARISON_ROWS = useComparisonRows(t);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { teamMember } = useAuth();
@@ -236,9 +200,7 @@ export default function Billing() {
       }
 
       if (!cancelled) {
-        setActivationError(
-          "Checkout completed, but we couldn't confirm the plan change yet. Please refresh in a moment or contact us if it stays stuck."
-        );
+        setActivationError(t("banners.activationTimeout"));
       }
     };
 
@@ -247,7 +209,7 @@ export default function Billing() {
       setActivationError(
         err instanceof Error
           ? err.message
-          : "Checkout completed, but we couldn't confirm the plan change yet.",
+          : t("banners.activationTimeoutGeneric"),
       );
     });
 
@@ -261,7 +223,7 @@ export default function Billing() {
   const handleUpgrade = async (targetPlan: "starter" | "growth") => {
     const priceId = PRICE_IDS[targetPlan][billing];
     if (!priceId) {
-      setError("Online upgrades are not configured for this deployment yet. Please contact us so we can complete billing setup.");
+      setError(t("errors.notConfigured"));
       return;
     }
     setLoading(targetPlan);
@@ -277,20 +239,20 @@ export default function Billing() {
 
       // fnError only fires for genuine infrastructure failures (network down,
       // function not deployed, CORS crash). Surface those directly.
-      if (fnError) throw new Error(fnError.message ?? "Could not reach the upgrade service.");
+      if (fnError) throw new Error(fnError.message ?? t("errors.couldNotReachService"));
 
       // Application-level errors are in data.error (Stripe not configured, etc.)
       if (data?.error) throw new Error(data.error);
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error("No checkout URL returned. Please try again or contact support at hello@olia.app.");
+        throw new Error(t("errors.noCheckoutUrl"));
       }
     } catch (e: any) {
-      const raw: string = e?.message ?? "Something went wrong. Please try again.";
+      const raw: string = e?.message ?? t("errors.genericError");
       // Stripe not configured → friendly contact-us message
       if (raw.includes("Stripe is not configured") || raw.includes("STRIPE_SECRET_KEY")) {
-        setError("Online upgrades aren't available yet. To upgrade your plan, email us at hello@olia.app and we'll get you set up.");
+        setError(t("errors.stripeNotConfigured"));
       } else {
         setError(raw);
       }
@@ -305,30 +267,33 @@ export default function Billing() {
     const tierOrder: Plan[] = ["starter", "growth", "enterprise"];
     const currentIdx = tierOrder.indexOf(plan);
     const targetIdx  = tierOrder.indexOf(p);
-    if (targetIdx > currentIdx) return `Upgrade to ${PLAN_LABELS[p]}`;
-    return `Switch to ${PLAN_LABELS[p]}`;
+    if (targetIdx > currentIdx) return t("card.upgradeTo", { plan: PLAN_LABELS[p] });
+    return t("card.switchTo", { plan: PLAN_LABELS[p] });
   };
 
   const plans: Plan[] = ["starter", "growth", "enterprise"];
   const currentPlanSummary = billingUnavailable
-    ? "We couldn't verify your billing plan just now."
-    : `${PLAN_LABELS[plan]} is active${planStatus === "trialing" ? " on trial" : ""}.`;
+    ? t("planSummary.couldNotVerify")
+    : t("planSummary.planActive", { plan: PLAN_LABELS[plan], trial: planStatus === "trialing" ? t("planSummary.onTrial") : "" });
+  const currentPlanMaxLocations = PLAN_FEATURES[resolvedPlan ?? plan].maxLocations;
   const currentPlanAllowance = billingUnavailable
-    ? "Refresh in a moment and we’ll pull the latest billing state."
+    ? t("planSummary.refreshMoment")
     : plan === "enterprise"
-      ? "Unlimited locations included."
-      : `${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === -1 ? "Unlimited" : PLAN_FEATURES[resolvedPlan ?? plan].maxLocations} location${PLAN_FEATURES[resolvedPlan ?? plan].maxLocations === 1 ? "" : "s"} included.`;
+      ? t("planSummary.unlimitedLocationsIncluded")
+      : currentPlanMaxLocations === -1
+        ? t("planSummary.unlimitedLocationsIncluded")
+        : t("planSummary.locationsIncluded", { count: currentPlanMaxLocations });
 
   if (isNative) {
     return (
       <Layout
         title="Olia"
-        subtitle="Manage your plan"
+        subtitle={t("subtitle")}
         headerLeft={
           <button
             onClick={() => navigate("/admin")}
             className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Back"
+            aria-label={t("back")}
           >
             <ArrowLeft size={18} className="text-muted-foreground" />
           </button>
@@ -336,10 +301,10 @@ export default function Billing() {
       >
         <section className="space-y-4 pb-6">
           <div className="card-surface p-5 space-y-3">
-            <p className="text-sm font-medium text-foreground">Current plan</p>
+            <p className="text-sm font-medium text-foreground">{t("native.currentPlan")}</p>
             <p className="text-xl font-display font-semibold text-foreground capitalize">{plan}</p>
             <p className="text-sm text-muted-foreground">
-              To view plans, upgrade, or manage your subscription, visit us on the web.
+              {t("native.viewOnWebNotice")}
             </p>
             <a
               href="https://olia.app/billing"
@@ -347,7 +312,7 @@ export default function Billing() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-sage underline underline-offset-2"
             >
-              Manage at olia.app <ExternalLink size={13} />
+              {t("native.manageAtOlia")} <ExternalLink size={13} />
             </a>
           </div>
         </section>
@@ -358,12 +323,12 @@ export default function Billing() {
   return (
     <Layout
       title="Olia"
-      subtitle="Manage your plan"
+      subtitle={t("subtitle")}
       headerLeft={
         <button
           onClick={() => navigate("/admin")}
           className="p-2 rounded-full hover:bg-muted transition-colors"
-          aria-label="Back"
+          aria-label={t("back")}
         >
           <ArrowLeft size={18} className="text-muted-foreground" />
         </button>
@@ -381,7 +346,7 @@ export default function Billing() {
             <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-ok/30 bg-status-ok/5">
               <Check size={15} className="text-status-ok shrink-0" />
               <p className="text-sm text-status-ok font-medium">
-                You're now on {PLAN_LABELS[plan]}. Welcome aboard!
+                {t("banners.welcomeAboard", { plan: PLAN_LABELS[plan] })}
               </p>
             </div>
           ) : activationError ? (
@@ -395,7 +360,7 @@ export default function Billing() {
             <div className="card-surface px-4 py-3 flex items-center gap-2 border border-border bg-muted/40">
               <Loader2 size={15} className="text-muted-foreground shrink-0 animate-spin" />
               <p className="text-sm text-muted-foreground">
-                Checkout complete — activating your plan. This page will update automatically.
+                {t("banners.activating")}
               </p>
             </div>
           )
@@ -403,7 +368,7 @@ export default function Billing() {
         {canceled && (
           <div className="card-surface px-4 py-3 flex items-center gap-2 border border-status-warn/30 bg-status-warn/5">
             <AlertCircle size={15} className="text-status-warn shrink-0" />
-            <p className="text-sm text-status-warn">Checkout was canceled — no changes made.</p>
+            <p className="text-sm text-status-warn">{t("banners.canceled")}</p>
           </div>
         )}
 
@@ -419,7 +384,7 @@ export default function Billing() {
                 :                       "bg-muted text-muted-foreground"
               )}>
                 {billingUnavailable ? <AlertCircle size={14} /> : PLAN_ICONS[plan]}
-                {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
+                {billingUnavailable ? t("planSummary.billingUnavailableBadge") : PLAN_LABELS[plan]}
               </span>
               <p className="text-sm font-medium text-foreground">
                 {currentPlanSummary}
@@ -429,7 +394,7 @@ export default function Billing() {
               {currentPlanAllowance}
               {!billingUnavailable && plan === "starter" && (
                 <span className="ml-1 text-sage font-medium">
-                  Upgrade to Growth for up to 10 locations.
+                  {t("planSummary.upgradeHint")}
                 </span>
               )}
             </p>
@@ -439,13 +404,13 @@ export default function Billing() {
             <button
               onClick={() => {
                 const portalUrl = runtimeConfig.stripe.customerPortalUrl;
-                if (!portalUrl) { alert("Customer portal not configured."); return; }
+                if (!portalUrl) { alert(t("planSummary.customerPortalNotConfigured")); return; }
                 window.open(portalUrl, "_blank");
               }}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
             >
               <ExternalLink size={12} />
-              Manage subscription on Stripe
+              {t("planSummary.manageSubscription")}
             </button>
           )}
         </div>
@@ -463,9 +428,9 @@ export default function Billing() {
                   : "border-border text-muted-foreground hover:border-sage/40"
               )}
             >
-              {period === "monthly" ? "Monthly" : "Annual"}
+              {period === "monthly" ? t("period.monthly") : t("period.annual")}
               {period === "annual" && (
-                <span className="ml-1.5 text-xs font-normal opacity-80">Save ~20%</span>
+                <span className="ml-1.5 text-xs font-normal opacity-80">{t("period.saveApprox")}</span>
               )}
             </button>
           ))}
@@ -515,12 +480,12 @@ export default function Billing() {
                     <span className={cn(
                       "text-xs px-2 py-0.5 rounded-full font-medium shadow-sm border border-border bg-card text-sage"
                     )}>
-                      Current plan
+                      {t("card.currentPlan")}
                     </span>
                   )}
                   {isRecommended && !isCurrent && (
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-sage text-primary-foreground shadow-sm border border-sage">
-                      Recommended
+                      {t("card.recommended")}
                     </span>
                   )}
                 </div>
@@ -532,14 +497,14 @@ export default function Billing() {
                       {PLAN_LABELS[p]}
                     </p>
                     <p className="text-xs mt-0.5 leading-relaxed text-muted-foreground">
-                      {PLAN_DESCRIPTIONS[p]}
+                      {t(`plans.${p}.description`)}
                     </p>
                   </div>
                   <div className="text-right shrink-0 min-h-[4.75rem] flex flex-col items-end">
                     {isEnterprise ? (
                       <>
-                        <p className="text-sm font-semibold text-foreground">Custom pricing</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{PLAN_LOCATION_HINT.enterprise}</p>
+                        <p className="text-sm font-semibold text-foreground">{t("card.customPricing")}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("plans.enterprise.locationHint")}</p>
                         <div className="mt-auto h-[2.25rem]" aria-hidden="true" />
                       </>
                     ) : (
@@ -548,18 +513,18 @@ export default function Billing() {
                           {price.currency}{priceVal}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          / location / {billing === "monthly" ? "month" : "year"}
+                          {t("card.perLocationPer", { period: billing === "monthly" ? t("period.month") : t("period.year") })}
                         </p>
                         <p className="text-xs text-muted-foreground/70 mt-0.5">
-                          {PLAN_LOCATION_HINT[p]}
+                          {t(`plans.${p}.locationHint`)}
                         </p>
                         {PLAN_EXAMPLE_LOCATIONS[p] != null && (() => {
                           const n    = PLAN_EXAMPLE_LOCATIONS[p]!;
                           const total = (priceVal * n).toLocaleString("en-IE");
-                          const period = billing === "monthly" ? "month" : "year";
+                          const period = billing === "monthly" ? t("period.month") : t("period.year");
                           return (
                             <p className="text-xs text-muted-foreground/50 mt-1.5 italic">
-                              e.g. {n} {n === 1 ? "location" : "locations"} = {price.currency}{total} / {period}
+                              {t("card.exampleLocations", { count: n, locationWord: t("card.location", { count: n }), currency: price.currency, total, period })}
                             </p>
                           );
                         })()}
@@ -570,7 +535,7 @@ export default function Billing() {
 
                 {/* Feature list */}
                 <ul className="space-y-1.5">
-                  {PLAN_HIGHLIGHTS[p].map(feature => (
+                  {(t(`plans.${p}.highlights`, { returnObjects: true }) as string[]).map(feature => (
                     <li key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Check size={12} className="text-status-ok shrink-0" />
                       {feature}
@@ -585,27 +550,27 @@ export default function Billing() {
                 <div className="space-y-3">
                 {isEnterprise && !isCurrent && (
                   <p className="text-xs text-muted-foreground/70 text-center">
-                    Pricing tailored to your operation
+                    {t("card.pricingTailored")}
                   </p>
                 )}
                 {isEnterprise ? (
                   isCurrent ? (
                     <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
-                      Current plan
+                      {t("card.currentPlan")}
                     </div>
                   ) : (
                     <a
                       href={`mailto:${ENTERPRISE_SALES_EMAIL}`}
                       className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
                     >
-                      Book a demo
+                      {t("card.bookADemo")}
                     </a>
                   )
                 ) : isCurrent ? (
                   // Always show "Current plan" as a non-clickable label for the active plan,
                   // regardless of whether there's a Stripe subscription (Starter is free).
                   <div className="w-full py-2.5 rounded-xl text-sm font-medium text-center bg-muted text-muted-foreground">
-                    Current plan
+                    {t("card.currentPlan")}
                   </div>
                 ) : (
                   <button
@@ -627,7 +592,7 @@ export default function Billing() {
 
         {/* ── Plan comparison ──────────────────────────────────────────────── */}
         <div className="card-surface p-4 space-y-3">
-          <p className="section-label">Plan comparison</p>
+          <p className="section-label">{t("comparison.heading")}</p>
           <div className="space-y-0">
             {/* Header */}
             <div className="grid grid-cols-4 gap-1 pb-2 border-b border-border">
@@ -690,7 +655,7 @@ export default function Billing() {
         {/* ── Footer microcopy ─────────────────────────────────────────────── */}
         <div className="space-y-1 px-1">
           <p className="text-xs text-muted-foreground text-center">
-            Secure payments powered by Stripe. Upgrade or cancel anytime.
+            {t("footer")}
           </p>
         </div>
 
