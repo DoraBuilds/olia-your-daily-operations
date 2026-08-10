@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export default function Admin() {
+  const { t } = useTranslation("admin");
   const location = useLocation();
   const navigate = useNavigate();
   const { user, teamMember: authMember } = useAuth();
@@ -135,7 +137,7 @@ export default function Admin() {
 
   const saveLocation = (loc: Location) => {
     saveLocationMut.mutate(loc, {
-      onSuccess: () => toast.success(loc.id ? "Location updated" : "Location created"),
+      onSuccess: () => toast.success(loc.id ? t("toast.locationUpdated") : t("toast.locationCreated")),
       onError: (err: Error) => {
         // Translate the raw Postgres RLS error into a product-level message
         const isLimitError =
@@ -147,18 +149,18 @@ export default function Admin() {
           // Message and CTA are plan-aware so a Growth user doesn't see "upgrade to Growth".
           if (plan === "growth") {
             toast.error(
-              "Growth includes up to 10 locations. Contact us to move to Enterprise for unlimited locations.",
-              { action: { label: "Book a demo", onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
+              t("toast.growthLimitError"),
+              { action: { label: t("toast.bookADemo"), onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
             );
           } else {
             const max = PLAN_FEATURES[plan].maxLocations;
             toast.error(
-              `Starter includes ${max} location. Upgrade to Growth to add more locations.`,
-              isNative ? undefined : { action: { label: "Upgrade", onClick: () => navigate("/billing") } },
+              t("toast.starterLimitError", { max }),
+              isNative ? undefined : { action: { label: t("toast.upgrade"), onClick: () => navigate("/billing") } },
             );
           }
         } else {
-          toast.error(`Failed to save location: ${err.message}`);
+          toast.error(t("toast.saveLocationFailed", { error: err.message }));
         }
       },
     });
@@ -166,13 +168,13 @@ export default function Admin() {
 
   const deleteLocation = (id: string) => {
     setConfirmModal({
-      title: "Delete location",
-      message: "This will permanently remove the location and cannot be undone.",
-      actionLabel: "Delete",
+      title: t("confirm.deleteLocationTitle"),
+      message: t("confirm.deleteLocationMessage"),
+      actionLabel: t("confirm.delete"),
       onConfirm: () => {
         deleteLocationMut.mutate(id, {
-          onSuccess: () => toast.success("Location deleted"),
-          onError: (err: Error) => toast.error(`Failed to delete location: ${err.message}`),
+          onSuccess: () => toast.success(t("toast.locationDeleted")),
+          onError: (err: Error) => toast.error(t("toast.deleteLocationFailed", { error: err.message })),
         });
         setConfirmModal(null);
       },
@@ -181,25 +183,25 @@ export default function Admin() {
 
   const saveStaff = (sp: StaffProfile) => {
     saveStaffMut.mutate(sp, {
-      onSuccess: () => toast.success(sp.id ? "Staff profile updated" : "Staff profile created"),
-      onError: (err: Error) => toast.error(`Failed to save staff profile: ${err.message}`),
+      onSuccess: () => toast.success(sp.id ? t("toast.staffProfileUpdated") : t("toast.staffProfileCreated")),
+      onError: (err: Error) => toast.error(t("toast.saveStaffFailed", { error: err.message })),
     });
   };
 
   const archiveStaff = (sp: StaffProfile) => {
     setConfirmModal({
-      title: "Archive staff profile",
+      title: t("confirm.archiveStaffTitle"),
       message: (
         <>
           <strong className="text-foreground">{staffDisplayName(sp)}</strong>
-          {" "}will be archived and removed from active lists. They can be restored later.
+          {" "}{t("confirm.archiveStaffMessage")}
         </>
       ),
-      actionLabel: "Archive",
+      actionLabel: t("confirm.archive"),
       onConfirm: () => {
         archiveStaffMut.mutate(sp.id, {
-          onSuccess: () => toast.success(`${staffDisplayName(sp)} archived`),
-          onError: (err: Error) => toast.error(`Could not archive: ${err.message}`),
+          onSuccess: () => toast.success(t("toast.staffArchived", { name: staffDisplayName(sp) })),
+          onError: (err: Error) => toast.error(t("toast.archiveStaffFailed", { error: err.message })),
         });
         setConfirmModal(null);
       },
@@ -208,21 +210,21 @@ export default function Admin() {
 
   const restoreStaff = (id: string) => {
     restoreStaffMut.mutate(id, {
-      onSuccess: () => toast.success("Profile restored"),
-      onError: (err: Error) => toast.error(`Could not restore: ${err.message}`),
+      onSuccess: () => toast.success(t("toast.profileRestored")),
+      onError: (err: Error) => toast.error(t("toast.restoreStaffFailed", { error: err.message })),
     });
   };
 
   const deleteStaff = (sp: StaffProfile) => {
     setConfirmModal({
-      title: "Delete staff profile",
+      title: t("confirm.deleteStaffTitle"),
       message: (
         <>
-          Permanently delete{" "}
-          <strong className="text-foreground">{staffDisplayName(sp)}</strong>? This cannot be undone.
+          {t("confirm.deleteStaffPrefix")}{" "}
+          <strong className="text-foreground">{staffDisplayName(sp)}</strong>{t("confirm.deleteStaffSuffix")}
         </>
       ),
-      actionLabel: "Delete permanently",
+      actionLabel: t("confirm.deletePermanently"),
       onConfirm: () => {
         deleteStaffMut.mutate(sp.id);
         setConfirmModal(null);
@@ -235,8 +237,8 @@ export default function Admin() {
     saveMemberMut.mutateAsync(m).then(newId => {
       if (isNew && newId) {
         sendInviteMut.mutate(newId, {
-          onSuccess: () => toast.success(`Invite sent to ${m.email}`),
-          onError: () => toast.error(`Team member saved, but invite email failed. Try re-sending from the member row.`),
+          onSuccess: () => toast.success(t("toast.inviteSent", { email: m.email })),
+          onError: () => toast.error(t("toast.inviteFailed")),
         });
       }
     }).catch(() => { /* error shown by mutation */ });
@@ -254,15 +256,15 @@ export default function Admin() {
     // all existing locations, staff, and checklists under the old org_id.
     // RLS then silently blocks every write operation.
     if (m.id === authMember?.id) {
-      toast.error("You cannot remove yourself from the team.");
+      toast.error(t("toast.cannotRemoveSelf"));
       return;
     }
     setConfirmModal({
-      title: "Remove team member",
+      title: t("confirm.removeMemberTitle"),
       message: (
-        <>Remove <strong className="text-foreground">{m.name}</strong> from the team? This cannot be undone.</>
+        <>{t("confirm.removeMemberPrefix")} <strong className="text-foreground">{m.name}</strong> {t("confirm.removeMemberSuffix")}</>
       ),
-      actionLabel: "Remove",
+      actionLabel: t("confirm.remove"),
       onConfirm: () => {
         deleteMemberMut.mutate(m.id);
         setConfirmModal(null);
@@ -276,15 +278,15 @@ export default function Admin() {
     ? `${activeUser.role} · ${activeUser.name}`
     : authMember
     ? `${authMember.role} · ${authMember.name}`
-    : "Admin";
+    : t("userLabelFallback");
 
   const TABS = [
-    { key: "location" as const, label: "Locations" },
+    { key: "location" as const, label: t("tabs.locations") },
     ...(isOwner ? [
-      { key: "users" as const, label: "Users" },
-      { key: "account" as const, label: "Account" },
-      { key: "notifications" as const, label: "Notifications" },
-      { key: "billing" as const, label: "Billing" },
+      { key: "users" as const, label: t("tabs.users") },
+      { key: "account" as const, label: t("tabs.account") },
+      { key: "notifications" as const, label: t("tabs.notifications") },
+      { key: "billing" as const, label: t("tabs.billing") },
     ] : []),
   ];
 
@@ -424,14 +426,12 @@ export default function Admin() {
               <>
                 <div className="text-center space-y-2">
                   <h2 className="font-display text-xl text-foreground">
-                    Scale beyond 10 locations with Enterprise
+                    {t("locationLimit.growthTitle")}
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Growth supports up to 10 locations. Enterprise is built for larger
-                    hospitality groups that need unlimited locations, a dedicated account
-                    manager, and custom onboarding.
+                    {t("locationLimit.growthBody")}
                   </p>
-                  <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
+                  <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
                 </div>
                 <div className="space-y-2 pt-1">
                   <a
@@ -439,13 +439,13 @@ export default function Admin() {
                     onClick={() => setShowLocationLimitModal(false)}
                     className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
                   >
-                    Book a demo
+                    {t("locationLimit.bookADemo")}
                   </a>
                   <button
                     onClick={() => setShowLocationLimitModal(false)}
                     className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
                   >
-                    Not now
+                    {t("locationLimit.notNow")}
                   </button>
                 </div>
               </>
@@ -454,24 +454,23 @@ export default function Admin() {
               <>
                 <div className="text-center space-y-2">
                   <h2 className="font-display text-xl text-foreground">
-                    Add more locations with Growth
+                    {t("locationLimit.starterTitle")}
                   </h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Starter includes 1 location. Growth supports up to 10 locations so
-                    you can manage multiple venues and teams from one account.
+                    {t("locationLimit.starterBody")}
                   </p>
                   {!isNative && (
                     <p className="text-xs font-medium text-foreground/70">
-                      Growth — {PLAN_PRICES.growth.currency}{PLAN_PRICES.growth.monthly} / month
+                      {t("locationLimit.growthPricePerMonth", { currency: PLAN_PRICES.growth.currency, price: PLAN_PRICES.growth.monthly })}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground">Current plan: {PLAN_LABELS[plan]}</p>
+                  <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
                   {!isNative && (
                     <button
                       onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
                       className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
                     >
-                      View plans
+                      {t("locationLimit.viewPlans")}
                     </button>
                   )}
                 </div>
@@ -484,21 +483,21 @@ export default function Admin() {
                       onClick={() => setShowLocationLimitModal(false)}
                       className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
                     >
-                      Upgrade at olia.app
+                      {t("locationLimit.upgradeAtOlia")}
                     </a>
                   ) : (
                     <button
                       onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
                       className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
                     >
-                      Upgrade to Growth
+                      {t("locationLimit.upgradeToGrowth")}
                     </button>
                   )}
                   <button
                     onClick={() => setShowLocationLimitModal(false)}
                     className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
                   >
-                    Not now
+                    {t("locationLimit.notNow")}
                   </button>
                 </div>
               </>
