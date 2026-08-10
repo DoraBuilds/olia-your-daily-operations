@@ -1,0 +1,89 @@
+{
+  "schedule": {
+    "none": "Once",
+    "daily": "Every day",
+    "weekday": "Every weekday",
+    "weekly": "Every week",
+    "monthly": "Every month",
+    "yearly": "Every year"
+  },
+  "shell": {
+    "editing": "Editing: {{title}}",
+    "newChecklist": "New checklist",
+    "subtitle": "Manage your checklists & inspections"
+  },
+  "reportingShell": {
+    "subtitle": "Logs & compliance overview"
+  },
+  "locations": {
+    "all": "All locations"
+  },
+  "search": {
+    "placeholder": "Search checklists…"
+  },
+  "empty": {
+    "folderEmpty": "This folder is empty",
+    "noChecklists": "No checklists yet",
+    "tapToCreate": "Tap to create a checklist or folder"
+  },
+  "folder": {
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items"
+  },
+  "checklist": {
+    "questionsCount_one": "{{count}} question",
+    "questionsCount_other": "{{count}} questions",
+    "previewTooltip": "Preview checklist"
+  },
+  "newFolder": {
+    "heading": "New folder",
+    "namePlaceholder": "Folder name",
+    "create": "Create folder"
+  },
+  "deleteConfirm": {
+    "headingFolder": "Delete folder?",
+    "headingChecklist": "Delete checklist?",
+    "body": "\"{{name}}\" will be permanently removed.",
+    "cancel": "Cancel",
+    "confirm": "Delete permanently",
+    "fallbackFolder": "this folder",
+    "fallbackChecklist": "this checklist"
+  },
+  "renameFolder": {
+    "heading": "Rename folder",
+    "save": "Rename"
+  },
+  "unsavedExit": {
+    "heading": "Leave without saving?",
+    "body": "Your unsaved changes will be lost if you exit.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
+  "breadcrumb": {
+    "all": "All"
+  },
+  "createMenu": {
+    "heading": "Create new",
+    "buildOwn": "Build your own checklist",
+    "convertFile": "Convert file",
+    "convertFileSub": "Excel, image or PDF",
+    "buildAI": "Build with AI",
+    "createFolder": "Create a folder"
+  },
+  "contextMenu": {
+    "moveToFolder": "Move to folder",
+    "rename": "Rename",
+    "delete": "Delete",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "downloadPdf": "Download as PDF"
+  },
+  "moveToFolder": {
+    "heading": "Move to folder",
+    "searchPlaceholder": "Search folders",
+    "noMatch": "No folders match your search.",
+    "noFolder": "No folder",
+    "noFolderUnfiled": "No folder (unfiled)",
+    "noFoldersYet": "No folders yet — create one from the Checklists main view."
+  }
+}

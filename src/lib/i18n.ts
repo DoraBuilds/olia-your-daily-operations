@@ -8,19 +8,21 @@ import enDashboard from "@/locales/en/dashboard.json";
 import esDashboard from "@/locales/es/dashboard.json";
 import enNotifications from "@/locales/en/notifications.json";
 import esNotifications from "@/locales/es/notifications.json";
+import enChecklists from "@/locales/en/checklists.json";
+import esChecklists from "@/locales/es/checklists.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
 
 const resources = {
-  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications },
-  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications },
+  en: { common: enCommon, kiosk: enKiosk, dashboard: enDashboard, notifications: enNotifications, checklists: enChecklists },
+  es: { common: esCommon, kiosk: esKiosk, dashboard: esDashboard, notifications: esNotifications, checklists: esChecklists },
 };
 
-// Namespaces are added here as each app area is translated (checklists,
-// settings, admin, billing, ...) — see issue #594.
-const NAMESPACES = ["common", "kiosk", "dashboard", "notifications"];
+// Namespaces are added here as each app area is translated (settings,
+// admin, billing, ...) — see issue #594.
+const NAMESPACES = ["common", "kiosk", "dashboard", "notifications", "checklists"];
 
 // Picks a supported language from a raw BCP-47 tag (e.g. "es-MX" -> "es"),
 // falling back to DEFAULT_LANGUAGE for anything unsupported/unset. Kept as a

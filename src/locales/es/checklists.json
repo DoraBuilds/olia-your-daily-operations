@@ -1,0 +1,89 @@
+{
+  "schedule": {
+    "none": "Una vez",
+    "daily": "Todos los días",
+    "weekday": "Cada día laborable",
+    "weekly": "Cada semana",
+    "monthly": "Cada mes",
+    "yearly": "Cada año"
+  },
+  "shell": {
+    "editing": "Editando: {{title}}",
+    "newChecklist": "Nueva lista",
+    "subtitle": "Gestiona tus listas de verificación e inspecciones"
+  },
+  "reportingShell": {
+    "subtitle": "Registros y resumen de cumplimiento"
+  },
+  "locations": {
+    "all": "Todas las ubicaciones"
+  },
+  "search": {
+    "placeholder": "Buscar listas…"
+  },
+  "empty": {
+    "folderEmpty": "Esta carpeta está vacía",
+    "noChecklists": "Aún no hay listas",
+    "tapToCreate": "Toca para crear una lista o carpeta"
+  },
+  "folder": {
+    "itemCount_one": "{{count}} elemento",
+    "itemCount_other": "{{count}} elementos"
+  },
+  "checklist": {
+    "questionsCount_one": "{{count}} pregunta",
+    "questionsCount_other": "{{count}} preguntas",
+    "previewTooltip": "Vista previa de la lista"
+  },
+  "newFolder": {
+    "heading": "Nueva carpeta",
+    "namePlaceholder": "Nombre de la carpeta",
+    "create": "Crear carpeta"
+  },
+  "deleteConfirm": {
+    "headingFolder": "¿Eliminar carpeta?",
+    "headingChecklist": "¿Eliminar lista?",
+    "body": "\"{{name}}\" se eliminará de forma permanente.",
+    "cancel": "Cancelar",
+    "confirm": "Eliminar permanentemente",
+    "fallbackFolder": "esta carpeta",
+    "fallbackChecklist": "esta lista"
+  },
+  "renameFolder": {
+    "heading": "Renombrar carpeta",
+    "save": "Renombrar"
+  },
+  "unsavedExit": {
+    "heading": "¿Salir sin guardar?",
+    "body": "Los cambios sin guardar se perderán si sales.",
+    "keepEditing": "Seguir editando",
+    "discard": "Descartar cambios"
+  },
+  "breadcrumb": {
+    "all": "Todo"
+  },
+  "createMenu": {
+    "heading": "Crear nuevo",
+    "buildOwn": "Crear tu propia lista",
+    "convertFile": "Convertir archivo",
+    "convertFileSub": "Excel, imagen o PDF",
+    "buildAI": "Crear con IA",
+    "createFolder": "Crear una carpeta"
+  },
+  "contextMenu": {
+    "moveToFolder": "Mover a carpeta",
+    "rename": "Renombrar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "duplicate": "Duplicar",
+    "downloadPdf": "Descargar como PDF"
+  },
+  "moveToFolder": {
+    "heading": "Mover a carpeta",
+    "searchPlaceholder": "Buscar carpetas",
+    "noMatch": "Ninguna carpeta coincide con tu búsqueda.",
+    "noFolder": "Sin carpeta",
+    "noFolderUnfiled": "Sin carpeta (sin clasificar)",
+    "noFoldersYet": "Aún no hay carpetas — crea una desde la vista principal de Listas."
+  }
+}

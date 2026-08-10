@@ -1,3 +1,5 @@
+import i18n from "@/lib/i18n";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type TaskType = "checkbox" | "numeric" | "photo";
@@ -110,6 +112,10 @@ export interface SectionDef {
 
 export type ScheduleType = "daily" | "weekday" | "weekly" | "monthly" | "yearly" | "custom" | "none";
 
+// Kept as English-only literals for ChecklistBuilderModal's schedule picker,
+// which hasn't been extracted to i18n yet (see #594) — getScheduleLabel()
+// below is the translated path used everywhere the *saved* schedule is
+// displayed (checklist list rows, preview modal).
 export const SCHEDULE_LABELS: Record<Exclude<ScheduleType, "custom">, string> = {
   none: "Once",
   daily: "Every day",
@@ -145,7 +151,7 @@ export function getScheduleLabel(schedule?: string | null): string | null {
   if (!schedule) return null;
   const parsed = parseScheduleType(schedule);
   if (parsed === "custom") return schedule;
-  return SCHEDULE_LABELS[parsed];
+  return i18n.t(`schedule.${parsed}`, { ns: "checklists" });
 }
 
 export interface CustomRecurrence {

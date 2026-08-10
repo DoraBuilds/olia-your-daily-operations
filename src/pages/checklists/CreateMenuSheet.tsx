@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X, ClipboardList, FileUp, Sparkles, FolderPlus, ChevronRight } from "lucide-react";
 
 export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI, onCreateFolder }: {
@@ -8,18 +9,19 @@ export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI,
   onBuildAI: () => void;
   onCreateFolder: () => void;
 }) {
+  const { t } = useTranslation("checklists");
   const items = [
-    { label: "Build your own checklist", icon: ClipboardList, action: onBuildOwn },
-    { label: "Convert file", sublabel: "Excel, image or PDF", icon: FileUp, action: onConvertFile },
-    { label: "Build with AI", icon: Sparkles, action: onBuildAI, hasAiIcon: true },
-    { label: "Create a folder", icon: FolderPlus, action: onCreateFolder },
+    { label: t("createMenu.buildOwn"), icon: ClipboardList, action: onBuildOwn },
+    { label: t("createMenu.convertFile"), sublabel: t("createMenu.convertFileSub"), icon: FileUp, action: onConvertFile },
+    { label: t("createMenu.buildAI"), icon: Sparkles, action: onBuildAI, hasAiIcon: true },
+    { label: t("createMenu.createFolder"), icon: FolderPlus, action: onCreateFolder },
   ];
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/20 px-4 pb-8 backdrop-blur-sm animate-fade-in sm:items-center sm:px-6 sm:py-10">
       <div className="bg-card w-full max-w-md rounded-3xl border border-border p-5 pb-6 space-y-1 shadow-2xl animate-fade-in">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-lg text-foreground">Create new</h2>
+          <h2 className="font-display text-lg text-foreground">{t("createMenu.heading")}</h2>
           <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>

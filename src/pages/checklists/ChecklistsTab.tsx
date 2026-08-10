@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
@@ -33,10 +34,12 @@ function checklistAppliesToLocation(
 }
 
 export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
+  const { t } = useTranslation("checklists");
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
   const { data: dbLocations = [] } = useLocations();
-  const locationOptions = ["All locations", ...dbLocations.map(l => l.name)];
+  const allLocationsLabel = t("locations.all");
+  const locationOptions = [allLocationsLabel, ...dbLocations.map(l => l.name)];
 
   // DB data
   const { data: dbFolders = [] } = useFolders();
@@ -95,7 +98,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("All locations");
+  const [selectedLocation, setSelectedLocation] = useState(allLocationsLabel);
   const [showLocationDrop, setShowLocationDrop] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(() => {
@@ -134,7 +137,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const visibleChecklists = checklists
     .filter(c => normalizedSearch ? c.title.toLowerCase().includes(normalizedSearch) : c.folderId === currentFolder)
     .filter(c => {
-      if (selectedLocation === "All locations") return true;
+      if (selectedLocation === allLocationsLabel) return true;
       if (!selectedLocationObj) return true;
       return checklistAppliesToLocation(
         { location_id: c.location_id, location_ids: c.location_ids },
@@ -242,8 +245,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       if (folder) setRenameTarget({ id: folder.id, name: folder.name });
     } else if (action === "delete") {
       const name = contextMenu.type === "folder"
-        ? folders.find(f => f.id === contextMenu.id)?.name ?? "this folder"
-        : checklists.find(c => c.id === contextMenu.id)?.title ?? "this checklist";
+        ? folders.find(f => f.id === contextMenu.id)?.name ?? t("deleteConfirm.fallbackFolder")
+        : checklists.find(c => c.id === contextMenu.id)?.title ?? t("deleteConfirm.fallbackChecklist");
       setDeleteConfirm({ id: contextMenu.id, type: contextMenu.type, name });
     } else if (action === "duplicate" && contextMenu.type === "checklist") {
       const orig = dbChecklists.find(c => c.id === contextMenu.id);
@@ -312,20 +315,20 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       {(blocker.state === "blocked" || showNavExitConfirm) && createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
-            <h3 className="font-display text-lg text-foreground">Leave without saving?</h3>
-            <p className="text-sm text-muted-foreground">Your unsaved changes will be lost if you exit.</p>
+            <h3 className="font-display text-lg text-foreground">{t("unsavedExit.heading")}</h3>
+            <p className="text-sm text-muted-foreground">{t("unsavedExit.body")}</p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowNavExitConfirm(false); if (blocker.state === "blocked") blocker.reset(); }}
                 className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
               >
-                Keep editing
+                {t("unsavedExit.keepEditing")}
               </button>
               <button
                 onClick={() => { discardAndClose(); setShowNavExitConfirm(false); if (blocker.state === "blocked") blocker.proceed(); }}
                 className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
               >
-                Discard changes
+                {t("unsavedExit.discard")}
               </button>
             </div>
           </div>
@@ -363,7 +366,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input type="text" placeholder="Search checklists…" value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder={t("search.placeholder")} value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <button
@@ -386,9 +389,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">
-              {currentFolder ? "This folder is empty" : "No checklists yet"}
+              {currentFolder ? t("empty.folderEmpty") : t("empty.noChecklists")}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">Tap to create a checklist or folder</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("empty.tapToCreate")}</p>
           </div>
         </button>
       ) : (
@@ -417,7 +420,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{folder.name}</p>
-                  <p className="text-xs text-muted-foreground">{folder.itemCount} items</p>
+                  <p className="text-xs text-muted-foreground">{t("folder.itemCount", { count: folder.itemCount })}</p>
                 </div>
               </button>
               <button onClick={e => { e.stopPropagation(); setContextMenu({ id: folder.id, type: "folder" }); }}
@@ -445,13 +448,13 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{cl.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {cl.questionsCount} questions{cl.schedule ? ` · ${getScheduleLabel(cl.schedule)}` : ""}
+                    {t("checklist.questionsCount", { count: cl.questionsCount })}{cl.schedule ? ` · ${getScheduleLabel(cl.schedule)}` : ""}
                   </p>
                 </div>
               </button>
               <button onClick={e => { e.stopPropagation(); setPreviewChecklist(cl); }}
                 className="p-2 text-muted-foreground hover:text-sage transition-colors shrink-0"
-                title="Preview checklist">
+                title={t("checklist.previewTooltip")}>
                 <Eye size={16} />
               </button>
               <button onClick={e => { e.stopPropagation(); setContextMenu({ id: cl.id, type: "checklist" }); }}
@@ -515,18 +518,18 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg text-foreground">New folder</h2>
+              <h2 className="font-display text-lg text-foreground">{t("newFolder.heading")}</h2>
               <button onClick={() => setShowNewFolder(false)} className="btn-icon">
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>
-            <input autoFocus type="text" placeholder="Folder name" value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+            <input autoFocus type="text" placeholder={t("newFolder.namePlaceholder")} value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
             <button disabled={!newFolderName.trim()} onClick={handleCreateFolder}
               className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
                 newFolderName.trim() ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
               )}>
-              Create folder
+              {t("newFolder.create")}
             </button>
           </div>
         </div>,
@@ -546,14 +549,16 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 <Trash2 size={18} className="text-status-error" />
               </div>
               <div>
-                <h2 className="font-display text-base text-foreground">Delete {deleteConfirm.type}?</h2>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">"{deleteConfirm.name}" will be permanently removed.</p>
+                <h2 className="font-display text-base text-foreground">
+                  {deleteConfirm.type === "folder" ? t("deleteConfirm.headingFolder") : t("deleteConfirm.headingChecklist")}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{t("deleteConfirm.body", { name: deleteConfirm.name })}</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setDeleteConfirm(null)}
                 className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
-                Cancel
+                {t("deleteConfirm.cancel")}
               </button>
               <button onClick={() => {
                 if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id);
@@ -561,7 +566,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 setDeleteConfirm(null);
               }}
                 className="flex-1 py-3 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity">
-                Delete permanently
+                {t("deleteConfirm.confirm")}
               </button>
             </div>
           </div>
@@ -589,7 +594,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg text-foreground">Rename folder</h2>
+              <h2 className="font-display text-lg text-foreground">{t("renameFolder.heading")}</h2>
               <button onClick={() => setRenameTarget(null)} className="btn-icon">
                 <X size={18} className="text-muted-foreground" />
               </button>
@@ -604,7 +609,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
               className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
                 renameTarget.name.trim() ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
               )}>
-              Rename
+              {t("renameFolder.save")}
             </button>
           </div>
         </div>,
