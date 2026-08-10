@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
 import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell } from "lucide-react";
@@ -87,12 +88,13 @@ function PaginationDots({ page, totalPages, setPage }: { page: number; totalPage
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("dashboard");
   const [complianceTab, setComplianceTab]          = useState<ComplianceTab>("today");
   const [page, setPage]                            = useState(0);
 
   const today    = new Date();
-  const dateLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-  const greeting  = "Here's what's happening today";
+  const dateLabel = today.toLocaleDateString(i18n.language === "es" ? "es-ES" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const greeting  = t("greeting");
 
   // ── Auth ──
   const { teamMember } = useAuth();
@@ -196,7 +198,7 @@ export default function Dashboard() {
             id="notifications-btn"
             onClick={() => navigate("/notifications")}
             className="relative p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label="Notifications"
+            aria-label={t("notificationsAriaLabel")}
           >
             <Bell size={20} className="text-muted-foreground" />
             {allAlerts.length > 0 && (
@@ -218,7 +220,7 @@ export default function Dashboard() {
               <p className="text-xl font-semibold text-[hsl(var(--powder-blue-deep))]">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Checklists</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.checklists")}</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
               <p className={cn("text-xl font-semibold",
@@ -226,25 +228,25 @@ export default function Dashboard() {
               )}>
                 {allAlerts.length}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Alerts</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.alerts")}</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
               <p className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">Overdue</p>
+              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.overdue")}</p>
             </div>
           </div>
         </section>
 
         {/* ── A. Operational Alerts ── */}
         <section>
-          <p className="section-label mb-3">Operational alerts</p>
+          <p className="section-label mb-3">{t("alerts.sectionLabel")}</p>
           {allAlerts.length === 0 ? (
             <div className="bg-card border border-border rounded-2xl p-6 text-center">
               <Bell size={20} className="mx-auto text-sage" aria-hidden="true" />
-              <p className="text-sm font-medium text-foreground">All clear</p>
-              <p className="text-xs text-muted-foreground mt-1">It looks like everything is calm now.</p>
+              <p className="text-sm font-medium text-foreground">{t("alerts.allClearTitle")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("alerts.allClearBody")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -259,7 +261,7 @@ export default function Dashboard() {
                       "w-full bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
                       alert.type === "error" ? "border-l-status-error" : "border-l-status-warn",
                     )}
-                    aria-label={`Open alerts and review ${copy.title}`}
+                    aria-label={t("alerts.openAriaLabel", { title: copy.title })}
                   >
                     <AlertCircle size={15}
                       className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
@@ -278,7 +280,7 @@ export default function Dashboard() {
                   onClick={() => navigate("/notifications")}
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-sage font-semibold rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
                 >
-                  See all {allAlerts.length} alerts
+                  {t("alerts.seeAll", { count: allAlerts.length })}
                   <ChevronRight size={12} />
                 </button>
               )}
@@ -289,7 +291,7 @@ export default function Dashboard() {
         {/* ── B. Daily Compliance ── */}
         <section>
           <div className="flex items-center justify-between mb-3 gap-2">
-            <p className="section-label">Daily compliance</p>
+            <p className="section-label">{t("compliance.sectionLabel")}</p>
             <div className="flex items-center bg-muted rounded-full p-0.5 text-xs shrink-0">
               {(["today", "week", "month"] as ComplianceTab[]).map(tab => (
                 <button key={tab}
@@ -300,7 +302,7 @@ export default function Dashboard() {
                     complianceTab === tab ? "bg-card text-foreground shadow-sm font-medium" : "text-muted-foreground"
                   )}
                 >
-                  {tab}
+                  {t(`compliance.tabs.${tab}`)}
                 </button>
               ))}
             </div>
@@ -312,8 +314,8 @@ export default function Dashboard() {
                 <TrendingUp size={20} className="text-sage" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">No locations yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Add a location to see health scores here.</p>
+                <p className="text-sm font-semibold text-foreground">{t("compliance.noLocations.title")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("compliance.noLocations.body")}</p>
               </div>
             </div>
           ) : (
@@ -342,10 +344,10 @@ export default function Dashboard() {
                         <p className="text-xs font-semibold text-foreground leading-tight line-clamp-2">{loc.name}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {loc.count > 0
-                            ? `${loc.completedCount}/${loc.count} checklists completed`
-                            : "No checklists assigned"}
+                            ? t("compliance.checklistsCompleted", { completed: loc.completedCount, count: loc.count })
+                            : t("compliance.noChecklistsAssigned")}
                         </p>
-                        <p className="text-xs text-sage mt-0.5 font-medium">Tap to review reporting →</p>
+                        <p className="text-xs text-sage mt-0.5 font-medium">{t("compliance.tapToReview")}</p>
                       </div>
                     </button>
                   );
