@@ -1,5 +1,6 @@
 import type { ElementType } from "react";
 import { CalendarIcon, Type, Hash, CheckSquare, Image, Pencil, User, Info } from "lucide-react";
+import i18n from "@/lib/i18n";
 import type { FolderItem, ChecklistItem, Action, LogEntry, ResponseType } from "./types";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -107,6 +108,14 @@ export const RESPONSE_TYPES: { key: ResponseType; label: string; icon: ElementTy
   // Existing saved checklists that contain these types still run — the kiosk
   // runner falls back to a plain text input for any unrecognised/removed type.
 ];
+
+// Translated label lookup for RESPONSE_TYPES — used by callers that have been
+// extracted to i18n. The RESPONSE_TYPES.label field above stays English-only
+// until ResponseTypePicker/ChecklistBuilderModal/FollowUpQuestionEditor get
+// their own translation passes (see #594).
+export function getResponseTypeLabel(key: ResponseType): string {
+  return i18n.t(`responseTypes.${key}`, { ns: "checklists" });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

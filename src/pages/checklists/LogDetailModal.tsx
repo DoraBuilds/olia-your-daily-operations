@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X, Camera, Check, MessageSquare, FileText, Hash, Type, Calendar, GitBranch, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportLogDetailPdf } from "@/lib/export-utils";
@@ -27,6 +28,7 @@ function isAnswered(type: string, ans: any): boolean {
 }
 
 export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () => void }) {
+  const { t } = useTranslation("checklists");
   const scoreColor =
     log.score == null ? "text-muted-foreground" :
     log.score >= 85 ? "text-status-ok" :
@@ -61,7 +63,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
             <span className={cn("text-lg font-semibold", scoreColor)}>{log.score == null ? "—" : `${log.score}%`}</span>
             <button onClick={handleExportPdf}
               className="flex items-center gap-1.5 text-xs font-medium text-sage px-3 py-1.5 rounded-full border border-sage/40 hover:bg-sage-light transition-colors">
-              <FileText size={12} /> Export PDF
+              <FileText size={12} /> {t("logDetail.exportPdf")}
             </button>
             <button onClick={onClose} className="btn-icon">
               <X size={18} className="text-muted-foreground" />
@@ -127,34 +129,34 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm text-foreground leading-snug">{ans.label}</p>
-                      {ans.required && <span className="text-xs text-muted-foreground/60">Required</span>}
+                      {ans.required && <span className="text-xs text-muted-foreground/60">{t("logDetail.required")}</span>}
                       {type === "instruction" && (
-                        <span className="text-xs text-sage/70 font-medium uppercase tracking-wide">Instruction</span>
+                        <span className="text-xs text-sage/70 font-medium uppercase tracking-wide">{t("logDetail.instruction")}</span>
                       )}
                     </div>
 
                     {/* Answer value */}
                     {type === "checkbox" && (
                       <p className={cn("mt-1 text-xs font-medium", answered ? "text-status-ok" : "text-status-error")}>
-                        {answered ? "Completed" : "Not completed"}
+                        {answered ? t("logDetail.completed") : t("logDetail.notCompleted")}
                       </p>
                     )}
                     {type === "number" && ans.answer && (
                       <p className="mt-1 text-sm font-medium text-foreground">{ans.answer}</p>
                     )}
                     {type === "number" && !ans.answer && (
-                      <p className="mt-1 text-xs text-status-error font-medium">No value entered</p>
+                      <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noValueEntered")}</p>
                     )}
                     {type === "photo" && (answered ? (
                       <div className="mt-2 w-24 h-16 rounded-lg bg-muted flex items-center justify-center border border-border">
                         <Camera size={18} className="text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground ml-1">Photo</span>
+                        <span className="text-xs text-muted-foreground ml-1">{t("logDetail.photo")}</span>
                       </div>
-                    ) : <p className="mt-1 text-xs text-status-error font-medium">No photo attached</p>)}
+                    ) : <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noPhotoAttached")}</p>)}
                     {(type === "text" || type === "multiple_choice" || type === "datetime") && (
                       ans.answer
                         ? <p className="mt-1 text-sm text-foreground">{ans.answer}</p>
-                        : <p className="mt-1 text-xs text-status-error font-medium">No answer entered</p>
+                        : <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noAnswerEntered")}</p>
                     )}
                     {type === "instruction" && ans.answer && ans.answer !== "" && ans.answer !== "undefined" && (
                       <p className="mt-1 text-xs text-muted-foreground">{ans.answer}</p>
@@ -174,14 +176,14 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
 
           {!(log.answers ?? []).length && (
             <div className="px-5 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No answer detail recorded for this submission.</p>
+              <p className="text-sm text-muted-foreground">{t("logDetail.noAnswerDetail")}</p>
             </div>
           )}
         </div>
 
         <div className="px-5 py-4 border-t border-border shrink-0">
           <p className="text-xs text-muted-foreground text-center">
-            This is a read-only report. Submitted responses cannot be edited.
+            {t("logDetail.readOnlyNotice")}
           </p>
         </div>
       </div>
