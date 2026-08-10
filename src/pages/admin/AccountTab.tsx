@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import {
   MapPin, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, MailCheck, Send, Eye, EyeOff,
 } from "lucide-react";
@@ -24,7 +26,7 @@ import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
-import { PERM_LABELS, roleUsesDepartment } from "./shared";
+import { PERM_LABELS, roleUsesDepartment, getPermLabel } from "./shared";
 import { ConfirmModal } from "./SharedUI";
 
 export interface AccountTabProps {
@@ -64,19 +66,10 @@ export interface AccountTabProps {
   section?: "account" | "locations" | "users" | "billing";
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  create_staff_profile: "Added staff member",
-  update_staff_profile: "Updated staff member",
-  archive_staff_profile: "Archived staff member",
-  restore_staff_profile: "Restored staff member",
-  delete_staff_profile: "Deleted staff member",
-  create_team_member: "Added team member",
-  update_team_member: "Updated team member",
-  delete_team_member: "Removed team member",
-};
-
 function formatAuditAction(action: string, details: Record<string, any> | null): string {
-  const label = ACTION_LABELS[action] ?? action.replace(/_/g, " ");
+  const label = i18n.exists(`accountTab.auditActions.${action}`, { ns: "admin" })
+    ? i18n.t(`accountTab.auditActions.${action}`, { ns: "admin" })
+    : action.replace(/_/g, " ");
   const name = details?.first_name
     ? `${details.first_name} ${details.last_name ?? ""}`.trim()
     : (details?.name ?? null);
@@ -90,6 +83,7 @@ export function AccountTab({
   onAddLocation, onLocationLimitReached, onEditLocation, onDeleteLocation, onSaveActiveLocations, savingActiveLocations,
   pendingInviteStatus, onInviteMember, onEditMember, onDeleteMember, section,
 }: AccountTabProps) {
+  const { t } = useTranslation("admin");
   const navigate = useNavigate();
   const { teamMember: authTeamMember, updateLanguage } = useAuth();
   const { plan, planStatus, isActive } = usePlan();
@@ -181,9 +175,9 @@ export function AccountTab({
         location_ids: currentAccount.location_ids,
         permissions: currentAccount.permissions,
       });
-      toast.success("Account profile saved");
+      toast.success(t("accountTab.toast.accountProfileSaved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save account profile");
+      toast.error(err instanceof Error ? err.message : t("accountTab.toast.couldNotSaveProfile"));
     } finally {
       setProfileSaving(false);
     }
@@ -192,9 +186,9 @@ export function AccountTab({
   const handleLanguageChange = async (language: SupportedLanguage) => {
     try {
       await updateLanguage(language);
-      toast.success("Language updated");
+      toast.success(t("accountTab.toast.languageUpdated"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not update language");
+      toast.error(err instanceof Error ? err.message : t("accountTab.toast.couldNotUpdateLanguage"));
     }
   };
 
@@ -210,9 +204,9 @@ export function AccountTab({
       setShowSavedPin(false);
       setRevealedPin(null);
       setShowRevealedPin(false);
-      toast.success("Admin PIN updated");
+      toast.success(t("accountTab.toast.adminPinUpdated"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not update admin PIN");
+      toast.error(err instanceof Error ? err.message : t("accountTab.toast.couldNotUpdatePin"));
     } finally {
       setPinSaving(false);
     }
@@ -230,7 +224,7 @@ export function AccountTab({
       setRevealedPin((data as string) ?? "");
       setShowRevealedPin(true);
     } catch (err) {
-      toast.error((err as any)?.message ?? "Could not reveal PIN");
+      toast.error((err as any)?.message ?? t("accountTab.toast.couldNotRevealPin"));
     } finally {
       setRevealLoading(false);
     }
@@ -246,7 +240,7 @@ export function AccountTab({
       navigate("/signup?reason=account-deleted", { replace: true });
       await supabase.auth.signOut();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete account");
+      toast.error(err instanceof Error ? err.message : t("accountTab.toast.couldNotDeleteAccount"));
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -291,7 +285,7 @@ export function AccountTab({
 
   const handleAddLocationClick = () => {
     if (billingUnavailable) {
-      toast.error("We couldn't verify your billing plan. Open Billing and refresh the subscription status first.");
+      toast.error(t("accountTab.toast.billingUnavailableError"));
       return;
     }
     if (atLocationLimit) {
@@ -316,15 +310,15 @@ export function AccountTab({
   const saveActiveSelection = async () => {
     if (maxLocations === -1) return;
     if (selectedActiveLocationIds.length !== maxLocations) {
-      toast.error(`Choose exactly ${maxLocations} active location${maxLocations === 1 ? "" : "s"} to continue.`);
+      toast.error(t("accountTab.toast.chooseExactLocations", { count: maxLocations }));
       return;
     }
     try {
       await onSaveActiveLocations(selectedActiveLocationIds);
       setCommittedActiveLocationIds(selectedActiveLocationIds);
-      toast.success("Active locations updated");
+      toast.success(t("accountTab.toast.activeLocationsUpdated"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update active locations");
+      toast.error(error instanceof Error ? error.message : t("accountTab.toast.couldNotUpdateActiveLocations"));
     }
   };
 
@@ -337,9 +331,9 @@ export function AccountTab({
         <div className="flex gap-4">
           {/* Left: My Account */}
           <div className="flex-1 min-w-0 space-y-3">
-            <p className="section-label">My account</p>
+            <p className="section-label">{t("accountTab.myAccount")}</p>
             <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Full name</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("accountTab.fullName")}</span>
               <input
                 type="text"
                 value={profileName}
@@ -348,7 +342,7 @@ export function AccountTab({
               />
             </label>
             <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Email</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("accountTab.email")}</span>
               <input
                 type="email"
                 value={profileEmail}
@@ -357,7 +351,7 @@ export function AccountTab({
               />
             </label>
             <label className="space-y-1 block">
-              <span className="text-xs text-muted-foreground font-medium">Language</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("accountTab.language")}</span>
               <LanguageSwitcher
                 value={authTeamMember?.language ?? "en"}
                 onChange={handleLanguageChange}
@@ -374,7 +368,7 @@ export function AccountTab({
                   : "bg-sage text-primary-foreground hover:bg-sage-deep",
               )}
             >
-              {profileSaving ? "Saving…" : "Save"}
+              {profileSaving ? t("accountTab.saving") : t("accountTab.save")}
             </button>
           </div>
 
@@ -383,16 +377,16 @@ export function AccountTab({
 
           {/* Right: Security */}
           <div className="flex-1 min-w-0 space-y-3">
-            <p className="section-label">Security</p>
+            <p className="section-label">{t("accountTab.security")}</p>
             {needsDefaultPinChange && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-                Default PIN is <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>. Change it before using kiosk mode.
+                {t("accountTab.defaultPinPrefix")} <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>{t("accountTab.defaultPinSuffix")}
               </div>
             )}
             {/* Current PIN (shown once after save) */}
             {savedPin && (
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground font-medium">Current PIN</span>
+                <span className="text-xs text-muted-foreground font-medium">{t("accountTab.currentPin")}</span>
                 <div className="relative">
                   <input
                     readOnly
@@ -421,7 +415,7 @@ export function AccountTab({
             )}
             {/* PIN */}
             <div className="space-y-1">
-              <span className="text-xs text-muted-foreground font-medium">New PIN</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("accountTab.newPin")}</span>
               <div className="relative">
                 <input
                   type={showNewPin ? "text" : "password"}
@@ -429,7 +423,7 @@ export function AccountTab({
                   maxLength={4}
                   value={pin}
                   onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  placeholder="4 digits"
+                  placeholder={t("accountTab.fourDigits")}
                   className="w-full border border-border rounded-xl px-3 py-2.5 pr-9 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring tracking-[0.3em]"
                 />
                 <button
@@ -445,7 +439,7 @@ export function AccountTab({
                   {revealedPin !== null ? (
                     <>
                       <span className="text-xs text-muted-foreground">
-                        Current PIN:&nbsp;
+                        {t("accountTab.currentPinLabel")}&nbsp;
                         <span className="font-mono font-medium">
                           {showRevealedPin ? revealedPin : "••••"}
                         </span>
@@ -465,7 +459,7 @@ export function AccountTab({
                       disabled={revealLoading}
                       className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
                     >
-                      {revealLoading ? "Loading…" : "View current PIN"}
+                      {revealLoading ? t("accountTab.loading") : t("accountTab.viewCurrentPin")}
                     </button>
                   )}
                 </div>
@@ -480,7 +474,7 @@ export function AccountTab({
                 pinSaving || pin.length !== 4 ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-sage text-white hover:bg-sage-deep",
               )}
             >
-              {pinSaving ? "Saving…" : "Create new PIN"}
+              {pinSaving ? t("accountTab.saving") : t("accountTab.createNewPin")}
             </button>
           </div>
         </div>
@@ -489,16 +483,16 @@ export function AccountTab({
       {/* Danger zone — owner only */}
       {show("account") && currentAccount?.role === "Owner" && (
         <section className="card-surface p-4 border border-status-error/20">
-          <p className="section-label text-status-error mb-2">Danger zone</p>
+          <p className="section-label text-status-error mb-2">{t("accountTab.dangerZone")}</p>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Permanently delete your account and all organisation data. This cannot be undone.
+            {t("accountTab.dangerZoneNotice")}
           </p>
           <button
             type="button"
             onClick={() => { setDeleteConfirmText(""); setShowDeleteModal(true); }}
             className="w-full py-2.5 rounded-xl text-sm font-semibold border border-status-error text-status-error hover:bg-status-error/5 transition-colors"
           >
-            Delete account
+            {t("accountTab.deleteAccount")}
           </button>
         </section>
       )}
@@ -507,7 +501,7 @@ export function AccountTab({
       {show("locations") && <section>
         {/* Header row: title */}
         <div className="flex items-center justify-between mb-1">
-          <p className="section-label">All locations</p>
+          <p className="section-label">{t("accountTab.allLocations")}</p>
         </div>
         {/* Usage + plan line */}
         <div className="flex items-center gap-2 mb-3">
@@ -517,7 +511,7 @@ export function AccountTab({
               ? "bg-muted text-muted-foreground"
               : "bg-sage/10 text-sage",
           )}>
-            {billingUnavailable ? "Billing unavailable" : PLAN_LABELS[plan]}
+            {billingUnavailable ? t("accountTab.billingUnavailableBadge") : PLAN_LABELS[plan]}
           </span>
           <span className={cn(
             "text-xs",
@@ -526,23 +520,23 @@ export function AccountTab({
               : atLocationLimit ? "text-status-warn font-medium" : "text-muted-foreground",
           )}>
             {billingUnavailable
-              ? "Plan status could not be verified."
-              : `${locations.length} / ${maxLocations === -1 ? "∞" : maxLocations} locations used`}
+              ? t("accountTab.planStatusUnverified")
+              : t("accountTab.locationsUsed", { count: locations.length, max: maxLocations === -1 ? "∞" : maxLocations })}
           </span>
         </div>
         {isLocationOverLimit && (
           <div className="card-surface border border-status-warn/30 bg-status-warn/5 px-4 py-3 mb-3 space-y-3">
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">Location limit grace period</p>
+              <p className="text-sm font-semibold text-foreground">{t("accountTab.gracePeriod.title")}</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 {isGraceActive
-                  ? `This account is over the ${PLAN_LABELS[plan]} location limit. Choose which ${maxLocations} location${maxLocations === 1 ? "" : "s"} stay active by ${graceDeadlineLabel}.`
-                  : `The 7-day grace period has ended. Only ${maxLocations} location${maxLocations === 1 ? "" : "s"} can stay operational on ${PLAN_LABELS[plan]}. Extra locations are now read-only until you upgrade or reduce usage.`}
+                  ? t("accountTab.gracePeriod.active", { plan: PLAN_LABELS[plan], count: maxLocations, plural: maxLocations === 1 ? "" : "s", date: graceDeadlineLabel })
+                  : t("accountTab.gracePeriod.expired", { count: maxLocations, plural: maxLocations === 1 ? "" : "s", plan: PLAN_LABELS[plan] })}
               </p>
             </div>
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Choose active locations
+                {t("accountTab.gracePeriod.chooseActive")}
               </p>
               <div className="grid gap-2">
                 {locations.map((location) => (
@@ -577,7 +571,7 @@ export function AccountTab({
               </div>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-muted-foreground">
-                  {selectedActiveLocationIds.length} of {maxLocations} selected
+                  {t("accountTab.gracePeriod.selectedCount", { selected: selectedActiveLocationIds.length, max: maxLocations })}
                 </p>
                 <button
                   type="button"
@@ -590,7 +584,7 @@ export function AccountTab({
                       : "bg-sage text-primary-foreground hover:bg-sage-deep",
                   )}
                 >
-                  {savingActiveLocations ? "Saving…" : "Save active locations"}
+                  {savingActiveLocations ? t("accountTab.saving") : t("accountTab.gracePeriod.saveActiveLocations")}
                 </button>
               </div>
             </div>
@@ -622,12 +616,12 @@ export function AccountTab({
                   <div className="flex flex-wrap gap-2 mt-2">
                     {activeLocationSet.has(loc.id) ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-sage/10 text-sage text-xs font-medium tracking-wide">
-                        {isGraceExpired ? "Active" : "Grace window"}
+                        {isGraceExpired ? t("accountTab.active") : t("accountTab.graceWindow")}
                       </span>
                     ) : null}
                     {inactiveLocationSet.has(loc.id) ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium tracking-wide">
-                        Read-only
+                        {t("accountTab.readOnly")}
                       </span>
                     ) : null}
                   </div>
@@ -656,7 +650,7 @@ export function AccountTab({
               onClick={handleAddLocationClick}
               className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
             >
-              <Plus size={14} /> Add location
+              <Plus size={14} /> {t("accountTab.addLocation")}
             </button>
           </div>
         </div>
@@ -665,17 +659,17 @@ export function AccountTab({
       {/* Team Members */}
       {show("users") && <section>
         <div className="flex items-center justify-between mb-1">
-          <p className="section-label">Team members ({teamMembers.length + staffProfiles.filter(s => s.status === "active").length})</p>
+          <p className="section-label">{t("accountTab.teamMembers", { count: teamMembers.length + staffProfiles.filter(s => s.status === "active").length })}</p>
         </div>
         <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          All team members across all locations in the organisation.
+          {t("accountTab.teamMembersNotice")}
         </p>
         <div className="card-surface divide-y divide-border">
           {/* Column headers */}
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="w-9 shrink-0" />
-            <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name</p>
-            <p className="w-20 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Role</p>
+            <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.name")}</p>
+            <p className="w-20 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.role")}</p>
             <div className="w-20 shrink-0" />
           </div>
           {[...teamMembers].sort((a, b) => a.role === "Owner" ? -1 : b.role === "Owner" ? 1 : 0).map(member => {
@@ -695,11 +689,11 @@ export function AccountTab({
                     {hasPendingInvite ? (
                       <p className={cn("text-xs flex items-center gap-1", inviteExpired ? "text-muted-foreground" : "text-status-warn")}>
                         <MailCheck size={11} />
-                        {inviteExpired ? "Invite expired" : "Invite pending"}
+                        {inviteExpired ? t("accountTab.inviteExpired") : t("accountTab.invitePending")}
                       </p>
                     ) : member.last_seen_at ? (
                       <p className="text-xs text-muted-foreground/60" title={daysAgoTooltip(member.last_seen_at)}>
-                        Last seen {new Date(member.last_seen_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {t("accountTab.lastSeen", { date: new Date(member.last_seen_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) })}
                       </p>
                     ) : null}
                   </div>
@@ -713,13 +707,13 @@ export function AccountTab({
                     <button
                       onClick={() => {
                         sendInvite.mutate(member.id, {
-                          onSuccess: () => toast.success(`Invite resent to ${member.email}`),
-                          onError: () => toast.error("Failed to resend invite"),
+                          onSuccess: () => toast.success(t("accountTab.toast.inviteResent", { email: member.email })),
+                          onError: () => toast.error(t("accountTab.toast.resendInviteFailed")),
                         });
                       }}
                       disabled={sendInvite.isPending}
-                      aria-label={`Resend invite to ${member.name}`}
-                      title="Resend invite"
+                      aria-label={t("accountTab.resendInviteAria", { name: member.name })}
+                      title={t("accountTab.resendInvite")}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                     >
                       <Send size={14} className="text-status-warn" />
@@ -727,7 +721,7 @@ export function AccountTab({
                   )}
                   <button
                     onClick={() => onEditMember(member)}
-                    aria-label={`Edit ${member.name}`}
+                    aria-label={t("accountTab.editAria", { name: member.name })}
                     className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                   >
                     <Pencil size={14} className="text-muted-foreground" />
@@ -743,7 +737,7 @@ export function AccountTab({
                   {member.id !== authMemberId && (
                     <button
                       onClick={() => onDeleteMember(member)}
-                      aria-label={`Delete ${member.name}`}
+                      aria-label={t("accountTab.deleteAria", { name: member.name })}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                     >
                       <Trash2 size={14} className="text-status-error" />
@@ -753,14 +747,14 @@ export function AccountTab({
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-2 bg-muted/30 space-y-3">
                     {member.role === "Owner" ? (
-                      <p className="text-xs text-muted-foreground italic">Full access — all settings</p>
+                      <p className="text-xs text-muted-foreground italic">{t("accountTab.fullAccessNotice")}</p>
                     ) : (
                       <>
-                        <p className="section-label">Permissions</p>
+                        <p className="section-label">{t("accountTab.permissions")}</p>
                         <div className="space-y-3">
                           {(Object.keys(PERM_LABELS) as (keyof ManagerPermissions)[]).map(key => (
                             <div key={key} className="flex items-center justify-between gap-3">
-                              <p className="text-sm text-foreground">{PERM_LABELS[key]}</p>
+                              <p className="text-sm text-foreground">{getPermLabel(key)}</p>
                               <Switch
                                 checked={mp[key]}
                                 onCheckedChange={val => setPendingPerms(prev => ({
@@ -775,7 +769,7 @@ export function AccountTab({
                           onClick={() => savePerms(member.id)}
                           className="w-full py-2.5 rounded-xl text-xs font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
                         >
-                          Save permissions
+                          {t("accountTab.savePermissions")}
                         </button>
                       </>
                     )}
@@ -800,7 +794,7 @@ export function AccountTab({
               onClick={onInviteMember}
               className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
             >
-              <Plus size={14} /> Add a team member
+              <Plus size={14} /> {t("accountTab.addTeamMember")}
             </button>
           </div>
         </div>
@@ -808,9 +802,9 @@ export function AccountTab({
 
       {/* Department Management */}
       {show("users") && <section>
-        <p className="section-label mb-3">Department management</p>
+        <p className="section-label mb-3">{t("accountTab.departmentManagement")}</p>
         <p className="text-xs text-muted-foreground mb-3">
-          Staff roles are managed at the department level only.
+          {t("accountTab.departmentManagementNotice")}
         </p>
         <div className="card-surface divide-y divide-border">
           {departments.map((department, departmentIndex) => {
@@ -850,7 +844,7 @@ export function AccountTab({
                   <>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground">{department.name}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Department role</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t("accountTab.departmentRole")}</p>
                     </div>
                     <button
                       onClick={() => setRenamingDepartment({ index: departmentIndex, value: department.name })}
@@ -861,7 +855,7 @@ export function AccountTab({
                     <button
                       onClick={() => deleteDepartment(departmentIndex)}
                       disabled={departmentInUse}
-                      title={departmentInUse ? "Department is in use" : "Delete department"}
+                      title={departmentInUse ? t("accountTab.departmentInUse") : t("accountTab.deleteDepartment")}
                       className={cn(
                         "p-1.5 rounded-lg transition-colors",
                         departmentInUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
@@ -882,7 +876,7 @@ export function AccountTab({
                   type="text"
                   value={newDepartmentName}
                   onChange={e => setNewDepartmentName(e.target.value)}
-                  placeholder="Department name…"
+                  placeholder={t("accountTab.departmentNamePlaceholder")}
                   onKeyDown={e => {
                     if (e.key === "Enter") { e.preventDefault(); addDepartment(); setShowAddDepartment(false); }
                     if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
@@ -906,7 +900,7 @@ export function AccountTab({
                 onClick={() => setShowAddDepartment(true)}
                 className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
               >
-                <Plus size={14} /> Add department
+                <Plus size={14} /> {t("accountTab.addDepartment")}
               </button>
             )}
           </div>
@@ -915,10 +909,10 @@ export function AccountTab({
 
       {/* Activity log */}
       {show("account") && <section>
-        <p className="section-label mb-3">Activity log</p>
+        <p className="section-label mb-3">{t("accountTab.activityLog")}</p>
         <div className="card-surface divide-y divide-border">
           {auditLog.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-muted-foreground">No activity recorded yet.</p>
+            <p className="px-4 py-4 text-sm text-muted-foreground">{t("accountTab.noActivity")}</p>
           ) : (
             auditLog.map(entry => (
               <div key={entry.id} className="px-4 py-3 flex items-start justify-between gap-3">
@@ -939,23 +933,23 @@ export function AccountTab({
 
       {/* Billing */}
       {show("billing") && <section>
-        <p className="section-label mb-3">Billing</p>
+        <p className="section-label mb-3">{t("accountTab.billing")}</p>
         <div className="card-surface divide-y divide-border">
           <div className="flex items-start justify-between gap-2 px-4 py-4">
             <div>
-              <p className="text-xs text-muted-foreground font-medium mb-0.5">Current plan</p>
-              <p className="font-display font-semibold text-xl text-foreground leading-tight">Olia {PLAN_LABELS[plan]}</p>
+              <p className="text-xs text-muted-foreground font-medium mb-0.5">{t("accountTab.currentPlanLabel")}</p>
+              <p className="font-display font-semibold text-xl text-foreground leading-tight">{t("accountTab.planName", { plan: PLAN_LABELS[plan] })}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {PLAN_PRICES[plan].monthly === 0
-                  ? "Free · No billing required"
-                  : `${PLAN_PRICES[plan].currency}${PLAN_PRICES[plan].monthly}/month`}
+                  ? t("accountTab.freeNoBilling")
+                  : t("accountTab.pricePerMonth", { currency: PLAN_PRICES[plan].currency, price: PLAN_PRICES[plan].monthly })}
               </p>
             </div>
             <span className={cn(
               "text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
               isActive ? "border-sage/20 text-sage bg-sage/10" : "border-status-warn/30 text-status-warn bg-status-warn/10"
             )}>
-              {planStatus === "trialing" ? "Trial" : isActive ? "Active" : planStatus}
+              {planStatus === "trialing" ? t("accountTab.trial") : isActive ? t("accountTab.active") : planStatus}
             </span>
           </div>
           <div className="flex justify-end px-4 py-3">
@@ -966,14 +960,14 @@ export function AccountTab({
                 rel="noopener noreferrer"
                 className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
               >
-                Manage at olia.app
+                {t("accountTab.manageAtOlia")}
               </a>
             ) : (
               <button
                 onClick={() => navigate("/billing")}
                 className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
               >
-                Manage Billing
+                {t("accountTab.manageBilling")}
               </button>
             )}
           </div>
@@ -983,25 +977,25 @@ export function AccountTab({
       {/* Delete account confirmation modal */}
       {showDeleteModal && (
         <ConfirmModal
-          title="Delete account"
+          title={t("accountTab.deleteAccountModal.title")}
           message={
             <span>
-              This will permanently delete your organisation, all locations, checklists, staff profiles, and team members.{" "}
-              <strong>This cannot be undone.</strong>
+              {t("accountTab.deleteAccountModal.body")}{" "}
+              <strong>{t("accountTab.deleteAccountModal.cannotBeUndone")}</strong>
               <br /><br />
-              Type <strong>DELETE</strong> to confirm.
+              {t("accountTab.deleteAccountModal.typeToConfirm")} <strong>DELETE</strong> {t("accountTab.deleteAccountModal.toConfirm")}
               <br />
               <input
                 autoFocus
                 type="text"
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value.toUpperCase())}
-                placeholder="Type DELETE"
+                placeholder={t("accountTab.deleteAccountModal.placeholder")}
                 className="mt-3 w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </span>
           }
-          actionLabel={deleting ? "Deleting…" : "Yes, delete everything"}
+          actionLabel={deleting ? t("accountTab.deleteAccountModal.deleting") : t("accountTab.deleteAccountModal.confirmAction")}
           onClose={() => setShowDeleteModal(false)}
           onConfirm={() => { if (deleteConfirmText === "DELETE") deleteAccount(); }}
         />
