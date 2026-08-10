@@ -1,0 +1,109 @@
+{
+  "subtitle": "Manage your plan",
+  "back": "Back",
+  "native": {
+    "currentPlan": "Current plan",
+    "viewOnWebNotice": "To view plans, upgrade, or manage your subscription, visit us on the web.",
+    "manageAtOlia": "Manage at olia.app"
+  },
+  "banners": {
+    "welcomeAboard": "You're now on {{plan}}. Welcome aboard!",
+    "activating": "Checkout complete — activating your plan. This page will update automatically.",
+    "canceled": "Checkout was canceled — no changes made.",
+    "activationTimeout": "Checkout completed, but we couldn't confirm the plan change yet. Please refresh in a moment or contact us if it stays stuck.",
+    "activationTimeoutGeneric": "Checkout completed, but we couldn't confirm the plan change yet."
+  },
+  "errors": {
+    "notConfigured": "Online upgrades are not configured for this deployment yet. Please contact us so we can complete billing setup.",
+    "couldNotReachService": "Could not reach the upgrade service.",
+    "noCheckoutUrl": "No checkout URL returned. Please try again or contact support at hello@olia.app.",
+    "genericError": "Something went wrong. Please try again.",
+    "stripeNotConfigured": "Online upgrades aren't available yet. To upgrade your plan, email us at hello@olia.app and we'll get you set up."
+  },
+  "planSummary": {
+    "billingUnavailableBadge": "Billing unavailable",
+    "couldNotVerify": "We couldn't verify your billing plan just now.",
+    "planActive": "{{plan}} is active{{trial}}.",
+    "onTrial": " on trial",
+    "refreshMoment": "Refresh in a moment and we’ll pull the latest billing state.",
+    "unlimitedLocationsIncluded": "Unlimited locations included.",
+    "locationsIncluded_one": "{{count}} location included.",
+    "locationsIncluded_other": "{{count}} locations included.",
+    "upgradeHint": "Upgrade to Growth for up to 10 locations.",
+    "manageSubscription": "Manage subscription on Stripe",
+    "customerPortalNotConfigured": "Customer portal not configured."
+  },
+  "period": {
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "saveApprox": "Save ~20%",
+    "month": "month",
+    "year": "year"
+  },
+  "plans": {
+    "starter": {
+      "description": "For single-location restaurants getting started with digital operations.",
+      "highlights": ["1 location", "Up to 15 staff profiles", "Up to 10 checklists", "Kiosk mode", "SOP & training hub", "PDF export"],
+      "locationHint": "1 location included"
+    },
+    "growth": {
+      "description": "For operators managing multiple venues and growing teams.",
+      "highlights": ["Up to 10 locations", "Up to 200 staff profiles", "Unlimited checklists", "AI checklist builder", "Multi-location oversight", "Advanced reporting & charts", "CSV + PDF export", "File-to-checklist conversion"],
+      "locationHint": "Up to 10 locations"
+    },
+    "enterprise": {
+      "description": "For larger hospitality groups with complex operational needs.",
+      "highlights": ["Unlimited locations & staff", "Everything in Growth", "Dedicated account manager", "Custom onboarding & training", "SLA-backed support", "Custom integrations on request"],
+      "locationHint": "Unlimited locations"
+    }
+  },
+  "card": {
+    "currentPlan": "Current plan",
+    "recommended": "Recommended",
+    "customPricing": "Custom pricing",
+    "perLocationPer": "/ location / {{period}}",
+    "exampleLocations": "e.g. {{count}} {{locationWord}} = {{currency}}{{total}} / {{period}}",
+    "location_one": "location",
+    "location_other": "locations",
+    "pricingTailored": "Pricing tailored to your operation",
+    "bookADemo": "Book a demo",
+    "upgradeTo": "Upgrade to {{plan}}",
+    "switchTo": "Switch to {{plan}}"
+  },
+  "comparison": {
+    "heading": "Plan comparison",
+    "sections": {
+      "usageLimits": "Usage limits",
+      "coreFeatures": "Core features",
+      "growthFeatures": "Growth features",
+      "enterprise": "Enterprise"
+    },
+    "rows": {
+      "locations": "Locations",
+      "staffProfiles": "Staff profiles",
+      "checklists": "Checklists",
+      "kioskMode": "Kiosk mode",
+      "staffPinCheckin": "Staff PIN check-in",
+      "checklistBuilder": "Checklist builder",
+      "sopTrainingHub": "SOP & training hub",
+      "pdfExport": "PDF export",
+      "multiLocationView": "Multi-location view",
+      "aiChecklistBuilder": "AI checklist builder",
+      "fileToChecklistImport": "File-to-checklist import",
+      "advancedReporting": "Advanced reporting",
+      "csvExport": "CSV export",
+      "dedicatedAccountManager": "Dedicated account manager",
+      "customOnboarding": "Custom onboarding",
+      "slaBackedSupport": "SLA-backed support",
+      "customIntegrations": "Custom integrations"
+    },
+    "values": {
+      "one": "1",
+      "upTo10": "Up to 10",
+      "upTo15": "Up to 15",
+      "upTo200": "Up to 200",
+      "unlimited": "Unlimited"
+    }
+  },
+  "footer": "Secure payments powered by Stripe. Upgrade or cancel anytime."
+}

@@ -1,0 +1,109 @@
+{
+  "subtitle": "Gestiona tu plan",
+  "back": "Atrás",
+  "native": {
+    "currentPlan": "Plan actual",
+    "viewOnWebNotice": "Para ver planes, actualizar o gestionar tu suscripción, visítanos en la web.",
+    "manageAtOlia": "Gestionar en olia.app"
+  },
+  "banners": {
+    "welcomeAboard": "Ahora tienes el plan {{plan}}. ¡Bienvenido!",
+    "activating": "Pago completado — activando tu plan. Esta página se actualizará automáticamente.",
+    "canceled": "El pago fue cancelado — no se hicieron cambios.",
+    "activationTimeout": "El pago se completó, pero aún no pudimos confirmar el cambio de plan. Actualiza en un momento o contáctanos si sigue atascado.",
+    "activationTimeoutGeneric": "El pago se completó, pero aún no pudimos confirmar el cambio de plan."
+  },
+  "errors": {
+    "notConfigured": "Las actualizaciones en línea aún no están configuradas para este despliegue. Contáctanos para completar la configuración de facturación.",
+    "couldNotReachService": "No se pudo conectar con el servicio de actualización.",
+    "noCheckoutUrl": "No se devolvió una URL de pago. Inténtalo de nuevo o contacta soporte en hello@olia.app.",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "stripeNotConfigured": "Las actualizaciones en línea aún no están disponibles. Para actualizar tu plan, escríbenos a hello@olia.app y te ayudaremos."
+  },
+  "planSummary": {
+    "billingUnavailableBadge": "Facturación no disponible",
+    "couldNotVerify": "No pudimos verificar tu plan de facturación en este momento.",
+    "planActive": "{{plan}} está activo{{trial}}.",
+    "onTrial": " en prueba",
+    "refreshMoment": "Actualiza en un momento y obtendremos el estado de facturación más reciente.",
+    "unlimitedLocationsIncluded": "Ubicaciones ilimitadas incluidas.",
+    "locationsIncluded_one": "{{count}} ubicación incluida.",
+    "locationsIncluded_other": "{{count}} ubicaciones incluidas.",
+    "upgradeHint": "Actualiza a Growth para hasta 10 ubicaciones.",
+    "manageSubscription": "Gestionar suscripción en Stripe",
+    "customerPortalNotConfigured": "El portal de clientes no está configurado."
+  },
+  "period": {
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "saveApprox": "Ahorra ~20%",
+    "month": "mes",
+    "year": "año"
+  },
+  "plans": {
+    "starter": {
+      "description": "Para restaurantes de una sola ubicación que empiezan a digitalizar sus operaciones.",
+      "highlights": ["1 ubicación", "Hasta 15 perfiles de personal", "Hasta 10 listas de verificación", "Modo kiosco", "Centro de procedimientos y capacitación", "Exportación a PDF"],
+      "locationHint": "1 ubicación incluida"
+    },
+    "growth": {
+      "description": "Para operadores que gestionan varios locales y equipos en crecimiento.",
+      "highlights": ["Hasta 10 ubicaciones", "Hasta 200 perfiles de personal", "Listas de verificación ilimitadas", "Creador de listas con IA", "Supervisión multi-ubicación", "Informes y gráficos avanzados", "Exportación a CSV + PDF", "Conversión de archivo a lista"],
+      "locationHint": "Hasta 10 ubicaciones"
+    },
+    "enterprise": {
+      "description": "Para grupos hoteleros más grandes con necesidades operativas complejas.",
+      "highlights": ["Ubicaciones y personal ilimitados", "Todo lo de Growth", "Gerente de cuenta dedicado", "Incorporación y capacitación personalizadas", "Soporte con SLA garantizado", "Integraciones personalizadas bajo pedido"],
+      "locationHint": "Ubicaciones ilimitadas"
+    }
+  },
+  "card": {
+    "currentPlan": "Plan actual",
+    "recommended": "Recomendado",
+    "customPricing": "Precio personalizado",
+    "perLocationPer": "/ ubicación / {{period}}",
+    "exampleLocations": "p. ej. {{count}} {{locationWord}} = {{currency}}{{total}} / {{period}}",
+    "location_one": "ubicación",
+    "location_other": "ubicaciones",
+    "pricingTailored": "Precio adaptado a tu operación",
+    "bookADemo": "Reservar una demo",
+    "upgradeTo": "Actualizar a {{plan}}",
+    "switchTo": "Cambiar a {{plan}}"
+  },
+  "comparison": {
+    "heading": "Comparación de planes",
+    "sections": {
+      "usageLimits": "Límites de uso",
+      "coreFeatures": "Funciones principales",
+      "growthFeatures": "Funciones de Growth",
+      "enterprise": "Enterprise"
+    },
+    "rows": {
+      "locations": "Ubicaciones",
+      "staffProfiles": "Perfiles de personal",
+      "checklists": "Listas de verificación",
+      "kioskMode": "Modo kiosco",
+      "staffPinCheckin": "Inicio de sesión con PIN",
+      "checklistBuilder": "Creador de listas",
+      "sopTrainingHub": "Centro de procedimientos y capacitación",
+      "pdfExport": "Exportación a PDF",
+      "multiLocationView": "Vista multi-ubicación",
+      "aiChecklistBuilder": "Creador de listas con IA",
+      "fileToChecklistImport": "Importar archivo a lista",
+      "advancedReporting": "Informes avanzados",
+      "csvExport": "Exportación a CSV",
+      "dedicatedAccountManager": "Gerente de cuenta dedicado",
+      "customOnboarding": "Incorporación personalizada",
+      "slaBackedSupport": "Soporte con SLA garantizado",
+      "customIntegrations": "Integraciones personalizadas"
+    },
+    "values": {
+      "one": "1",
+      "upTo10": "Hasta 10",
+      "upTo15": "Hasta 15",
+      "upTo200": "Hasta 200",
+      "unlimited": "Ilimitado"
+    }
+  },
+  "footer": "Pagos seguros procesados por Stripe. Actualiza o cancela cuando quieras."
+}
