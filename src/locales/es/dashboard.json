@@ -1,0 +1,56 @@
+{
+  "greeting": "Esto es lo que ocurre hoy",
+  "notificationsAriaLabel": "Notificaciones",
+  "stats": {
+    "checklists": "Listas",
+    "alerts": "Alertas",
+    "overdue": "Atrasado"
+  },
+  "alerts": {
+    "sectionLabel": "Alertas operativas",
+    "allClearTitle": "Todo en orden",
+    "allClearBody": "Por ahora todo parece estar tranquilo.",
+    "seeAll": "Ver las {{count}} alertas",
+    "openAriaLabel": "Abrir alertas y revisar {{title}}",
+    "copy": {
+      "reviewNeeded": {
+        "title": "La respuesta necesita revisión",
+        "bodyWithValue": "Valor registrado: {{value}}.",
+        "bodyGeneric": "Un valor registrado está fuera del rango esperado.",
+        "helperRange": "Rango permitido: {{range}}."
+      },
+      "followUp": {
+        "title": "Requiere seguimiento",
+        "bodyWithSubject": "{{subject}} quedó sin responder.",
+        "bodyGeneric": "Un paso de la lista quedó sin responder.",
+        "helper": "No se proporcionó una respuesta, así que este ítem necesita atención."
+      },
+      "actionNeeded": {
+        "title": "Requiere acción",
+        "bodyGeneric": "Un paso de la lista necesita atención.",
+        "helper": "Abre la lista de verificación para revisar el detalle."
+      },
+      "fallback": {
+        "titleError": "Necesita atención",
+        "titleWarn": "Revisa este ítem",
+        "bodyGeneric": "Un paso de la lista necesita atención."
+      },
+      "contextFallback": "Abre la lista de verificación para más detalle."
+    }
+  },
+  "compliance": {
+    "sectionLabel": "Cumplimiento diario",
+    "tabs": {
+      "today": "hoy",
+      "week": "semana",
+      "month": "mes"
+    },
+    "noLocations": {
+      "title": "Aún no hay ubicaciones",
+      "body": "Agrega una ubicación para ver los puntajes aquí."
+    },
+    "checklistsCompleted": "{{completed}}/{{count}} listas completadas",
+    "noChecklistsAssigned": "Sin listas asignadas",
+    "tapToReview": "Toca para revisar los informes →"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "greeting": "Here's what's happening today",
+  "notificationsAriaLabel": "Notifications",
+  "stats": {
+    "checklists": "Checklists",
+    "alerts": "Alerts",
+    "overdue": "Overdue"
+  },
+  "alerts": {
+    "sectionLabel": "Operational alerts",
+    "allClearTitle": "All clear",
+    "allClearBody": "It looks like everything is calm now.",
+    "seeAll": "See all {{count}} alerts",
+    "openAriaLabel": "Open alerts and review {{title}}",
+    "copy": {
+      "reviewNeeded": {
+        "title": "Response needs a review",
+        "bodyWithValue": "Recorded value: {{value}}.",
+        "bodyGeneric": "A recorded value is outside the expected range.",
+        "helperRange": "Allowed range: {{range}}."
+      },
+      "followUp": {
+        "title": "Follow-up needed",
+        "bodyWithSubject": "{{subject}} was left unanswered.",
+        "bodyGeneric": "A checklist step was left unanswered.",
+        "helper": "A response was not provided, so this item needs attention."
+      },
+      "actionNeeded": {
+        "title": "Action needed",
+        "bodyGeneric": "A checklist step needs attention.",
+        "helper": "Open the checklist to review the detail."
+      },
+      "fallback": {
+        "titleError": "Needs attention",
+        "titleWarn": "Check this item",
+        "bodyGeneric": "A checklist step needs attention."
+      },
+      "contextFallback": "Open the checklist for more detail."
+    }
+  },
+  "compliance": {
+    "sectionLabel": "Daily compliance",
+    "tabs": {
+      "today": "today",
+      "week": "week",
+      "month": "month"
+    },
+    "noLocations": {
+      "title": "No locations yet",
+      "body": "Add a location to see health scores here."
+    },
+    "checklistsCompleted": "{{completed}}/{{count}} checklists completed",
+    "noChecklistsAssigned": "No checklists assigned",
+    "tapToReview": "Tap to review reporting →"
+  }
+}
