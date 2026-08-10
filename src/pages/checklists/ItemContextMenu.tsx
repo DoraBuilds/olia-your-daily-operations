@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { Move, Pencil, Copy, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,17 +8,18 @@ export function ItemContextMenu({ type, onAction, onClose }: {
   onAction: (action: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("checklists");
   const folderActions = [
-    { key: "move", label: "Move to folder", icon: Move },
-    { key: "rename", label: "Rename", icon: Pencil },
-    { key: "delete", label: "Delete", icon: Trash2 },
+    { key: "move", label: t("contextMenu.moveToFolder"), icon: Move },
+    { key: "rename", label: t("contextMenu.rename"), icon: Pencil },
+    { key: "delete", label: t("contextMenu.delete"), icon: Trash2 },
   ];
   const checklistActions = [
-    { key: "edit", label: "Edit", icon: Pencil },
-    { key: "duplicate", label: "Duplicate", icon: Copy },
-    { key: "move", label: "Move to folder", icon: Move },
-    { key: "download", label: "Download as PDF", icon: Download },
-    { key: "delete", label: "Delete", icon: Trash2 },
+    { key: "edit", label: t("contextMenu.edit"), icon: Pencil },
+    { key: "duplicate", label: t("contextMenu.duplicate"), icon: Copy },
+    { key: "move", label: t("contextMenu.moveToFolder"), icon: Move },
+    { key: "download", label: t("contextMenu.downloadPdf"), icon: Download },
+    { key: "delete", label: t("contextMenu.delete"), icon: Trash2 },
   ];
   const actions = type === "folder" ? folderActions : checklistActions;
 

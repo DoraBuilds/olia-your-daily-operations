@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
 import type { FolderItem } from "./types";
 
@@ -6,6 +7,7 @@ export function FolderBreadcrumb({ folders, currentId, onNavigate }: {
   currentId: string | null;
   onNavigate: (id: string | null) => void;
 }) {
+  const { t } = useTranslation("checklists");
   if (!currentId) return null;
   const trail: FolderItem[] = [];
   let cur = currentId;
@@ -17,7 +19,7 @@ export function FolderBreadcrumb({ folders, currentId, onNavigate }: {
   }
   return (
     <div className="flex items-center gap-1 text-xs text-muted-foreground overflow-x-auto pb-1">
-      <button onClick={() => onNavigate(null)} className="shrink-0 hover:text-foreground transition-colors">All</button>
+      <button onClick={() => onNavigate(null)} className="shrink-0 hover:text-foreground transition-colors">{t("breadcrumb.all")}</button>
       {trail.map(f => (
         <span key={f.id} className="flex items-center gap-1 shrink-0">
           <ChevronRight size={10} />
