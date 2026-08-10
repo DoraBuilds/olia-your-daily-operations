@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import {
   MapPin, Plus, Pencil, X,
   ChevronDown, Eye, EyeOff,
@@ -22,7 +23,7 @@ import {
   getRoleDepartment, getInitials, generatePin,
 } from "@/lib/admin-repository";
 import {
-  PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP,
+  PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP, getPermLabel,
 } from "./shared";
 
 // Re-export so LocationModal callers can use this without importing from shared
@@ -132,6 +133,7 @@ export function ConfirmModal({
   title: string; message: React.ReactNode; actionLabel: string;
   onClose: () => void; onConfirm: () => void;
 }) {
+  const { t } = useTranslation("admin");
   return (
     <BottomSheet onClose={onClose}>
       <ModalHeader title={title} onClose={onClose} />
@@ -141,7 +143,7 @@ export function ConfirmModal({
           onClick={onClose}
           className="flex-1 py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
         >
-          Cancel
+          {t("sharedUI.cancel")}
         </button>
         <button
           onClick={onConfirm}
@@ -163,6 +165,7 @@ export function StaffProfileModal({
   onClose: () => void; onSave: (p: StaffProfile & { rawPin?: string }) => void;
   isOwner?: boolean;
 }) {
+  const { t } = useTranslation("admin");
   const isEdit = !!profile;
   const [firstName, setFirstName] = useState(profile?.first_name ?? "");
   const [lastName, setLastName] = useState(profile?.last_name ?? "");
@@ -187,7 +190,7 @@ export function StaffProfileModal({
       setRevealedPin((data as string) ?? "");
       setShowRevealedPin(true);
     } catch (err) {
-      const msg = (err as any)?.message ?? "Could not reveal PIN";
+      const msg = (err as any)?.message ?? t("sharedUI.couldNotRevealPin");
       toast.error(msg);
     } finally {
       setRevealLoading(false);
@@ -220,9 +223,9 @@ export function StaffProfileModal({
 
   return (
     <BottomSheet onClose={onClose}>
-      <ModalHeader title={isEdit ? "Edit staff profile" : "Add staff profile"} onClose={onClose} />
+      <ModalHeader title={isEdit ? t("sharedUI.staffProfile.editTitle") : t("sharedUI.staffProfile.addTitle")} onClose={onClose} />
       <form onSubmit={handleSave} className="space-y-3">
-        <FormField label="Location (required)">
+        <FormField label={t("sharedUI.staffProfile.locationRequired")}>
           <div className="flex gap-2 flex-wrap">
             {locations.map(loc => (
               <button
@@ -239,41 +242,41 @@ export function StaffProfileModal({
             ))}
           </div>
         </FormField>
-        <FormField label="First name (required)">
+        <FormField label={t("sharedUI.staffProfile.firstNameRequired")}>
           <input
             autoFocus type="text" value={firstName}
             onChange={e => setFirstName(e.target.value)}
-            placeholder="e.g. Maria" className={inputCls}
+            placeholder={t("sharedUI.staffProfile.firstNamePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label="Last name">
+        <FormField label={t("sharedUI.staffProfile.lastName")}>
           <input
             type="text" value={lastName}
             onChange={e => setLastName(e.target.value)}
-            placeholder="e.g. Garcia" className={inputCls}
+            placeholder={t("sharedUI.staffProfile.lastNamePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label="Email (optional)">
+        <FormField label={t("sharedUI.staffProfile.emailOptional")}>
           <input
             type="email" value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="e.g. maria@yourplace.com" className={inputCls}
+            placeholder={t("sharedUI.staffProfile.emailPlaceholder")} className={inputCls}
           />
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            Used to send this staff member email alerts from checklist logic rules.
+            {t("sharedUI.staffProfile.emailHint")}
           </p>
         </FormField>
-        <FormField label="Role">
+        <FormField label={t("sharedUI.staffProfile.role")}>
           <DepartmentRolePicker departments={departments} value={role} onChange={setRole} />
         </FormField>
-        <FormField label={isEdit ? "New PIN (optional)" : "Staff PIN"}>
+        <FormField label={isEdit ? t("sharedUI.staffProfile.newPinOptional") : t("sharedUI.staffProfile.staffPin")}>
           {isEdit ? (
             <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
-              Leave blank to keep the existing PIN. Enter a new 4-digit PIN to change it.
+              {t("sharedUI.staffProfile.editPinHint")}
             </p>
           ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              Note this PIN and share it with the staff member — they'll use it to log in on the kiosk.
+              {t("sharedUI.staffProfile.newPinHint")}
             </p>
           )}
           <div className="flex gap-2">
@@ -281,11 +284,11 @@ export function StaffProfileModal({
               type="text" value={pin} maxLength={4}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               className={cn(inputCls, "text-center font-mono text-lg tracking-widest flex-1")}
-              placeholder={isEdit ? "Enter new PIN to change" : "4-digit PIN"}
+              placeholder={isEdit ? t("sharedUI.staffProfile.newPinToChange") : t("sharedUI.staffProfile.fourDigitPin")}
             />
             <button type="button" onClick={() => setPin(generatePin())}
               className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors">
-              Generate
+              {t("sharedUI.staffProfile.generate")}
             </button>
           </div>
           {isEdit && isOwner && (
@@ -293,7 +296,7 @@ export function StaffProfileModal({
               {revealedPin !== null ? (
                 <>
                   <span className="text-xs text-muted-foreground">
-                    Current PIN:&nbsp;
+                    {t("sharedUI.staffProfile.currentPin")}&nbsp;
                     <span className="font-mono font-medium">
                       {showRevealedPin ? revealedPin : "••••"}
                     </span>
@@ -313,13 +316,13 @@ export function StaffProfileModal({
                   disabled={revealLoading}
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
                 >
-                  {revealLoading ? "Loading…" : "View current PIN"}
+                  {revealLoading ? t("sharedUI.staffProfile.loading") : t("sharedUI.staffProfile.viewCurrentPin")}
                 </button>
               )}
             </div>
           )}
         </FormField>
-        <SaveButton disabled={!firstName.trim() || !locationId || (!isEdit && !pin)} label={isEdit ? "Save changes" : "Add profile"} />
+        <SaveButton disabled={!firstName.trim() || !locationId || (!isEdit && !pin)} label={isEdit ? t("sharedUI.staffProfile.saveChanges") : t("sharedUI.staffProfile.addProfile")} />
       </form>
     </BottomSheet>
   );
@@ -334,6 +337,7 @@ export function TeamMemberModal({
   onClose: () => void; onSave: (m: TeamMember & { rawPin?: string }) => void;
   isOwner?: boolean;
 }) {
+  const { t } = useTranslation("admin");
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
@@ -356,7 +360,7 @@ export function TeamMemberModal({
       setRevealedPin((data as string) ?? "");
       setShowRevealedPin(true);
     } catch (err) {
-      const msg = (err as any)?.message ?? "Could not reveal PIN";
+      const msg = (err as any)?.message ?? t("sharedUI.couldNotRevealPin");
       toast.error(msg);
     } finally {
       setRevealLoading(false);
@@ -395,23 +399,23 @@ export function TeamMemberModal({
 
   return (
     <BottomSheet onClose={onClose}>
-      <ModalHeader title={member ? "Edit team member" : "Add team member"} onClose={onClose} />
+      <ModalHeader title={member ? t("sharedUI.teamMember.editTitle") : t("sharedUI.teamMember.addTitle")} onClose={onClose} />
       <form onSubmit={handleSave} className="space-y-3">
-        <FormField label="Full name">
+        <FormField label={t("sharedUI.teamMember.fullName")}>
           <input
             autoFocus type="text" value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. Marc Devaux" className={inputCls}
+            placeholder={t("sharedUI.teamMember.fullNamePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label="Email">
+        <FormField label={t("sharedUI.teamMember.email")}>
           <input
             type="email" value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="e.g. marc@example.com" className={inputCls}
+            placeholder={t("sharedUI.teamMember.emailPlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label="Role">
+        <FormField label={t("sharedUI.teamMember.role")}>
           <div className="flex gap-2">
             {(["Owner", "Manager", "Member"] as AccountRole[]).map(r => (
               <button
@@ -428,14 +432,14 @@ export function TeamMemberModal({
             ))}
           </div>
         </FormField>
-        <FormField label={role === "Owner" ? "Admin PIN" : "Kiosk PIN"}>
+        <FormField label={role === "Owner" ? t("sharedUI.teamMember.adminPin") : t("sharedUI.teamMember.kioskPin")}>
           {member?.id ? (
             <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
-              Leave blank to keep the existing PIN. Enter a new 4-digit PIN to change it.
+              {t("sharedUI.staffProfile.editPinHint")}
             </p>
           ) : (
             <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              {"This PIN is used for kiosk access. Generate one now so the team member can log in."}
+              {t("sharedUI.teamMember.newPinPlaceholder")}
             </p>
           )}
           <div className="flex gap-2">
@@ -443,7 +447,7 @@ export function TeamMemberModal({
               type="text"
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder={member?.id ? "Enter new PIN to change" : "4-digit PIN"}
+              placeholder={member?.id ? t("sharedUI.staffProfile.newPinToChange") : t("sharedUI.staffProfile.fourDigitPin")}
               className={cn(inputCls, "flex-1 text-center font-mono text-lg tracking-widest")}
               maxLength={4}
             />
@@ -452,7 +456,7 @@ export function TeamMemberModal({
               onClick={() => setPin(generatePin())}
               className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors"
             >
-              Generate
+              {t("sharedUI.staffProfile.generate")}
             </button>
           </div>
           {member?.id && isOwner && (
@@ -460,7 +464,7 @@ export function TeamMemberModal({
               {revealedPin !== null ? (
                 <>
                   <span className="text-xs text-muted-foreground">
-                    Current PIN:&nbsp;
+                    {t("sharedUI.staffProfile.currentPin")}&nbsp;
                     <span className="font-mono font-medium">
                       {showRevealedPin ? revealedPin : "••••"}
                     </span>
@@ -480,13 +484,13 @@ export function TeamMemberModal({
                   disabled={revealLoading}
                   className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
                 >
-                  {revealLoading ? "Loading…" : "View current PIN"}
+                  {revealLoading ? t("sharedUI.staffProfile.loading") : t("sharedUI.staffProfile.viewCurrentPin")}
                 </button>
               )}
             </div>
           )}
         </FormField>
-        <FormField label="Location(s)">
+        <FormField label={t("sharedUI.teamMember.locations")}>
           <div className="flex gap-2 flex-wrap">
             {locations.map(loc => (
               <button
@@ -505,10 +509,10 @@ export function TeamMemberModal({
         </FormField>
         {role === "Manager" && (
           <div className="border-t border-border pt-3 space-y-3">
-            <p className="section-label">Permissions</p>
+            <p className="section-label">{t("sharedUI.teamMember.permissions")}</p>
             {(Object.keys(PERM_LABELS) as (keyof ManagerPermissions)[]).map(key => (
               <div key={key} className="flex items-center justify-between gap-3">
-                <p className="text-sm text-foreground">{PERM_LABELS[key]}</p>
+                <p className="text-sm text-foreground">{getPermLabel(key)}</p>
                 <Switch
                   checked={perms[key]}
                   onCheckedChange={val => setPerms(prev => ({ ...prev, [key]: val }))}
@@ -519,10 +523,10 @@ export function TeamMemberModal({
         )}
         {!member && (
           <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
-            An invitation email will be sent to this address so the team member can sign in to the Olia admin app.
+            {t("sharedUI.teamMember.inviteNotice")}
           </p>
         )}
-        <SaveButton disabled={!name.trim() || (!member && !pin.trim())} label={member ? "Save changes" : "Add team member"} />
+        <SaveButton disabled={!name.trim() || (!member && !pin.trim())} label={member ? t("sharedUI.teamMember.saveChanges") : t("sharedUI.teamMember.addTeamMember")} />
       </form>
     </BottomSheet>
   );
@@ -535,6 +539,7 @@ export function LocationModal({
 }: {
   location: Location | null; onClose: () => void; onSave: (loc: Location) => void;
 }) {
+  const { t } = useTranslation("admin");
   const [name, setName] = useState(location?.name ?? "");
   const [address, setAddress] = useState(location?.address ?? "");
   const [email, setEmail] = useState(location?.contact_email ?? "");
@@ -580,55 +585,55 @@ export function LocationModal({
 
   return (
     <BottomSheet onClose={onClose}>
-      <ModalHeader title={location ? "Edit location" : "New location"} onClose={onClose} />
+      <ModalHeader title={location ? t("sharedUI.location.editTitle") : t("sharedUI.location.newTitle")} onClose={onClose} />
       <form onSubmit={handleSave} className="space-y-3">
-        <FormField label="Location name (required)">
+        <FormField label={t("sharedUI.location.nameRequired")}>
           <input
             autoFocus type="text" value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. Main Branch" className={inputCls}
+            placeholder={t("sharedUI.location.namePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label="Address">
+        <FormField label={t("sharedUI.location.address")}>
           <PlacesAutocompleteInput
             value={address}
             onChange={handleAddressChange}
             onPlaceSelect={handlePlaceSelect}
             className={inputCls}
-            placeholder="e.g. 14 Rue de la Paix, Lyon"
+            placeholder={t("sharedUI.location.addressPlaceholder")}
           />
           <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-            Pick a real place from Google Maps to autofill the official address and map preview.
+            {t("sharedUI.location.addressHint")}
           </p>
           {lat !== null && lng !== null && (
             <div className="mt-2 space-y-2">
               <StaticMapPreview lat={lat} lng={lng} />
               <div className="flex items-center gap-2 rounded-xl border border-sage/30 bg-sage-light px-3 py-2 text-xs text-sage-deep">
                 <MapPin size={13} className="shrink-0" />
-                <span>Official place selected from maps</span>
+                <span>{t("sharedUI.location.officialPlaceSelected")}</span>
               </div>
             </div>
           )}
         </FormField>
-        <FormField label="Alert email (required)">
+        <FormField label={t("sharedUI.location.alertEmailRequired")}>
           <input
             type="email" value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="e.g. main@olia.app" className={inputCls}
+            placeholder={t("sharedUI.location.alertEmailPlaceholder")} className={inputCls}
             required
           />
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            Out-of-range alerts and operational notifications are sent here.
+            {t("sharedUI.location.alertEmailHint")}
           </p>
         </FormField>
-        <FormField label="Location phone (optional)">
+        <FormField label={t("sharedUI.location.phoneOptional")}>
           <input
             type="tel" value={phone}
             onChange={e => setPhone(e.target.value)}
-            placeholder="e.g. +33 4 78 00 11 22" className={inputCls}
+            placeholder={t("sharedUI.location.phonePlaceholder")} className={inputCls}
           />
         </FormField>
-        <SaveButton disabled={!name.trim() || !email.trim()} label={location ? "Save changes" : "Add location"} />
+        <SaveButton disabled={!name.trim() || !email.trim()} label={location ? t("sharedUI.location.saveChanges") : t("sharedUI.location.addLocation")} />
       </form>
     </BottomSheet>
   );

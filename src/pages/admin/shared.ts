@@ -1,6 +1,7 @@
 // ─── Shared constants, types, and helpers for the Admin page ─────────────────
 // Used by both MyLocationTab and AccountTab (and the modals they render).
 
+import i18n from "@/lib/i18n";
 import {
   type ManagerPermissions, type StaffDepartment,
   getRoleDepartment,
@@ -8,6 +9,9 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Kept as English-only literals for AccountTab's permissions list, which
+// hasn't been extracted to i18n yet (see #594) — getPermLabel() below is
+// the translated path used by newly-extracted callers (SharedUI.tsx).
 export const PERM_LABELS: Record<keyof ManagerPermissions, string> = {
   create_edit_checklists: "Create & edit checklists",
   assign_checklists: "Assign checklists",
@@ -18,6 +22,10 @@ export const PERM_LABELS: Record<keyof ManagerPermissions, string> = {
   export_data: "Export data",
   override_inactivity_threshold: "Override inactivity threshold",
 };
+
+export function getPermLabel(key: keyof ManagerPermissions): string {
+  return i18n.t(`perms.${key}`, { ns: "admin" });
+}
 
 export const ROLE_COLOR_MAP: Record<string, string> = {
   "Front of House": "bg-sage-light text-sage-deep",
