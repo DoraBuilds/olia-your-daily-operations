@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import i18n from "@/lib/i18n";
 import type { SectionDef } from "./types";
 
 /** Reads a file as a base64-encoded string. */
@@ -70,24 +72,26 @@ async function extractFileContent(file: File): Promise<
 }
 
 function humanizeConvertError(msg: string): string {
-  if (!msg) return "Something went wrong. Please try again.";
+  const t = (key: string) => i18n.t(`convertFile.${key}`, { ns: "checklists" });
+  if (!msg) return t("genericError");
   const l = msg.toLowerCase();
   if (l.includes("quota") || l.includes("billing") || l.includes("credit") || l.includes("rate limit") || l.includes("429")) {
-    return "AI service quota reached. Please try again later or contact support.";
+    return t("quotaError");
   }
   if (l.includes("non-2xx") || l.includes("edge function") || l.includes("502") || l.includes("503")) {
-    return "The AI service is temporarily unavailable. Please try again in a moment.";
+    return t("unavailableError");
   }
   if (l.includes("not an array") || l.includes("unexpected response")) {
-    return "The AI returned an unexpected response. Please try again.";
+    return t("unexpectedResponseError");
   }
   if (l.includes("network") || l.includes("failed to fetch")) {
-    return "Network error. Check your connection and try again.";
+    return t("networkError");
   }
   return msg;
 }
 
 export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {
+  const { t } = useTranslation("checklists");
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [converting, setConverting] = useState(false);
@@ -122,7 +126,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
       if (data?.error) throw new Error(data.error);
 
       const { sections } = data as { sections: SectionDef[] };
-      if (!Array.isArray(sections)) throw new Error("Unexpected response from AI. Please try again.");
+      if (!Array.isArray(sections)) throw new Error(t("convertFile.unexpectedFromAI"));
       onConvert(sections);
       onClose();
     } catch (e: any) {
@@ -142,16 +146,16 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-foreground">Convert file to checklist</h2>
+          <h2 className="font-display text-lg text-foreground">{t("convertFile.heading")}</h2>
           <button
             onClick={onClose}
             className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
           >
             <X size={14} />
-            Close
+            {t("convertFile.close")}
           </button>
         </div>
-        <p className="text-sm text-muted-foreground">Upload an Excel, PDF, or image file and we'll convert it into a checklist.</p>
+        <p className="text-sm text-muted-foreground">{t("convertFile.description")}</p>
         {/* Hidden input kept in DOM so Safari can always trigger it via .click() */}
         <input
           ref={fileInputRef}
@@ -180,8 +184,8 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
             <p className="text-sm font-medium text-foreground">{file.name}</p>
           ) : (
             <>
-              <p className="text-sm font-medium text-foreground">Tap to select a file</p>
-              <p className="text-xs text-muted-foreground mt-1">Excel, PDF, or image · Max 10MB</p>
+              <p className="text-sm font-medium text-foreground">{t("convertFile.tapToSelect")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("convertFile.fileTypesHint")}</p>
             </>
           )}
         </div>
@@ -198,7 +202,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
             file && !converting ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
         >
-          {converting ? "Converting…" : "Convert to checklist"}
+          {converting ? t("convertFile.converting") : t("convertFile.convert")}
         </button>
       </div>
     </div>,

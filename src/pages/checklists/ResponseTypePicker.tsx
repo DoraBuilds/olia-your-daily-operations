@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResponseType } from "./types";
-import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
 
 export type ResponseTypePickerAnchorRect = Pick<DOMRect, "top" | "right" | "bottom" | "left" | "width" | "height">;
 
@@ -37,6 +38,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
   onClose: () => void;
   anchorRect?: ResponseTypePickerAnchorRect | null;
 }) {
+  const { t } = useTranslation("checklists");
   // Always render into document.body via a portal so CSS transforms or
   // backdrop-filter on any ancestor (e.g. animate-fade-in uses translateY,
   // which creates a new containing block for position:fixed children) cannot
@@ -57,21 +59,21 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
         aria-modal="true"
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
-          <h2 className="font-display text-lg text-foreground">Type of response</h2>
+          <h2 className="font-display text-lg text-foreground">{t("responsePicker.heading")}</h2>
           <button onClick={onClose} className="btn-icon">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
         <div className="overflow-y-auto flex-1 pb-6">
-          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Responses</p>
+          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("responsePicker.responsesSection")}</p>
           {RESPONSE_TYPES.map(rt => (
             <button key={rt.key} onClick={() => { onSelect(rt.key); onClose(); }}
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left">
               <rt.icon size={18} className="text-sage shrink-0" />
-              <span className="text-sm text-foreground">{rt.label}</span>
+              <span className="text-sm text-foreground">{getResponseTypeLabel(rt.key)}</span>
             </button>
           ))}
-          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Multiple choice</p>
+          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("responsePicker.multipleChoiceSection")}</p>
           {multipleChoiceSets.map(mc => (
             <button key={mc.id} onClick={() => { onSelect("multiple_choice", mc.id); onClose(); }}
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left">

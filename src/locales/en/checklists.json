@@ -165,6 +165,49 @@
     "media": "Photo / Media",
     "instruction": "Instruction"
   },
+  "responsePicker": {
+    "heading": "Type of response",
+    "responsesSection": "Responses",
+    "multipleChoiceSection": "Multiple choice"
+  },
+  "customRecurrence": {
+    "heading": "Custom recurrence",
+    "repeatEvery": "Repeat every",
+    "units": { "day": "day", "week": "week", "month": "month", "year": "year" },
+    "repeatOn": "Repeat on",
+    "dayInitials": { "mon": "M", "tue": "T", "wed": "W", "thu": "T", "fri": "F", "sat": "S", "sun": "S" },
+    "ends": "Ends",
+    "never": "Never",
+    "on": "On",
+    "after": "After",
+    "occurrences": "occurrences",
+    "cancel": "Cancel",
+    "done": "Done"
+  },
+  "buildAI": {
+    "heading": "Build with AI",
+    "description": "Describe the checklist you need and AI will generate it for you.",
+    "promptPlaceholder": "e.g. Create a daily opening checklist for a restaurant kitchen with food safety, cleanliness, and equipment checks…",
+    "generating": "Generating…",
+    "generate": "Generate checklist",
+    "unexpectedResponse": "Unexpected response from AI. Please try again.",
+    "genericError": "Something went wrong. Please try again."
+  },
+  "convertFile": {
+    "heading": "Convert file to checklist",
+    "close": "Close",
+    "description": "Upload an Excel, PDF, or image file and we'll convert it into a checklist.",
+    "tapToSelect": "Tap to select a file",
+    "fileTypesHint": "Excel, PDF, or image · Max 10MB",
+    "converting": "Converting…",
+    "convert": "Convert to checklist",
+    "genericError": "Something went wrong. Please try again.",
+    "quotaError": "AI service quota reached. Please try again later or contact support.",
+    "unavailableError": "The AI service is temporarily unavailable. Please try again in a moment.",
+    "unexpectedResponseError": "The AI returned an unexpected response. Please try again.",
+    "networkError": "Network error. Check your connection and try again.",
+    "unexpectedFromAI": "Unexpected response from AI. Please try again."
+  },
   "preview": {
     "yes": "Yes",
     "no": "No",

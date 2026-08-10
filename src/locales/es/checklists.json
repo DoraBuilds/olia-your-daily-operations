@@ -165,6 +165,49 @@
     "media": "Foto / Multimedia",
     "instruction": "Instrucción"
   },
+  "responsePicker": {
+    "heading": "Tipo de respuesta",
+    "responsesSection": "Respuestas",
+    "multipleChoiceSection": "Opción múltiple"
+  },
+  "customRecurrence": {
+    "heading": "Repetición personalizada",
+    "repeatEvery": "Repetir cada",
+    "units": { "day": "día", "week": "semana", "month": "mes", "year": "año" },
+    "repeatOn": "Repetir el",
+    "dayInitials": { "mon": "L", "tue": "M", "wed": "X", "thu": "J", "fri": "V", "sat": "S", "sun": "D" },
+    "ends": "Termina",
+    "never": "Nunca",
+    "on": "El día",
+    "after": "Después de",
+    "occurrences": "repeticiones",
+    "cancel": "Cancelar",
+    "done": "Listo"
+  },
+  "buildAI": {
+    "heading": "Crear con IA",
+    "description": "Describe la lista que necesitas y la IA la generará por ti.",
+    "promptPlaceholder": "p. ej. Crea una lista de apertura diaria para una cocina de restaurante con revisiones de seguridad alimentaria, limpieza y equipo…",
+    "generating": "Generando…",
+    "generate": "Generar lista",
+    "unexpectedResponse": "Respuesta inesperada de la IA. Inténtalo de nuevo.",
+    "genericError": "Algo salió mal. Inténtalo de nuevo."
+  },
+  "convertFile": {
+    "heading": "Convertir archivo a lista",
+    "close": "Cerrar",
+    "description": "Sube un archivo Excel, PDF o imagen y lo convertiremos en una lista de verificación.",
+    "tapToSelect": "Toca para seleccionar un archivo",
+    "fileTypesHint": "Excel, PDF o imagen · Máx. 10 MB",
+    "converting": "Convirtiendo…",
+    "convert": "Convertir a lista",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "quotaError": "Se alcanzó el límite del servicio de IA. Inténtalo más tarde o contacta a soporte.",
+    "unavailableError": "El servicio de IA no está disponible temporalmente. Inténtalo de nuevo en un momento.",
+    "unexpectedResponseError": "La IA devolvió una respuesta inesperada. Inténtalo de nuevo.",
+    "networkError": "Error de red. Revisa tu conexión e inténtalo de nuevo.",
+    "unexpectedFromAI": "Respuesta inesperada de la IA. Inténtalo de nuevo."
+  },
   "preview": {
     "yes": "Sí",
     "no": "No",
