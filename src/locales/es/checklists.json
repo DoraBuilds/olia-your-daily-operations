@@ -283,5 +283,57 @@
     "answeredSimple": "respondió {{comparator}} {{value}}",
     "answeredBetween": "respondió {{comparator}} {{value}} y {{valueTo}}",
     "actionRequiredTitle": "Acción requerida: \"{{question}}\" {{condition}}"
+  },
+  "followUpEditor": {
+    "defaultLabel": "Pregunta de seguimiento",
+    "nestedLabel": "Seguimiento",
+    "questionTextPlaceholder": "Texto de la pregunta de seguimiento",
+    "emailSubjectPlaceholder": "Asunto del correo (opcional — se genera automáticamente si está vacío)",
+    "number": {
+      "heading": "Respuesta numérica",
+      "description": "Por defecto es una sola respuesta numérica. Activa el modo temperatura solo cuando necesites un rango aceptable.",
+      "modeNumber": "Número",
+      "modeTemperature": "Temperatura",
+      "singleModeNotice": "El personal ingresará un número y verá el teclado numérico en los dispositivos compatibles.",
+      "min": "Mín",
+      "max": "Máx",
+      "to": "a",
+      "unit": "Unidad"
+    },
+    "text": {
+      "heading": "Vista previa de respuesta de texto",
+      "placeholder": "El encuestado escribe aquí…",
+      "maxChars": "máx. 160 caracteres"
+    },
+    "checkbox": {
+      "heading": "Vista previa de respuesta de casilla"
+    },
+    "media": {
+      "heading": "Captura multimedia",
+      "notice": "Al tocar se abrirá la cámara del dispositivo en el kiosco."
+    },
+    "multipleChoice": {
+      "heading": "Opciones de elección múltiple",
+      "modeSingle": "Única",
+      "modeMultiple": "Múltiple",
+      "choosePreset": "Elige un preset para agregar opciones de respuesta.",
+      "addOption": "Agregar opción",
+      "newOptionLabel": "Opción {{n}}",
+      "deleteOption": "Eliminar opción {{choice}}",
+      "colors": {
+        "green": "Verde",
+        "yellow": "Amarillo",
+        "red": "Rojo",
+        "blue": "Azul",
+        "neutral": "Neutro"
+      }
+    },
+    "instruction": {
+      "heading": "Contenido de la instrucción",
+      "placeholder": "Escribe aquí el texto de la instrucción…",
+      "imageAlt": "Instrucción",
+      "replaceImage": "Reemplazar imagen",
+      "uploadImage": "Subir imagen"
+    }
   }
 }

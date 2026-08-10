@@ -1,5 +1,7 @@
 import { useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   Bell,
   Camera,
   ChevronDown,
@@ -23,19 +25,23 @@ import type {
   QuestionDef,
   ResponseType,
 } from "./types";
-import { RESPONSE_TYPES, multipleChoiceSets } from "./data";
+import i18n from "@/lib/i18n";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 
-const MC_COLOR_OPTIONS = [
-  { label: "Green", value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
-  { label: "Yellow", value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
-  { label: "Red", value: "bg-status-error/10 border-status-error/40 text-status-error" },
-  { label: "Blue", value: "bg-blue-100 border-blue-300 text-blue-700" },
-  { label: "Neutral", value: "bg-muted text-muted-foreground border-border" },
-];
-const DEFAULT_MC_COLOR = MC_COLOR_OPTIONS[MC_COLOR_OPTIONS.length - 1].value;
+function useMcColorOptions(t: (key: string) => string) {
+  return [
+    { label: t("followUpEditor.multipleChoice.colors.green"), value: "bg-status-ok/10 border-status-ok/40 text-status-ok" },
+    { label: t("followUpEditor.multipleChoice.colors.yellow"), value: "bg-status-warn/10 border-status-warn/40 text-status-warn" },
+    { label: t("followUpEditor.multipleChoice.colors.red"), value: "bg-status-error/10 border-status-error/40 text-status-error" },
+    { label: t("followUpEditor.multipleChoice.colors.blue"), value: "bg-blue-100 border-blue-300 text-blue-700" },
+    { label: t("followUpEditor.multipleChoice.colors.neutral"), value: "bg-muted text-muted-foreground border-border" },
+  ];
+}
+const DEFAULT_MC_COLOR = "bg-muted text-muted-foreground border-border";
 
-const responseTypeLabel = (type: ResponseType) => RESPONSE_TYPES.find(r => r.key === type)?.label || "Response type";
+const responseTypeLabel = (type: ResponseType) =>
+  RESPONSE_TYPES.find(r => r.key === type) ? getResponseTypeLabel(type) : i18n.t("preview.responseTypeFallback", { ns: "checklists" });
 const getQuestionChoices = (q: QuestionDef) => q.choices?.length
   ? q.choices
   : (q.mcSetId ? multipleChoiceSets.find(m => m.id === q.mcSetId)?.choices ?? [] : []);
@@ -58,7 +64,7 @@ export function FollowUpQuestionEditor({
   question,
   onChange,
   notifyRecipients,
-  label = "Follow-up question",
+  label,
   depth = 0,
 }: {
   question: QuestionDef;
@@ -67,6 +73,9 @@ export function FollowUpQuestionEditor({
   label?: string;
   depth?: number;
 }) {
+  const { t } = useTranslation("checklists");
+  const displayLabel = label ?? t("followUpEditor.defaultLabel");
+  const MC_COLOR_OPTIONS = useMcColorOptions(t);
   const [showResponsePicker, setShowResponsePicker] = useState(false);
   const imgInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -106,9 +115,9 @@ export function FollowUpQuestionEditor({
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Number response</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.number.heading")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.
+                {t("followUpEditor.number.description")}
               </p>
             </div>
             <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
@@ -129,7 +138,7 @@ export function FollowUpQuestionEditor({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {mode === "single" ? "Number" : "Temperature"}
+                  {mode === "single" ? t("followUpEditor.number.modeNumber") : t("followUpEditor.number.modeTemperature")}
                 </button>
               ))}
             </div>
@@ -137,14 +146,14 @@ export function FollowUpQuestionEditor({
 
           {(cfg.numberMode ?? "single") === "single" ? (
             <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              Staff will enter one number and see the numeric keypad on supported devices.
+              {t("followUpEditor.number.singleModeNotice")}
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  placeholder="Min"
+                  placeholder={t("followUpEditor.number.min")}
                   value={cfg.numberMin ?? ""}
                   onChange={e => updateConfig({
                     numberMode: "temperature",
@@ -152,10 +161,10 @@ export function FollowUpQuestionEditor({
                   })}
                   className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 />
-                <span className="text-xs text-muted-foreground">to</span>
+                <span className="text-xs text-muted-foreground">{t("followUpEditor.number.to")}</span>
                 <input
                   type="number"
-                  placeholder="Max"
+                  placeholder={t("followUpEditor.number.max")}
                   value={cfg.numberMax ?? ""}
                   onChange={e => updateConfig({
                     numberMode: "temperature",
@@ -165,7 +174,7 @@ export function FollowUpQuestionEditor({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground shrink-0">Unit</span>
+                <span className="text-xs text-muted-foreground shrink-0">{t("followUpEditor.number.unit")}</span>
                 <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
                   {(["C", "F"] as const).map(unit => (
                     <button
@@ -179,7 +188,7 @@ export function FollowUpQuestionEditor({
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {unit === "C" ? "Celsius" : "Fahrenheit"}
+                      {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
                     </button>
                   ))}
                 </div>
@@ -193,16 +202,16 @@ export function FollowUpQuestionEditor({
   if (question.responseType === "text") {
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Text answer preview</p>
+        <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.text.heading")}</p>
           <div className="relative">
             <input
               type="text"
-              placeholder="Respondent types here…"
+              placeholder={t("followUpEditor.text.placeholder")}
               maxLength={160}
               disabled
               className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">max 160 chars</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{t("followUpEditor.text.maxChars")}</span>
           </div>
         </div>
       );
@@ -211,9 +220,9 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "checkbox") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Checkbox answer preview</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.checkbox.heading")}</p>
           <div className="flex gap-2 flex-wrap">
-            {["Yes", "No", "N/A"].map(opt => (
+            {[t("preview.yes"), t("preview.no"), t("preview.notApplicable")].map(opt => (
               <div key={opt} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
                 <Square size={11} /> {opt}
               </div>
@@ -226,12 +235,12 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "media") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Media capture</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.media.heading")}</p>
           <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors">
             <Camera size={16} />
-            Take photo
+            {t("preview.takePhoto")}
           </button>
-          <p className="text-xs text-muted-foreground">Tapping will open the device camera on the kiosk.</p>
+          <p className="text-xs text-muted-foreground">{t("followUpEditor.media.notice")}</p>
         </div>
       );
     }
@@ -241,7 +250,7 @@ export function FollowUpQuestionEditor({
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">Multiple choice options</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
               {mcSet && <p className="text-xs text-muted-foreground mt-0.5">{mcSet.name}</p>}
             </div>
             <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
@@ -257,7 +266,7 @@ export function FollowUpQuestionEditor({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {mode === "single" ? "Single" : "Multiple"}
+                  {mode === "single" ? t("followUpEditor.multipleChoice.modeSingle") : t("followUpEditor.multipleChoice.modeMultiple")}
                 </button>
               ))}
             </div>
@@ -314,7 +323,7 @@ export function FollowUpQuestionEditor({
                       });
                     }}
                     className="p-2 text-muted-foreground hover:text-status-error transition-colors"
-                    aria-label={`Delete option ${choice}`}
+                    aria-label={t("followUpEditor.multipleChoice.deleteOption", { choice })}
                   >
                     <X size={14} />
                   </button>
@@ -323,18 +332,18 @@ export function FollowUpQuestionEditor({
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Choose a preset to add answer options.
+              {t("followUpEditor.multipleChoice.choosePreset")}
             </p>
           )}
           <button
             type="button"
             onClick={() => updateQuestion({
-              choices: [...questionChoices, `Option ${questionChoices.length + 1}`],
+              choices: [...questionChoices, t("followUpEditor.multipleChoice.newOptionLabel", { n: questionChoices.length + 1 })],
               choiceColors: [...questionChoiceColors, DEFAULT_MC_COLOR],
             })}
             className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
           >
-            <Plus size={11} /> Add option
+            <Plus size={11} /> {t("followUpEditor.multipleChoice.addOption")}
           </button>
         </div>
       );
@@ -343,9 +352,9 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "instruction") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground">Instruction content</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.instruction.heading")}</p>
           <textarea
-            placeholder="Write your instruction text here…"
+            placeholder={t("followUpEditor.instruction.placeholder")}
             rows={3}
             value={cfg.instructionText || ""}
             onChange={e => updateConfig({ instructionText: e.target.value })}
@@ -353,7 +362,7 @@ export function FollowUpQuestionEditor({
           />
           {cfg.instructionImageUrl && (
             <div className="relative group">
-              <img src={cfg.instructionImageUrl} alt="Instruction" className="w-full max-h-40 object-cover rounded-lg border border-border" />
+              <img src={cfg.instructionImageUrl} alt={t("followUpEditor.instruction.imageAlt")} className="w-full max-h-40 object-cover rounded-lg border border-border" />
               <button
                 type="button"
                 onClick={() => updateConfig({ instructionImageUrl: undefined })}
@@ -386,7 +395,7 @@ export function FollowUpQuestionEditor({
               className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-sage/40 hover:text-foreground transition-colors"
             >
               <Image size={13} />
-              {cfg.instructionImageUrl ? "Replace image" : "Upload image"}
+              {cfg.instructionImageUrl ? t("followUpEditor.instruction.replaceImage") : t("followUpEditor.instruction.uploadImage")}
             </button>
           </div>
         </div>
@@ -403,10 +412,10 @@ export function FollowUpQuestionEditor({
       data-depth={depth}
     >
       <div className="flex items-start gap-2">
-        <span className="text-xs text-muted-foreground mt-2.5 shrink-0">{label}</span>
+        <span className="text-xs text-muted-foreground mt-2.5 shrink-0">{displayLabel}</span>
         <input
           type="text"
-          placeholder="Follow-up question text"
+          placeholder={t("followUpEditor.questionTextPlaceholder")}
           value={question.text}
           onChange={e => updateQuestion({ text: e.target.value })}
           className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
@@ -420,7 +429,7 @@ export function FollowUpQuestionEditor({
           <ChevronDown size={10} />
         </button>
         <label className="flex items-center gap-2 cursor-pointer">
-          <span className="text-xs text-muted-foreground">Required</span>
+          <span className="text-xs text-muted-foreground">{t("preview.required")}</span>
           <button
             type="button"
             onClick={() => updateQuestion({ required: !question.required })}
@@ -469,6 +478,7 @@ function LogicRulesEditor({
   notifyRecipients: { id: string; name: string; role: string | null; email: string }[];
   depth?: number;
 }) {
+  const { t } = useTranslation("checklists");
   const cfg = question.config || {};
   const rules = cfg.logicRules || [];
   const showLogic = rules.length > 0;
@@ -489,32 +499,32 @@ function LogicRulesEditor({
   }, [openDropdown]);
 
   const NUMERIC_COMPARATORS: { key: LogicComparator; label: string }[] = [
-    { key: "lt", label: "Less than" },
-    { key: "lte", label: "Less than or equal to" },
-    { key: "eq", label: "Equal to" },
-    { key: "neq", label: "Not equal to" },
-    { key: "gte", label: "Greater than or equal to" },
-    { key: "gt", label: "Greater than" },
-    { key: "between", label: "Between" },
-    { key: "not_between", label: "Not between" },
-    { key: "unanswered", label: "Not provided" },
+    { key: "lt", label: t("logicRules.comparators.lessThan") },
+    { key: "lte", label: t("logicRules.comparators.lessThanOrEqual") },
+    { key: "eq", label: t("logicRules.comparators.equalTo") },
+    { key: "neq", label: t("logicRules.comparators.notEqualTo") },
+    { key: "gte", label: t("logicRules.comparators.greaterThanOrEqual") },
+    { key: "gt", label: t("logicRules.comparators.greaterThan") },
+    { key: "between", label: t("logicRules.comparators.between") },
+    { key: "not_between", label: t("logicRules.comparators.notBetween") },
+    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
   ];
   const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
-    { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
+    { key: "is", label: t("logicRules.comparators.is") },
+    { key: "is_not", label: t("logicRules.comparators.isNot") },
+    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
   ];
-  const TEXT_COMPARATORS: { key: LogicComparator; label: string }[] = [
-    { key: "is", label: "Is" }, { key: "is_not", label: "Is not" }, { key: "unanswered", label: "Not provided" },
-  ];
+  const TEXT_COMPARATORS = CHOICE_COMPARATORS;
   const comparators = isNumericType ? NUMERIC_COMPARATORS : isMcType ? CHOICE_COMPARATORS : TEXT_COMPARATORS;
   const describeCondition = (rule: LogicRule) => {
-    if (rule.comparator === "unanswered") return "left unanswered";
+    if (rule.comparator === "unanswered") return t("logicRules.leftUnanswered");
     const label = comparators.find(c => c.key === rule.comparator)?.label || rule.comparator;
-    if (rule.comparator === "between" || rule.comparator === "not_between") {
-      return `answered ${label.toLowerCase()} ${rule.value}${rule.valueTo ? ` and ${rule.valueTo}` : ""}`;
+    if ((rule.comparator === "between" || rule.comparator === "not_between") && rule.valueTo) {
+      return t("logicRules.answeredBetween", { comparator: label.toLowerCase(), value: rule.value, valueTo: rule.valueTo });
     }
-    return `answered ${label.toLowerCase()} ${rule.value}`;
+    return t("logicRules.answeredSimple", { comparator: label.toLowerCase(), value: rule.value });
   };
-  const mcChoices = getQuestionChoices(question).length > 0 ? getQuestionChoices(question) : ["Yes", "No", "N/A"];
+  const mcChoices = getQuestionChoices(question).length > 0 ? getQuestionChoices(question) : [t("preview.yes"), t("preview.no"), t("preview.notApplicable")];
 
   const updateQuestion = (update: Partial<QuestionDef>) => onChange({ ...question, ...update });
   const updateRule = (ri: number, update: Partial<LogicRule>) => {
@@ -540,8 +550,8 @@ function LogicRulesEditor({
     if (rule.triggers.some(t => t.type === triggerType)) return;
     const triggerConfig: LogicTrigger["config"] = {};
     if (triggerType === "require_action") {
-      const qLabel = question.text || "Follow-up question";
-      triggerConfig.actionTitle = `Action required: "${qLabel}" ${describeCondition(rule)}`;
+      const qLabel = question.text || t("logicRules.followUpLabel");
+      triggerConfig.actionTitle = t("logicRules.actionRequiredTitle", { question: qLabel, condition: describeCondition(rule) });
     }
     if (triggerType === "ask_question") {
       triggerConfig.questionText = "";
@@ -552,10 +562,10 @@ function LogicRulesEditor({
   const removeTrigger = (ri: number, ti: number) => updateRule(ri, { triggers: rules[ri].triggers.filter((_, i) => i !== ti) });
 
   const TRIGGER_OPTIONS: { key: LogicTriggerType; label: string; icon: React.ElementType }[] = [
-    { key: "ask_question", label: "Ask question", icon: MessageSquare },
-    { key: "notify", label: "Notify (email)", icon: Bell },
-    { key: "require_note", label: "Require note", icon: FileText },
-    { key: "require_media", label: "Require media", icon: Image },
+    { key: "ask_question", label: t("logicRules.triggers.askQuestion"), icon: MessageSquare },
+    { key: "notify", label: t("logicRules.triggers.notify"), icon: Bell },
+    { key: "require_note", label: t("logicRules.triggers.requireNote"), icon: FileText },
+    { key: "require_media", label: t("logicRules.triggers.requireMedia"), icon: Image },
   ];
 
   return (
@@ -563,18 +573,18 @@ function LogicRulesEditor({
       {!showLogic && (
         <button onClick={addRule} className="flex items-center gap-1.5 text-xs text-sage hover:text-sage-deep transition-colors">
           <GitBranch size={12} />
-          <span>Add logic</span>
+          <span>{t("logicRules.addLogic")}</span>
         </button>
       )}
       {showLogic && (
         <div className="bg-muted/50 rounded-lg p-3 space-y-3">
           <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-            <GitBranch size={12} /> Logic rules
+            <GitBranch size={12} /> {t("logicRules.heading")}
           </p>
           {rules.map((rule, ri) => (
             <div key={rule.id} className="border border-border rounded-lg p-3 space-y-3 bg-background">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs text-muted-foreground">If answer</span>
+                <span className="text-xs text-muted-foreground">{t("logicRules.ifAnswer")}</span>
                 <select
                   value={rule.comparator}
                   onChange={e => {
@@ -593,7 +603,7 @@ function LogicRulesEditor({
                 </select>
                 {rule.comparator === "unanswered" ? (
                   <span className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-muted-foreground">
-                    No response provided
+                    {t("logicRules.noResponseProvided")}
                   </span>
                 ) : isMcType ? (
                   <select
@@ -609,17 +619,17 @@ function LogicRulesEditor({
                       type={isNumericType ? "number" : "text"}
                       value={rule.value}
                       onChange={e => updateRule(ri, { value: e.target.value })}
-                      placeholder={isNumericType ? "Value" : "Text"}
+                      placeholder={isNumericType ? t("logicRules.valuePlaceholder") : t("logicRules.textPlaceholder")}
                       className="w-20 text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                     {(rule.comparator === "between" || rule.comparator === "not_between") && (
                       <>
-                        <span className="text-xs text-muted-foreground">and</span>
+                        <span className="text-xs text-muted-foreground">{t("logicRules.and")}</span>
                         <input
                           type="number"
                           value={rule.valueTo ?? ""}
                           onChange={e => updateRule(ri, { valueTo: e.target.value })}
-                          placeholder="Value"
+                          placeholder={t("logicRules.valuePlaceholder")}
                           className="w-20 text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </>
@@ -632,7 +642,7 @@ function LogicRulesEditor({
               </div>
 
               <div className="space-y-2">
-                <span className="text-xs text-muted-foreground">then</span>
+                <span className="text-xs text-muted-foreground">{t("logicRules.then")}</span>
                 {rule.triggers.map((trigger, ti) => (
                   <div key={ti} className="flex items-start gap-2 bg-muted/60 rounded-lg px-3 py-2">
                     <div className="flex-1 space-y-2">
@@ -653,7 +663,7 @@ function LogicRulesEditor({
                               })}
                               className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                             >
-                              <Plus size={11} /> Build follow-up question
+                              <Plus size={11} /> {t("logicRules.buildFollowUp")}
                             </button>
                           ) : (
                             <FollowUpQuestionEditor
@@ -663,7 +673,7 @@ function LogicRulesEditor({
                                 followUpQuestion: next,
                               })}
                               notifyRecipients={notifyRecipients}
-                              label="Follow-up"
+                              label={t("followUpEditor.nestedLabel")}
                               depth={depth + 1}
                             />
                           )}
@@ -676,7 +686,7 @@ function LogicRulesEditor({
                             <Mail size={11} className="text-muted-foreground shrink-0" />
                             {notifyRecipients.length === 0 ? (
                               <span className="flex-1 text-xs text-muted-foreground italic px-2 py-1.5">
-                                No team members with email found. Add team members in Admin.
+                                {t("logicRules.noRecipients")}
                               </span>
                             ) : (
                               <select
@@ -685,7 +695,7 @@ function LogicRulesEditor({
                                 className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                               >
 
-                                <option value="">Select recipient…</option>
+                                <option value="">{t("logicRules.selectRecipient")}</option>
                                 {notifyRecipients.map(m => (
                                   <option key={m.id} value={m.email}>
                                     {m.name}{m.role ? ` — ${m.role}` : ""} ({m.email})
@@ -696,7 +706,7 @@ function LogicRulesEditor({
                           </div>
                           <input
                             type="text"
-                            placeholder="Email subject (optional — auto-generated if blank)"
+                            placeholder={t("followUpEditor.emailSubjectPlaceholder")}
                             value={trigger.config?.notifyMessage || ""}
                             onChange={e => updateTriggerConfig(ri, ti, { notifyMessage: e.target.value })}
                             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -708,7 +718,7 @@ function LogicRulesEditor({
                         <div className="space-y-2">
                           <input
                             type="text"
-                            placeholder="Action / task title"
+                            placeholder={t("logicRules.actionTitlePlaceholder")}
                             value={trigger.config?.actionTitle || ""}
                             onChange={e => updateTriggerConfig(ri, ti, { actionTitle: e.target.value })}
                             className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -717,7 +727,7 @@ function LogicRulesEditor({
                             <User size={11} className="text-muted-foreground shrink-0" />
                             <input
                               type="text"
-                              placeholder="Assign to"
+                              placeholder={t("logicRules.assignTo")}
                               value={trigger.config?.actionAssignee || ""}
                               onChange={e => updateTriggerConfig(ri, ti, { actionAssignee: e.target.value })}
                               className="flex-1 text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
@@ -728,7 +738,7 @@ function LogicRulesEditor({
                               <AlertTriangle size={11} className="text-status-warn mt-0.5 shrink-0" />
                               <div>
                                 <p className="text-[11px] font-medium text-foreground leading-snug">{trigger.config.actionTitle}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Appears as an operational alert on the dashboard</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{t("logicRules.actionAlertNote")}</p>
                               </div>
                             </div>
                           )}
@@ -746,7 +756,7 @@ function LogicRulesEditor({
                     onClick={() => setOpenDropdown(openDropdown === ri ? null : ri)}
                     className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1"
                   >
-                    <Plus size={11} /> trigger
+                    <Plus size={11} /> {t("logicRules.addTrigger")}
                   </button>
                   {openDropdown === ri && (
                     <div className="absolute left-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[160px]">
@@ -768,7 +778,7 @@ function LogicRulesEditor({
             </div>
           ))}
           <button onClick={addRule} className="text-xs text-sage hover:text-sage-deep transition-colors flex items-center gap-1">
-            <Plus size={11} /> Add another rule
+            <Plus size={11} /> {t("logicRules.addAnotherRule")}
           </button>
         </div>
       )}
