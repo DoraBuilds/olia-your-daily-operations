@@ -56,5 +56,31 @@
     "viewPlans": "View plans",
     "upgradeAtOlia": "Upgrade at olia.app",
     "upgradeToGrowth": "Upgrade to Growth"
+  },
+  "notificationsTab": {
+    "loading": "Loading…",
+    "dailySummary": "Daily checklist summary",
+    "dailySummaryDesc": "Email a daily summary of incomplete checklists",
+    "alertMeAbout": "Alert me about",
+    "unstartedChecklists": "Unstarted checklists",
+    "unfinishedChecklists": "Unfinished checklists",
+    "sendTo": "Send to",
+    "emailPlaceholder": "manager@yourplace.com",
+    "sendAt": "Send at",
+    "sendAtNotice": "A daily summary email will be sent at this time if any checklists are incomplete.",
+    "saving": "Saving…",
+    "saveSettings": "Save settings",
+    "sending": "Sending…",
+    "test": "Test",
+    "activeNotice": "Daily summary active — emails sent at {{time}} to {{email}}.",
+    "enterEmailToReceive": "Enter an email address to receive notifications.",
+    "enterEmailFirst": "Enter an email address first.",
+    "settingsSaved": "Notification settings saved",
+    "saveFailed": "Failed to save: {{error}}",
+    "testSent": "Test notification sent to {{email}}",
+    "testFailed": "Could not send test: {{error}}",
+    "unknownError": "Unknown error",
+    "am": "am",
+    "pm": "pm"
   }
 }
