@@ -143,5 +143,57 @@
       "badgeActionRequired": "ACTION REQ.",
       "badgeUnstarted": "UNSTARTED"
     }
+  },
+  "logDetail": {
+    "exportPdf": "Export PDF",
+    "required": "Required",
+    "instruction": "Instruction",
+    "completed": "Completed",
+    "notCompleted": "Not completed",
+    "noValueEntered": "No value entered",
+    "photo": "Photo",
+    "noPhotoAttached": "No photo attached",
+    "noAnswerEntered": "No answer entered",
+    "noAnswerDetail": "No answer detail recorded for this submission.",
+    "readOnlyNotice": "This is a read-only report. Submitted responses cannot be edited."
+  },
+  "responseTypes": {
+    "checkbox": "Checkbox",
+    "text": "Text answer",
+    "number": "Number",
+    "datetime": "Date & Time",
+    "media": "Photo / Media",
+    "instruction": "Instruction"
+  },
+  "preview": {
+    "yes": "Yes",
+    "no": "No",
+    "notApplicable": "N/A",
+    "optionA": "Option A",
+    "optionB": "Option B",
+    "optionC": "Option C",
+    "fahrenheit": "Fahrenheit",
+    "celsius": "Celsius",
+    "acceptableRange": "Acceptable range: {{min}} to {{max}} {{unit}}",
+    "typeYourAnswer": "Type your answer…",
+    "takePhoto": "Take photo",
+    "instructionPlaceholder": "Instruction content will appear here",
+    "openLinkedTraining": "Open linked training: {{title}}",
+    "openLinkedDocument": "Open linked document: {{title}}",
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions",
+    "questionFallback": "Question {{n}}",
+    "edit": "Edit",
+    "close": "Close",
+    "visibleFromTo": "Visible {{from}} - {{to}}",
+    "due": "Due {{time}}",
+    "visibleAllDay": "Visible all day",
+    "required": "Required",
+    "multipleChoiceFallback": "Multiple choice",
+    "followUpQuestion": "Follow-up question",
+    "untitledFollowUp": "Untitled follow-up question",
+    "responseTypeFallback": "Response type",
+    "nestedTriggersEnabled": "{{responseType}} and nested triggers enabled",
+    "structuralPreviewNotice": "This is a structural preview. Staff will see and interact with this checklist from the Kiosk."
   }
 }

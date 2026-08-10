@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
 import { getScheduleLabel } from "./types";
-import { RESPONSE_TYPES } from "./data";
+import { RESPONSE_TYPES, getResponseTypeLabel } from "./data";
 
 function formatTime12h(time24: string) {
   const [h, m] = time24.split(":").map(Number);
@@ -31,10 +32,11 @@ function MockResponse({
     instructionLinkSection?: "library" | "training";
   };
 }) {
+  const { t } = useTranslation("checklists");
   if (responseType === "checkbox") {
     return (
       <div className="flex gap-2 mt-2">
-        {["Yes", "No", "N/A"].map(opt => (
+        {[t("preview.yes"), t("preview.no"), t("preview.notApplicable")].map(opt => (
           <div key={opt} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
             <Square size={11} /> {opt}
           </div>
@@ -43,7 +45,7 @@ function MockResponse({
     );
   }
   if (responseType === "multiple_choice") {
-    const previewChoices = choices?.length ? choices : ["Option A", "Option B", "Option C"];
+    const previewChoices = choices?.length ? choices : [t("preview.optionA"), t("preview.optionB"), t("preview.optionC")];
     return (
         <div className="flex gap-2 mt-2 flex-wrap">
         {previewChoices.map((opt, idx) => (
@@ -69,13 +71,17 @@ function MockResponse({
           <span className="text-xs text-muted-foreground">0.00</span>
           {isTemperature && (
             <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
-              {questionConfig?.temperatureUnit === "F" ? "Fahrenheit" : "Celsius"}
+              {questionConfig?.temperatureUnit === "F" ? t("preview.fahrenheit") : t("preview.celsius")}
             </span>
           )}
         </div>
         {isTemperature && (
           <p className="text-xs text-muted-foreground">
-            Acceptable range: {questionConfig?.numberMin ?? "—"} to {questionConfig?.numberMax ?? "—"} {questionConfig?.temperatureUnit === "F" ? "F" : "C"}
+            {t("preview.acceptableRange", {
+              min: questionConfig?.numberMin ?? "—",
+              max: questionConfig?.numberMax ?? "—",
+              unit: questionConfig?.temperatureUnit === "F" ? "F" : "C",
+            })}
           </p>
         )}
       </div>
@@ -85,7 +91,7 @@ function MockResponse({
     return (
       <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50">
         <Type size={11} className="text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground">Type your answer…</span>
+        <span className="text-xs text-muted-foreground">{t("preview.typeYourAnswer")}</span>
       </div>
     );
   }
@@ -107,7 +113,7 @@ function MockResponse({
     return (
       <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border bg-muted/30 w-32">
         <Camera size={11} className="text-muted-foreground shrink-0" />
-        <span className="text-xs text-muted-foreground">Take photo</span>
+        <span className="text-xs text-muted-foreground">{t("preview.takePhoto")}</span>
       </div>
     );
   }
@@ -118,12 +124,14 @@ function MockResponse({
       <div className="mt-2 px-3 py-2 rounded-lg bg-muted/40 border-l-2 border-l-sage/40 space-y-2">
         <div className="flex items-center gap-1.5">
           <Info size={11} className="text-sage shrink-0" />
-          <span className="text-xs text-muted-foreground italic">Instruction content will appear here</span>
+          <span className="text-xs text-muted-foreground italic">{t("preview.instructionPlaceholder")}</span>
         </div>
         {questionConfig?.instructionLinkTitle && (
           <div className="inline-flex items-center gap-1.5 rounded-full border border-sage/20 bg-background/70 px-3 py-1 text-xs text-sage-deep">
             <ChevronRight size={10} />
-            Open linked {questionConfig.instructionLinkSection === "training" ? "training" : "document"}: {questionConfig.instructionLinkTitle}
+            {questionConfig.instructionLinkSection === "training"
+              ? t("preview.openLinkedTraining", { title: questionConfig.instructionLinkTitle })
+              : t("preview.openLinkedDocument", { title: questionConfig.instructionLinkTitle })}
           </div>
         )}
       </div>
@@ -137,12 +145,13 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const { t } = useTranslation("checklists");
   const sections = checklist.sections?.length ? checklist.sections : [{
     id: "preview-sec",
     name: "",
     questions: Array.from({ length: checklist.questionsCount || 1 }, (_, i) => ({
       id: `pq-${i}`,
-      text: `Question ${i + 1}`,
+      text: t("preview.questionFallback", { n: i + 1 }),
       responseType: "checkbox" as ResponseType,
       required: i < 2,
     })),
@@ -170,7 +179,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
           <div className="flex-1 min-w-0 pr-3">
             <h2 className="font-display text-lg text-foreground leading-snug">{checklist.title}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs text-muted-foreground">{totalQ} question{totalQ !== 1 ? "s" : ""}</span>
+              <span className="text-xs text-muted-foreground">{t("preview.questionCount", { count: totalQ })}</span>
               {checklist.schedule && (
                 <>
                   <span className="text-muted-foreground/40 text-xs">·</span>
@@ -187,20 +196,20 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                 <>
                   <span className="text-muted-foreground/40 text-xs">·</span>
                   <span className="text-xs text-muted-foreground">
-                    Visible {formatTime12h(checklist.visibility_from!)} - {formatTime12h(checklist.visibility_until!)}
+                    {t("preview.visibleFromTo", { from: formatTime12h(checklist.visibility_from!), to: formatTime12h(checklist.visibility_until!) })}
                   </span>
                 </>
               )}
               {!hasVisibilityWindow && checklist.due_time && (
                 <>
                   <span className="text-muted-foreground/40 text-xs">·</span>
-                  <span className="text-xs text-muted-foreground">Due {formatTime12h(checklist.due_time)}</span>
+                  <span className="text-xs text-muted-foreground">{t("preview.due", { time: formatTime12h(checklist.due_time) })}</span>
                 </>
               )}
               {!hasVisibilityWindow && !checklist.due_time && (
                 <>
                   <span className="text-muted-foreground/40 text-xs">·</span>
-                  <span className="text-xs text-muted-foreground">Visible all day</span>
+                  <span className="text-xs text-muted-foreground">{t("preview.visibleAllDay")}</span>
                 </>
               )}
             </div>
@@ -208,14 +217,14 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
           <div className="flex flex-wrap items-center gap-2 shrink-0 sm:justify-end">
             <button onClick={onEdit}
               className="flex items-center gap-1.5 text-xs font-medium text-sage px-3 py-1.5 rounded-full border border-sage/40 hover:bg-sage-light transition-colors">
-              <Pencil size={12} /> Edit
+              <Pencil size={12} /> {t("preview.edit")}
             </button>
             <button
               onClick={onClose}
               className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-muted-foreground"
             >
               <X size={14} />
-              Close
+              {t("preview.close")}
             </button>
           </div>
         </div>
@@ -243,14 +252,14 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-2">
-                          <p className="text-sm text-foreground flex-1">{q.text || `Question ${globalIdx + 1}`}</p>
+                          <p className="text-sm text-foreground flex-1">{q.text || t("preview.questionFallback", { n: globalIdx + 1 })}</p>
                           {q.required && (
-                            <span className="text-xs text-status-error font-medium shrink-0 mt-0.5">Required</span>
+                            <span className="text-xs text-status-error font-medium shrink-0 mt-0.5">{t("preview.required")}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
                           <RtIcon size={10} className="text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{rtDef?.label || "Multiple choice"}</span>
+                          <span className="text-xs text-muted-foreground">{rtDef ? getResponseTypeLabel(rtDef.key) : t("preview.multipleChoiceFallback")}</span>
                         </div>
                         <MockResponse
                           responseType={q.responseType}
@@ -268,10 +277,14 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                                 if (!followUp) return null;
                                 return (
                                   <div key={`${q.id}-${ri}-${ti}`} className="rounded-lg border border-sage/20 bg-sage/5 px-3 py-2">
-                                    <p className="text-xs uppercase tracking-wide text-sage-deep/70">Follow-up question</p>
-                                    <p className="text-sm font-medium text-foreground mt-1">{followUp.text || "Untitled follow-up question"}</p>
+                                    <p className="text-xs uppercase tracking-wide text-sage-deep/70">{t("preview.followUpQuestion")}</p>
+                                    <p className="text-sm font-medium text-foreground mt-1">{followUp.text || t("preview.untitledFollowUp")}</p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                      {RESPONSE_TYPES.find(r => r.key === followUp.responseType)?.label || "Response type"} and nested triggers enabled
+                                      {t("preview.nestedTriggersEnabled", {
+                                        responseType: RESPONSE_TYPES.find(r => r.key === followUp.responseType)
+                                          ? getResponseTypeLabel(followUp.responseType)
+                                          : t("preview.responseTypeFallback"),
+                                      })}
                                     </p>
                                   </div>
                                 );
@@ -290,7 +303,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
           {/* Footer note */}
           <div className="px-5 py-4 border-t border-border mt-2">
             <p className="text-xs text-muted-foreground text-center">
-              This is a structural preview. Staff will see and interact with this checklist from the Kiosk.
+              {t("preview.structuralPreviewNotice")}
             </p>
           </div>
         </div>

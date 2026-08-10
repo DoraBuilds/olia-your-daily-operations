@@ -143,5 +143,57 @@
       "badgeActionRequired": "REQUIERE ACCIÓN",
       "badgeUnstarted": "SIN EMPEZAR"
     }
+  },
+  "logDetail": {
+    "exportPdf": "Exportar PDF",
+    "required": "Obligatorio",
+    "instruction": "Instrucción",
+    "completed": "Completado",
+    "notCompleted": "No completado",
+    "noValueEntered": "No se ingresó ningún valor",
+    "photo": "Foto",
+    "noPhotoAttached": "Sin foto adjunta",
+    "noAnswerEntered": "No se ingresó respuesta",
+    "noAnswerDetail": "No hay detalle de respuestas registrado para este envío.",
+    "readOnlyNotice": "Este es un informe de solo lectura. Las respuestas enviadas no se pueden editar."
+  },
+  "responseTypes": {
+    "checkbox": "Casilla",
+    "text": "Respuesta de texto",
+    "number": "Número",
+    "datetime": "Fecha y hora",
+    "media": "Foto / Multimedia",
+    "instruction": "Instrucción"
+  },
+  "preview": {
+    "yes": "Sí",
+    "no": "No",
+    "notApplicable": "N/D",
+    "optionA": "Opción A",
+    "optionB": "Opción B",
+    "optionC": "Opción C",
+    "fahrenheit": "Fahrenheit",
+    "celsius": "Celsius",
+    "acceptableRange": "Rango aceptable: {{min}} a {{max}} {{unit}}",
+    "typeYourAnswer": "Escribe tu respuesta…",
+    "takePhoto": "Tomar foto",
+    "instructionPlaceholder": "El contenido de la instrucción aparecerá aquí",
+    "openLinkedTraining": "Abrir capacitación vinculada: {{title}}",
+    "openLinkedDocument": "Abrir documento vinculado: {{title}}",
+    "questionCount_one": "{{count}} pregunta",
+    "questionCount_other": "{{count}} preguntas",
+    "questionFallback": "Pregunta {{n}}",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "visibleFromTo": "Visible {{from}} - {{to}}",
+    "due": "Vence {{time}}",
+    "visibleAllDay": "Visible todo el día",
+    "required": "Obligatorio",
+    "multipleChoiceFallback": "Opción múltiple",
+    "followUpQuestion": "Pregunta de seguimiento",
+    "untitledFollowUp": "Pregunta de seguimiento sin título",
+    "responseTypeFallback": "Tipo de respuesta",
+    "nestedTriggersEnabled": "{{responseType}} y disparadores anidados habilitados",
+    "structuralPreviewNotice": "Esta es una vista previa estructural. El personal verá e interactuará con esta lista desde el Kiosco."
   }
 }
