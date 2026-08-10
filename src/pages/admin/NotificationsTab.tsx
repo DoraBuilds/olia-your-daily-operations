@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Bell, Mail, Clock, Send, CheckCircle2, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
@@ -9,13 +10,17 @@ import {
   useSaveChecklistNotificationRules,
 } from "@/hooks/useChecklistNotificationRules";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => {
-  const h = i % 12 === 0 ? 12 : i % 12;
-  const period = i < 12 ? "am" : "pm";
-  return { value: i, label: `${h}:00 ${period}` };
-});
+function useHours(t: (key: string) => string) {
+  return Array.from({ length: 24 }, (_, i) => {
+    const h = i % 12 === 0 ? 12 : i % 12;
+    const period = i < 12 ? t("notificationsTab.am") : t("notificationsTab.pm");
+    return { value: i, label: `${h}:00 ${period}` };
+  });
+}
 
 export function NotificationsTab() {
+  const { t } = useTranslation("admin");
+  const HOURS = useHours(t);
   const { data: rules, isLoading } = useChecklistNotificationRules();
   const saveMut = useSaveChecklistNotificationRules();
 
@@ -45,21 +50,21 @@ export function NotificationsTab() {
 
   const handleSave = () => {
     if (enabled && !recipientEmail.trim()) {
-      toast.error("Enter an email address to receive notifications.");
+      toast.error(t("notificationsTab.enterEmailToReceive"));
       return;
     }
     saveMut.mutate(
       { enabled, notify_unstarted: notifyUnstarted, notify_unfinished: notifyUnfinished, recipient_email: recipientEmail.trim(), notify_hour: notifyHour },
       {
-        onSuccess: () => toast.success("Notification settings saved"),
-        onError: (err: Error) => toast.error(`Failed to save: ${err.message}`),
+        onSuccess: () => toast.success(t("notificationsTab.settingsSaved")),
+        onError: (err: Error) => toast.error(t("notificationsTab.saveFailed", { error: err.message })),
       }
     );
   };
 
   const handleTest = async () => {
     if (!recipientEmail.trim()) {
-      toast.error("Enter an email address first.");
+      toast.error(t("notificationsTab.enterEmailFirst"));
       return;
     }
     setTesting(true);
@@ -68,9 +73,9 @@ export function NotificationsTab() {
         body: { recipient_email: recipientEmail.trim(), test: true },
       });
       if (error) throw error;
-      toast.success(`Test notification sent to ${recipientEmail.trim()}`);
+      toast.success(t("notificationsTab.testSent", { email: recipientEmail.trim() }));
     } catch (err: any) {
-      toast.error(`Could not send test: ${err.message ?? "Unknown error"}`);
+      toast.error(t("notificationsTab.testFailed", { error: err.message ?? t("notificationsTab.unknownError") }));
     } finally {
       setTesting(false);
     }
@@ -79,7 +84,7 @@ export function NotificationsTab() {
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 text-center">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("notificationsTab.loading")}</p>
       </div>
     );
   }
@@ -92,8 +97,8 @@ export function NotificationsTab() {
           <div className="flex items-center gap-2.5">
             <Bell size={16} className="text-sage" />
             <div>
-              <p className="text-sm font-semibold text-foreground">Daily checklist summary</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Email a daily summary of incomplete checklists</p>
+              <p className="text-sm font-semibold text-foreground">{t("notificationsTab.dailySummary")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("notificationsTab.dailySummaryDesc")}</p>
             </div>
           </div>
           <Switch
@@ -107,11 +112,11 @@ export function NotificationsTab() {
           <div className="space-y-4 pt-1 border-t border-border">
             {/* What to notify */}
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Alert me about</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("notificationsTab.alertMeAbout")}</p>
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={14} className="text-status-warn" />
-                  <span className="text-sm text-foreground">Unstarted checklists</span>
+                  <span className="text-sm text-foreground">{t("notificationsTab.unstartedChecklists")}</span>
                 </div>
                 <Switch
                   data-testid="notifications-unstarted-toggle"
@@ -122,7 +127,7 @@ export function NotificationsTab() {
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={14} className="text-status-error" />
-                  <span className="text-sm text-foreground">Unfinished checklists</span>
+                  <span className="text-sm text-foreground">{t("notificationsTab.unfinishedChecklists")}</span>
                 </div>
                 <Switch
                   data-testid="notifications-unfinished-toggle"
@@ -136,14 +141,14 @@ export function NotificationsTab() {
             <div className="space-y-1.5">
               <label className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Mail size={12} />
-                Send to
+                {t("notificationsTab.sendTo")}
               </label>
               <input
                 data-testid="notifications-email-input"
                 type="email"
                 value={recipientEmail}
                 onChange={e => setRecipientEmail(e.target.value)}
-                placeholder="manager@yourplace.com"
+                placeholder={t("notificationsTab.emailPlaceholder")}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
@@ -152,7 +157,7 @@ export function NotificationsTab() {
             <div className="space-y-1.5">
               <label className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                 <Clock size={12} />
-                Send at
+                {t("notificationsTab.sendAt")}
               </label>
               <select
                 data-testid="notifications-hour-select"
@@ -165,7 +170,7 @@ export function NotificationsTab() {
                 ))}
               </select>
               <p className="text-xs text-muted-foreground">
-                A daily summary email will be sent at this time if any checklists are incomplete.
+                {t("notificationsTab.sendAtNotice")}
               </p>
             </div>
           </div>
@@ -185,7 +190,7 @@ export function NotificationsTab() {
               : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
         >
-          {saveMut.isPending ? "Saving…" : "Save settings"}
+          {saveMut.isPending ? t("notificationsTab.saving") : t("notificationsTab.saveSettings")}
         </button>
         {enabled && (
           <button
@@ -195,7 +200,7 @@ export function NotificationsTab() {
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground hover:border-sage/40 transition-colors disabled:opacity-50"
           >
             <Send size={13} />
-            {testing ? "Sending…" : "Test"}
+            {testing ? t("notificationsTab.sending") : t("notificationsTab.test")}
           </button>
         )}
       </div>
@@ -205,7 +210,7 @@ export function NotificationsTab() {
         <div className="flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-2xl">
           <CheckCircle2 size={14} className="text-status-ok shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Daily summary active — emails sent at {HOURS[rules.notify_hour]?.label} to {rules.recipient_email}.
+            {t("notificationsTab.activeNotice", { time: HOURS[rules.notify_hour]?.label, email: rules.recipient_email })}
           </p>
         </div>
       )}

@@ -56,5 +56,31 @@
     "viewPlans": "Ver planes",
     "upgradeAtOlia": "Actualizar en olia.app",
     "upgradeToGrowth": "Actualizar a Growth"
+  },
+  "notificationsTab": {
+    "loading": "Cargando…",
+    "dailySummary": "Resumen diario de listas de verificación",
+    "dailySummaryDesc": "Envía por correo un resumen diario de listas incompletas",
+    "alertMeAbout": "Avísame sobre",
+    "unstartedChecklists": "Listas sin empezar",
+    "unfinishedChecklists": "Listas sin terminar",
+    "sendTo": "Enviar a",
+    "emailPlaceholder": "gerente@tulocal.com",
+    "sendAt": "Enviar a las",
+    "sendAtNotice": "Se enviará un correo con el resumen diario a esta hora si hay listas incompletas.",
+    "saving": "Guardando…",
+    "saveSettings": "Guardar ajustes",
+    "sending": "Enviando…",
+    "test": "Probar",
+    "activeNotice": "Resumen diario activo — se envían correos a las {{time}} a {{email}}.",
+    "enterEmailToReceive": "Ingresa un correo electrónico para recibir notificaciones.",
+    "enterEmailFirst": "Ingresa un correo electrónico primero.",
+    "settingsSaved": "Ajustes de notificaciones guardados",
+    "saveFailed": "Error al guardar: {{error}}",
+    "testSent": "Notificación de prueba enviada a {{email}}",
+    "testFailed": "No se pudo enviar la prueba: {{error}}",
+    "unknownError": "Error desconocido",
+    "am": "a. m.",
+    "pm": "p. m."
   }
 }
