@@ -1,0 +1,8 @@
+{
+  "subtitle": "Active operational alerts",
+  "backAriaLabel": "Back",
+  "dismissAriaLabel": "Dismiss alert",
+  "clearAll": "Clear all",
+  "count_one": "{{count}} alert",
+  "count_other": "{{count}} alerts"
+}

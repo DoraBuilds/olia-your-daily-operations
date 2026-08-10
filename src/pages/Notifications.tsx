@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { AlertCircle, ArrowLeft, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,7 @@ import { formatOperationalAlertCopy } from "@/lib/alert-copy";
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const { t } = useTranslation("notifications");
   const { data: alerts = [] } = useAlerts();
   const dismissMut = useDismissAlert();
   const clearMut = useClearAlerts();
@@ -17,12 +19,12 @@ export default function Notifications() {
   return (
     <Layout
       title="Olia"
-      subtitle="Active operational alerts"
+      subtitle={t("subtitle")}
       headerLeft={
         <button
           onClick={() => navigate("/dashboard")}
           className="p-2 rounded-full hover:bg-muted transition-colors"
-          aria-label="Back"
+          aria-label={t("backAriaLabel")}
         >
           <ArrowLeft size={18} className="text-muted-foreground" />
         </button>
@@ -30,14 +32,14 @@ export default function Notifications() {
     >
       <section>
         <div className="flex items-center justify-between mb-3">
-          <p className="section-label">{alerts.length} alert{alerts.length !== 1 ? "s" : ""}</p>
+          <p className="section-label">{t("count", { count: alerts.length })}</p>
           {alerts.length > 0 && (
             <button
               onClick={clearAll}
               className="flex items-center gap-1.5 text-xs text-status-error font-medium hover:opacity-80 transition-opacity"
             >
               <Trash2 size={12} />
-              Clear all
+              {t("clearAll")}
             </button>
           )}
         </div>
@@ -49,8 +51,8 @@ export default function Notifications() {
               <path d="M26 40l10 10 18-20" stroke="hsl(var(--sage))" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <div>
-              <p className="text-sm font-medium text-foreground">All clear</p>
-              <p className="text-xs text-muted-foreground mt-1">It looks like everything is calm now.</p>
+              <p className="text-sm font-medium text-foreground">{t("dashboard:alerts.allClearTitle")}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("dashboard:alerts.allClearBody")}</p>
             </div>
           </div>
         ) : (
@@ -77,7 +79,7 @@ export default function Notifications() {
                   <button
                     onClick={() => clearOne(alert.id)}
                     className="btn-icon shrink-0"
-                    aria-label="Dismiss alert"
+                    aria-label={t("dismissAriaLabel")}
                   >
                     <X size={14} className="text-muted-foreground" />
                   </button>
