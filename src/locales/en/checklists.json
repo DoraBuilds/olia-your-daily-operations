@@ -283,5 +283,57 @@
     "answeredSimple": "answered {{comparator}} {{value}}",
     "answeredBetween": "answered {{comparator}} {{value}} and {{valueTo}}",
     "actionRequiredTitle": "Action required: \"{{question}}\" {{condition}}"
+  },
+  "followUpEditor": {
+    "defaultLabel": "Follow-up question",
+    "nestedLabel": "Follow-up",
+    "questionTextPlaceholder": "Follow-up question text",
+    "emailSubjectPlaceholder": "Email subject (optional — auto-generated if blank)",
+    "number": {
+      "heading": "Number response",
+      "description": "Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.",
+      "modeNumber": "Number",
+      "modeTemperature": "Temperature",
+      "singleModeNotice": "Staff will enter one number and see the numeric keypad on supported devices.",
+      "min": "Min",
+      "max": "Max",
+      "to": "to",
+      "unit": "Unit"
+    },
+    "text": {
+      "heading": "Text answer preview",
+      "placeholder": "Respondent types here…",
+      "maxChars": "max 160 chars"
+    },
+    "checkbox": {
+      "heading": "Checkbox answer preview"
+    },
+    "media": {
+      "heading": "Media capture",
+      "notice": "Tapping will open the device camera on the kiosk."
+    },
+    "multipleChoice": {
+      "heading": "Multiple choice options",
+      "modeSingle": "Single",
+      "modeMultiple": "Multiple",
+      "choosePreset": "Choose a preset to add answer options.",
+      "addOption": "Add option",
+      "newOptionLabel": "Option {{n}}",
+      "deleteOption": "Delete option {{choice}}",
+      "colors": {
+        "green": "Green",
+        "yellow": "Yellow",
+        "red": "Red",
+        "blue": "Blue",
+        "neutral": "Neutral"
+      }
+    },
+    "instruction": {
+      "heading": "Instruction content",
+      "placeholder": "Write your instruction text here…",
+      "imageAlt": "Instruction",
+      "replaceImage": "Replace image",
+      "uploadImage": "Upload image"
+    }
   }
 }
