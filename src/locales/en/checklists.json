@@ -85,5 +85,63 @@
     "noFolder": "No folder",
     "noFolderUnfiled": "No folder (unfiled)",
     "noFoldersYet": "No folders yet — create one from the Checklists main view."
+  },
+  "reporting": {
+    "period": {
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month",
+      "custom": "Custom",
+      "customRange": "Custom range",
+      "fromDate": "From {{date}}"
+    },
+    "csv": "CSV",
+    "pdf": "PDF",
+    "stats": {
+      "completed": "Completed",
+      "unfinished": "Unfinished",
+      "unstarted": "Unstarted",
+      "avgScore": "Avg Score",
+      "openActions": "Open Actions",
+      "none": "none",
+      "good": "Good",
+      "review": "Review",
+      "actionNeeded": "Action needed",
+      "noChange": "No change"
+    },
+    "filters": {
+      "heading": "Filters",
+      "clear": "Clear filters",
+      "checklistName": "Checklist name",
+      "checklistNamePlaceholder": "Type a checklist name",
+      "person": "Person",
+      "allPeople": "All people",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "showingUnstarted_one": "Showing {{count}} unstarted checklist.",
+      "showingUnstarted_other": "Showing {{count}} unstarted checklists.",
+      "showingLogs_one": "Showing {{shown}} of {{total}} log.",
+      "showingLogs_other": "Showing {{shown}} of {{total}} logs."
+    },
+    "scoreTrend": {
+      "heading": "Score Trend",
+      "chartAriaLabel": "Score trend chart",
+      "passThreshold": "Pass"
+    },
+    "log": {
+      "heading": "Completion Log",
+      "loading": "Loading…",
+      "checklistColumn": "Checklist",
+      "statusColumn": "Status",
+      "noActivity": "No activity this period",
+      "allStarted": "All checklists have been started this period.",
+      "noMatchFilters": "No logs match your filters.",
+      "noneRecorded": "No logs recorded for this period.",
+      "badgeUnfinished": "UNFINISHED",
+      "badgePass": "PASS",
+      "badgeReview": "REVIEW",
+      "badgeActionRequired": "ACTION REQ.",
+      "badgeUnstarted": "UNSTARTED"
+    }
   }
 }

@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown, Search, User, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,10 +20,11 @@ import { LogDetailModal } from "./LogDetailModal";
 type Period = "today" | "week" | "month" | "custom";
 
 function scoreBadge(score: number | null) {
-  if (score == null) return { label: "UNFINISHED", cls: "status-warn" };
-  if (score >= 85) return { label: "PASS", cls: "status-ok" };
-  if (score >= 65) return { label: "REVIEW", cls: "status-warn" };
-  return { label: "ACTION REQ.", cls: "status-error" };
+  const t = (key: string) => i18n.t(`reporting.log.${key}`, { ns: "checklists" });
+  if (score == null) return { label: t("badgeUnfinished"), cls: "status-warn" };
+  if (score >= 85) return { label: t("badgePass"), cls: "status-ok" };
+  if (score >= 65) return { label: t("badgeReview"), cls: "status-warn" };
+  return { label: t("badgeActionRequired"), cls: "status-error" };
 }
 
 function dotColor(score: number) {
@@ -31,6 +34,7 @@ function dotColor(score: number) {
 }
 
 function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
+  const { t } = useTranslation("checklists");
   // viewBox is 640 wide; on mobile (~430px rendered) the scale is ~0.67
   // All fontSize values are SVG units — multiply by ~0.67 to get rendered px
   const W = 640, H = 210;
@@ -55,7 +59,7 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-[210px] w-full min-w-[320px]" role="img" aria-label="Score trend chart">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[210px] w-full min-w-[320px]" role="img" aria-label={t("reporting.scoreTrend.chartAriaLabel")}>
         <defs>
           <linearGradient id="score-area-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="hsl(var(--sage))" stopOpacity="0.14" />
@@ -78,8 +82,8 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
 
         {/* Threshold lines + right-side labels — fontSize 14 → ~9px rendered */}
         {[
-          { v: 85, varName: "--status-ok", label: "Pass" },
-          { v: 65, varName: "--status-warn", label: "Review" },
+          { v: 85, varName: "--status-ok", label: t("reporting.scoreTrend.passThreshold") },
+          { v: 65, varName: "--status-warn", label: t("reporting.stats.review") },
         ].map(({ v, varName, label }) => (
           <g key={v}>
             <line x1={PL} x2={PL + chartW} y1={getY(v)} y2={getY(v)}
@@ -128,6 +132,7 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
 }
 
 export function ReportingTab({ initialLocationId }: { initialLocationId?: string }) {
+  const { t } = useTranslation("checklists");
   const { can } = usePlan();
   const [period, setPeriod] = useState<Period>("today");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -265,19 +270,19 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   );
 
   const periodLabel =
-    period === "today" ? "Today" :
-    period === "week" ? "This Week" :
-    period === "month" ? "This Month" :
+    period === "today" ? t("reporting.period.today") :
+    period === "week" ? t("reporting.period.week") :
+    period === "month" ? t("reporting.period.month") :
     dateRange?.from && dateRange?.to
       ? `${format(dateRange.from, "d MMM")} – ${format(dateRange.to, "d MMM yyyy")}`
-      : dateRange?.from ? `From ${format(dateRange.from, "d MMM yyyy")}`
-      : "Custom range";
+      : dateRange?.from ? t("reporting.period.fromDate", { date: format(dateRange.from, "d MMM yyyy") })
+      : t("reporting.period.customRange");
 
   const pickerLabel =
     dateRange?.from && dateRange?.to
       ? `${format(dateRange.from, "d MMM")} – ${format(dateRange.to, "d MMM")}`
       : dateRange?.from ? format(dateRange.from, "d MMM yyyy")
-      : "Custom";
+      : t("reporting.period.custom");
 
   const reportRows = useMemo(
     () => logEntries.map(l => {
@@ -312,9 +317,9 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {/* Period tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
         {([
-          { key: "today" as Period, label: "Today" },
-          { key: "week" as Period, label: "This Week" },
-          { key: "month" as Period, label: "This Month" },
+          { key: "today" as Period, label: t("reporting.period.today") },
+          { key: "week" as Period, label: t("reporting.period.week") },
+          { key: "month" as Period, label: t("reporting.period.month") },
         ]).map(({ key, label }) => (
           <button key={key}
             onClick={() => { setPeriod(key); setDateRange(undefined); setCalOpen(false); }}
@@ -340,7 +345,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
               onClick={() => setPeriod("custom")}
             >
               <CalendarIcon size={12} />
-              {period === "custom" && dateRange?.from ? pickerLabel : "Custom"}
+              {period === "custom" && dateRange?.from ? pickerLabel : t("reporting.period.custom")}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-[60]" align="start">
@@ -371,7 +376,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
             onChange={e => setLocationFilter(e.target.value)}
             className="w-full text-xs bg-card border border-border rounded-full px-3 py-2 pr-7 text-foreground font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage/40"
           >
-            <option value="all">All locations</option>
+            <option value="all">{t("locations.all")}</option>
             {locations.map(l => (
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
@@ -385,7 +390,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           disabled={!logEntries.length}
           className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
         >
-          <Download size={12} /> CSV
+          <Download size={12} /> {t("reporting.csv")}
         </button>
         <button
           data-testid="export-pdf"
@@ -393,7 +398,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           disabled={!logEntries.length}
           className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
         >
-          <FileText size={12} /> PDF
+          <FileText size={12} /> {t("reporting.pdf")}
         </button>
       </div>
       </div>{/* end top toolbar */}
@@ -401,36 +406,36 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {/* Stat cards — row 1: completion breakdown */}
       <div className="grid grid-cols-3 gap-2">
         <div data-testid="stat-completed" className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Completed</p>
+          <p className="section-label mb-1">{t("reporting.stats.completed")}</p>
           <p className="text-2xl font-semibold text-status-ok">{isLoading ? "—" : completedCount}</p>
           {!isLoading && completedCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("reporting.stats.none")}</span>
             </div>
           )}
         </div>
         <div data-testid="stat-unfinished" className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Unfinished</p>
+          <p className="section-label mb-1">{t("reporting.stats.unfinished")}</p>
           <p className={cn("text-2xl font-semibold", unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground")}>
             {isLoading ? "—" : unfinishedCount}
           </p>
           {!isLoading && unfinishedCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("reporting.stats.none")}</span>
             </div>
           )}
         </div>
         <div data-testid="stat-unstarted" className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Unstarted</p>
+          <p className="section-label mb-1">{t("reporting.stats.unstarted")}</p>
           <p className={cn("text-2xl font-semibold", unstartedCount > 0 ? "text-status-error" : "text-muted-foreground")}>
             {isLoading ? "—" : unstartedCount}
           </p>
           {!isLoading && unstartedCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("reporting.stats.none")}</span>
             </div>
           )}
         </div>
@@ -439,7 +444,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {/* Stat cards — row 2: score + actions */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Avg Score</p>
+          <p className="section-label mb-1">{t("reporting.stats.avgScore")}</p>
           <p className={cn("text-2xl font-semibold",
             avgScore == null ? "text-muted-foreground" :
             avgScoreValue >= 85 ? "text-status-ok" :
@@ -451,23 +456,23 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           {!isLoading && hasAvgScore && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               {avgScoreValue >= 85
-                ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-xs text-status-ok font-medium">Good</span></>
+                ? <><TrendingUp size={10} className="text-status-ok" /><span className="text-xs text-status-ok font-medium">{t("reporting.stats.good")}</span></>
                 : avgScoreValue >= 65
-                ? <><Minus size={10} className="text-status-warn" /><span className="text-xs text-status-warn font-medium">Review</span></>
-                : <><TrendingDown size={10} className="text-status-error" /><span className="text-xs text-status-error font-medium">Action needed</span></>
+                ? <><Minus size={10} className="text-status-warn" /><span className="text-xs text-status-warn font-medium">{t("reporting.stats.review")}</span></>
+                : <><TrendingDown size={10} className="text-status-error" /><span className="text-xs text-status-error font-medium">{t("reporting.stats.actionNeeded")}</span></>
               }
             </div>
           )}
         </div>
         <div className="bg-card border border-border rounded-2xl p-4 text-center">
-          <p className="section-label mb-1">Open Actions</p>
+          <p className="section-label mb-1">{t("reporting.stats.openActions")}</p>
           <p className={cn("text-2xl font-semibold", openActionsCount > 0 ? "text-status-error" : "text-status-ok")}>
             {openActionsCount}
           </p>
           {openActionsCount === 0 && (
             <div className="flex items-center justify-center gap-0.5 mt-1">
               <Minus size={10} className="text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-medium">none</span>
+              <span className="text-xs text-muted-foreground font-medium">{t("reporting.stats.none")}</span>
             </div>
           )}
         </div>
@@ -476,7 +481,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {/* Filter panel */}
       <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="section-label">Filters</p>
+          <p className="section-label">{t("reporting.filters.heading")}</p>
           {hasActiveFilters && (
             <button
               data-testid="reporting-clear-filters"
@@ -489,13 +494,13 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
               <X size={12} />
-              Clear filters
+              {t("reporting.filters.clear")}
             </button>
           )}
         </div>
         <div className="grid gap-2 md:grid-cols-3">
           <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">Checklist name</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.checklistName")}</span>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -503,7 +508,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
                 type="text"
                 value={checklistSearch}
                 onChange={e => setChecklistSearch(e.target.value)}
-                placeholder="Type a checklist name"
+                placeholder={t("reporting.filters.checklistNamePlaceholder")}
                 className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 list="reporting-checklist-options"
               />
@@ -514,7 +519,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           </label>
 
           <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">Person</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.person")}</span>
             <div className="relative">
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <select
@@ -523,7 +528,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
                 onChange={e => setPersonFilter(e.target.value)}
                 className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
-                <option value="all">All people</option>
+                <option value="all">{t("reporting.filters.allPeople")}</option>
                 {peopleOptions.map(name => (
                   <option key={name} value={name}>{name}</option>
                 ))}
@@ -532,24 +537,24 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
           </label>
 
           <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">Status</span>
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
             <select
               data-testid="reporting-status-filter"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
               className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="all">All statuses</option>
-              <option value="completed">Completed</option>
-              <option value="unfinished">Unfinished</option>
-              <option value="unstarted">Unstarted</option>
+              <option value="all">{t("reporting.filters.allStatuses")}</option>
+              <option value="completed">{t("reporting.stats.completed")}</option>
+              <option value="unfinished">{t("reporting.stats.unfinished")}</option>
+              <option value="unstarted">{t("reporting.stats.unstarted")}</option>
             </select>
           </label>
         </div>
         <p className="text-xs text-muted-foreground">
           {statusFilter === "unstarted"
-            ? `Showing ${unstartedCount} unstarted checklist${unstartedCount === 1 ? "" : "s"}.`
-            : `Showing ${logEntries.length} of ${logs.length} log${logs.length === 1 ? "" : "s"}.`
+            ? t("reporting.filters.showingUnstarted", { count: unstartedCount })
+            : t("reporting.filters.showingLogs", { count: logs.length, shown: logEntries.length, total: logs.length })
           }
         </p>
       </div>
@@ -558,12 +563,12 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {trendData.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-4">
           <div className="flex items-center justify-between mb-4">
-            <p className="section-label">Score Trend</p>
+            <p className="section-label">{t("reporting.scoreTrend.heading")}</p>
             {trendData.length >= 2 && (() => {
               const delta = trendData[trendData.length - 1].avg - trendData[0].avg;
               if (delta > 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-ok"><TrendingUp size={12} />+{delta}%</span>;
               if (delta < 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-error"><TrendingDown size={12} />{delta}%</span>;
-              return <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Minus size={12} />No change</span>;
+              return <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Minus size={12} />{t("reporting.stats.noChange")}</span>;
             })()}
           </div>
           <ScoreTrendChart data={trendData} />
@@ -574,43 +579,43 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       <div>
         <div className="flex items-center justify-between mb-3">
           <p className="section-label">
-            Completion Log
+            {t("reporting.log.heading")}
             <span className="text-muted-foreground font-normal ml-1">— {periodLabel}</span>
           </p>
         </div>
 
         {isLoading ? (
           <div className="bg-card border border-border rounded-2xl p-6 text-center">
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t("reporting.log.loading")}</p>
           </div>
         ) : statusFilter === "unstarted" ? (
           unstartedChecklists.length > 0 ? (
             <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-24 text-right">Status</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-24 text-right">{t("reporting.log.statusColumn")}</p>
               </div>
               {unstartedChecklists.map(c => (
                 <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">No activity this period</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("reporting.log.noActivity")}</p>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">UNSTARTED</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">{t("reporting.log.badgeUnstarted")}</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="bg-card border border-border rounded-2xl p-8 text-center">
-              <p className="text-sm text-muted-foreground">All checklists have been started this period.</p>
+              <p className="text-sm text-muted-foreground">{t("reporting.log.allStarted")}</p>
             </div>
           )
         ) : logEntries.length > 0 || (statusFilter === "all" && unstartedChecklists.length > 0) ? (
           <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">Checklist</p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">Status</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">{t("reporting.log.statusColumn")}</p>
               <div className="w-4" />
             </div>
             {logEntries.map(log => {
@@ -637,10 +642,10 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
               <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">No activity this period</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("reporting.log.noActivity")}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">UNSTARTED</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">{t("reporting.log.badgeUnstarted")}</span>
                   <div className="w-[13px]" />
                 </div>
               </div>
@@ -649,7 +654,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         ) : (
           <div className="bg-card border border-border rounded-2xl p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              {hasActiveFilters ? "No logs match your filters." : "No logs recorded for this period."}
+              {hasActiveFilters ? t("reporting.log.noMatchFilters") : t("reporting.log.noneRecorded")}
             </p>
           </div>
         )}

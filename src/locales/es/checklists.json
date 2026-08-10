@@ -85,5 +85,63 @@
     "noFolder": "Sin carpeta",
     "noFolderUnfiled": "Sin carpeta (sin clasificar)",
     "noFoldersYet": "Aún no hay carpetas — crea una desde la vista principal de Listas."
+  },
+  "reporting": {
+    "period": {
+      "today": "Hoy",
+      "week": "Esta semana",
+      "month": "Este mes",
+      "custom": "Personalizado",
+      "customRange": "Rango personalizado",
+      "fromDate": "Desde {{date}}"
+    },
+    "csv": "CSV",
+    "pdf": "PDF",
+    "stats": {
+      "completed": "Completadas",
+      "unfinished": "Sin terminar",
+      "unstarted": "Sin empezar",
+      "avgScore": "Puntaje prom.",
+      "openActions": "Acciones abiertas",
+      "none": "ninguna",
+      "good": "Bien",
+      "review": "Revisar",
+      "actionNeeded": "Requiere acción",
+      "noChange": "Sin cambios"
+    },
+    "filters": {
+      "heading": "Filtros",
+      "clear": "Borrar filtros",
+      "checklistName": "Nombre de la lista",
+      "checklistNamePlaceholder": "Escribe el nombre de una lista",
+      "person": "Persona",
+      "allPeople": "Todas las personas",
+      "status": "Estado",
+      "allStatuses": "Todos los estados",
+      "showingUnstarted_one": "Mostrando {{count}} lista sin empezar.",
+      "showingUnstarted_other": "Mostrando {{count}} listas sin empezar.",
+      "showingLogs_one": "Mostrando {{shown}} de {{total}} registro.",
+      "showingLogs_other": "Mostrando {{shown}} de {{total}} registros."
+    },
+    "scoreTrend": {
+      "heading": "Tendencia de puntaje",
+      "chartAriaLabel": "Gráfico de tendencia de puntaje",
+      "passThreshold": "Aprobado"
+    },
+    "log": {
+      "heading": "Registro de finalización",
+      "loading": "Cargando…",
+      "checklistColumn": "Lista",
+      "statusColumn": "Estado",
+      "noActivity": "Sin actividad en este período",
+      "allStarted": "Todas las listas se han iniciado en este período.",
+      "noMatchFilters": "Ningún registro coincide con tus filtros.",
+      "noneRecorded": "No hay registros para este período.",
+      "badgeUnfinished": "SIN TERMINAR",
+      "badgePass": "APROBADO",
+      "badgeReview": "REVISAR",
+      "badgeActionRequired": "REQUIERE ACCIÓN",
+      "badgeUnstarted": "SIN EMPEZAR"
+    }
   }
 }
