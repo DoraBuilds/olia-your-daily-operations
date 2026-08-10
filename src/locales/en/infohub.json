@@ -1,0 +1,161 @@
+{
+  "subtitleLibrary": "Documents & SOPs",
+  "subtitleTraining": "Staff training modules",
+  "searchLibraryPlaceholder": "Search documents and folders…",
+  "searchTrainingPlaceholder": "Search training and folders…",
+  "addContent": "Add content",
+  "tabs": {
+    "library": "Library",
+    "training": "Training"
+  },
+  "folders": "Folders",
+  "documents": "Documents",
+  "modules": "Modules",
+  "restricted": "Restricted",
+  "docCount_one": "{{count}} document",
+  "docCount_other": "{{count}} documents",
+  "subfolderCount_one": "{{count}} subfolder",
+  "subfolderCount_other": "{{count}} subfolders",
+  "moduleCount": "{{count}} modules",
+  "durationSteps": "{{duration}} · {{count}} steps",
+  "done": "Done",
+  "openAiTools": "Open AI tools for {{title}}",
+  "emptyState": {
+    "noMatchLibrary": "No matching library items.",
+    "noMatchTraining": "No matching training items.",
+    "folderEmpty": "This folder is empty.",
+    "noFolders": "No folders yet.",
+    "tapToCreate": "Tap to create a folder or document."
+  },
+  "archived": "Archived ({{count}})",
+  "restore": "Restore",
+  "actions": {
+    "moveToFolder": "Move to folder",
+    "renameFolder": "Rename folder",
+    "manageAccess": "Manage access",
+    "archiveFolder": "Archive folder",
+    "downloadFile": "Download file",
+    "archiveFile": "Archive file"
+  },
+  "aiSheet": {
+    "libraryDocument": "library document",
+    "trainingModule": "training module",
+    "heading": "AI Tools",
+    "generateFrom": "Generate study materials for \"{{title}}\" from {{source}} content.",
+    "notEnoughContent": "This document does not have enough content for AI generation.",
+    "unexpectedResponse": "Unexpected AI response. Please try again.",
+    "genericError": "Something went wrong. Please try again.",
+    "summary": {
+      "title": "Generate summary",
+      "description": "AI-powered key points from this content",
+      "sectionLabel": "Summary",
+      "takeawayLabel": "Takeaway"
+    },
+    "flashcards": {
+      "title": "Create flashcards",
+      "description": "Turn content into review flashcards",
+      "sectionLabel": "Flashcards",
+      "front": "Front",
+      "back": "Back"
+    },
+    "quiz": {
+      "title": "Generate quiz",
+      "description": "Test understanding with auto-generated questions",
+      "sectionLabel": "Quiz"
+    }
+  },
+  "shared": {
+    "moveToFolder": {
+      "heading": "Move to folder",
+      "searchPlaceholder": "Search folders",
+      "rootOption": "Root (no folder)",
+      "noFoldersFound": "No folders found."
+    },
+    "newFolder": {
+      "heading": "New folder",
+      "nameLabel": "Folder name",
+      "namePlaceholder": "e.g. Health & Safety",
+      "create": "Create folder"
+    },
+    "renameFolder": {
+      "heading": "Rename folder",
+      "nameLabel": "Folder name",
+      "save": "Rename"
+    },
+    "newDocument": {
+      "heading": "New document",
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. Fire safety procedure",
+      "folderLabel": "Folder",
+      "tagsLabel": "Tags",
+      "tagsHint": "(comma-separated, optional)",
+      "tagsPlaceholder": "e.g. Safety, Weekly, Kitchen",
+      "create": "Create document"
+    },
+    "filePreview": {
+      "download": "Download",
+      "closePreview": "Close preview",
+      "cannotPreview": "This file type can't be previewed in the browser.",
+      "downloadToOpen": "Download to open"
+    },
+    "upload": {
+      "heading": "Upload file",
+      "fileTooLarge": "File is too large. Maximum size is 20 MB.",
+      "notSignedIn": "Not signed in.",
+      "uploadFailed": "Upload failed. Please try again.",
+      "dragDropPrefix": "Drag & drop or",
+      "browse": "browse",
+      "fileTypesHint": "PDF, DOC, DOCX, images · max 20 MB",
+      "uploading": "Uploading…",
+      "upload": "Upload file"
+    },
+    "plusMenu": {
+      "heading": "Create new",
+      "newDocumentTitle": "New document",
+      "newDocumentDesc": "Create a new document from scratch",
+      "uploadFileTitle": "Upload file",
+      "uploadFileDesc": "Upload a PDF, DOC, or image",
+      "newFolderTitle": "New folder",
+      "newFolderDesc": "Organise documents into a folder"
+    },
+    "manageAccess": {
+      "heading": "Manage access",
+      "orgWideTitle": "Org-wide access",
+      "orgWideDesc": "Everyone in the organization can see this item.",
+      "restrictedTitle": "Restricted access",
+      "restrictedDesc": "Limit visibility by person, role, or location.",
+      "teamMembers": "Team members",
+      "roles": "Roles",
+      "locations": "Locations",
+      "save": "Save access"
+    },
+    "searchOverlay": {
+      "placeholder": "Search all documents...",
+      "startTyping": "Start typing to search across Library and Training.",
+      "noResults": "No results found.",
+      "library": "Library",
+      "training": "Training",
+      "durationSteps": "{{duration}} · {{count}} steps"
+    },
+    "breadcrumbAllFolders": "All folders",
+    "noResponseProvided": "No response provided"
+  },
+  "docViews": {
+    "editingDocument": "Editing document",
+    "updatedOn": "Updated {{date}}",
+    "openAiTools": "Open AI tools",
+    "titleLabel": "Title",
+    "summaryLabel": "Summary",
+    "contentLabel": "Content",
+    "tagsLabel": "Tags (comma-separated)",
+    "tagsPlaceholder": "e.g. Service, Safety, Weekly",
+    "saveChanges": "Save changes",
+    "fileFallback": "File",
+    "tapToAddContent": "Tap to add content",
+    "durationStepsProgress": "{{duration}} · {{completed}}/{{total}} steps",
+    "step": "Step {{n}}",
+    "moduleComplete": "Module complete.",
+    "moduleCompleteNotice": "Well done. This module has been marked as completed.",
+    "markIncomplete": "Mark as incomplete"
+  }
+}

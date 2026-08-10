@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
@@ -38,6 +39,7 @@ import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentVi
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
 export default function Infohub() {
+  const { t } = useTranslation("infohub");
   const location = useLocation();
   const navigate = useNavigate();
   const { teamMember } = useAuth();
@@ -271,30 +273,30 @@ export default function Infohub() {
     />
   );
 
-  const subtitle = subTab === "library" ? "Documents & SOPs" : "Staff training modules";
+  const subtitle = subTab === "library" ? t("subtitleLibrary") : t("subtitleTraining");
 
   // Folder menu actions
   const folderActions = (folder: { id: string; name: string; access: InfohubAccessControl }, section: "library" | "training") => {
     const actions = [
-      { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "folder", id: folder.id, section }) },
-      { label: "Rename folder", icon: <Pencil size={16} className="text-muted-foreground" />, onClick: () => setRenameTarget({ id: folder.id, name: folder.name, section }) },
+      { label: t("actions.moveToFolder"), icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "folder", id: folder.id, section }) },
+      { label: t("actions.renameFolder"), icon: <Pencil size={16} className="text-muted-foreground" />, onClick: () => setRenameTarget({ id: folder.id, name: folder.name, section }) },
     ];
     if (canManageAccess) {
       actions.push({
-        label: "Manage access",
+        label: t("actions.manageAccess"),
         icon: <Shield size={16} className="text-muted-foreground" />,
         onClick: () => setAccessTarget({ id: folder.id, type: "folder", section, name: folder.name, access: folder.access }),
       });
     }
-    actions.push({ label: "Archive folder", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveFolder(folder.id, section) });
+    actions.push({ label: t("actions.archiveFolder"), icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveFolder(folder.id, section) });
     return actions;
   };
 
   const docActions = (doc: DocItem | TrainingDoc, section: "library" | "training") => {
     const actions = [
-      { label: "Move to folder", icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
+      { label: t("actions.moveToFolder"), icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
       {
-        label: "Download file",
+        label: t("actions.downloadFile"),
         icon: <Download size={16} className="text-muted-foreground" />,
         onClick: async () => {
           const libraryDoc = section === "library" ? (doc as DocItem) : null;
@@ -328,12 +330,12 @@ export default function Infohub() {
     ];
     if (canManageAccess) {
       actions.push({
-        label: "Manage access",
+        label: t("actions.manageAccess"),
         icon: <Shield size={16} className="text-muted-foreground" />,
         onClick: () => setAccessTarget({ id: doc.id, type: "doc", section, name: doc.title, access: doc.access }),
       });
     }
-    actions.push({ label: "Archive file", icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) });
+    actions.push({ label: t("actions.archiveFile"), icon: <Archive size={16} className="text-muted-foreground" />, onClick: () => handleArchiveDoc(doc.id, section) });
     return actions;
   };
 
@@ -354,7 +356,7 @@ export default function Infohub() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder={subTab === "library" ? "Search documents and folders…" : "Search training and folders…"}
+            placeholder={subTab === "library" ? t("searchLibraryPlaceholder") : t("searchTrainingPlaceholder")}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
@@ -362,7 +364,7 @@ export default function Infohub() {
         </div>
         <button
           onClick={() => setShowPlusMenu(true)}
-          aria-label="Add content"
+          aria-label={t("addContent")}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep shrink-0"
         >
           <Plus size={18} />
@@ -372,8 +374,8 @@ export default function Infohub() {
       {/* Sub-tab toggle */}
       <div className="flex gap-1 bg-muted rounded-xl p-1">
         {([
-          { key: "library" as const, label: "Library", icon: BookOpen },
-          { key: "training" as const, label: "Training", icon: GraduationCap },
+          { key: "library" as const, label: t("tabs.library"), icon: BookOpen },
+          { key: "training" as const, label: t("tabs.training"), icon: GraduationCap },
         ]).map(({ key, label, icon: Icon }) => (
           <button key={key}
             onClick={() => {
@@ -399,7 +401,7 @@ export default function Infohub() {
 
           {accessibleLibFolders.length > 0 && (
             <>
-              <p className="section-label">Folders</p>
+              <p className="section-label">{t("folders")}</p>
               <div className="card-surface divide-y divide-border">
                 {accessibleLibFolders.map((folder, idx) => (
                   <div key={folder.id} className="relative"
@@ -425,14 +427,14 @@ export default function Infohub() {
                           {folder.access.accessScope === "restricted" && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
-                              Restricted
+                              {t("restricted")}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {countDocsInFolder(folder.id, libFolders, libDocs)} {countDocsInFolder(folder.id, libFolders, libDocs) === 1 ? "document" : "documents"}
+                          {t("docCount", { count: countDocsInFolder(folder.id, libFolders, libDocs) })}
                           {libFolders.filter(f => f.parentId === folder.id).length > 0 &&
-                            ` · ${libFolders.filter(f => f.parentId === folder.id).length} subfolder${libFolders.filter(f => f.parentId === folder.id).length > 1 ? 's' : ''}`
+                            ` · ${t("subfolderCount", { count: libFolders.filter(f => f.parentId === folder.id).length })}`
                           }
                         </p>
                       </div>
@@ -457,7 +459,7 @@ export default function Infohub() {
           {/* Documents in current folder */}
           {(currentLibFolder || normalizedSearch) && accessibleDocsInCurrentFolder.length > 0 && (
             <>
-              <p className="section-label">Documents</p>
+              <p className="section-label">{t("documents")}</p>
               <div className="card-surface divide-y divide-border">
                 {accessibleDocsInCurrentFolder.map(doc => (
                   <div key={doc.id} className="relative">
@@ -474,7 +476,7 @@ export default function Infohub() {
                           {doc.access.accessScope === "restricted" && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
-                              Restricted
+                              {t("restricted")}
                             </span>
                           )}
                         </div>
@@ -483,7 +485,7 @@ export default function Infohub() {
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setAiSheetDocTitle(doc.title); }}
-                        aria-label={`Open AI tools for ${doc.title}`}
+                        aria-label={t("openAiTools", { title: doc.title })}
                         className="p-1.5 rounded-full hover:bg-lavender-light transition-colors shrink-0"
                       >
                         <Sparkles size={14} className="text-lavender-deep" />
@@ -515,10 +517,10 @@ export default function Infohub() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {normalizedSearch
-                  ? "No matching library items."
-                  : currentLibFolder ? "This folder is empty." : "No folders yet."}
+                  ? t("emptyState.noMatchLibrary")
+                  : currentLibFolder ? t("emptyState.folderEmpty") : t("emptyState.noFolders")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Tap to create a folder or document.</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("emptyState.tapToCreate")}</p>
             </button>
           )}
           {archivedLibDocs.length > 0 && (
@@ -528,7 +530,7 @@ export default function Infohub() {
                 className="flex items-center gap-1.5 section-label hover:text-foreground transition-colors w-full"
               >
                 <Archive size={12} />
-                Archived ({archivedLibDocs.length})
+                {t("archived", { count: archivedLibDocs.length })}
                 <ChevronRight size={12} className={cn("ml-0.5 transition-transform", showArchived && "rotate-90")} />
               </button>
               {showArchived && (
@@ -543,7 +545,7 @@ export default function Infohub() {
                         onClick={() => handleRestoreDoc(doc.id)}
                         className="text-xs text-sage font-medium px-2.5 py-1 rounded-lg hover:bg-sage-light transition-colors shrink-0"
                       >
-                        Restore
+                        {t("restore")}
                       </button>
                     </div>
                   ))}
@@ -562,7 +564,7 @@ export default function Infohub() {
 
           {accessibleTrainFolders.length > 0 && (
             <>
-              <p className="section-label">Folders</p>
+              <p className="section-label">{t("folders")}</p>
               <div className="card-surface divide-y divide-border">
                 {accessibleTrainFolders.map((folder, idx) => (
                   <div key={folder.id} className="relative"
@@ -588,11 +590,11 @@ export default function Infohub() {
                           {folder.access.accessScope === "restricted" && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
-                              Restricted
+                              {t("restricted")}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{countTrainingDocsInFolder(folder.id, trainFolders, trainDocs)} modules</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("moduleCount", { count: countTrainingDocsInFolder(folder.id, trainFolders, trainDocs) })}</p>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === folder.id ? null : folder.id); }}
@@ -614,7 +616,7 @@ export default function Infohub() {
 
           {(currentTrainFolder || normalizedSearch) && accessibleDocsInCurrentTrainFolder.length > 0 && (
             <>
-              <p className="section-label">Modules</p>
+              <p className="section-label">{t("modules")}</p>
               <div className="card-surface divide-y divide-border">
                 {accessibleDocsInCurrentTrainFolder.map(doc => (
                   <div key={doc.id} className="relative">
@@ -632,21 +634,21 @@ export default function Infohub() {
                           {doc.access.accessScope === "restricted" && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                               <Lock size={10} />
-                              Restricted
+                              {t("restricted")}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{doc.duration} · {doc.steps.length} steps</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("durationSteps", { duration: doc.duration, count: doc.steps.length })}</p>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setAiSheetDocTitle(doc.title); }}
-                        aria-label={`Open AI tools for ${doc.title}`}
+                        aria-label={t("openAiTools", { title: doc.title })}
                         className="p-1.5 rounded-full hover:bg-lavender-light transition-colors shrink-0"
                       >
                         <Sparkles size={14} className="text-lavender-deep" />
                       </button>
                       {doc.completed && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium status-ok shrink-0">Done</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium status-ok shrink-0">{t("done")}</span>
                       )}
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === doc.id ? null : doc.id); }}
@@ -673,9 +675,9 @@ export default function Infohub() {
                 <Plus size={18} className="text-lavender-deep" />
               </div>
               <p className="text-sm text-muted-foreground">
-                {normalizedSearch ? "No matching training items." : "This folder is empty."}
+                {normalizedSearch ? t("emptyState.noMatchTraining") : t("emptyState.folderEmpty")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Tap to create a folder or document.</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("emptyState.tapToCreate")}</p>
             </button>
           )}
         </>
@@ -753,7 +755,7 @@ export default function Infohub() {
       {aiSheetDocTitle && (
         <AIActionsSheet
           docTitle={aiSheetDocTitle}
-          sourceLabel={subTab === "library" ? "library document" : "training module"}
+          sourceLabel={subTab === "library" ? t("aiSheet.libraryDocument") : t("aiSheet.trainingModule")}
           sourceText={
             subTab === "library"
               ? (libDocs.find(doc => doc.title === aiSheetDocTitle)?.content ?? "")

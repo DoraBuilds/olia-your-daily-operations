@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { CheckCircle, ChevronLeft, Circle, Download, FileText, Pencil, Sparkles, Tag } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +20,7 @@ export function LibraryDocDetail({
   onBack: () => void;
   onSave: (updated: DocItem) => void;
 }) {
+  const { t } = useTranslation("infohub");
   const folder = folders.find((folderItem) => folderItem.id === doc.folderId);
   const [aiSheet, setAiSheet] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -56,14 +58,14 @@ export function LibraryDocDetail({
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-lg text-foreground leading-tight truncate">
-              {isEditing ? "Editing document" : doc.title}
+              {isEditing ? t("docViews.editingDocument") : doc.title}
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{folder?.name} · Updated {doc.lastUpdated}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{folder?.name} · {t("docViews.updatedOn", { date: doc.lastUpdated })}</p>
           </div>
           {!isEditing && (
             <button
               onClick={() => setAiSheet(true)}
-              aria-label="Open AI tools"
+              aria-label={t("docViews.openAiTools")}
               className="p-2 rounded-full hover:bg-lavender-light transition-colors"
             >
               <Sparkles size={18} className="text-lavender-deep" />
@@ -85,7 +87,7 @@ export function LibraryDocDetail({
         {isEditing ? (
           <>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Title</label>
+              <label className="text-xs font-medium text-muted-foreground">{t("docViews.titleLabel")}</label>
               <input
                 autoFocus
                 value={editTitle}
@@ -94,7 +96,7 @@ export function LibraryDocDetail({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Summary</label>
+              <label className="text-xs font-medium text-muted-foreground">{t("docViews.summaryLabel")}</label>
               <textarea
                 value={editSummary}
                 onChange={(e) => setEditSummary(e.target.value)}
@@ -103,7 +105,7 @@ export function LibraryDocDetail({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Content</label>
+              <label className="text-xs font-medium text-muted-foreground">{t("docViews.contentLabel")}</label>
               <textarea
                 data-testid="doc-content-editor"
                 value={editContent}
@@ -113,16 +115,16 @@ export function LibraryDocDetail({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Tags (comma-separated)</label>
+              <label className="text-xs font-medium text-muted-foreground">{t("docViews.tagsLabel")}</label>
               <input
                 value={editTags}
                 onChange={(e) => setEditTags(e.target.value)}
-                placeholder="e.g. Service, Safety, Weekly"
+                placeholder={t("docViews.tagsPlaceholder")}
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-sage/30"
               />
             </div>
             <button onClick={handleSave} className="w-full py-3 rounded-xl bg-sage text-white text-sm font-medium hover:bg-sage-deep transition-colors">
-              Save changes
+              {t("docViews.saveChanges")}
             </button>
           </>
         ) : (
@@ -142,7 +144,7 @@ export function LibraryDocDetail({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
-                  <p className="text-xs text-muted-foreground">{doc.fileType ?? "File"}</p>
+                  <p className="text-xs text-muted-foreground">{doc.fileType ?? t("docViews.fileFallback")}</p>
                 </div>
                 {fileSignedUrl ? (
                   <a
@@ -151,7 +153,7 @@ export function LibraryDocDetail({
                     rel="noopener noreferrer"
                     download
                     className="p-2 rounded-full hover:bg-muted transition-colors"
-                    aria-label="Download file"
+                    aria-label={t("actions.downloadFile")}
                   >
                     <Download size={16} className="text-muted-foreground" />
                   </a>
@@ -167,7 +169,7 @@ export function LibraryDocDetail({
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{doc.content}</p>
               ) : (
                 <button onClick={() => setIsEditing(true)} className="w-full text-sm text-muted-foreground text-center py-4 hover:text-foreground transition-colors">
-                  Tap to add content
+                  {t("docViews.tapToAddContent")}
                 </button>
               )}
             </div>
@@ -177,7 +179,7 @@ export function LibraryDocDetail({
       {aiSheet && (
         <AIActionsSheet
           docTitle={doc.title}
-          sourceLabel="library document"
+          sourceLabel={t("aiSheet.libraryDocument")}
           sourceText={`${doc.title}\n\n${doc.summary}\n\n${doc.content}`}
           onClose={() => setAiSheet(false)}
         />
@@ -195,6 +197,7 @@ export function TrainingDocDetail({
   onBack: () => void;
   onToggleComplete: (completed: boolean) => void;
 }) {
+  const { t } = useTranslation("infohub");
   const onToggleCompleteRef = useRef(onToggleComplete);
   const lastReportedCompletion = useRef<boolean | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
@@ -235,11 +238,11 @@ export function TrainingDocDetail({
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-lg text-foreground leading-tight truncate">{doc.title}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{doc.duration} · {completedSteps.size}/{doc.steps.length} steps</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("docViews.durationStepsProgress", { duration: doc.duration, completed: completedSteps.size, total: doc.steps.length })}</p>
           </div>
           <button
             onClick={() => setAiSheet(true)}
-            aria-label="Open AI tools"
+            aria-label={t("docViews.openAiTools")}
             className="p-2 rounded-full hover:bg-lavender-light transition-colors"
           >
             <Sparkles size={18} className="text-lavender-deep" />
@@ -260,7 +263,7 @@ export function TrainingDocDetail({
             >
               {done ? <CheckCircle size={18} className="text-sage-deep mt-0.5 shrink-0" /> : <Circle size={18} className="text-muted-foreground mt-0.5 shrink-0" />}
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-0.5">Step {index + 1}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-0.5">{t("docViews.step", { n: index + 1 })}</p>
                 <p className={cn("text-sm leading-relaxed", done ? "text-sage-deep" : "text-foreground")}>{step}</p>
               </div>
             </button>
@@ -269,15 +272,15 @@ export function TrainingDocDetail({
         {allDone && (
           <div className="card-surface p-5 text-center border-sage/30 bg-sage-light animate-fade-in">
             <CheckCircle size={24} className="text-sage-deep mx-auto mb-2" />
-            <p className="text-sm font-medium text-sage-deep">Module complete.</p>
-            <p className="text-xs text-sage-deep/70 mt-1">Well done. This module has been marked as completed.</p>
+            <p className="text-sm font-medium text-sage-deep">{t("docViews.moduleComplete")}</p>
+            <p className="text-xs text-sage-deep/70 mt-1">{t("docViews.moduleCompleteNotice")}</p>
             <button
               onClick={() => {
                 setCompletedSteps(new Set());
               }}
               className="mt-3 text-xs text-sage-deep/70 underline hover:text-sage-deep transition-colors"
             >
-              Mark as incomplete
+              {t("docViews.markIncomplete")}
             </button>
           </div>
         )}
@@ -285,7 +288,7 @@ export function TrainingDocDetail({
       {aiSheet && (
         <AIActionsSheet
           docTitle={doc.title}
-          sourceLabel="training module"
+          sourceLabel={t("aiSheet.trainingModule")}
           sourceText={`${doc.title}\n\n${doc.steps.join("\n\n")}`}
           onClose={() => setAiSheet(false)}
         />
