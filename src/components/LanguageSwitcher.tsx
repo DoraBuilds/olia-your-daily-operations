@@ -28,6 +28,11 @@ const LANGUAGE_SHORT_LABEL: Record<SupportedLanguage, string> = {
   es: "ES",
 };
 
+const LANGUAGE_FLAG: Record<SupportedLanguage, string> = {
+  en: "🇬🇧",
+  es: "🇪🇸",
+};
+
 // Presentational only — callers own where the chosen language is persisted
 // (Supabase profile for the staff app, localStorage for the device-scoped
 // Kiosk picker; see issue #594).
@@ -46,12 +51,14 @@ export function LanguageSwitcher({ value, onChange, className, variant = "defaul
         )}
         aria-label={t("language.label")}
       >
-        {isPill ? <span>{LANGUAGE_SHORT_LABEL[value]}</span> : <SelectValue />}
+        {isPill
+          ? <span><span aria-hidden="true">{LANGUAGE_FLAG[value]}</span> <span>{LANGUAGE_SHORT_LABEL[value]}</span></span>
+          : <SelectValue />}
       </SelectTrigger>
       <SelectContent>
         {SUPPORTED_LANGUAGES.map((lang) => (
           <SelectItem key={lang} value={lang}>
-            {LANGUAGE_ENDONYM[lang]}
+            <span aria-hidden="true">{LANGUAGE_FLAG[lang]}</span> <span>{LANGUAGE_ENDONYM[lang]}</span>
           </SelectItem>
         ))}
       </SelectContent>

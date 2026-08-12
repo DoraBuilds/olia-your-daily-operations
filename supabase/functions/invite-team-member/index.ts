@@ -52,15 +52,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
   if (authError || !user) return err("Invalid session");
 
-  // Caller must be a team member (owner or manager)
-  const { data: caller, error: callerError } = await supabase
-    .from("team_members")
-    .select("organization_id, role")
-    .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
-    .single();
-
-  if (callerError || !caller) return err("Caller is not a team member");
-
   // ── Parse request body ──────────────────────────────────────────────
   let body: { team_member_id?: string };
   try {
@@ -81,10 +72,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (memberError || !member) return err("Team member not found");
 
-  // Caller must belong to the same org as the invitee
-  if (member.organization_id !== caller.organization_id) {
-    return err("Not authorised to invite members of this organisation");
-  }
+  // Caller must be a team member of the SAME organisation as the invitee.
+  // Scoping by organization_id (not just matching id/auth_user_id globally)
+  // matters because a caller can legitimately have more than one
+  // team_members row — e.g. they run their own org AND were separately
+  // invited into a partner's org. An unscoped `.single()` lookup would find
+  // both rows and throw, failing the invite for that caller only.
+  const { data: caller, error: callerError } = await supabase
+    .from("team_members")
+    .select("organization_id, role")
+    .eq("organization_id", member.organization_id)
+    .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+    .single();
+
+  if (callerError || !caller) return err("Caller is not a team member of this organisation");
 
   const { data: org, error: orgError } = await supabase
     .from("organizations")
