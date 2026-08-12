@@ -29,6 +29,18 @@ if (restoredGitHubPagesPath) {
   window.history.replaceState(null, "", restoredGitHubPagesPath);
 }
 
+// Same "must run before createBrowserRouter reads window.location" reason as
+// above — and the same class of bug it's meant to prevent (#574): a device
+// configured as a kiosk must never render the marketing/login/signup route,
+// even for one frame. Doing this redirect only after RootLayout mounts (see
+// the useLayoutEffect below) still lets that route's lazy chunk finish
+// loading and paint before Kiosk's own lazy chunk has loaded — the URL flips
+// to /kiosk immediately, but the old page stays on screen until Kiosk's
+// chunk arrives, which can take a moment on a slow connection (#631).
+if (shouldRedirectToKiosk(window.location.pathname, Boolean(localStorage.getItem("kiosk_location_id")))) {
+  window.history.replaceState(null, "", `${import.meta.env.BASE_URL}kiosk`.replace(/\/{2,}/g, "/"));
+}
+
 const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Checklists = lazy(() => import("./pages/Checklists"));
@@ -75,6 +87,10 @@ function RootLayout() {
   // testing kiosk mode on their own laptop — to the kiosk picker any time
   // they clicked back to the homepage from an ordinary marketing page like
   // /privacy, which has nothing to do with an actual kiosk device.
+  //
+  // The module-scope check above (#631) now handles the common "fresh page
+  // load" case before the router even matches "/" — this effect is a
+  // defense-in-depth backstop for it, not the primary mechanism anymore.
   const kioskMountCheckDone = useRef(false);
   useLayoutEffect(() => {
     if (kioskMountCheckDone.current) return;
