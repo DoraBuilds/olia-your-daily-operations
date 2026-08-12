@@ -7,6 +7,11 @@
     "billing": "Facturación"
   },
   "userLabelFallback": "Admin",
+  "roles": {
+    "Owner": "Propietario",
+    "Manager": "Gerente",
+    "Member": "Miembro"
+  },
   "toast": {
     "locationUpdated": "Ubicación actualizada",
     "locationCreated": "Ubicación creada",

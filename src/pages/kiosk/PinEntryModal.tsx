@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -106,6 +107,7 @@ export function KioskPinShell({
   onDigit, onBackspace, ctaLabel, ctaId, ctaTestId, ctaDisabled, onCta,
   secondsLeft, onCancelCountdown, footer,
 }: KioskPinShellProps) {
+  const { t } = useTranslation("kiosk");
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm"
@@ -125,13 +127,17 @@ export function KioskPinShell({
           <p className="text-center text-xs text-status-error">{error}</p>
         )}
         {validating && (
-          <p className="text-center text-xs text-muted-foreground">Checking PIN…</p>
+          <p className="text-center text-xs text-muted-foreground">{t("pin.checking")}</p>
         )}
 
         {lockedUntil ? (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground">
-              Try again in <span className="font-bold text-foreground">{lockSecondsLeft}s</span>
+              <Trans
+                i18nKey="kiosk:pin.tryAgainIn"
+                values={{ seconds: lockSecondsLeft }}
+                components={{ bold: <span className="font-bold text-foreground" /> }}
+              />
             </p>
           </div>
         ) : (
@@ -160,8 +166,8 @@ export function KioskPinShell({
 
       {secondsLeft !== null && secondsLeft !== undefined && (
         <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
-          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
-          <button onClick={onCancelCountdown} className="text-sm font-semibold underline">Stay</button>
+          <p className="text-sm">{t("completion.returningIn", { count: secondsLeft })}</p>
+          <button onClick={onCancelCountdown} className="text-sm font-semibold underline">{t("stayButton")}</button>
         </div>
       )}
     </div>
@@ -170,6 +176,7 @@ export function KioskPinShell({
 
 // ─── AdminLoginModal ───────────────────────────────────────────────────────────
 export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => void; kioskLocationId?: string | null }) {
+  const { t } = useTranslation("kiosk");
   const navigate = useNavigate();
   const { teamMember } = useAuth();
   const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
@@ -185,7 +192,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
     const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
     if (!locationId) {
       setLoading(false);
-      setError("Select a kiosk location before opening admin.");
+      setError(t("pin.selectLocationBeforeAdmin"));
       return;
     }
 
@@ -194,7 +201,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       if (!locationStillAccessible) {
         clearKioskLocationSelectionForModal();
         setLoading(false);
-        setError("This kiosk location is no longer linked to your account. Select a location again.");
+        setError(t("pin.locationNoLongerLinked"));
         return;
       }
     }
@@ -208,7 +215,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       if (!tokenValid) {
         clearKioskLocationSelectionForModal();
         setLoading(false);
-        setError("Kiosk setup required. Please contact your administrator.");
+        setError(t("pin.kioskSetupRequired"));
         return;
       }
     }
@@ -219,15 +226,15 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
 
     if (rpcError) {
       if (rpcError.message?.includes("Too many PIN attempts")) {
-        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+        setError(t("pin.tooManyAttempts"));
       } else {
-        setError("Could not verify the admin PIN. Please try again.");
+        setError(t("pin.couldNotVerifyAdminPin"));
       }
       return;
     }
 
     if (!data || data.length === 0) {
-      setError("Invalid PIN.");
+      setError(t("pin.invalidPin"));
       return;
     }
 
@@ -254,12 +261,12 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
         setError("");
         setLoading(true);
         const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
-        if (!locationId) { setLoading(false); setError("Select a kiosk location first."); setPin(""); return; }
+        if (!locationId) { setLoading(false); setError(t("pin.selectLocationFirst")); setPin(""); return; }
         if (teamMember?.organization_id && locationsFetched && !locationsErrored) {
           if (!allLocations.some(l => l.id === locationId)) {
             clearKioskLocationSelectionForModal();
             setLoading(false);
-            setError("Location no longer accessible. Select again.");
+            setError(t("pin.locationNoLongerAccessible"));
             setPin("");
             return;
           }
@@ -271,15 +278,15 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
           if (!tokenValid) {
             clearKioskLocationSelectionForModal();
             setLoading(false);
-            setError("Kiosk setup required. Please contact your administrator.");
+            setError(t("pin.kioskSetupRequired"));
             setPin("");
             return;
           }
         }
         const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
         setLoading(false);
-        if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? "Too many failed attempts. Please wait 5 minutes before trying again." : "Could not verify PIN. Please try again."); setPin(""); return; }
-        if (!data || data.length === 0) { setError("Invalid PIN."); setPin(""); return; }
+        if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? t("pin.tooManyAttempts") : t("pin.couldNotVerifyPin")); setPin(""); return; }
+        if (!data || data.length === 0) { setError(t("pin.invalidPin")); setPin(""); return; }
         grantKioskAdminSession(data[0].id, locationId);
         navigate("/admin?from=kiosk");
       })();
@@ -294,7 +301,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
 
   return (
     <KioskPinShell
-      title="Admin PIN"
+      title={t("pin.adminTitle")}
       onClose={onClose}
       pin={pin}
       error={error}
@@ -303,12 +310,12 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
       onBackspace={handleBackspace}
       footer={
         <p className="text-center text-xs text-muted-foreground pt-1">
-          Forgot your PIN?{" "}
+          {t("pin.forgotPin")}{" "}
           <button
             onClick={() => { void handlePinRecovery(); }}
             className="text-sage font-medium hover:underline"
           >
-            Log out and sign in again
+            {t("pin.logoutAndSignIn")}
           </button>
         </p>
       }
@@ -369,6 +376,7 @@ export function PinEntryModal({
   onSuccess: (staffId: string | null, staffName: string, orgId: string) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation("kiosk");
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
@@ -392,13 +400,13 @@ export function PinEntryModal({
         setLockedUntil(null);
         setAttempts(0);
         setLockSecondsLeft(0);
-        setError("Please try again.");
+        setError(t("pin.pleaseTryAgain"));
       } else {
         setLockSecondsLeft(remaining);
       }
     }, 500);
     return () => clearInterval(id);
-  }, [lockedUntil]);
+  }, [lockedUntil, t]);
 
   const validate = async (enteredPin: string) => {
     setValidating(true);
@@ -414,7 +422,7 @@ export function PinEntryModal({
         localStorage.removeItem("kiosk_location_id");
         localStorage.removeItem("kiosk_location_name");
         localStorage.removeItem("kiosk_token");
-        setError("Kiosk setup required. Please contact your administrator.");
+        setError(t("pin.kioskSetupRequired"));
         return;
       }
     }
@@ -438,9 +446,9 @@ export function PinEntryModal({
         const until = Date.now() + 5 * 60 * 1000;
         setLockedUntil(until);
         setLockSecondsLeft(5 * 60);
-        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+        setError(t("pin.tooManyAttempts"));
       } else {
-        setError("Connection error. Check your network and try again.");
+        setError(t("pin.connectionError"));
       }
       return;
     }
@@ -457,7 +465,7 @@ export function PinEntryModal({
 
     if (staffRpcError) {
       setPin("");
-      setError("Connection error. Check your network and try again.");
+      setError(t("pin.connectionError"));
       return;
     }
 
@@ -468,9 +476,9 @@ export function PinEntryModal({
       const until = Date.now() + 30000;
       setLockedUntil(until);
       setLockSecondsLeft(30);
-      setError("Please ask your manager for help.");
+      setError(t("pin.askManagerForHelp"));
     } else {
-      setError("PIN not recognised. Please try again.");
+      setError(t("pin.pinNotRecognised"));
     }
   };
 
@@ -493,7 +501,7 @@ export function PinEntryModal({
 
   return (
     <KioskPinShell
-      title="Insert PIN"
+      title={t("pin.insertTitle")}
       onClose={onCancel}
       pin={pin}
       error={error}
@@ -502,7 +510,7 @@ export function PinEntryModal({
       lockSecondsLeft={lockSecondsLeft}
       onDigit={handleDigit}
       onBackspace={handleBackspace}
-      ctaLabel="START"
+      ctaLabel={t("pin.startButton")}
       ctaId="pin-start-btn"
       ctaDisabled={!canStart}
       onCta={() => canStart && validate(pin)}
@@ -522,6 +530,7 @@ export function LibraryPinModal({
   onSuccess: (memberId: string | null, memberName: string, orgId: string) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation("kiosk");
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
@@ -544,13 +553,13 @@ export function LibraryPinModal({
         setLockedUntil(null);
         setAttempts(0);
         setLockSecondsLeft(0);
-        setError("Please try again.");
+        setError(t("pin.pleaseTryAgain"));
       } else {
         setLockSecondsLeft(remaining);
       }
     }, 500);
     return () => clearInterval(id);
-  }, [lockedUntil]);
+  }, [lockedUntil, t]);
 
   const validate = async (enteredPin: string) => {
     setValidating(true);
@@ -564,7 +573,7 @@ export function LibraryPinModal({
         localStorage.removeItem("kiosk_location_id");
         localStorage.removeItem("kiosk_location_name");
         localStorage.removeItem("kiosk_token");
-        setError("Kiosk setup required. Please contact your administrator.");
+        setError(t("pin.kioskSetupRequired"));
         return;
       }
     }
@@ -585,9 +594,9 @@ export function LibraryPinModal({
         const until = Date.now() + 5 * 60 * 1000;
         setLockedUntil(until);
         setLockSecondsLeft(5 * 60);
-        setError("Too many failed attempts. Please wait 5 minutes before trying again.");
+        setError(t("pin.tooManyAttempts"));
       } else {
-        setError("Connection error. Check your network and try again.");
+        setError(t("pin.connectionError"));
       }
       return;
     }
@@ -604,7 +613,7 @@ export function LibraryPinModal({
 
     if (staffRpcError) {
       setPin("");
-      setError("Connection error. Check your network and try again.");
+      setError(t("pin.connectionError"));
       return;
     }
 
@@ -615,9 +624,9 @@ export function LibraryPinModal({
       const until = Date.now() + 30000;
       setLockedUntil(until);
       setLockSecondsLeft(30);
-      setError("Please ask your manager for help.");
+      setError(t("pin.askManagerForHelp"));
     } else {
-      setError("PIN not recognised. Please try again.");
+      setError(t("pin.pinNotRecognised"));
     }
   };
 
@@ -640,7 +649,7 @@ export function LibraryPinModal({
 
   return (
     <KioskPinShell
-      title="Staff Library"
+      title={t("pin.staffLibraryTitle")}
       onClose={onCancel}
       pin={pin}
       error={error}
@@ -649,7 +658,7 @@ export function LibraryPinModal({
       lockSecondsLeft={lockSecondsLeft}
       onDigit={handleDigit}
       onBackspace={handleBackspace}
-      ctaLabel="ACCESS"
+      ctaLabel={t("pin.accessButton")}
       ctaTestId="library-pin-access-btn"
       ctaDisabled={!canSubmit}
       onCta={() => canSubmit && validate(pin)}

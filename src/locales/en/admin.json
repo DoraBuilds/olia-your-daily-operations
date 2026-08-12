@@ -7,6 +7,11 @@
     "billing": "Billing"
   },
   "userLabelFallback": "Admin",
+  "roles": {
+    "Owner": "Owner",
+    "Manager": "Manager",
+    "Member": "Member"
+  },
   "toast": {
     "locationUpdated": "Location updated",
     "locationCreated": "Location created",

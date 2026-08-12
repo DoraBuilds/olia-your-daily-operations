@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
@@ -34,6 +35,7 @@ export function ChecklistRunner({
   /** Pre-filled answers when re-editing a completed checklist */
   initialAnswers?: Record<string, any>;
 }) {
+  const { t } = useTranslation("kiosk");
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
   const [initialDraft] = useState(() => {
     const draft = loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions);
@@ -130,7 +132,7 @@ export function ChecklistRunner({
   const handleComplete = () => {
     const missing = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
     if (missing.length > 0) {
-      setCompletionError(`${missing.length} required question${missing.length !== 1 ? "s" : ""} still need an answer.`);
+      setCompletionError(t("runner.missingRequired", { count: missing.length }));
       document.getElementById(`question-${missing[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
@@ -156,7 +158,7 @@ export function ChecklistRunner({
               onClick={() => setShowCancelConfirm(true)}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
             >
-              Cancel
+              {t("cancel")}
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -164,7 +166,7 @@ export function ChecklistRunner({
               <div className="h-full bg-sage rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
             <p className="text-xs text-muted-foreground shrink-0 w-20 text-right">
-              {answeredCount}/{scorable.length} answered
+              {t("runner.answeredCount", { answered: answeredCount, total: scorable.length })}
             </p>
           </div>
         </div>
@@ -173,7 +175,7 @@ export function ChecklistRunner({
         {showDraftBanner && (
           <div className="shrink-0 mx-5 mt-3">
             <div className="bg-sage/10 border border-sage/20 rounded-xl px-4 py-2.5 flex items-center justify-between">
-              <p className="text-xs text-sage font-medium">Continuing from where you left off</p>
+              <p className="text-xs text-sage font-medium">{t("runner.continuingBanner")}</p>
               <button onClick={() => setShowDraftBanner(false)} className="text-sage/60 hover:text-sage ml-2 p-0.5">
                 <X size={12} />
               </button>
@@ -310,7 +312,7 @@ export function ChecklistRunner({
                               : "bg-sage text-white hover:bg-sage-deep active:scale-[0.97]",
                           )}
                         >
-                          {isInstruction ? "Acknowledge" : "Next →"}
+                          {isInstruction ? t("runner.acknowledge") : t("runner.next")}
                         </button>
                       </div>
                     )}
@@ -349,7 +351,7 @@ export function ChecklistRunner({
                       "text-sm font-medium truncate flex-1",
                       isPast ? "text-foreground" : "text-muted-foreground",
                     )}>
-                      {isInstruction ? (q.instructionText ?? q.text ?? "Note") : q.text}
+                      {isInstruction ? (q.instructionText ?? q.text ?? t("runner.noteFallback")) : q.text}
                       {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
                     </p>
                     {isAnswered && (
@@ -358,10 +360,10 @@ export function ChecklistRunner({
                         selectedOptionSeverity === "error" ? "text-status-error" :
                         selectedOptionSeverity === "warn" ? "text-status-warn" :
                         isNoAnswer ? "text-status-warn" : "text-sage",
-                      )}>✓ Done</span>
+                      )}>✓ {t("runner.done")}</span>
                     )}
-                    {!isAnswered && isPast && !isInstruction && <span className="text-xs text-muted-foreground/60 shrink-0">Edit</span>}
-                    {!isAnswered && !isPast && <span className="text-xs text-muted-foreground/50 shrink-0">Pending</span>}
+                    {!isAnswered && isPast && !isInstruction && <span className="text-xs text-muted-foreground/60 shrink-0">{t("runner.edit")}</span>}
+                    {!isAnswered && !isPast && <span className="text-xs text-muted-foreground/50 shrink-0">{t("runner.pending")}</span>}
                   </button>
                 )}
               </Fragment>
@@ -383,7 +385,7 @@ export function ChecklistRunner({
             className="w-full py-4 rounded-2xl text-sm font-bold tracking-wide bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
           >
             <Check size={16} />
-            Complete Checklist
+            {t("runner.completeButton")}
           </button>
         </div>
 
@@ -396,7 +398,7 @@ export function ChecklistRunner({
             <button
               onClick={() => setLightboxImage(null)}
               className="absolute top-5 right-5 w-10 h-10 rounded-full bg-background/20 hover:bg-background/30 flex items-center justify-center transition-colors"
-              aria-label="Close"
+              aria-label={t("close")}
             >
               <X size={20} className="text-background" />
             </button>
@@ -432,7 +434,7 @@ export function ChecklistRunner({
                     type="button"
                     onClick={() => setLinkedResourceId(null)}
                     className="p-2 rounded-full hover:bg-muted transition-colors shrink-0"
-                    aria-label="Close linked resource"
+                    aria-label={t("runner.closeLinkedResource")}
                   >
                     <X size={16} className="text-muted-foreground" />
                   </button>
@@ -449,22 +451,22 @@ export function ChecklistRunner({
         {showCancelConfirm && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
             <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4">
-              <h3 className="font-display text-lg text-foreground">Cancel checklist?</h3>
+              <h3 className="font-display text-lg text-foreground">{t("runner.cancelConfirmTitle")}</h3>
               <p className="text-sm text-muted-foreground">
-                Your answers are saved as a draft. You can pick up where you left off next time.
+                {t("runner.cancelConfirmBody")}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowCancelConfirm(false)}
                   className="flex-1 py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
                 >
-                  Keep going
+                  {t("runner.keepGoing")}
                 </button>
                 <button
                   onClick={onCancel}
                   className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
             </div>
@@ -474,8 +476,8 @@ export function ChecklistRunner({
         {/* ── Inactivity countdown ── */}
         {secondsLeft !== null && (
           <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[80]">
-            <p className="text-sm">Returning to home in {secondsLeft}s…</p>
-            <button onClick={cancelCountdown} className="text-sm font-semibold underline">Stay</button>
+            <p className="text-sm">{t("completion.returningIn", { count: secondsLeft })}</p>
+            <button onClick={cancelCountdown} className="text-sm font-semibold underline">{t("stayButton")}</button>
           </div>
         )}
       </div>
