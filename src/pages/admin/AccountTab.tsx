@@ -701,7 +701,7 @@ export function AccountTab({
                     "text-xs px-2 py-0.5 rounded-full font-medium",
                     member.role === "Owner" ? "bg-lavender-light text-lavender-deep" : "status-ok",
                   )}>
-                    {member.role}
+                    {t(`roles.${member.role}`)}
                   </span>
                   {hasPendingInvite && (
                     <button

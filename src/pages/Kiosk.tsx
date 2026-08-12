@@ -805,9 +805,8 @@ export default function Kiosk() {
     <div className="min-h-screen bg-background w-full min-[900px]:max-w-none mx-auto flex flex-col">
       {/* Top bar */}
       <div className="px-5 pt-6 pb-4 grid grid-cols-3 items-center border-b border-border">
-        {/* Left: current status */}
+        {/* Left: date/time */}
         <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest">{t("grid.currentStatus")}</p>
           <p className="text-sm font-semibold text-foreground">{dateStr} · {timeStr}</p>
         </div>
 

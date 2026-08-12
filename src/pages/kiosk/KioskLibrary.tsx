@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { BookOpen, FileText, Folder } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { ensureKioskToken } from "./PinEntryModal";
@@ -35,6 +36,7 @@ export function KioskLibrary({
   locationId: string;
   onBack: () => void;
 }) {
+  const { t } = useTranslation("kiosk");
   const [data, setData] = useState<KioskLibraryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export function KioskLibrary({
         .then(({ data: rpcData, error: rpcError }) => {
           if (cancelled) return;
           if (rpcError) {
-            setError("Could not load library. Check your connection and try again.");
+            setError(t("library.loadError"));
           } else {
             setData((rpcData as KioskLibraryData) ?? { folders: [], documents: [] });
           }
@@ -67,7 +69,7 @@ export function KioskLibrary({
     return () => {
       cancelled = true;
     };
-  }, [locationId, memberId]);
+  }, [locationId, memberId, t]);
 
   const folders = data?.folders ?? [];
   const documents = data?.documents ?? [];
@@ -88,17 +90,17 @@ export function KioskLibrary({
   };
 
   const backLabel = selectedDoc
-    ? (currentFolder?.name ?? "Library")
+    ? (currentFolder?.name ?? t("grid.library"))
     : currentFolderId
-      ? (parentFolder?.name ?? "Library")
-      : "Kiosk";
+      ? (parentFolder?.name ?? t("grid.library"))
+      : t("grid.kioskFallbackName");
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
           <BookOpen size={32} className="text-muted-foreground mx-auto animate-pulse" />
-          <p className="text-sm text-muted-foreground">Loading library…</p>
+          <p className="text-sm text-muted-foreground">{t("library.loading")}</p>
         </div>
       </div>
     );
@@ -110,7 +112,7 @@ export function KioskLibrary({
         <div className="text-center space-y-3">
           <p className="text-sm text-status-error font-medium">{error}</p>
           <button onClick={onBack} className="text-sm text-muted-foreground underline">
-            Back to kiosk
+            {t("library.backToKiosk")}
           </button>
         </div>
       </div>
@@ -134,7 +136,7 @@ export function KioskLibrary({
               ? selectedDoc.title
               : currentFolder
                 ? currentFolder.name
-                : "Staff Library"}
+                : t("library.title")}
           </h1>
         </div>
         <p className="text-xs text-muted-foreground shrink-0 pl-3">{memberName}</p>
@@ -162,9 +164,9 @@ export function KioskLibrary({
 
       {secondsLeft !== null && (
         <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[70]">
-          <p className="text-sm">Returning to home in {secondsLeft}s…</p>
+          <p className="text-sm">{t("completion.returningIn", { count: secondsLeft })}</p>
           <button onClick={cancelCountdown} className="text-sm font-semibold underline">
-            Stay
+            {t("stayButton")}
           </button>
         </div>
       )}
@@ -181,11 +183,12 @@ function RootFolders({
   docsInFolder: (id: string) => KioskDoc[];
   onFolderSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation("kiosk");
   if (folders.length === 0) {
     return (
       <div className="text-center py-12 space-y-2">
         <BookOpen size={32} className="text-muted-foreground mx-auto" />
-        <p className="text-sm text-muted-foreground">No library documents available.</p>
+        <p className="text-sm text-muted-foreground">{t("library.noDocuments")}</p>
       </div>
     );
   }
@@ -206,7 +209,7 @@ function RootFolders({
             <div className="w-full">
               <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {count} document{count !== 1 ? "s" : ""}
+                {t("library.documentCount", { count })}
               </p>
             </div>
           </button>
@@ -227,8 +230,9 @@ function FolderContents({
   onFolderSelect: (id: string) => void;
   onDocSelect: (doc: KioskDoc) => void;
 }) {
+  const { t } = useTranslation("kiosk");
   if (subFolders.length === 0 && docs.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-8">No documents in this folder.</p>;
+    return <p className="text-sm text-muted-foreground text-center py-8">{t("library.noFolderDocuments")}</p>;
   }
   return (
     <>
@@ -272,6 +276,7 @@ function FolderContents({
 }
 
 function DocDetail({ doc }: { doc: KioskDoc }) {
+  const { t } = useTranslation("kiosk");
   return (
     <div className="space-y-4">
       {doc.summary && (
@@ -303,7 +308,7 @@ function DocDetail({ doc }: { doc: KioskDoc }) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground">{doc.title}</p>
             <p className="text-xs text-muted-foreground">
-              {doc.metadata.fileType ?? "Attachment"} · Open in admin panel to download
+              {doc.metadata.fileType ?? t("library.attachmentFallback")} · {t("library.openInAdminToDownload")}
             </p>
           </div>
         </div>

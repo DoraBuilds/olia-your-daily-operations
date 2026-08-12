@@ -523,9 +523,9 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByText("Done")).toBeInTheDocument();
   });
 
-  it("grid screen shows 'Current Status' label in top bar", async () => {
+  it("grid screen shows date/time in top bar without a status label", async () => {
     await renderGridScreen();
-    expect(screen.getByText("Current Status")).toBeInTheDocument();
+    expect(screen.queryByText("Current Status")).not.toBeInTheDocument();
   });
 
   it("grid screen shows 'Olia' brand label", async () => {

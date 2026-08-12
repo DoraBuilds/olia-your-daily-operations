@@ -15,7 +15,7 @@ export function SidebarNav() {
       <div className="w-full h-fit rounded-[28px] border border-border bg-card/92 p-3 shadow-panel backdrop-blur-sm">
         <div className="flex items-center gap-2.5 px-3 pt-1 pb-3 mb-1 border-b border-border/60">
           <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-7 h-7 shrink-0" />
-          <span className="font-display italic text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
+          <span className="font-display text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
         </div>
         <p className="px-3 pt-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
           {t("nav.sectionLabel")}

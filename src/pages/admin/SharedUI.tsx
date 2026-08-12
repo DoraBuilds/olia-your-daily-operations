@@ -427,7 +427,7 @@ export function TeamMemberModal({
                     : "border-border text-muted-foreground hover:border-sage/40",
                 )}
               >
-                {r}
+                {t(`roles.${r}`)}
               </button>
             ))}
           </div>

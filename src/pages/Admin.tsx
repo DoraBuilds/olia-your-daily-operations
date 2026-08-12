@@ -275,9 +275,9 @@ export default function Admin() {
   // ─── Derived values ─────────────────────────────────────────────────────────
 
   const userLabel = activeUser
-    ? `${activeUser.role} · ${activeUser.name}`
+    ? `${t(`roles.${activeUser.role}`)} · ${activeUser.name}`
     : authMember
-    ? `${authMember.role} · ${authMember.name}`
+    ? `${t(`roles.${authMember.role}`)} · ${authMember.name}`
     : t("userLabelFallback");
 
   const TABS = [
