@@ -13,6 +13,7 @@ import {
   getRoleDepartment, getInitials, daysAgo, daysAgoTooltip, staffDisplayName,
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
+import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 import {
   ROLE_COLOR_MAP,
 } from "./shared";
@@ -52,6 +53,16 @@ export function MyLocationTab({
   // freely while typing. null = not editing (show saved value).
   // Save is only enabled when the draft is a valid integer >= 1 AND differs from saved.
   const [thresholdDraft, setThresholdDraft] = useState<string | null>(null);
+
+  // Whether *this browser* is currently registered as a kiosk device — a
+  // device-level fact independent of currentLocationId/the picker above.
+  // Read once at mount; clearKioskDeviceState() below flips it off directly
+  // rather than re-reading localStorage (#633).
+  const [kioskDeviceActive, setKioskDeviceActive] = useState(
+    () => Boolean(localStorage.getItem("kiosk_location_id")),
+  );
+  const [kioskDeviceName] = useState(() => localStorage.getItem("kiosk_location_name") ?? "");
+  const [confirmingKioskExit, setConfirmingKioskExit] = useState(false);
 
   const currentLocation = locations.find(l => l.id === currentLocationId) ?? locations[0];
 
@@ -95,6 +106,53 @@ export function MyLocationTab({
 
   return (
     <div className="space-y-4">
+      {/* Kiosk-device banner — surfaces the previously-invisible fact that
+          this browser is registered as a kiosk, and gives a one-click,
+          PIN-gated-by-already-being-in-Admin way to un-register it. Without
+          this, the kiosk-escape guard (#631) permanently bounces this
+          browser back to /kiosk with no in-product way out (#633). */}
+      {kioskDeviceActive && (
+        <div className="rounded-2xl border border-status-warn/40 bg-status-warn/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Tablet size={15} className="text-status-warn shrink-0" />
+            <p className="text-xs text-status-warn font-medium">
+              {t("myLocationTab.kioskDeviceActive", {
+                name: kioskDeviceName || t("myLocationTab.kioskDeviceActiveFallbackName"),
+              })}
+            </p>
+          </div>
+          {confirmingKioskExit ? (
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-muted-foreground">{t("myLocationTab.exitKioskConfirm")}</span>
+              <button
+                onClick={() => setConfirmingKioskExit(false)}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                {t("sharedUI.cancel")}
+              </button>
+              <button
+                onClick={() => {
+                  clearKioskDeviceState();
+                  setKioskDeviceActive(false);
+                  setConfirmingKioskExit(false);
+                  window.location.href = "/";
+                }}
+                className="text-xs font-semibold text-status-error hover:underline"
+              >
+                {t("myLocationTab.exitKioskConfirmCta")}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingKioskExit(true)}
+              className="text-xs font-semibold text-status-warn hover:underline shrink-0"
+            >
+              {t("myLocationTab.exitKiosk")}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Location picker */}
       {isOwner ? (
         <div>
