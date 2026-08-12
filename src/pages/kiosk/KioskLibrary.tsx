@@ -122,8 +122,8 @@ export function KioskLibrary({
   return (
     <div className="min-h-screen bg-background flex flex-col w-full min-[900px]:max-w-none mx-auto">
       {/* Header */}
-      <div className="px-5 pt-6 pb-4 border-b border-border flex items-center justify-between">
-        <div className="flex-1 min-w-0">
+      <div className="px-5 pt-6 pb-4 border-b border-border">
+        <div className="flex items-center justify-between">
           <button
             data-testid="library-back-btn"
             onClick={handleBack}
@@ -131,15 +131,15 @@ export function KioskLibrary({
           >
             ← {backLabel}
           </button>
-          <h1 className="font-display text-xl italic text-foreground leading-tight truncate">
-            {selectedDoc
-              ? selectedDoc.title
-              : currentFolder
-                ? currentFolder.name
-                : t("library.title")}
-          </h1>
+          <p className="text-xs text-muted-foreground shrink-0 pl-3">{memberName}</p>
         </div>
-        <p className="text-xs text-muted-foreground shrink-0 pl-3">{memberName}</p>
+        <h1 className="font-display text-xl text-foreground leading-tight truncate text-center mt-1">
+          {selectedDoc
+            ? selectedDoc.title
+            : currentFolder
+              ? currentFolder.name
+              : t("library.title")}
+        </h1>
       </div>
 
       {/* Content */}

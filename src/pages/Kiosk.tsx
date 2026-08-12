@@ -168,6 +168,21 @@ export default function Kiosk() {
     i18n.changeLanguage(kioskLanguage);
   }, [kioskLanguage]);
 
+  // The kiosk and the authenticated staff app share one global i18n instance.
+  // Without this, leaving Kiosk mode (e.g. the Admin PIN success path, which
+  // navigates to /admin without a full page reload) leaves the device-scoped
+  // kiosk language active in the staff app, desyncing it from the signed-in
+  // user's own saved language preference.
+  const teamMemberLanguageRef = useRef(teamMember?.language);
+  useEffect(() => {
+    teamMemberLanguageRef.current = teamMember?.language;
+  }, [teamMember?.language]);
+  useEffect(() => {
+    return () => {
+      i18n.changeLanguage(teamMemberLanguageRef.current ?? resolveSupportedLanguage(navigator.language));
+    };
+  }, []);
+
   const handleKioskLanguageChange = (language: SupportedLanguage) => {
     setKioskLanguage(language);
     localStorage.setItem("kiosk_language", language);
