@@ -1084,4 +1084,94 @@ describe("Admin page", () => {
 
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("delete_my_account"));
   });
+
+  // ── Exit kiosk mode banner (#633) ─────────────────────────────────────────
+  // This browser being "a configured kiosk" is a localStorage fact, not test
+  // data — set/clear it around each test in this block so it never leaks
+  // into the suites above/below.
+  describe("Exit kiosk mode banner", () => {
+    afterEach(() => {
+      localStorage.removeItem("kiosk_location_id");
+      localStorage.removeItem("kiosk_location_name");
+      localStorage.removeItem("kiosk_token");
+      localStorage.removeItem("kiosk_owner_user_id");
+      localStorage.removeItem("kiosk_owner_org_id");
+    });
+
+    it("does not show the kiosk-device banner when this browser has no kiosk registered", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
+      expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument();
+    });
+
+    it("shows the kiosk-device banner naming the registered location when this browser is a configured kiosk", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => {
+        expect(screen.getByText(/This browser is currently running as the kiosk for Main Branch\./)).toBeInTheDocument();
+      });
+      expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument();
+    });
+
+    it("falls back to a generic name when kiosk_location_name is missing", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => {
+        expect(screen.getByText(/This browser is currently running as the kiosk for this location\./)).toBeInTheDocument();
+      });
+    });
+
+    it("asks for confirmation before clearing the kiosk registration", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+      await waitFor(() => {
+        expect(screen.getByText("Stop treating this device as a kiosk?")).toBeInTheDocument();
+      });
+    });
+
+    it("cancelling the confirmation keeps the kiosk registration intact", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+      await waitFor(() => expect(screen.getByText("Cancel")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Cancel"));
+
+      expect(localStorage.getItem("kiosk_location_id")).toBe("l1");
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+    });
+
+    it("clears kiosk device storage and hides the banner when the exit is confirmed", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      localStorage.setItem("kiosk_token", "tok-1");
+
+      // Replace window.location wholesale so the handler's real navigation
+      // (window.location.href = "/") doesn't hit jsdom's unimplemented
+      // navigation path.
+      const originalLocation = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...originalLocation, href: "" },
+      });
+
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+      await waitFor(() => expect(screen.getByText("Stop treating this device as a kiosk?")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+
+      expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+      expect(localStorage.getItem("kiosk_location_name")).toBeNull();
+      expect(localStorage.getItem("kiosk_token")).toBeNull();
+      expect(window.location.href).toBe("/");
+
+      Object.defineProperty(window, "location", { configurable: true, value: originalLocation });
+    });
+  });
 });

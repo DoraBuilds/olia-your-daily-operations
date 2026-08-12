@@ -13,3 +13,21 @@ const KIOSK_ESCAPE_ROUTES = new Set(["/", "/login", "/signup"]);
 export function shouldRedirectToKiosk(pathname: string, hasKioskLocation: boolean): boolean {
   return hasKioskLocation && KIOSK_ESCAPE_ROUTES.has(pathname);
 }
+
+// The localStorage keys that mark this browser as a configured kiosk
+// device (see Kiosk.tsx). Single source of truth so every call site that
+// needs to fully un-register a device — the Admin "Exit kiosk mode" control
+// (#633) included — clears the same set.
+export const KIOSK_DEVICE_STORAGE_KEYS = [
+  "kiosk_location_id",
+  "kiosk_location_name",
+  "kiosk_token",
+  "kiosk_owner_user_id",
+  "kiosk_owner_org_id",
+] as const;
+
+export function clearKioskDeviceState(): void {
+  for (const key of KIOSK_DEVICE_STORAGE_KEYS) {
+    localStorage.removeItem(key);
+  }
+}

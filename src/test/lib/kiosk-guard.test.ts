@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
+import { describe, it, expect, beforeEach } from "vitest";
+import { shouldRedirectToKiosk, clearKioskDeviceState, KIOSK_DEVICE_STORAGE_KEYS } from "@/lib/kiosk-guard";
 
 describe("shouldRedirectToKiosk", () => {
   it("redirects the landing page back to the kiosk once kiosk mode is configured", () => {
@@ -25,5 +25,27 @@ describe("shouldRedirectToKiosk", () => {
     expect(shouldRedirectToKiosk("/privacy", true)).toBe(false);
     expect(shouldRedirectToKiosk("/admin/location", true)).toBe(false);
     expect(shouldRedirectToKiosk("/dashboard", true)).toBe(false);
+  });
+});
+
+describe("clearKioskDeviceState", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    for (const key of KIOSK_DEVICE_STORAGE_KEYS) {
+      localStorage.setItem(key, "some-value");
+    }
+    localStorage.setItem("kiosk_language", "es");
+  });
+
+  it("removes every kiosk device storage key", () => {
+    clearKioskDeviceState();
+    for (const key of KIOSK_DEVICE_STORAGE_KEYS) {
+      expect(localStorage.getItem(key)).toBeNull();
+    }
+  });
+
+  it("leaves unrelated localStorage keys untouched", () => {
+    clearKioskDeviceState();
+    expect(localStorage.getItem("kiosk_language")).toBe("es");
   });
 });
