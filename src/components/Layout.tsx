@@ -120,8 +120,12 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           <SidebarNav />
 
           {/* Only this column scrolls */}
-          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 pt-5 animate-fade-in md:pb-8">
-            <div className={cn(contentWidthClass, "min-w-0 space-y-4")}>
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 pt-5 animate-fade-in md:pb-8 flex flex-col">
+            {/* my-auto centers content vertically when it's shorter than the
+                pane (e.g. a short list on a tall tablet screen) — auto margins
+                collapse to 0 once content overflows, so long pages still start
+                at the top and scroll normally. */}
+            <div className={cn(contentWidthClass, "min-w-0 space-y-4 my-auto")}>
               {children}
             </div>
           </main>

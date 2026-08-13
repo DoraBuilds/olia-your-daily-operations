@@ -919,7 +919,12 @@ export default function Kiosk() {
       )}
 
       {/* Checklist grid */}
-      <div className="px-5 sm:px-6 lg:px-8 flex-1 pb-6 mt-2">
+      <div data-testid="kiosk-checklist-grid" className="px-5 sm:px-6 lg:px-8 flex-1 pb-6 mt-2 flex flex-col">
+        {/* my-auto centers a short state (loading/empty/"nothing due") within
+            the available space on a tall tablet screen; once real checklist
+            cards overflow that space, the margin collapses to 0 and the list
+            starts at the top and scrolls normally. */}
+        <div className="my-auto">
         {checklistsLoading ? (
           <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
             <Loader2 size={16} className="animate-spin" />
@@ -1041,6 +1046,7 @@ export default function Kiosk() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Footer */}

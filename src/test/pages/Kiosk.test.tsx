@@ -410,6 +410,15 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByRole("heading", { name: "Terrace" })).toBeInTheDocument();
   });
 
+  it("vertically centers a short checklist state (e.g. 'nothing due') via a flex column + auto-margin wrapper, so it isn't stranded at the top with a large empty gap below on a tall tablet screen", async () => {
+    await renderGridScreen();
+    const grid = screen.getByTestId("kiosk-checklist-grid");
+    expect(grid).toHaveClass("flex", "flex-col");
+    // my-auto's margin collapses to 0 once real checklist cards overflow
+    // the pane, so a busy kiosk still lists from the top and scrolls.
+    expect(grid.firstElementChild).toHaveClass("my-auto");
+  });
+
   it("shows a device-scoped language picker defaulting to English", async () => {
     await renderGridScreen();
     expect(screen.getByRole("combobox")).toHaveTextContent("EN");
