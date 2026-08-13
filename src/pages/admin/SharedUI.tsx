@@ -2,7 +2,7 @@
 // BottomSheet, ModalHeader, FormField, SaveButton, DepartmentRolePicker,
 // ConfirmModal, StaffProfileModal, TeamMemberModal, LocationModal
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -366,11 +366,6 @@ export function TeamMemberModal({
       setRevealLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (member?.id) return;
-    setPin(generatePin());
-  }, [member?.id, role]);
 
   const toggleLocation = (id: string) => {
     setLocationIds(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
