@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, setupError, signOut } = useAuth();
+  const { user, teamMember, loading, setupError, signOut } = useAuth();
   const navigate = useNavigate();
 
   // Navigate first, then sign out. Calling signOut first fires SIGNED_OUT
@@ -37,7 +37,13 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/kiosk" replace />;
   }
 
-  if (loading) {
+  // Only show the full-page blocker while there's no authenticated content to
+  // keep on screen yet. Once teamMember has loaded once, a later loading=true
+  // (e.g. Supabase re-firing an auth event on browser tab refocus) is just a
+  // background re-validation of the same session — unmounting `children` here
+  // would blow away any open modal or in-progress local state on the page for
+  // no user-visible reason (see #team-member-modal-tab-switch).
+  if (loading && !teamMember) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-sm text-muted-foreground">Loading…</p>

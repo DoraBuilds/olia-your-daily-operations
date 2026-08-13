@@ -54,6 +54,28 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Protected content")).toBeInTheDocument();
   });
 
+  it("keeps rendering children through a background loading=true once teamMember has already loaded (e.g. tab refocus re-firing the auth event)", () => {
+    // Regression test: switching browser tabs and back can make Supabase
+    // re-fire an auth event for the same session, which briefly sets
+    // loading=true again while teamMember is re-fetched. That must not blank
+    // out and unmount already-rendered protected content — doing so would
+    // wipe any open modal or local state on the page for no visible reason.
+    mockUseAuth.mockReturnValue({
+      user: { id: "user-1" },
+      teamMember: { id: "user-1", name: "Sarah" },
+      loading: true,
+      setupError: null,
+      signOut: vi.fn(),
+    });
+    renderWithProviders(
+      <ProtectedRoute>
+        <p>Protected content</p>
+      </ProtectedRoute>
+    );
+    expect(screen.getByText("Protected content")).toBeInTheDocument();
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+  });
+
   it("navigates to /login when no user and not loading", () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false, setupError: null, signOut: vi.fn() });
     render(
