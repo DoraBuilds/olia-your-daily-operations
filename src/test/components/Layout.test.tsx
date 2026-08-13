@@ -82,6 +82,18 @@ describe("Layout", () => {
     expect(screen.getByText("Right Btn")).toBeInTheDocument();
   });
 
+  it("vertically centers short page content via a flex column + auto-margin wrapper, so a short page doesn't strand content at the top with a large empty gap below on a tall (e.g. tablet-portrait) viewport", () => {
+    renderWithProviders(<Layout title="T"><p>content</p></Layout>);
+    const contentText = screen.getByText("content");
+    const main = contentText.closest("main");
+    expect(main).not.toBeNull();
+    expect(main).toHaveClass("flex", "flex-col");
+    // The immediate wrapper around children carries my-auto: its margin
+    // collapses to 0 once content overflows the pane (long pages still
+    // start at the top and scroll normally), but centers a short page.
+    expect(contentText.parentElement).toHaveClass("my-auto");
+  });
+
   it("renders the BottomNav", () => {
     renderWithProviders(<Layout title="T"><span /></Layout>);
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
