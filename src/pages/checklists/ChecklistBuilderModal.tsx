@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { useCreateAlert } from "@/hooks/useAlerts";
 import { useLocations } from "@/hooks/useLocations";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
@@ -68,6 +69,8 @@ interface ChecklistBuilderModalProps {
   initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
   initialVisibilityUntil?: string | null;
+  /** Whether this checklist is currently visible on the kiosk. Defaults to false (Draft) for new checklists. */
+  initialIsPublished?: boolean;
   editId?: string;
   /** When true, renders as a full-page editor (no overlay).
    *  The parent is responsible for showing/hiding it. */
@@ -78,7 +81,8 @@ interface ChecklistBuilderModalProps {
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
-  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, editId, asPage = false, onDirtyChange,
+  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, initialIsPublished,
+  editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const { t } = useTranslation("checklists");
   const MC_COLOR_OPTIONS = useMcColorOptions(t);
@@ -104,6 +108,7 @@ export function ChecklistBuilderModal({
   const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
   const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
   const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
+  const [isPublished, setIsPublished] = useState(initialIsPublished ?? false);
   const [schedule, setSchedule] = useState<ScheduleType>(() => parseScheduleType(initialSchedule));
   const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>({
     interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13,
@@ -143,6 +148,7 @@ export function ChecklistBuilderModal({
     visibilityUntil: visibilityWindowEnabled ? visibilityUntil : null,
     locationMode,
     selectedLocationIds: locationMode === "specific" ? [...selectedLocationIds].sort() : [],
+    isPublished,
   });
 
   const hasContent = !!(
@@ -417,6 +423,7 @@ export function ChecklistBuilderModal({
       visibility_until: visibilityWindowEnabled ? visibilityUntil : null,
       location_id: isAllLocations ? null : (selectedIds.length === 1 ? selectedIds[0] : null),
       location_ids: isAllLocations ? null : selectedIds,
+      is_published: isPublished,
     };
 
     const toastRlsError = (err: unknown) => {
@@ -508,6 +515,22 @@ export function ChecklistBuilderModal({
             <ArrowLeft size={16} /> {t("builder.exit")}
           </button>
         )}
+
+        {/* Kiosk visibility (Draft/Live) */}
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/40 p-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">{t("builder.kioskVisibility.heading")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isPublished ? t("builder.kioskVisibility.liveDesc") : t("builder.kioskVisibility.draftDesc")}
+            </p>
+          </div>
+          <Switch
+            data-testid="checklist-published-toggle"
+            checked={isPublished}
+            onCheckedChange={setIsPublished}
+          />
+        </div>
+
         {/* Locations */}
         <div className="space-y-3">
           <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.locations.heading")}</label>

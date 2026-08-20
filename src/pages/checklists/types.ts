@@ -33,6 +33,7 @@ export interface ChecklistItem {
   due_time?: string | null;
   visibility_from?: string | null;
   visibility_until?: string | null;
+  is_published?: boolean;
 }
 
 export interface FolderItem {

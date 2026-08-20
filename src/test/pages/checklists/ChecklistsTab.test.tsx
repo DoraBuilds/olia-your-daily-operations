@@ -95,7 +95,13 @@ vi.mock("@/hooks/useChecklists", () => {
   const CHECKLISTS = [{
     id: "cl-1", title: "Opening Checklist", folder_id: "f1",
     location_id: null, schedule: "daily", sections: [],
+    is_published: true,
     created_at: "2026-01-01", updated_at: "2026-01-01",
+  }, {
+    id: "cl-2", title: "Unfinished Checklist", folder_id: null,
+    location_id: null, schedule: null, sections: [],
+    is_published: false,
+    created_at: "2026-01-02", updated_at: "2026-01-02",
   }];
   return {
     useFolders: () => ({ data: FOLDERS, isLoading: false }),
@@ -163,5 +169,21 @@ describe("ChecklistsTab", () => {
     render(<ChecklistsTab />, { wrapper });
     // Location dropdown is the filter control
     expect(screen.getByText("All locations")).toBeInTheDocument();
+  });
+
+  it("shows a Draft badge for unpublished checklists but not published ones", async () => {
+    render(<ChecklistsTab />, { wrapper });
+    // cl-2 (unpublished, root level) is visible without navigating into a folder
+    await waitFor(() => {
+      expect(screen.getByText("Unfinished Checklist")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Draft")).toBeInTheDocument();
+
+    // cl-1 (published) lives inside the "Daily Operations" folder — no Draft badge for it
+    fireEvent.click(screen.getByText("Daily Operations"));
+    await waitFor(() => {
+      expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    });
+    expect(screen.queryAllByText("Draft")).toHaveLength(0);
   });
 });

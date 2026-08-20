@@ -33,7 +33,8 @@
   "checklist": {
     "questionsCount_one": "{{count}} pregunta",
     "questionsCount_other": "{{count}} preguntas",
-    "previewTooltip": "Vista previa de la lista"
+    "previewTooltip": "Vista previa de la lista",
+    "draftBadge": "Borrador"
   },
   "newFolder": {
     "heading": "Nueva carpeta",
@@ -338,6 +339,11 @@
   },
   "builder": {
     "exit": "Salir",
+    "kioskVisibility": {
+      "heading": "Visibilidad en el kiosco",
+      "draftDesc": "Borrador — oculto en el kiosco hasta que lo actives.",
+      "liveDesc": "Activo — visible en el kiosco ahora."
+    },
     "locations": {
       "heading": "Ubicaciones",
       "selectSpecific": "Seleccionar ubicaciones específicas",

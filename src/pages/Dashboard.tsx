@@ -178,7 +178,9 @@ export default function Dashboard() {
   const todayCompletedIds = new Set(
     logs.filter((log) => log.created_at.startsWith(todayStr)).map((log) => log.checklist_id).filter(Boolean)
   );
-  const missedChecklists = computeMissedChecklists(checklists, todayCompletedIds, nowMinutes);
+  // Draft checklists aren't shown on kiosk, so they shouldn't count as "overdue" here either.
+  const publishedChecklists = checklists.filter((checklist) => checklist.is_published);
+  const missedChecklists = computeMissedChecklists(publishedChecklists, todayCompletedIds, nowMinutes);
   const overdueCount = overdueActions.length + missedChecklists.length;
 
   // ── Alerts ──
@@ -231,7 +233,7 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.alerts")}</p>
             </div>
             <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
-              <p className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
+              <p data-testid="stats-overdue" className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.overdue")}</p>

@@ -25,6 +25,7 @@ export interface ChecklistItem {
   due_time: string | null;   // HH:MM — when checklist is due (drives kiosk visibility)
   visibility_from: string | null;
   visibility_until: string | null;
+  is_published: boolean;     // Draft checklists are hidden from the kiosk until published
   created_at: string;
   updated_at: string;
 }
@@ -102,7 +103,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, organization_id, title, description, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, created_at, updated_at")
+        .select("id, organization_id, title, description, folder_id, location_id, location_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at")
         .order("title");
       if (error) throw error;
       return ((data ?? []) as ChecklistItem[]).filter(
@@ -131,6 +132,8 @@ export function useSaveChecklist() {
         p_due_time:         checklist.due_time ?? null,
         p_visibility_from:  checklist.visibility_from ?? null,
         p_visibility_until: checklist.visibility_until ?? null,
+        // New checklists default to draft (hidden from kiosk) unless the caller says otherwise.
+        p_is_published:     checklist.is_published ?? false,
       });
       if (error) throw error;
       return data;

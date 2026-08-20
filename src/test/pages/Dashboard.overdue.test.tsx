@@ -87,6 +87,7 @@ const OVERDUE_CHECKLIST = {
   schedule: null,
   sections: [],
   time_of_day: "morning" as const,
+  is_published: true,
   created_at: "",
   updated_at: "",
 };
@@ -101,6 +102,7 @@ const FUTURE_CHECKLIST = {
   schedule: null,
   sections: [],
   time_of_day: "evening" as const,
+  is_published: true,
   created_at: "",
   updated_at: "",
 };
@@ -115,6 +117,7 @@ const SECOND_ALPHA_CHECKLIST = {
   schedule: null,
   sections: [],
   time_of_day: "morning" as const,
+  is_published: true,
   created_at: "",
   updated_at: "",
 };
@@ -184,6 +187,20 @@ describe("Dashboard - compliance tabs", () => {
     expect(screen.getByTestId("compliance-tab-week")).toHaveClass("bg-card");
     clickComplianceTab("month");
     expect(screen.getByTestId("compliance-tab-month")).toHaveClass("bg-card");
+  });
+
+  it("excludes draft (unpublished) checklists from the overdue count", () => {
+    mockUseLocations.mockReturnValue({ data: [LOCATION_A] });
+    mockUseChecklists.mockReturnValue({ data: [OVERDUE_CHECKLIST] });
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByTestId("stats-overdue")).toHaveTextContent("1");
+  });
+
+  it("draft checklists don't count as overdue even though they're past due_time", () => {
+    mockUseLocations.mockReturnValue({ data: [LOCATION_A] });
+    mockUseChecklists.mockReturnValue({ data: [{ ...OVERDUE_CHECKLIST, is_published: false }] });
+    renderWithProviders(<Dashboard />);
+    expect(screen.getByTestId("stats-overdue")).toHaveTextContent("0");
   });
 
   it("shows location completion counts in the today view", () => {
