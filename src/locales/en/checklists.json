@@ -441,7 +441,10 @@
     "footer": {
       "publishing": "Publishing…",
       "publish": "Publish",
+      "saving": "Saving…",
+      "save": "Save",
       "lastPublishedAt": "Last published at {{time}}",
+      "lastSavedAt": "Last saved at {{time}}",
       "savedAt": "Saved {{time}}"
     },
     "discardConfirm": {
@@ -451,7 +454,8 @@
       "planLimitError": "Could not save — you may have reached your plan's checklist limit. Delete unused checklists to free up space.",
       "genericSaveError": "Could not save checklist — please try again.",
       "published": "Checklist published!",
-      "changesSaved": "Changes saved!"
+      "changesSaved": "Changes saved!",
+      "savedAsDraft": "Saved as draft — hidden from the kiosk until published."
     }
   }
 }

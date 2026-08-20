@@ -441,7 +441,10 @@
     "footer": {
       "publishing": "Publicando…",
       "publish": "Publicar",
+      "saving": "Guardando…",
+      "save": "Guardar",
       "lastPublishedAt": "Última publicación: {{time}}",
+      "lastSavedAt": "Último guardado: {{time}}",
       "savedAt": "Guardado {{time}}"
     },
     "discardConfirm": {
@@ -451,7 +454,8 @@
       "planLimitError": "No se pudo guardar — es posible que hayas alcanzado el límite de listas de tu plan. Elimina listas sin usar para liberar espacio.",
       "genericSaveError": "No se pudo guardar la lista — inténtalo de nuevo.",
       "published": "¡Lista publicada!",
-      "changesSaved": "¡Cambios guardados!"
+      "changesSaved": "¡Cambios guardados!",
+      "savedAsDraft": "Guardada como borrador — oculta en el kiosco hasta que se publique."
     }
   }
 }
