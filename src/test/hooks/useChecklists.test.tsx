@@ -285,6 +285,37 @@ describe("useSaveChecklist", () => {
       p_location_ids: null,
     }));
   });
+
+  it("defaults p_is_published to false when not provided", async () => {
+    mockRpc.mockResolvedValueOnce({ data: { id: "cl-4" }, error: null });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({
+      id: "cl-4",
+      title: "New Checklist",
+      sections: [],
+    } as any);
+
+    expect(mockRpc).toHaveBeenCalledWith("save_checklist", expect.objectContaining({
+      p_is_published: false,
+    }));
+  });
+
+  it("passes p_is_published through when explicitly set", async () => {
+    mockRpc.mockResolvedValueOnce({ data: { id: "cl-5" }, error: null });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({
+      id: "cl-5",
+      title: "Live Checklist",
+      sections: [],
+      is_published: true,
+    } as any);
+
+    expect(mockRpc).toHaveBeenCalledWith("save_checklist", expect.objectContaining({
+      p_is_published: true,
+    }));
+  });
 });
 
 describe("useDeleteChecklist", () => {

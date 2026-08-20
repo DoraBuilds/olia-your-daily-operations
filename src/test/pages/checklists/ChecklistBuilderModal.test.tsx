@@ -159,6 +159,25 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("defaults a new checklist to Draft (hidden from kiosk) and saves it that way", async () => {
+    onAdd.mockResolvedValue(undefined);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    expect(screen.getByTestId("checklist-published-toggle")).not.toBeChecked();
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), { target: { value: "New Checklist" } });
+    fireEvent.click(screen.getAllByText("Publish")[0]);
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ is_published: false })));
+  });
+
+  it("toggling kiosk visibility on saves the checklist as published", async () => {
+    onAdd.mockResolvedValue(undefined);
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), { target: { value: "New Checklist" } });
+    fireEvent.click(screen.getByTestId("checklist-published-toggle"));
+    expect(screen.getByTestId("checklist-published-toggle")).toBeChecked();
+    fireEvent.click(screen.getAllByText("Publish")[0]);
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ is_published: true })));
+  });
+
   it("close button calls onClose", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     const buttons = screen.getAllByRole("button");
@@ -601,6 +620,27 @@ describe("ChecklistBuilderModal - edit mode", () => {
     fireEvent.click(screen.getAllByText("Publish")[0]);
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Existing Checklist" }));
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("pre-fills kiosk visibility from initialIsPublished and toggling it off saves as Draft", () => {
+    renderWithClient(
+      <ChecklistBuilderModal
+        onClose={onClose}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+        editId="cl-1"
+        initialTitle="Existing Checklist"
+        initialIsPublished
+      />
+    );
+    const toggle = screen.getByTestId("checklist-published-toggle");
+    expect(toggle).toBeChecked();
+
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+
+    fireEvent.click(screen.getAllByText("Publish")[0]);
+    expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ is_published: false }));
   });
 
   it("pre-fills the saved start date in edit mode", () => {

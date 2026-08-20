@@ -73,6 +73,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     due_time: c.due_time ?? null,
     visibility_from: c.visibility_from ?? null,
     visibility_until: c.visibility_until ?? null,
+    is_published: c.is_published,
   }));
 
   // PDF download helper — dynamically imports export-utils (pulls in jsPDF) only on demand
@@ -279,6 +280,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             due_time: item.due_time ?? null,
             visibility_from: item.visibility_from ?? null,
             visibility_until: item.visibility_until ?? null,
+            is_published: item.is_published ?? false,
           });
           return (data as any)?.id as string | undefined;
         }}
@@ -298,6 +300,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             due_time: updates.due_time !== undefined ? updates.due_time : orig.due_time,
             visibility_from: updates.visibility_from !== undefined ? updates.visibility_from : (orig.visibility_from ?? null),
             visibility_until: updates.visibility_until !== undefined ? updates.visibility_until : (orig.visibility_until ?? null),
+            is_published: updates.is_published !== undefined ? updates.is_published : orig.is_published,
           });
         }}
         initialTitle={prefillTitle}
@@ -308,6 +311,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
+        initialIsPublished={editingChecklist?.is_published ?? false}
         editId={editingChecklistId || undefined}
         onDirtyChange={handleDirtyChange}
       />
@@ -446,7 +450,14 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                   <ClipboardList size={16} className="text-lavender-deep" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{cl.title}</p>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{cl.title}</p>
+                    {!cl.is_published && (
+                      <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-status-warn/10 text-status-warn">
+                        {t("checklist.draftBadge")}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {t("checklist.questionsCount", { count: cl.questionsCount })}{cl.schedule ? ` · ${getScheduleLabel(cl.schedule)}` : ""}
                   </p>

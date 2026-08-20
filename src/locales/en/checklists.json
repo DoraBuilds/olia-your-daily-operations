@@ -33,7 +33,8 @@
   "checklist": {
     "questionsCount_one": "{{count}} question",
     "questionsCount_other": "{{count}} questions",
-    "previewTooltip": "Preview checklist"
+    "previewTooltip": "Preview checklist",
+    "draftBadge": "Draft"
   },
   "newFolder": {
     "heading": "New folder",
@@ -338,6 +339,11 @@
   },
   "builder": {
     "exit": "Exit",
+    "kioskVisibility": {
+      "heading": "Kiosk visibility",
+      "draftDesc": "Draft — hidden from the kiosk until you turn this on.",
+      "liveDesc": "Live — visible on the kiosk now."
+    },
     "locations": {
       "heading": "Locations",
       "selectSpecific": "Select specific locations",
