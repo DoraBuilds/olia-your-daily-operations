@@ -457,13 +457,23 @@ export function ChecklistBuilderModal({
       initialSettingsRef.current = settingsSnapshot();
       onDirtyChange?.(false);
       setLastPublishedAt(new Date());
-      toast.success(isFirstPublish ? t("builder.toast.published") : t("builder.toast.changesSaved"));
+      toast.success(
+        !isPublished
+          ? t("builder.toast.savedAsDraft")
+          : isFirstPublish ? t("builder.toast.published") : t("builder.toast.changesSaved"),
+      );
     } catch (err) {
       toastRlsError(err);
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Primary action label: "Publish" only makes sense once the checklist will actually
+  // go live on the kiosk. While it's staying in Draft, this button just saves it.
+  const primaryActionLabel = isSaving
+    ? (isPublished ? t("builder.footer.publishing") : t("builder.footer.saving"))
+    : (isPublished ? t("builder.footer.publish") : t("builder.footer.save"));
 
   // ── Form content (shared between page and modal modes) ────────────────────
 
@@ -1351,16 +1361,19 @@ export function ChecklistBuilderModal({
         )}
         <button
           ref={footerPublishRef}
+          data-testid="checklist-save-button"
           disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
           onClick={handleCreate}
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
             !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
-          {isSaving ? t("builder.footer.publishing") : t("builder.footer.publish")}
+          {primaryActionLabel}
         </button>
         {lastPublishedAt && (
           <p className="text-xs text-center text-muted-foreground mt-2">
-            {t("builder.footer.lastPublishedAt", { time: format(lastPublishedAt, "h:mm a") })}
+            {isPublished
+              ? t("builder.footer.lastPublishedAt", { time: format(lastPublishedAt, "h:mm a") })
+              : t("builder.footer.lastSavedAt", { time: format(lastPublishedAt, "h:mm a") })}
           </p>
         )}
       </div>
@@ -1478,6 +1491,7 @@ export function ChecklistBuilderModal({
               </span>
             )}
             <button
+              data-testid="checklist-save-button"
               disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
               onClick={handleCreate}
               className={cn(
@@ -1487,7 +1501,7 @@ export function ChecklistBuilderModal({
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
-              {isSaving ? t("builder.footer.publishing") : t("builder.footer.publish")}
+              {primaryActionLabel}
             </button>
           </div>,
           document.body
