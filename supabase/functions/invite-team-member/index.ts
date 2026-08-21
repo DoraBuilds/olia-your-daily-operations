@@ -87,6 +87,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (callerError || !caller) return err("Caller is not a team member of this organisation");
 
+  // Only Owners manage the team (the Admin UI already hides the Users tab
+  // from Managers) — enforce it here too so a direct function call can't
+  // let a Manager send invites on behalf of the organisation.
+  if (caller.role !== "Owner") return err("Only an Owner can invite team members");
+
   const { data: org, error: orgError } = await supabase
     .from("organizations")
     .select("name")
