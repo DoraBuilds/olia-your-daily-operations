@@ -21,6 +21,9 @@
 - Terms of Service (`/terms`) — Spanish law, Barcelona courts, IVA section
 - Cookie Policy (`/cookies`) — full per-cookie table, AEPD-compliant
 - Aviso Legal (`/aviso-legal`) — LSSI Article 10, written in Spanish *(company details pending — see below)*
+- PostHog analytics — consent-gated (same pattern as Sentry), live, verified firing on oliahq.com
+- `sitemap.xml` — added and linked from `robots.txt` (was 404)
+- Landing page "Contact sales" — now opens the demo-request modal instead of a dead link
 
 ---
 
@@ -61,3 +64,11 @@ The billing flow works end-to-end but is still using test Stripe credentials. Wh
 ## Non-urgent (post-launch)
 
 - Google Maps API migration — deprecated `AutocompleteService` still works, Google gives 12+ months notice before removal. Migrate `PlacesAutocompleteInput.tsx` to `AutocompleteSuggestion` when ready.
+
+### From the landing-page audit (2026-08-21)
+
+- **Real customer quote / case study** — replace the generic trust badges ("Live in many kitchens" etc.) with one genuine quote or before/after story from an actual venue. Blocked on you — needs real content, not something to fabricate.
+- **FAQ section** — none exists yet; would cut pre-sales friction on pricing/onboarding questions.
+- **Unique page titles + meta descriptions per route** — `/`, `/login`, `/privacy`, `/terms` all currently share one static `<title>Olia</title>` since it's a client-rendered SPA. Small SEO/social-share win.
+- **Re-skin the 404 page** — functional (`Oops! Page not found` + return-home link) but plain gray, doesn't match the teal/black/cream brand system.
+- Skipped as not applicable to a SaaS product (no physical venue): maps + directions, LocalBusiness schema markup, response-time-promise SLA copy, breadcrumbs.
