@@ -24,6 +24,7 @@
 - PostHog analytics — consent-gated (same pattern as Sentry), live, verified firing on oliahq.com
 - `sitemap.xml` — added and linked from `robots.txt` (was 404)
 - Landing page "Contact sales" — now opens the demo-request modal instead of a dead link
+- AI-content disclosure — "AI-generated draft, review before saving" note on Build with AI / Convert File / AI training; Privacy Policy updated with Anthropic as a processor
 
 ---
 
