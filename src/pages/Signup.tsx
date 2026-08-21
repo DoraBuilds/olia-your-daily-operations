@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 type Step = "form" | "code";
 
@@ -31,6 +32,10 @@ function SignupHeader() {
 }
 
 export default function Signup() {
+  useDocumentMeta(
+    "Get started — Olia",
+    "Set up your first checklist in under an hour. Starter plans from €49/month per location, no per-user fees.",
+  );
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const accountReset = searchParams.get("reason") === "account-reset";

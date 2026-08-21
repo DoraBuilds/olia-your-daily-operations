@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 type Step = "email" | "code";
 
@@ -41,6 +42,10 @@ function getFriendlyAuthError(message: string | null | undefined) {
 }
 
 export default function Login() {
+  useDocumentMeta(
+    "Sign in — Olia",
+    "Sign in to your Olia account to manage checklists, compliance logs, and your team.",
+  );
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const { user } = useAuth();

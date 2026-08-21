@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -27,6 +28,10 @@ function CookieRow({
 }
 
 export default function Cookies() {
+  useDocumentMeta(
+    "Cookie Policy — Olia",
+    "Which cookies Olia uses, why, and how to manage your preferences.",
+  );
   return (
     <div className="min-h-screen bg-background legal-scope" style={legalTheme}>
       <style>{legalLinkStyle}</style>

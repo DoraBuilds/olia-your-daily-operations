@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { DemoModal } from "@/components/landing/DemoModal";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 /**
  * Olia's marketing site — single scrolling page, one nav
@@ -327,6 +328,26 @@ const css = `
   .rx-pbtn-neon { color: var(--ink); background: #fff; border: none; }
   .rx-pbtn-neon:hover { background: #f2f2f2; }
 
+  /* FAQ */
+  .rx-faq { background: var(--white); }
+  .rx-faq-list { max-width: 760px; margin: 0 auto; }
+  .rx-faq-item { border-bottom: 1px solid var(--line); padding: 22px 0; }
+  .rx-faq-item:first-child { padding-top: 0; }
+  .rx-faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .rx-faq-item summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-size: 20px; font-weight: 500; color: var(--ink);
+    cursor: pointer; list-style: none;
+  }
+  .rx-faq-item summary::-webkit-details-marker { display: none; }
+  .rx-faq-item summary::after {
+    content: '+'; font-family: 'Hanken Grotesk', sans-serif; font-style: normal;
+    font-size: 22px; font-weight: 300; color: var(--ink-faint); flex-shrink: 0;
+  }
+  .rx-faq-item[open] summary::after { content: '−'; }
+  .rx-faq-item p { font-size: 14.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.7; margin-top: 12px; max-width: 640px; }
+
   /* CTA */
   .rx-cta { background: var(--white); text-align: center; padding: 60px 0; }
   .rx-cta h2 { font-size: clamp(30px, 4vw, 46px); max-width: 600px; margin: 0 auto 18px; line-height: 1.15; }
@@ -571,6 +592,30 @@ const manifesto = [
   },
 ];
 
+// Answers pulled from the pricing/features copy above — nothing new asserted here.
+const faqs = [
+  {
+    q: "How long does it take to set up?",
+    a: "Most venues are running in under an hour — no IT department, no lengthy onboarding.",
+  },
+  {
+    q: "Do my staff need to download anything or create an account?",
+    a: "No. Olia is kiosk-first — staff tap through tasks on a tablet already in your venue. No login, no app to install, no account to create.",
+  },
+  {
+    q: "What's included in the compliance logging?",
+    a: "Every checklist completion is timestamped and stored automatically — allergen checks, fridge temperature records, hygiene standards — downloadable and audit-ready.",
+  },
+  {
+    q: "Can I use Olia across multiple venues?",
+    a: "Yes. The Growth plan includes a multi-location dashboard for up to 10 venues; Enterprise supports unlimited locations with advanced permissions.",
+  },
+  {
+    q: "Is there a contract, or can I cancel anytime?",
+    a: "Plans are billed monthly with no long-term contract — cancel anytime. Pricing is per location, not per user, so adding staff never costs extra.",
+  },
+];
+
 // Honest, early-stage social proof — no invented numbers.
 const floatMessages = [
   "Built with real restaurant operators",
@@ -579,6 +624,10 @@ const floatMessages = [
 ];
 
 export default function SundayRemixSite() {
+  useDocumentMeta(
+    "Olia — Run every shift the same way, every time",
+    "Daily checklists, compliance logging, and multi-location visibility for hospitality teams. Starter plans from €49/month per location — no per-user fees.",
+  );
   const navRef = useRef<HTMLElement>(null);
   const pricingGridRef = useRef<HTMLDivElement>(null);
   const featuredCardRef = useRef<HTMLDivElement>(null);
@@ -958,6 +1007,24 @@ export default function SundayRemixSite() {
               </ul>
               <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openDemo}>Contact sales</a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rx-faq" id="faq">
+        <div className="rx-container">
+          <div className="rx-section-header rx-fade">
+            <div className="rx-badge centered"><span className="rx-badge-dot" />FAQ</div>
+            <h2>Questions, answered.</h2>
+            <p>Everything you need to know before you set up your first checklist.</p>
+          </div>
+          <div className="rx-faq-list rx-fade">
+            {faqs.map((f) => (
+              <details key={f.q} className="rx-faq-item">
+                <summary>{f.q}</summary>
+                <p>{f.a}</p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
