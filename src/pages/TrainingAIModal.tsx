@@ -108,6 +108,7 @@ export function TrainingAIModal({
           <Sparkles size={14} />
           {generating ? "Generating…" : "Generate training module"}
         </button>
+        <p className="text-xs text-muted-foreground/70 text-center">AI-generated draft — review before saving.</p>
       </div>
     </div>,
     document.body

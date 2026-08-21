@@ -191,6 +191,7 @@
     "promptPlaceholder": "p. ej. Crea una lista de apertura diaria para una cocina de restaurante con revisiones de seguridad alimentaria, limpieza y equipo…",
     "generating": "Generando…",
     "generate": "Generar lista",
+    "aiDisclosure": "Borrador generado por IA — revísalo antes de guardar.",
     "unexpectedResponse": "Respuesta inesperada de la IA. Inténtalo de nuevo.",
     "genericError": "Algo salió mal. Inténtalo de nuevo."
   },
@@ -202,6 +203,7 @@
     "fileTypesHint": "Excel, PDF o imagen · Máx. 10 MB",
     "converting": "Convirtiendo…",
     "convert": "Convertir a lista",
+    "aiDisclosure": "Borrador generado por IA — revísalo antes de guardar.",
     "genericError": "Algo salió mal. Inténtalo de nuevo.",
     "quotaError": "Se alcanzó el límite del servicio de IA. Inténtalo más tarde o contacta a soporte.",
     "unavailableError": "El servicio de IA no está disponible temporalmente. Inténtalo de nuevo en un momento.",
