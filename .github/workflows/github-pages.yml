@@ -98,6 +98,8 @@ jobs:
           VITE_STRIPE_CUSTOMER_PORTAL_URL: ${{ vars.VITE_STRIPE_CUSTOMER_PORTAL_URL }}
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
         run: bun run build
 
       - name: Upload Pages artifact

@@ -9,7 +9,12 @@ vi.mock("@/lib/sentry", () => ({
   initSentryIfConsented: vi.fn(),
 }));
 
+vi.mock("@/lib/posthog", () => ({
+  initPostHogIfConsented: vi.fn(),
+}));
+
 import { getCookieConsent, setCookieConsent, initSentryIfConsented } from "@/lib/sentry";
+import { initPostHogIfConsented } from "@/lib/posthog";
 
 describe("CookieBanner", () => {
   let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
@@ -54,6 +59,12 @@ describe("CookieBanner", () => {
     expect(initSentryIfConsented).toHaveBeenCalled();
   });
 
+  it("accepting inits PostHog", () => {
+    renderWithProviders(<CookieBanner />);
+    fireEvent.click(screen.getByRole("button", { name: /accept all/i }));
+    expect(initPostHogIfConsented).toHaveBeenCalled();
+  });
+
   it("accepting hides the banner", () => {
     renderWithProviders(<CookieBanner />);
     fireEvent.click(screen.getByRole("button", { name: /accept all/i }));
@@ -76,6 +87,12 @@ describe("CookieBanner", () => {
     renderWithProviders(<CookieBanner />);
     fireEvent.click(screen.getByRole("button", { name: /essential only/i }));
     expect(initSentryIfConsented).not.toHaveBeenCalled();
+  });
+
+  it("declining does not init PostHog", () => {
+    renderWithProviders(<CookieBanner />);
+    fireEvent.click(screen.getByRole("button", { name: /essential only/i }));
+    expect(initPostHogIfConsented).not.toHaveBeenCalled();
   });
 
   it("shows a link to the Cookie Policy", () => {
