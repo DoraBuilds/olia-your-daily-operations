@@ -65,6 +65,12 @@ The billing flow works end-to-end but is still using test Stripe credentials. Wh
 
 - Google Maps API migration — deprecated `AutocompleteService` still works, Google gives 12+ months notice before removal. Migrate `PlacesAutocompleteInput.tsx` to `AutocompleteSuggestion` when ready.
 
+### Session token hardening (from the 2026-08-21 security review)
+
+The Supabase session (access + refresh token) currently lives in `localStorage`, readable by any JS on the page — standard supabase-js default, not unique to Olia, but worth closing given no CSP exists yet either. Fixing this properly requires standing up a small first-party auth proxy (Olia is a static SPA today with no backend), so it's tracked as its own milestone rather than a quick patch:
+
+**[Milestone: Session token hardening (httpOnly cookie migration)](https://github.com/DoraBuilds/olia-your-daily-operations/milestone/13)** — 6 issues, chunked so the backend/edge platform choice (#656) is a separate, deliberately-deferred decision from the implementation work (#654, #657, #658, #659, #660). Also fixed as part of the same review: a `team_members` RLS gap letting any team member edit/promote any other member's role (#647, already shipped) and an Owner-only check missing from the invite-team-member function (also #647, already shipped).
+
 ### From the landing-page audit (2026-08-21)
 
 - **Real customer quote / case study** — replace the generic trust badges ("Live in many kitchens" etc.) with one genuine quote or before/after story from an actual venue. Blocked on you — needs real content, not something to fabricate.
