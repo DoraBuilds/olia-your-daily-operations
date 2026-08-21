@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -19,6 +20,10 @@ const REGISTRO        = "[REGISTRO MERCANTIL]"; // e.g. "Registro Mercantil de B
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AvisoLegal() {
+  useDocumentMeta(
+    "Aviso Legal — Olia",
+    "Información legal de Olia conforme al artículo 10 de la LSSI.",
+  );
   return (
     <div className="min-h-screen bg-background legal-scope" style={legalTheme}>
       <style>{legalLinkStyle}</style>

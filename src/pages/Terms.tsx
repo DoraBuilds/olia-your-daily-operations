@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,6 +12,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function Terms() {
+  useDocumentMeta(
+    "Terms of Service — Olia",
+    "The terms that govern your use of Olia's hospitality operations platform.",
+  );
   return (
     <div className="min-h-screen bg-background legal-scope" style={legalTheme}>
       <style>{legalLinkStyle}</style>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,6 +12,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function Privacy() {
+  useDocumentMeta(
+    "Privacy Policy — Olia",
+    "How Olia collects, uses, and protects your data under GDPR and Spain's LOPDGDD.",
+  );
   return (
     <div className="min-h-screen bg-background legal-scope" style={legalTheme}>
       <style>{legalLinkStyle}</style>
