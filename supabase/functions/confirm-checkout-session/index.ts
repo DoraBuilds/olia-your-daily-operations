@@ -1,26 +1,10 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const ok = (body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
-const err = (message: string) =>
-  new Response(JSON.stringify({ error: message }), {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
 
 function planFromMetadata(metadata: Record<string, string> | null | undefined): "starter" | "growth" | "enterprise" {
   const plan = metadata?.olia_plan;
@@ -29,6 +13,19 @@ function planFromMetadata(metadata: Record<string, string> | null | undefined): 
 }
 
 Deno.serve(async (req) => {
+  const CORS_HEADERS = corsHeaders(req.headers.get("origin"));
+
+  const ok = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+    });
+  const err = (message: string) =>
+    new Response(JSON.stringify({ error: message }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+    });
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
