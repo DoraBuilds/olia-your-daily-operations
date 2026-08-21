@@ -29,7 +29,7 @@ export default function Privacy() {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="font-display text-4xl text-foreground">Privacy Policy</h1>
-          <p className="text-sm text-muted-foreground">Last updated: 21 July 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: 21 August 2026</p>
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -60,6 +60,7 @@ export default function Privacy() {
           <p><strong className="text-foreground">Operational data:</strong> checklists, checklist completion logs, locations, infohub documents and training materials you create within Olia.</p>
           <p><strong className="text-foreground">Usage and error data:</strong> if you consent, we collect anonymised error and performance data via Sentry to help us fix bugs.</p>
           <p><strong className="text-foreground">Payment data:</strong> billing is handled by Stripe. We do not store card numbers — only your subscription status and Stripe customer ID.</p>
+          <p><strong className="text-foreground">AI-generated drafts:</strong> Build with AI, Convert File, and the AI training tools send the prompt or file you submit to our AI provider (Anthropic) to generate a draft, which you review and edit before saving. This content is not used to train AI models.</p>
         </Section>
 
         <Section title="3. Why we collect it">
@@ -85,6 +86,7 @@ export default function Privacy() {
             <li><strong className="text-foreground">Resend</strong> — transactional email delivery</li>
             <li><strong className="text-foreground">Sentry</strong> — error monitoring, hosted in the EU (Frankfurt), only if you consent</li>
             <li><strong className="text-foreground">Google Maps</strong> — address lookup for location setup</li>
+            <li><strong className="text-foreground">Anthropic</strong> — powers AI-assisted drafts (Build with AI, Convert File, AI training tools), only for content you explicitly ask AI to generate</li>
           </ul>
           <p>We do not sell your data to any third party.</p>
         </Section>

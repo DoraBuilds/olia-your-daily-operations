@@ -191,6 +191,7 @@
     "promptPlaceholder": "e.g. Create a daily opening checklist for a restaurant kitchen with food safety, cleanliness, and equipment checks…",
     "generating": "Generating…",
     "generate": "Generate checklist",
+    "aiDisclosure": "AI-generated draft — review before saving.",
     "unexpectedResponse": "Unexpected response from AI. Please try again.",
     "genericError": "Something went wrong. Please try again."
   },
@@ -202,6 +203,7 @@
     "fileTypesHint": "Excel, PDF, or image · Max 10MB",
     "converting": "Converting…",
     "convert": "Convert to checklist",
+    "aiDisclosure": "AI-generated draft — review before saving.",
     "genericError": "Something went wrong. Please try again.",
     "quotaError": "AI service quota reached. Please try again later or contact support.",
     "unavailableError": "The AI service is temporarily unavailable. Please try again in a moment.",

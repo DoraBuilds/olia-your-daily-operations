@@ -204,6 +204,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
         >
           {converting ? t("convertFile.converting") : t("convertFile.convert")}
         </button>
+        <p className="text-xs text-muted-foreground/70 text-center">{t("convertFile.aiDisclosure")}</p>
       </div>
     </div>,
     document.body

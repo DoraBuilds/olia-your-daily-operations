@@ -72,6 +72,7 @@ export function BuildWithAIModal({ onClose, onGenerate }: { onClose: () => void;
           <Sparkles size={14} />
           {generating ? t("buildAI.generating") : t("buildAI.generate")}
         </button>
+        <p className="text-xs text-muted-foreground/70 text-center">{t("buildAI.aiDisclosure")}</p>
       </div>
     </div>,
     document.body
