@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { captureEvent } from "@/lib/posthog";
 
 export interface ChecklistLog {
   id: string;
@@ -61,6 +62,12 @@ export function useCreateChecklistLog() {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["checklist_logs"] }),
+    onSuccess: (_, payload) => {
+      captureEvent("checklist_completed", {
+        checklist_id: payload.checklist_id,
+        staff_profile_id: payload.staff_profile_id,
+      });
+      qc.invalidateQueries({ queryKey: ["checklist_logs"] });
+    },
   });
 }

@@ -11,6 +11,7 @@
 
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import { captureServerEvent } from "../_shared/posthog.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")!;
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
@@ -160,6 +161,16 @@ Deno.serve(async (req) => {
             }),
           })
           .eq("id", orgId);
+
+        // Only fire on the initial activation, not every renewal/plan tweak
+        // that also routes through "updated".
+        if (event.type === "customer.subscription.created") {
+          await captureServerEvent("subscription_activated", `org_${orgId}`, {
+            plan,
+            amount_cents: sub.items?.data?.[0]?.price?.unit_amount ?? undefined,
+            currency: sub.currency,
+          });
+        }
         break;
       }
 
@@ -189,6 +200,10 @@ Deno.serve(async (req) => {
             }),
           })
           .eq("id", orgId);
+
+        await captureServerEvent("subscription_canceled", `org_${orgId}`, {
+          plan: currentOrgState?.plan ?? null,
+        });
         break;
       }
 
@@ -213,6 +228,11 @@ Deno.serve(async (req) => {
           .from("organizations")
           .update({ plan_status: "past_due" })
           .eq("id", orgId);
+
+        await captureServerEvent("subscription_payment_failed", `org_${orgId}`, {
+          amount_cents: invoice.amount_due,
+          attempt_count: invoice.attempt_count,
+        });
         break;
       }
 

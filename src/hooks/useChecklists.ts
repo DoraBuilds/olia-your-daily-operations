@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { captureEvent } from "@/lib/posthog";
 
 export interface FolderItem {
   id: string;
@@ -138,7 +139,7 @@ export function useSaveChecklist() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       // Immediately patch the cache so the list reflects the new field values
       // (e.g. location_ids) before the background refetch completes.
       // Without this, opening the edit modal immediately after saving reads
@@ -148,6 +149,8 @@ export function useSaveChecklist() {
           { queryKey: ["checklists"] },
           (old) => old?.map((c) => c.id === variables.id ? { ...c, ...variables } : c),
         );
+      } else {
+        captureEvent("checklist_created", { checklist_id: data as string | undefined });
       }
       qc.invalidateQueries({ queryKey: ["checklists"] });
     },

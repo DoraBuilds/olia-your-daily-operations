@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
 import i18n, { type SupportedLanguage } from "@/lib/i18n";
+import { identifyUser, captureEvent, resetPostHog } from "@/lib/posthog";
 
 interface TeamMemberProfile {
   id: string;
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data) {
       setTeamMember(data as TeamMemberProfile);
       setLoading(false);
+      identifyUser(userId, { org_id: (data as TeamMemberProfile).organization_id, role: (data as TeamMemberProfile).role });
+      captureEvent("user_signed_in", { method: "email_otp" });
       // Fire-and-forget: stamp last_seen_at for returning users.
       supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("id", userId);
       return;
@@ -78,6 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (byAuthId) {
       setTeamMember(byAuthId as TeamMemberProfile);
       setLoading(false);
+      identifyUser(userId, { org_id: (byAuthId as TeamMemberProfile).organization_id, role: (byAuthId as TeamMemberProfile).role });
+      captureEvent("user_signed_in", { method: "email_otp" });
       supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
       return;
     }
@@ -119,6 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (linked) {
         setTeamMember(linked as TeamMemberProfile);
         setLoading(false);
+        identifyUser(userId, { org_id: (linked as TeamMemberProfile).organization_id, role: (linked as TeamMemberProfile).role });
+        captureEvent("team_member_joined", { role: (linked as TeamMemberProfile).role });
         supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
         return;
       }
@@ -214,6 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setTeamMember(newData);
       setLoading(false);
+      identifyUser(userId, { org_id: newData.organization_id, role: newData.role });
+      captureEvent("user_signed_up", { method: "email_otp" });
     } catch (err) {
       console.error("[AuthContext] setup_new_organization threw:", err);
       localStorage.removeItem("olia_pending_onboarding");
@@ -296,7 +305,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    captureEvent("user_signed_out");
     await supabase.auth.signOut();
+    resetPostHog();
   };
 
   return (
