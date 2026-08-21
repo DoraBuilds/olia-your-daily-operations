@@ -5,6 +5,15 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 
+// Mirrors stripe-webhook/index.ts's planFromMetadata() — keep these in sync.
+// Maps Stripe product metadata to an Olia plan name. Fallback is "starter"
+// (safe default — never accidentally assigns a paid tier).
+function planFromMetadata(metadata: Record<string, string>): string {
+  const plan = metadata?.olia_plan;
+  if (plan === "growth" || plan === "enterprise") return plan;
+  return "starter";
+}
+
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -67,9 +76,8 @@ Deno.serve(async (req) => {
       .single();
     if (orgError || !org) return err("Organization not found");
 
-    const { priceId, planName, returnUrl } = await req.json() as {
+    const { priceId, returnUrl } = await req.json() as {
       priceId: string;
-      planName: string;   // e.g. "growth" — used to stamp olia_plan on the subscription
       returnUrl: string;
     };
 
@@ -77,6 +85,16 @@ Deno.serve(async (req) => {
       apiVersion: "2024-12-18.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
+
+    // Derive the plan tier from Stripe's own product metadata for the price
+    // actually being purchased — never trust a client-supplied plan name for
+    // entitlements. A request could otherwise pair a cheap priceId with a
+    // claimed "enterprise" plan name and receive entitlements it didn't pay
+    // for. This also doubles as priceId validation (throws below on an
+    // unknown id).
+    const price = await stripe.prices.retrieve(priceId, { expand: ["product"] });
+    const product = price.product as Stripe.Product;
+    const olia_plan = planFromMetadata(product?.metadata ?? {});
 
     // Reuse existing Stripe customer or create a new one
     let customerId = org.stripe_customer_id;
@@ -97,9 +115,8 @@ Deno.serve(async (req) => {
     // Create the Stripe Checkout session.
     // subscription_data.metadata carries both:
     //   organization_id — so the webhook can find the right org row
-    //   olia_plan       — so the webhook knows which plan tier to write
-    // Without olia_plan here, planFromMetadata() falls back to "starter"
-    // and the webhook would silently downgrade the org after a successful checkout.
+    //   olia_plan       — so the webhook knows which plan tier to write,
+    //                      derived server-side above, never client-supplied
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
@@ -109,7 +126,7 @@ Deno.serve(async (req) => {
       subscription_data: {
         metadata: {
           organization_id: org.id,
-          olia_plan: planName ?? "growth",
+          olia_plan,
         },
       },
     });
