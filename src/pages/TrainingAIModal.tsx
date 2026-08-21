@@ -49,7 +49,7 @@ export function TrainingAIModal({
             Build training with AI
             <Sparkles size={16} className="text-lavender" />
           </h2>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label="Close">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

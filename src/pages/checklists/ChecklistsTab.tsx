@@ -530,7 +530,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-foreground">{t("newFolder.heading")}</h2>
-              <button onClick={() => setShowNewFolder(false)} className="btn-icon">
+              <button onClick={() => setShowNewFolder(false)} className="btn-icon" aria-label={t("close")}>
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>
@@ -606,7 +606,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-foreground">{t("renameFolder.heading")}</h2>
-              <button onClick={() => setRenameTarget(null)} className="btn-icon">
+              <button onClick={() => setRenameTarget(null)} className="btn-icon" aria-label={t("close")}>
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>

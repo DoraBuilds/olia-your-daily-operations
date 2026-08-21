@@ -87,7 +87,7 @@ function NewTaskModal({ onClose, onAdd }: {
       <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-8 space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">New maintenance task</h2>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label="Close">
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

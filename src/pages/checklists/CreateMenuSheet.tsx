@@ -22,7 +22,7 @@ export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI,
       <div className="bg-card w-full max-w-md rounded-3xl border border-border p-5 pb-6 space-y-1 shadow-2xl animate-fade-in">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-lg text-foreground">{t("createMenu.heading")}</h2>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

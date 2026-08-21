@@ -1516,7 +1516,7 @@ export function ChecklistBuilderModal({
       <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm overflow-y-auto">
         <div className="flex min-h-full items-end sm:items-center justify-center sm:py-8 px-0 sm:px-4 pb-20">
           <div className="relative bg-card w-full max-w-3xl rounded-t-2xl sm:rounded-2xl flex flex-col shadow-xl">
-            <button onClick={handleRequestClose} className="absolute top-3 right-3 z-10 btn-icon">
+            <button onClick={handleRequestClose} className="absolute top-3 right-3 z-10 btn-icon" aria-label={t("close")}>
               <X size={18} className="text-muted-foreground" />
             </button>
             {formContent}

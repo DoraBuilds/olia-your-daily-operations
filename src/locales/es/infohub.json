@@ -1,4 +1,8 @@
 {
+  "close": "Cerrar",
+  "back": "Atrás",
+  "cancel": "Cancelar",
+  "openOptions": "Abrir opciones",
   "subtitleLibrary": "Documentos y procedimientos",
   "subtitleTraining": "Módulos de capacitación del personal",
   "searchLibraryPlaceholder": "Buscar documentos y carpetas…",

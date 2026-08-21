@@ -379,7 +379,7 @@ export function AccountTab({
           <div className="flex-1 min-w-0 space-y-3">
             <p className="section-label">{t("accountTab.security")}</p>
             {needsDefaultPinChange && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+              <div className="rounded-xl status-warn px-3 py-2 text-xs leading-relaxed">
                 {t("accountTab.defaultPinPrefix")} <span className="font-semibold">{DEFAULT_ADMIN_PIN}</span>{t("accountTab.defaultPinSuffix")}
               </div>
             )}
