@@ -25,6 +25,7 @@
 - `sitemap.xml` — added and linked from `robots.txt` (was 404)
 - Landing page "Contact sales" — now opens the demo-request modal instead of a dead link
 - AI-content disclosure — "AI-generated draft, review before saving" note on Build with AI / Convert File / AI training; Privacy Policy updated with Anthropic as a processor
+- UI audit fixes — Kiosk skeleton loader (was a spinner), 3 raw-color spots switched to semantic tokens, aria-labels added to ~29 icon-only buttons
 
 ---
 
