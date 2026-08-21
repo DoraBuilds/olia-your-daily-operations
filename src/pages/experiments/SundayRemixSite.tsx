@@ -956,7 +956,7 @@ export default function SundayRemixSite() {
               <ul className="rx-pfeats">
                 {["Everything in Growth", "Unlimited locations", "Advanced permissions", "R&B account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
-              <a href="#" className="rx-pbtn rx-pbtn-outline">Contact sales</a>
+              <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openDemo}>Contact sales</a>
             </div>
           </div>
         </div>

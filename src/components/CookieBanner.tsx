@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getCookieConsent, setCookieConsent, initSentryIfConsented } from "@/lib/sentry";
+import { initPostHogIfConsented } from "@/lib/posthog";
 import { legalTheme, legalLinkStyle, isNewDesignPath } from "@/lib/legal-theme";
 
 export function CookieBanner() {
@@ -13,6 +14,7 @@ export function CookieBanner() {
   const accept = () => {
     setCookieConsent("accepted");
     initSentryIfConsented();
+    initPostHogIfConsented();
     setVisible(false);
   };
 

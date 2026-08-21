@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/react";
 import { initSentryIfConsented } from "@/lib/sentry";
+import { initPostHogIfConsented } from "@/lib/posthog";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -14,6 +15,10 @@ import { Capacitor } from "@capacitor/core";
 // ── Sentry error monitoring ───────────────────────────────────────────────────
 // Only initialises when VITE_SENTRY_DSN is set AND the user has accepted cookies.
 initSentryIfConsented();
+
+// ── PostHog analytics ──────────────────────────────────────────────────────
+// Only initialises when VITE_POSTHOG_KEY is set AND the user has accepted cookies.
+initPostHogIfConsented();
 
 // GitHub Pages deep-link restoration now happens in App.tsx, before the
 // router is created (see comment there) — importing App below already runs it.
