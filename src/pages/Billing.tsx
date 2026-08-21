@@ -10,6 +10,7 @@ import { usePlan } from "@/hooks/usePlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { runtimeConfig } from "@/lib/runtime-config";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
+import { captureEvent } from "@/lib/posthog";
 import {
   PLAN_FEATURES,
   PLAN_LABELS,
@@ -228,6 +229,7 @@ export default function Billing() {
     }
     setLoading(targetPlan);
     setError(null);
+    captureEvent("checkout_started", { plan: targetPlan, interval: billing });
     try {
       // The edge function always returns HTTP 200 (even for application-level
       // errors), so supabase-js always routes the response to `data`, never to

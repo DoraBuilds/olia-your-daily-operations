@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Location } from "@/lib/admin-repository";
 import { usePlan } from "@/hooks/usePlan";
+import { captureEvent } from "@/lib/posthog";
 
 export function useLocations() {
   const { teamMember } = useAuth();
@@ -151,7 +152,10 @@ export function useSaveLocation() {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["locations"] }),
+    onSuccess: (_, loc) => {
+      if (!loc.id) captureEvent("location_created");
+      qc.invalidateQueries({ queryKey: ["locations"] });
+    },
   });
 }
 

@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { TeamMember, ManagerPermissions } from "@/lib/admin-repository";
 import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
 import { writeAuditLog } from "@/hooks/useAuditLog";
+import { captureEvent } from "@/lib/posthog";
 
 export function useTeamMembers() {
   const { teamMember } = useAuth();
@@ -176,6 +177,9 @@ export function useSendInvite() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_member_invites"] }),
+    onSuccess: () => {
+      captureEvent("team_member_invited");
+      qc.invalidateQueries({ queryKey: ["team_member_invites"] });
+    },
   });
 }

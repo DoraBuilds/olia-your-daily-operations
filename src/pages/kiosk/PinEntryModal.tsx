@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocations } from "@/hooks/useLocations";
 import { grantKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { captureEvent } from "@/lib/posthog";
 import type { KioskChecklist } from "./types";
 import { useInactivityTimer } from "./hooks";
 
@@ -434,6 +435,7 @@ export function PinEntryModal({
     if (!memberRpcError && memberData && memberData.length > 0) {
       setValidating(false);
       const member = memberData[0];
+      captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false });
       onSuccess(null, member.name, member.organization_id ?? "");
       return;
     }
@@ -459,6 +461,7 @@ export function PinEntryModal({
 
     if (!staffRpcError && staffData && staffData.length > 0) {
       const staff = staffData[0];
+      captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false, staff_profile_id: staff.id });
       onSuccess(staff.id, `${staff.first_name} ${staff.last_name}`.trim(), staff.organization_id ?? "");
       return;
     }
