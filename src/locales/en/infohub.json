@@ -1,4 +1,8 @@
 {
+  "close": "Close",
+  "back": "Back",
+  "cancel": "Cancel",
+  "openOptions": "Open options",
   "subtitleLibrary": "Documents & SOPs",
   "subtitleTraining": "Staff training modules",
   "searchLibraryPlaceholder": "Search documents and folders…",

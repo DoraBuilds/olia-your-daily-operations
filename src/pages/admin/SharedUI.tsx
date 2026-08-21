@@ -50,10 +50,11 @@ export function BottomSheet({ children, onClose }: { children: React.ReactNode; 
 // ─── ModalHeader ─────────────────────────────────────────────────────────────
 
 export function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  const { t } = useTranslation("admin");
   return (
     <div className="flex items-center justify-between">
       <h2 className="font-display text-lg text-foreground">{title}</h2>
-      <button onClick={onClose} className="btn-icon">
+      <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
         <X size={18} className="text-muted-foreground" />
       </button>
     </div>
@@ -275,7 +276,7 @@ export function StaffProfileModal({
               {t("sharedUI.staffProfile.editPinHint")}
             </p>
           ) : (
-            <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
+            <p className="text-xs status-warn rounded-lg px-3 py-2 mb-2 leading-relaxed">
               {t("sharedUI.staffProfile.newPinHint")}
             </p>
           )}
@@ -433,7 +434,7 @@ export function TeamMemberModal({
               {t("sharedUI.staffProfile.editPinHint")}
             </p>
           ) : (
-            <p className="text-xs text-amber-600/80 bg-amber-50 rounded-lg px-3 py-2 mb-2 leading-relaxed">
+            <p className="text-xs status-warn rounded-lg px-3 py-2 mb-2 leading-relaxed">
               {t("sharedUI.teamMember.newPinPlaceholder")}
             </p>
           )}

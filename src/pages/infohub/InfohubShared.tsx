@@ -92,7 +92,7 @@ export function MoveToFolderSheet({
       <div className="space-y-3">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-display text-base text-foreground">{t("shared.moveToFolder.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -202,7 +202,7 @@ export function CreateFolderModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">{t("shared.newFolder.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -244,7 +244,7 @@ export function RenameFolderModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">{t("shared.renameFolder.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -290,7 +290,7 @@ export function CreateDocModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">{t("shared.newDocument.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -478,7 +478,7 @@ export function UploadDocModal({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-base text-foreground">{t("shared.upload.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -568,7 +568,7 @@ export function PlusMenu({ onClose, onAction }: { onClose: () => void; onAction:
       <div className="space-y-1">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-base text-foreground">{t("shared.plusMenu.heading")}</h3>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -642,7 +642,7 @@ export function ManageAccessModal({
             <h3 className="font-display text-base text-foreground">{t("shared.manageAccess.heading")}</h3>
             <p className="text-xs text-muted-foreground mt-1">{target.name}</p>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -792,7 +792,7 @@ export function AIActionsSheet({
             <Sparkles size={16} className="text-lavender-deep" />
             <h3 className="font-display text-base text-foreground">{t("aiSheet.heading")}</h3>
           </div>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
@@ -936,7 +936,7 @@ export function SearchOverlay({
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 text-sm bg-transparent focus:outline-none"
         />
-        <button onClick={onClose} className="btn-icon">
+        <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
           <X size={18} className="text-muted-foreground" />
         </button>
       </header>

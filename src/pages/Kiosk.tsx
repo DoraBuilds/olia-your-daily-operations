@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocations } from "@/hooks/useLocations";
@@ -120,6 +121,19 @@ function ChecklistCard({ cl, idx, onSelect, dim = false }: {
         )}
       </div>
     </button>
+  );
+}
+
+/** Mirrors ChecklistCard's shape (image block + title line + subtitle line) so the loading state doesn't jump when real cards arrive. */
+function ChecklistCardSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      <Skeleton className="w-full h-20 rounded-xl" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-1/3" />
+      </div>
+    </div>
   );
 }
 
@@ -926,9 +940,8 @@ export default function Kiosk() {
             starts at the top and scrolls normally. */}
         <div className="my-auto">
         {checklistsLoading ? (
-          <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
-            <Loader2 size={16} className="animate-spin" />
-            <p className="text-sm">{t("grid.loadingChecklists")}</p>
+          <div aria-label={t("grid.loadingChecklists")} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => <ChecklistCardSkeleton key={i} />)}
           </div>
         ) : checklistsError ? (
           <div className="text-center py-12 px-4 space-y-3">

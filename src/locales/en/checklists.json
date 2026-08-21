@@ -1,4 +1,5 @@
 {
+  "close": "Close",
   "schedule": {
     "none": "Once",
     "daily": "Every day",

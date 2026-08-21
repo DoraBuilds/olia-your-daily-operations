@@ -76,7 +76,7 @@ export function DemoModal({ open, onClose }: Props) {
           <>
             <div className="flex items-center justify-between">
               <h2 id="demo-modal-title" className="font-display text-lg text-foreground">Book a demo</h2>
-              <button onClick={onClose} className="btn-icon">
+              <button onClick={onClose} className="btn-icon" aria-label="Close">
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>
@@ -102,7 +102,7 @@ export function DemoModal({ open, onClose }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 id="demo-modal-title" className="font-display text-lg text-foreground">Book a demo</h2>
-              <button type="button" onClick={onClose} className="btn-icon">
+              <button type="button" onClick={onClose} className="btn-icon" aria-label="Close">
                 <X size={18} className="text-muted-foreground" />
               </button>
             </div>

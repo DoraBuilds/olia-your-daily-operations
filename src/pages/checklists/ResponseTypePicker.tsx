@@ -60,7 +60,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <h2 className="font-display text-lg text-foreground">{t("responsePicker.heading")}</h2>
-          <button onClick={onClose} className="btn-icon">
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
