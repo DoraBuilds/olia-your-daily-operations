@@ -328,6 +328,30 @@ const css = `
   .rx-pbtn-neon { color: var(--ink); background: #fff; border: none; }
   .rx-pbtn-neon:hover { background: #f2f2f2; }
 
+  /* PRICING — full comparison table */
+  .rx-compare { margin-top: 40px; }
+  .rx-compare summary {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 13.5px; font-weight: 600;
+    color: var(--ink); cursor: pointer; list-style: none; text-align: center;
+  }
+  .rx-compare summary::-webkit-details-marker { display: none; }
+  .rx-compare summary::after {
+    content: '\\2193'; font-size: 11px; color: var(--neon-deep); transition: transform 0.2s ease;
+  }
+  .rx-compare[open] summary::after { transform: rotate(180deg); }
+  .rx-compare-scroll { overflow-x: auto; margin-top: 24px; }
+  .rx-compare-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  .rx-compare-table th, .rx-compare-table td { padding: 12px 14px; text-align: center; border-bottom: 1px solid var(--line); }
+  .rx-compare-table td:first-child, .rx-compare-table th:first-child { text-align: left; font-weight: 400; color: var(--ink-soft); }
+  .rx-compare-table thead th { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 700; font-size: 12.5px; color: var(--ink); padding-bottom: 14px; }
+  .rx-compare-table tbody tr:last-child td { border-bottom: none; }
+  .rx-compare-table td.rx-compare-featured, .rx-compare-table th.rx-compare-featured { background: rgba(0,229,204,0.07); }
+  .rx-compare-table td.rx-compare-featured { border-left: 1px solid rgba(0,229,204,0.25); border-right: 1px solid rgba(0,229,204,0.25); }
+  .rx-compare-table th.rx-compare-featured { border-radius: 8px 8px 0 0; border-left: 1px solid rgba(0,229,204,0.25); border-right: 1px solid rgba(0,229,204,0.25); border-top: 1px solid rgba(0,229,204,0.25); }
+  .rx-compare-check { width: 15px; height: 15px; color: var(--neon-deep); }
+  .rx-compare-dash { color: var(--ink-faint); }
+
   /* FAQ */
   .rx-faq { background: var(--white); }
   .rx-faq-list { max-width: 760px; margin: 0 auto; }
@@ -482,6 +506,11 @@ function PCheck({ className }: { className?: string }) {
   );
 }
 
+function CompareCell({ value }: { value: boolean | string }) {
+  if (typeof value === "string") return <>{value}</>;
+  return value ? <PCheck className="rx-compare-check" /> : <span className="rx-compare-dash">—</span>;
+}
+
 function Laurel({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 30" fill="currentColor" stroke="none">
@@ -590,6 +619,32 @@ const manifesto = [
     title: "Boring is a feature.",
     body: "Reliable, unglamorous software that never goes down beats a flashy product that breaks during service.",
   },
+];
+
+// Full pricing feature matrix behind the "Compare all features" toggle.
+// `true`/`false` render as check/dash; strings render as-is (locations, staff caps).
+const compareRows: { feature: string; starter: boolean | string; growth: boolean | string; enterprise: boolean | string }[] = [
+  { feature: "Locations", starter: "1", growth: "1", enterprise: "Contact us" },
+  { feature: "Staff", starter: "20", growth: "40", enterprise: "Unlimited" },
+  { feature: "Checklists", starter: "Unlimited", growth: "Unlimited", enterprise: "Unlimited" },
+  { feature: "Checklist builder, folders & logic", starter: true, growth: true, enterprise: true },
+  { feature: "AI checklist builder", starter: true, growth: true, enterprise: true },
+  { feature: "AI file-to-checklist convert", starter: true, growth: true, enterprise: true },
+  { feature: "Fridge temperature logging", starter: true, growth: true, enterprise: true },
+  { feature: "Photo upload on checklist items", starter: true, growth: true, enterprise: true },
+  { feature: "Staff PIN entry", starter: true, growth: true, enterprise: true },
+  { feature: "Offline submission queue", starter: true, growth: true, enterprise: true },
+  { feature: "Live stats & compliance summary", starter: true, growth: true, enterprise: true },
+  { feature: "Overdue actions & alerts", starter: true, growth: true, enterprise: true },
+  { feature: "Info Hub", starter: true, growth: true, enterprise: true },
+  { feature: "PDF & CSV export", starter: true, growth: true, enterprise: true },
+  { feature: "Training mode for onboarding", starter: false, growth: true, enterprise: true },
+  { feature: "Advanced reporting", starter: false, growth: true, enterprise: true },
+  { feature: "Maintenance Hub (OCR, fridge trends, machinery health)", starter: false, growth: true, enterprise: true },
+  { feature: "Fridge temperature trends over time", starter: false, growth: true, enterprise: true },
+  { feature: "Weather integration (alerts & triggers)", starter: false, growth: true, enterprise: true },
+  { feature: "AI assistant trained on your org (RAG)", starter: false, growth: true, enterprise: true },
+  { feature: "Priority support", starter: false, growth: false, enterprise: true },
 ];
 
 // Answers pulled from the pricing/features copy above — nothing new asserted here.
@@ -982,7 +1037,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Up to 3 checklists", "Compliance temperature logging", "Issue reporting", "Kiosk access, unlimited staff", "30-day data history", "Email support"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["1 location", "Up to 20 staff", "Unlimited checklists", "Compliance & fridge temp logging", "AI checklist builder", "Issue reporting & photo evidence", "Email support"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <Link to="/signup" className="rx-pbtn rx-pbtn-outline">Start with Starter</Link>
             </div>
@@ -993,7 +1048,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Unlimited checklists", "Full compliance suite", "Issue tracking", "Reporting & analytics", "Multi-location dashboard (up to 10)", "12-month data retention", "Priority support"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Starter, plus:", "Up to 40 staff", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <span className="rx-shine-wrap block"><Link to="/signup" className="rx-pbtn rx-pbtn-neon">Start with Growth</Link></span>
             </div>
@@ -1003,11 +1058,37 @@ export default function SundayRemixSite() {
               <div className="rx-punit">tailored to your requirements</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Everything in Growth", "Unlimited locations", "Advanced permissions", "R&B account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Growth, plus:", "Unlimited locations", "Unlimited staff", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openDemo}>Contact sales</a>
             </div>
           </div>
+
+          <details className="rx-compare">
+            <summary>Compare all features</summary>
+            <div className="rx-compare-scroll">
+              <table className="rx-compare-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Starter</th>
+                    <th className="rx-compare-featured">Growth</th>
+                    <th>Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareRows.map((row) => (
+                    <tr key={row.feature}>
+                      <td>{row.feature}</td>
+                      <td><CompareCell value={row.starter} /></td>
+                      <td className="rx-compare-featured"><CompareCell value={row.growth} /></td>
+                      <td><CompareCell value={row.enterprise} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </section>
 
