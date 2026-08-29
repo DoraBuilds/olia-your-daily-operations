@@ -4,6 +4,7 @@
 
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Mirrors stripe-webhook/index.ts's planFromMetadata() — keep these in sync.
 // Maps Stripe product metadata to an Olia plan name. Fallback is "starter"
@@ -18,23 +19,19 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-// Helper: always return HTTP 200 with { error } so supabase-js routes the
-// response to `data` (not `fnError`). This avoids relying on
-// FunctionsHttpError.context body-parsing, which silently fails in some
-// versions of @supabase/functions-js because the response body may already
-// be consumed before the error reaches the caller.
-const ok  = (body: unknown) =>
-  new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
-const err = (message: string) =>
-  new Response(JSON.stringify({ error: message }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
-
 Deno.serve(async (req) => {
+  const CORS_HEADERS = corsHeaders(req.headers.get("origin"));
+
+  // Helper: always return HTTP 200 with { error } so supabase-js routes the
+  // response to `data` (not `fnError`). This avoids relying on
+  // FunctionsHttpError.context body-parsing, which silently fails in some
+  // versions of @supabase/functions-js because the response body may already
+  // be consumed before the error reaches the caller.
+  const ok  = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+  const err = (message: string) =>
+    new Response(JSON.stringify({ error: message }), { status: 200, headers: { "Content-Type": "application/json", ...CORS_HEADERS } });
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
