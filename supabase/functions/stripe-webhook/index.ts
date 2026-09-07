@@ -12,20 +12,12 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 import { captureServerEvent } from "../_shared/posthog.ts";
+import { planFromMetadata, planFromPriceMetadata } from "../_shared/plan-from-price.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")!;
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Map Stripe product/price metadata to Olia plan names.
-// Set `olia_plan` in Stripe product metadata to "growth" or "enterprise".
-// Fallback is "starter" (safe default — never accidentally assigns a paid tier).
-function planFromMetadata(metadata: Record<string, string>): string {
-  const plan = metadata?.olia_plan;
-  if (plan === "growth" || plan === "enterprise") return plan;
-  return "starter";
-}
 
 function locationLimitForPlan(plan: string): number {
   if (plan === "enterprise") return -1;
@@ -135,7 +127,7 @@ Deno.serve(async (req) => {
               { expand: ["product"] }
             );
             const product = price.product as Stripe.Product;
-            const productPlan = planFromMetadata(product?.metadata ?? {});
+            const productPlan = planFromPriceMetadata(sub.items.data[0].price.id, product?.metadata, "stripe-webhook");
             if (productPlan !== "starter") plan = productPlan;
           } catch {
             // Unable to fetch product — keep "starter" as safe default
