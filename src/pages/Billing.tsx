@@ -108,6 +108,17 @@ export default function Billing() {
   // can land mid-page otherwise.
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
+  // Self-healing: Growth is billed per location, and the Stripe subscription
+  // quantity is normally kept in sync by useLocations' add/delete hooks. This
+  // catches any drift (e.g. a location added before that sync existed) every
+  // time the Billing page loads, with no action needed from the user.
+  useEffect(() => {
+    if (plan !== "growth" || !hasStripeSubscription) return;
+    supabase.functions.invoke("sync-location-quantity").catch((err: unknown) => {
+      console.warn("[Billing] sync-location-quantity failed:", err);
+    });
+  }, [plan, hasStripeSubscription]);
+
   // Confirm the completed Stripe checkout session directly so the page does
   // not stay stuck waiting only on the webhook write.
   //
