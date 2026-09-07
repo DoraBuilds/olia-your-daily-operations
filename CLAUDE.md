@@ -177,9 +177,8 @@ Reusable CSS utility classes: `.status-ok/warn/error`, `.card-surface`, `.sectio
 
 shadcn/ui components are in `src/components/ui/` — do not edit these files manually; use the shadcn CLI to add/update them.
 
-### What Is Not Yet Built
-- Export buttons generate real PDFs/CSVs via `src/lib/export-utils.ts`
-- No real payment processing (Stripe integration is UI-only)
+### Billing / Stripe
+Stripe checkout, the customer portal, and webhook sync are real and live (`supabase/functions/create-checkout-session`, `confirm-checkout-session`, `stripe-webhook`) — this is not UI-only. The connected Stripe account is currently in **test/sandbox mode**. Plan tier is derived server-side from the purchased Stripe price/product, never from client input (see `supabase/functions/_shared/plan-from-price.ts`).
 
 ### TypeScript Config
 Strict mode is disabled (`strict: false`, `noImplicitAny: false`, `strictNullChecks: false`). The codebase does not require explicit null checks or strict typing.
