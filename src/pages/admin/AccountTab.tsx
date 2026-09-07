@@ -953,15 +953,20 @@ export function AccountTab({
               <p className="text-sm text-muted-foreground mt-1">
                 {PLAN_PRICES[plan].monthly === 0
                   ? t("accountTab.freeNoBilling")
-                  : locations.length > 1
-                    ? t("accountTab.pricePerMonthBreakdown", {
-                        currency: PLAN_PRICES[plan].currency,
-                        total: PLAN_PRICES[plan].monthly * locations.length,
-                        count: locations.length,
-                        unitPrice: PLAN_PRICES[plan].monthly,
-                      })
-                    : t("accountTab.pricePerMonth", { currency: PLAN_PRICES[plan].currency, price: PLAN_PRICES[plan].monthly })}
+                  : t("accountTab.pricePerMonth", {
+                      currency: PLAN_PRICES[plan].currency,
+                      price: PLAN_PRICES[plan].monthly * Math.max(1, locations.length),
+                    })}
               </p>
+              {PLAN_PRICES[plan].monthly > 0 && locations.length > 1 && (
+                <p className="text-xs text-muted-foreground/70 mt-0.5">
+                  ({t("accountTab.pricePerLocationBreakdown", {
+                    count: locations.length,
+                    currency: PLAN_PRICES[plan].currency,
+                    unitPrice: PLAN_PRICES[plan].monthly,
+                  })})
+                </p>
+              )}
             </div>
             <span className={cn(
               "text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
