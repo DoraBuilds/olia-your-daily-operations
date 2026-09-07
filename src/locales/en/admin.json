@@ -287,7 +287,7 @@
     "planName": "Olia {{plan}}",
     "freeNoBilling": "Free · No billing required",
     "pricePerMonth": "{{currency}}{{price}}/month",
-    "pricePerMonthBreakdown": "{{currency}}{{total}}/month · {{count}} locations × {{currency}}{{unitPrice}}",
+    "pricePerLocationBreakdown": "{{count}} locations × {{currency}}{{unitPrice}}",
     "trial": "Trial",
     "manageBilling": "Manage Billing",
     "manageAtOlia": "Manage at olia.app",
