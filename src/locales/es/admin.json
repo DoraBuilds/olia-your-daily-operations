@@ -16,8 +16,8 @@
   "toast": {
     "locationUpdated": "Ubicación actualizada",
     "locationCreated": "Ubicación creada",
-    "locationLimitError": "Tu plan incluye 1 ubicación. Contáctanos para pasar a Enterprise y tener ubicaciones ilimitadas.",
-    "bookADemo": "Reservar una demo",
+    "locationLimitError": "Starter incluye 1 ubicación. Actualiza a Growth para tener ubicaciones ilimitadas, facturadas por ubicación.",
+    "upgrade": "Actualizar",
     "saveLocationFailed": "No se pudo guardar la ubicación: {{error}}",
     "locationDeleted": "Ubicación eliminada",
     "deleteLocationFailed": "No se pudo eliminar la ubicación: {{error}}",
@@ -49,11 +49,13 @@
     "remove": "Quitar"
   },
   "locationLimit": {
-    "title": "Supera 1 ubicación con Enterprise",
-    "body": "Tu plan incluye 1 ubicación. Enterprise está diseñado para grupos hoteleros más grandes que necesitan más ubicaciones, un gerente de cuenta dedicado y una incorporación personalizada.",
+    "title": "Agrega más ubicaciones con Growth",
+    "body": "Starter incluye 1 ubicación. Growth se factura por ubicación, así que puedes agregar tantos locales como necesites, sin límite.",
     "currentPlan": "Plan actual: {{plan}}",
-    "bookADemo": "Reservar una demo",
-    "notNow": "Ahora no"
+    "notNow": "Ahora no",
+    "growthPricePerMonth": "Growth — {{currency}}{{price}} / mes / ubicación",
+    "upgradeAtOlia": "Actualizar en olia.app",
+    "upgradeToGrowth": "Actualizar a Growth"
   },
   "notificationsTab": {
     "loading": "Cargando…",

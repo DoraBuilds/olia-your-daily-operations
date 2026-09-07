@@ -27,11 +27,12 @@ const PRICE_IDS: Record<"starter" | "growth", { monthly: string; annual: string 
 const ENTERPRISE_SALES_EMAIL = "enterprise@olia.com";
 
 // ─── Example location count used in the pricing illustration ─────────────────
-// Both Starter and Growth are capped at 1 location — only Enterprise (custom
-// pricing, no numeric example shown) supports more.
+// Starter uses 1 (its only option); Growth is billed per location with no
+// cap, so 3 illustrates a relatable multi-venue size.
 const PLAN_EXAMPLE_LOCATIONS: Partial<Record<Plan, number>> = {
   starter: 1,
-  growth:  1,
+  growth:  3,
+  // enterprise: omitted — custom pricing, no numeric example shown
 };
 
 // ─── Side-by-side comparison rows ────────────────────────────────────────────
@@ -47,7 +48,7 @@ function useComparisonRows(t: (key: string) => string): ComparisonRow[] {
   return [
     // ── Usage limits ──────────────────────────────────────────────────────────
     { isHeader: true, label: section("usageLimits") },
-    { label: row("locations"),      starter: v("one"),    growth: v("one"),    enterprise: v("unlimited") },
+    { label: row("locations"),      starter: v("one"),    growth: v("unlimited"), enterprise: v("unlimited") },
     { label: row("staffProfiles"),  starter: v("upTo20"), growth: v("upTo40"), enterprise: v("unlimited") },
     { label: row("checklists"),     starter: v("unlimited"), growth: v("unlimited"), enterprise: v("unlimited") },
     // ── Core features ─────────────────────────────────────────────────────────

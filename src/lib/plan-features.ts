@@ -33,7 +33,7 @@ export interface PlanFeatures {
 
 // ─── Feature limits per plan ────────────────────────────────────────────────
 // Matches the check_plan_limit() DB function, last defined in
-// 20260907000001_update_plan_tier_limits.sql
+// 20260907000002_growth_unlimited_locations.sql
 
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   starter: {
@@ -49,7 +49,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     prioritySupport: false,
   },
   growth: {
-    maxLocations: 1,
+    maxLocations: -1,
     maxStaff: 40,
     maxChecklists: -1,
     aiBuilder: true,
@@ -57,7 +57,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
     advancedReporting: true,
     exportPdf: true,
     exportCsv: true,
-    multiLocation: false,
+    multiLocation: true,
     prioritySupport: false,
   },
   enterprise: {
