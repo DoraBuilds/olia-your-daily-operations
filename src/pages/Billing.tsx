@@ -27,11 +27,11 @@ const PRICE_IDS: Record<"starter" | "growth", { monthly: string; annual: string 
 const ENTERPRISE_SALES_EMAIL = "enterprise@olia.com";
 
 // ─── Example location count used in the pricing illustration ─────────────────
-// Starter uses 1 (its only option); Growth uses 3 (a relatable multi-venue size)
+// Both Starter and Growth are capped at 1 location — only Enterprise (custom
+// pricing, no numeric example shown) supports more.
 const PLAN_EXAMPLE_LOCATIONS: Partial<Record<Plan, number>> = {
   starter: 1,
-  growth:  3,
-  // enterprise: omitted — custom pricing, no numeric example shown
+  growth:  1,
 };
 
 // ─── Side-by-side comparison rows ────────────────────────────────────────────
@@ -47,9 +47,9 @@ function useComparisonRows(t: (key: string) => string): ComparisonRow[] {
   return [
     // ── Usage limits ──────────────────────────────────────────────────────────
     { isHeader: true, label: section("usageLimits") },
-    { label: row("locations"),      starter: v("one"),    growth: v("upTo10"),  enterprise: v("unlimited") },
-    { label: row("staffProfiles"),  starter: v("upTo15"), growth: v("upTo200"), enterprise: v("unlimited") },
-    { label: row("checklists"),     starter: v("upTo10"), growth: v("unlimited"), enterprise: v("unlimited") },
+    { label: row("locations"),      starter: v("one"),    growth: v("one"),    enterprise: v("unlimited") },
+    { label: row("staffProfiles"),  starter: v("upTo20"), growth: v("upTo40"), enterprise: v("unlimited") },
+    { label: row("checklists"),     starter: v("unlimited"), growth: v("unlimited"), enterprise: v("unlimited") },
     // ── Core features ─────────────────────────────────────────────────────────
     { isHeader: true, label: section("coreFeatures") },
     { label: row("kioskMode"),         starter: "✓", growth: "✓", enterprise: "✓" },
@@ -57,15 +57,15 @@ function useComparisonRows(t: (key: string) => string): ComparisonRow[] {
     { label: row("checklistBuilder"),  starter: "✓", growth: "✓", enterprise: "✓" },
     { label: row("sopTrainingHub"),    starter: "✓", growth: "✓", enterprise: "✓" },
     { label: row("pdfExport"),         starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("csvExport"),              starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("aiChecklistBuilder"),     starter: "✓", growth: "✓", enterprise: "✓" },
+    { label: row("fileToChecklistImport"),  starter: "✓", growth: "✓", enterprise: "✓" },
     // ── Growth features ───────────────────────────────────────────────────────
     { isHeader: true, label: section("growthFeatures") },
-    { label: row("multiLocationView"),      starter: "—", growth: "✓", enterprise: "✓" },
-    { label: row("aiChecklistBuilder"),     starter: "—", growth: "✓", enterprise: "✓" },
-    { label: row("fileToChecklistImport"),  starter: "—", growth: "✓", enterprise: "✓" },
     { label: row("advancedReporting"),      starter: "—", growth: "✓", enterprise: "✓" },
-    { label: row("csvExport"),              starter: "—", growth: "✓", enterprise: "✓" },
     // ── Enterprise features ───────────────────────────────────────────────────
     { isHeader: true, label: section("enterprise") },
+    { label: row("prioritySupport"),         starter: "—", growth: "—", enterprise: "✓" },
     { label: row("dedicatedAccountManager"), starter: "—", growth: "—", enterprise: "✓" },
     { label: row("customOnboarding"),        starter: "—", growth: "—", enterprise: "✓" },
     { label: row("slaBackedSupport"),        starter: "—", growth: "—", enterprise: "✓" },

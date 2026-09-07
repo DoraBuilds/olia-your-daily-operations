@@ -128,7 +128,8 @@
     "scoreTrend": {
       "heading": "Score Trend",
       "chartAriaLabel": "Score trend chart",
-      "passThreshold": "Pass"
+      "passThreshold": "Pass",
+      "upgradeLocked": "Advanced reporting is available on the Growth plan and above. Tap to see plans."
     },
     "log": {
       "heading": "Completion Log",

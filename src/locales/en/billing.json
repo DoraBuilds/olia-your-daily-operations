@@ -29,7 +29,7 @@
     "unlimitedLocationsIncluded": "Unlimited locations included.",
     "locationsIncluded_one": "{{count}} location included.",
     "locationsIncluded_other": "{{count}} locations included.",
-    "upgradeHint": "Upgrade to Growth for up to 10 locations.",
+    "upgradeHint": "Upgrade to Growth for up to 40 staff profiles and advanced reporting.",
     "manageSubscription": "Manage subscription on Stripe",
     "customerPortalNotConfigured": "Customer portal not configured."
   },
@@ -43,17 +43,17 @@
   "plans": {
     "starter": {
       "description": "For single-location restaurants getting started with digital operations.",
-      "highlights": ["1 location", "Up to 15 staff profiles", "Up to 10 checklists", "Kiosk mode", "SOP & training hub", "PDF export"],
+      "highlights": ["1 location", "Up to 20 staff profiles", "Unlimited checklists", "AI checklist builder + file-to-checklist convert", "Kiosk mode with offline queue", "PDF + CSV export"],
       "locationHint": "1 location included"
     },
     "growth": {
-      "description": "For operators managing multiple venues and growing teams.",
-      "highlights": ["Up to 10 locations", "Up to 200 staff profiles", "Unlimited checklists", "AI checklist builder", "Multi-location oversight", "Advanced reporting & charts", "CSV + PDF export", "File-to-checklist conversion"],
-      "locationHint": "Up to 10 locations"
+      "description": "For growing teams that need more staff capacity, deeper reporting, and AI-assisted workflows.",
+      "highlights": ["Up to 40 staff profiles", "Advanced reporting & analytics", "Training mode for onboarding", "Maintenance Hub — OCR, fridge trends, machinery health", "Weather-integrated alerts", "AI assistant trained on your business"],
+      "locationHint": "1 location included"
     },
     "enterprise": {
       "description": "For larger hospitality groups with complex operational needs.",
-      "highlights": ["Unlimited locations & staff", "Everything in Growth", "Dedicated account manager", "Custom onboarding & training", "SLA-backed support", "Custom integrations on request"],
+      "highlights": ["Unlimited locations & staff", "Everything in Growth", "Priority support", "Dedicated account manager", "Custom onboarding & training", "SLA-backed support", "Custom integrations on request"],
       "locationHint": "Unlimited locations"
     }
   },
@@ -87,11 +87,11 @@
       "checklistBuilder": "Checklist builder",
       "sopTrainingHub": "SOP & training hub",
       "pdfExport": "PDF export",
-      "multiLocationView": "Multi-location view",
       "aiChecklistBuilder": "AI checklist builder",
       "fileToChecklistImport": "File-to-checklist import",
       "advancedReporting": "Advanced reporting",
       "csvExport": "CSV export",
+      "prioritySupport": "Priority support",
       "dedicatedAccountManager": "Dedicated account manager",
       "customOnboarding": "Custom onboarding",
       "slaBackedSupport": "SLA-backed support",
@@ -99,9 +99,8 @@
     },
     "values": {
       "one": "1",
-      "upTo10": "Up to 10",
-      "upTo15": "Up to 15",
-      "upTo200": "Up to 200",
+      "upTo20": "Up to 20",
+      "upTo40": "Up to 40",
       "unlimited": "Unlimited"
     }
   },

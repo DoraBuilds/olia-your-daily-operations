@@ -128,7 +128,8 @@
     "scoreTrend": {
       "heading": "Tendencia de puntaje",
       "chartAriaLabel": "Gráfico de tendencia de puntaje",
-      "passThreshold": "Aprobado"
+      "passThreshold": "Aprobado",
+      "upgradeLocked": "Los informes avanzados están disponibles a partir del plan Growth. Toca para ver los planes."
     },
     "log": {
       "heading": "Registro de finalización",

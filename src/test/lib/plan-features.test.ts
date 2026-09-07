@@ -38,9 +38,11 @@ describe("PLAN_FEATURES", () => {
       expect(starter.maxLocations).toBe(1);
       expect(starter.maxStaff).toBeLessThanOrEqual(25);
     });
-    it("does not include AI or multi-location features", () => {
-      expect(starter.aiBuilder).toBe(false);
+    it("does not include multi-location support", () => {
       expect(starter.multiLocation).toBe(false);
+    });
+    it("includes the AI checklist builder", () => {
+      expect(starter.aiBuilder).toBe(true);
     });
     it("includes PDF export", () => {
       expect(starter.exportPdf).toBe(true);
@@ -56,8 +58,9 @@ describe("PLAN_FEATURES", () => {
       expect(growth.aiBuilder).toBe(true);
       expect(growth.advancedReporting).toBe(true);
     });
-    it("includes multi-location support", () => {
-      expect(growth.multiLocation).toBe(true);
+    it("is still capped at 1 location, same as starter", () => {
+      expect(growth.maxLocations).toBe(1);
+      expect(growth.multiLocation).toBe(false);
     });
     it("does not include priority support", () => {
       expect(growth.prioritySupport).toBe(false);
