@@ -129,16 +129,33 @@ export function DepartmentRolePicker({
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
 export function ConfirmModal({
-  title, message, actionLabel, onClose, onConfirm,
+  title, message, actionLabel, onClose, onConfirm, requireDeleteText,
 }: {
   title: string; message: React.ReactNode; actionLabel: string;
-  onClose: () => void; onConfirm: () => void;
+  onClose: () => void; onConfirm: () => void; requireDeleteText?: boolean;
 }) {
   const { t } = useTranslation("admin");
+  const [deleteText, setDeleteText] = useState("");
+  const locked = requireDeleteText && deleteText !== "DELETE";
   return (
     <BottomSheet onClose={onClose}>
       <ModalHeader title={title} onClose={onClose} />
       <p className="text-sm text-muted-foreground">{message}</p>
+      {requireDeleteText && (
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {t("confirm.typeToConfirm")} <strong className="text-foreground">DELETE</strong> {t("confirm.toConfirm")}
+          </p>
+          <input
+            autoFocus
+            type="text"
+            value={deleteText}
+            onChange={e => setDeleteText(e.target.value.toUpperCase())}
+            placeholder={t("confirm.placeholder")}
+            className="mt-2 w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+      )}
       <div className="flex gap-3">
         <button
           onClick={onClose}
@@ -147,8 +164,9 @@ export function ConfirmModal({
           {t("sharedUI.cancel")}
         </button>
         <button
+          disabled={locked}
           onClick={onConfirm}
-          className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors"
+          className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
         >
           {actionLabel}
         </button>
@@ -642,4 +660,5 @@ export type ConfirmState = {
   message: React.ReactNode;
   actionLabel: string;
   onConfirm: () => void;
+  requireDeleteText?: boolean;
 } | null;

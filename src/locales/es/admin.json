@@ -46,7 +46,10 @@
     "removeMemberTitle": "Quitar miembro del equipo",
     "removeMemberPrefix": "¿Quitar a",
     "removeMemberSuffix": "del equipo? Esto no se puede deshacer.",
-    "remove": "Quitar"
+    "remove": "Quitar",
+    "typeToConfirm": "Escribe",
+    "toConfirm": "para confirmar.",
+    "placeholder": "Escribe DELETE"
   },
   "locationLimit": {
     "title": "Agrega más ubicaciones con Growth",

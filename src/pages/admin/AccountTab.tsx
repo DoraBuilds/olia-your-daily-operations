@@ -120,7 +120,6 @@ export function AccountTab({
   const [selectedActiveLocationIds, setSelectedActiveLocationIds] = useState<string[]>(activeLocationIds);
   const [committedActiveLocationIds, setCommittedActiveLocationIds] = useState<string[]>(activeLocationIds);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -500,7 +499,7 @@ export function AccountTab({
           </p>
           <button
             type="button"
-            onClick={() => { setDeleteConfirmText(""); setShowDeleteModal(true); }}
+            onClick={() => setShowDeleteModal(true)}
             className="w-full py-2.5 rounded-xl text-sm font-semibold border border-status-error text-status-error hover:bg-status-error/5 transition-colors"
           >
             {t("accountTab.deleteAccount")}
@@ -1005,22 +1004,12 @@ export function AccountTab({
             <span>
               {t("accountTab.deleteAccountModal.body")}{" "}
               <strong>{t("accountTab.deleteAccountModal.cannotBeUndone")}</strong>
-              <br /><br />
-              {t("accountTab.deleteAccountModal.typeToConfirm")} <strong>DELETE</strong> {t("accountTab.deleteAccountModal.toConfirm")}
-              <br />
-              <input
-                autoFocus
-                type="text"
-                value={deleteConfirmText}
-                onChange={e => setDeleteConfirmText(e.target.value.toUpperCase())}
-                placeholder={t("accountTab.deleteAccountModal.placeholder")}
-                className="mt-3 w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-              />
             </span>
           }
           actionLabel={deleting ? t("accountTab.deleteAccountModal.deleting") : t("accountTab.deleteAccountModal.confirmAction")}
+          requireDeleteText
           onClose={() => setShowDeleteModal(false)}
-          onConfirm={() => { if (deleteConfirmText === "DELETE") deleteAccount(); }}
+          onConfirm={() => deleteAccount()}
         />
       )}
     </div>
