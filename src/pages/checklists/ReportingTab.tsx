@@ -139,6 +139,7 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   const [calOpen, setCalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [showCsvUpgrade, setShowCsvUpgrade] = useState(false);
+  const [showReportingUpgrade, setShowReportingUpgrade] = useState(false);
   // Location filter — "all" means no filter; any UUID string = filter to that location
   const [locationFilter, setLocationFilter] = useState<string>(initialLocationId ?? "all");
   const [personFilter, setPersonFilter] = useState<string>("all");
@@ -559,20 +560,30 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
         </p>
       </div>
 
-      {/* Score Trend */}
+      {/* Score Trend — Advanced reporting, gated to Growth+ */}
       {trendData.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-4">
-            <p className="section-label">{t("reporting.scoreTrend.heading")}</p>
-            {trendData.length >= 2 && (() => {
-              const delta = trendData[trendData.length - 1].avg - trendData[0].avg;
-              if (delta > 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-ok"><TrendingUp size={12} />+{delta}%</span>;
-              if (delta < 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-error"><TrendingDown size={12} />{delta}%</span>;
-              return <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Minus size={12} />{t("reporting.stats.noChange")}</span>;
-            })()}
+        can("advancedReporting") ? (
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="section-label">{t("reporting.scoreTrend.heading")}</p>
+              {trendData.length >= 2 && (() => {
+                const delta = trendData[trendData.length - 1].avg - trendData[0].avg;
+                if (delta > 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-ok"><TrendingUp size={12} />+{delta}%</span>;
+                if (delta < 0) return <span className="flex items-center gap-1 text-xs font-semibold text-status-error"><TrendingDown size={12} />{delta}%</span>;
+                return <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"><Minus size={12} />{t("reporting.stats.noChange")}</span>;
+              })()}
+            </div>
+            <ScoreTrendChart data={trendData} />
           </div>
-          <ScoreTrendChart data={trendData} />
-        </div>
+        ) : (
+          <button
+            onClick={() => setShowReportingUpgrade(true)}
+            className="w-full text-left bg-card border border-border rounded-2xl p-4 hover:bg-muted/30 transition-colors"
+          >
+            <p className="section-label mb-1">{t("reporting.scoreTrend.heading")}</p>
+            <p className="text-xs text-muted-foreground">{t("reporting.scoreTrend.upgradeLocked")}</p>
+          </button>
+        )
       )}
 
       {/* Completion Log — table-style with PASS/REVIEW/ACTION REQ. */}
@@ -663,6 +674,9 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
       {selectedLog && <LogDetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />}
       {showCsvUpgrade && (
         <UpgradePrompt feature="CSV export" onClose={() => setShowCsvUpgrade(false)} />
+      )}
+      {showReportingUpgrade && (
+        <UpgradePrompt feature="Advanced reporting" onClose={() => setShowReportingUpgrade(false)} />
       )}
     </>
   );

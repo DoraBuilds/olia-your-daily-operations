@@ -16,10 +16,8 @@
   "toast": {
     "locationUpdated": "Location updated",
     "locationCreated": "Location created",
-    "growthLimitError": "Growth includes up to 10 locations. Contact us to move to Enterprise for unlimited locations.",
+    "locationLimitError": "Your plan includes 1 location. Contact us to move to Enterprise for unlimited locations.",
     "bookADemo": "Book a demo",
-    "starterLimitError": "Starter includes {{max}} location. Upgrade to Growth to add more locations.",
-    "upgrade": "Upgrade",
     "saveLocationFailed": "Failed to save location: {{error}}",
     "locationDeleted": "Location deleted",
     "deleteLocationFailed": "Failed to delete location: {{error}}",
@@ -51,17 +49,11 @@
     "remove": "Remove"
   },
   "locationLimit": {
-    "growthTitle": "Scale beyond 10 locations with Enterprise",
-    "growthBody": "Growth supports up to 10 locations. Enterprise is built for larger hospitality groups that need unlimited locations, a dedicated account manager, and custom onboarding.",
+    "title": "Scale beyond 1 location with Enterprise",
+    "body": "Your plan includes 1 location. Enterprise is built for larger hospitality groups that need more locations, a dedicated account manager, and custom onboarding.",
     "currentPlan": "Current plan: {{plan}}",
     "bookADemo": "Book a demo",
-    "notNow": "Not now",
-    "starterTitle": "Add more locations with Growth",
-    "starterBody": "Starter includes 1 location. Growth supports up to 10 locations so you can manage multiple venues and teams from one account.",
-    "growthPricePerMonth": "Growth — {{currency}}{{price}} / month",
-    "viewPlans": "View plans",
-    "upgradeAtOlia": "Upgrade at olia.app",
-    "upgradeToGrowth": "Upgrade to Growth"
+    "notNow": "Not now"
   },
   "notificationsTab": {
     "loading": "Loading…",

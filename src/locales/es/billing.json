@@ -29,7 +29,7 @@
     "unlimitedLocationsIncluded": "Ubicaciones ilimitadas incluidas.",
     "locationsIncluded_one": "{{count}} ubicación incluida.",
     "locationsIncluded_other": "{{count}} ubicaciones incluidas.",
-    "upgradeHint": "Actualiza a Growth para hasta 10 ubicaciones.",
+    "upgradeHint": "Actualiza a Growth para hasta 40 perfiles de personal e informes avanzados.",
     "manageSubscription": "Gestionar suscripción en Stripe",
     "customerPortalNotConfigured": "El portal de clientes no está configurado."
   },
@@ -43,17 +43,17 @@
   "plans": {
     "starter": {
       "description": "Para restaurantes de una sola ubicación que empiezan a digitalizar sus operaciones.",
-      "highlights": ["1 ubicación", "Hasta 15 perfiles de personal", "Hasta 10 listas de verificación", "Modo kiosco", "Centro de procedimientos y capacitación", "Exportación a PDF"],
+      "highlights": ["1 ubicación", "Hasta 20 perfiles de personal", "Listas de verificación ilimitadas", "Creador de listas con IA + conversión de archivo a lista", "Modo kiosco con cola sin conexión", "Exportación a PDF + CSV"],
       "locationHint": "1 ubicación incluida"
     },
     "growth": {
-      "description": "Para operadores que gestionan varios locales y equipos en crecimiento.",
-      "highlights": ["Hasta 10 ubicaciones", "Hasta 200 perfiles de personal", "Listas de verificación ilimitadas", "Creador de listas con IA", "Supervisión multi-ubicación", "Informes y gráficos avanzados", "Exportación a CSV + PDF", "Conversión de archivo a lista"],
-      "locationHint": "Hasta 10 ubicaciones"
+      "description": "Para equipos en crecimiento que necesitan más capacidad de personal, informes más profundos y flujos de trabajo asistidos por IA.",
+      "highlights": ["Hasta 40 perfiles de personal", "Informes y análisis avanzados", "Modo de capacitación para incorporación", "Centro de mantenimiento — OCR, tendencias de refrigeración, salud de maquinaria", "Alertas integradas con el clima", "Asistente de IA entrenado con tu negocio"],
+      "locationHint": "1 ubicación incluida"
     },
     "enterprise": {
       "description": "Para grupos hoteleros más grandes con necesidades operativas complejas.",
-      "highlights": ["Ubicaciones y personal ilimitados", "Todo lo de Growth", "Gerente de cuenta dedicado", "Incorporación y capacitación personalizadas", "Soporte con SLA garantizado", "Integraciones personalizadas bajo pedido"],
+      "highlights": ["Ubicaciones y personal ilimitados", "Todo lo de Growth", "Soporte prioritario", "Gerente de cuenta dedicado", "Incorporación y capacitación personalizadas", "Soporte con SLA garantizado", "Integraciones personalizadas bajo pedido"],
       "locationHint": "Ubicaciones ilimitadas"
     }
   },
@@ -87,11 +87,11 @@
       "checklistBuilder": "Creador de listas",
       "sopTrainingHub": "Centro de procedimientos y capacitación",
       "pdfExport": "Exportación a PDF",
-      "multiLocationView": "Vista multi-ubicación",
       "aiChecklistBuilder": "Creador de listas con IA",
       "fileToChecklistImport": "Importar archivo a lista",
       "advancedReporting": "Informes avanzados",
       "csvExport": "Exportación a CSV",
+      "prioritySupport": "Soporte prioritario",
       "dedicatedAccountManager": "Gerente de cuenta dedicado",
       "customOnboarding": "Incorporación personalizada",
       "slaBackedSupport": "Soporte con SLA garantizado",
@@ -99,9 +99,8 @@
     },
     "values": {
       "one": "1",
-      "upTo10": "Hasta 10",
-      "upTo15": "Hasta 15",
-      "upTo200": "Hasta 200",
+      "upTo20": "Hasta 20",
+      "upTo40": "Hasta 40",
       "unlimited": "Ilimitado"
     }
   },

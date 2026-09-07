@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { readKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
-import { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES } from "@/lib/plan-features";
+import { PLAN_LABELS } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
 import {
   useStaffProfiles, useSaveStaffProfile, useArchiveStaffProfile,
@@ -22,7 +22,6 @@ import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, 
 import { useDepartments } from "@/hooks/useDepartments";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
-import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 // Re-export parseGoogleOpeningHours so existing import paths keep working
@@ -54,7 +53,6 @@ export default function Admin() {
   const [kioskAdminSession] = useState(() => readKioskAdminSession());
   const userId = kioskAdminSession?.userId ?? null;
   const { plan, billingUnavailable } = usePlan();
-  const isNative = useIsNativeApp();
 
   // Data — from Supabase
   const {
@@ -146,19 +144,12 @@ export default function Admin() {
           err.message?.toLowerCase().includes("policy");
         if (isLimitError && !loc.id) {
           // Only INSERT can hit the limit; UPDATE (loc.id truthy) never will.
-          // Message and CTA are plan-aware so a Growth user doesn't see "upgrade to Growth".
-          if (plan === "growth") {
-            toast.error(
-              t("toast.growthLimitError"),
-              { action: { label: t("toast.bookADemo"), onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
-            );
-          } else {
-            const max = PLAN_FEATURES[plan].maxLocations;
-            toast.error(
-              t("toast.starterLimitError", { max }),
-              isNative ? undefined : { action: { label: t("toast.upgrade"), onClick: () => navigate("/billing") } },
-            );
-          }
+          // Every self-serve plan is capped at 1 location — only Enterprise
+          // offers more, so the CTA is the same regardless of current plan.
+          toast.error(
+            t("toast.locationLimitError"),
+            { action: { label: t("toast.bookADemo"), onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
+          );
         } else {
           toast.error(t("toast.saveLocationFailed", { error: err.message }));
         }
@@ -421,87 +412,33 @@ export default function Admin() {
               </div>
             </div>
 
-            {plan === "growth" ? (
-              /* ── Growth → Enterprise prompt ────────────────────────────── */
-              <>
-                <div className="text-center space-y-2">
-                  <h2 className="font-display text-xl text-foreground">
-                    {t("locationLimit.growthTitle")}
-                  </h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {t("locationLimit.growthBody")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
-                </div>
-                <div className="space-y-2 pt-1">
-                  <a
-                    href="mailto:enterprise@olia.com"
-                    onClick={() => setShowLocationLimitModal(false)}
-                    className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
-                  >
-                    {t("locationLimit.bookADemo")}
-                  </a>
-                  <button
-                    onClick={() => setShowLocationLimitModal(false)}
-                    className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    {t("locationLimit.notNow")}
-                  </button>
-                </div>
-              </>
-            ) : (
-              /* ── Starter → Growth prompt ────────────────────────────────── */
-              <>
-                <div className="text-center space-y-2">
-                  <h2 className="font-display text-xl text-foreground">
-                    {t("locationLimit.starterTitle")}
-                  </h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {t("locationLimit.starterBody")}
-                  </p>
-                  {!isNative && (
-                    <p className="text-xs font-medium text-foreground/70">
-                      {t("locationLimit.growthPricePerMonth", { currency: PLAN_PRICES.growth.currency, price: PLAN_PRICES.growth.monthly })}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
-                  {!isNative && (
-                    <button
-                      onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                      className="text-xs text-sage underline underline-offset-2 hover:text-sage-deep transition-colors"
-                    >
-                      {t("locationLimit.viewPlans")}
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-2 pt-1">
-                  {isNative ? (
-                    <a
-                      href="https://olia.app/billing"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setShowLocationLimitModal(false)}
-                      className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
-                    >
-                      {t("locationLimit.upgradeAtOlia")}
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
-                      className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
-                    >
-                      {t("locationLimit.upgradeToGrowth")}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowLocationLimitModal(false)}
-                    className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    {t("locationLimit.notNow")}
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Every self-serve plan (Starter and Growth) is capped at 1
+                location — only Enterprise offers more, so there's a single
+                prompt regardless of which plan hit the limit. */}
+            <div className="text-center space-y-2">
+              <h2 className="font-display text-xl text-foreground">
+                {t("locationLimit.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {t("locationLimit.body")}
+              </p>
+              <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
+            </div>
+            <div className="space-y-2 pt-1">
+              <a
+                href="mailto:enterprise@olia.com"
+                onClick={() => setShowLocationLimitModal(false)}
+                className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
+              >
+                {t("locationLimit.bookADemo")}
+              </a>
+              <button
+                onClick={() => setShowLocationLimitModal(false)}
+                className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
+              >
+                {t("locationLimit.notNow")}
+              </button>
+            </div>
           </div>
         </div>
       )}
