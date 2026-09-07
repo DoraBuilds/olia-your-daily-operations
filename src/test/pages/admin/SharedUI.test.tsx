@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { TeamMemberModal } from "@/pages/admin/SharedUI";
+import { TeamMemberModal, ConfirmModal } from "@/pages/admin/SharedUI";
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -65,5 +65,67 @@ describe("TeamMemberModal", () => {
     fireEvent.change(pinInput, { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Generate" }));
     expect(pinInput.value).toMatch(/^\d{4}$/);
+  });
+});
+
+describe("ConfirmModal", () => {
+  it("confirms immediately when requireDeleteText is not set", () => {
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmModal
+        title="Delete location"
+        message="This cannot be undone."
+        actionLabel="Delete"
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    fireEvent.click(screen.getByText("Delete"));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables confirm until DELETE is typed when requireDeleteText is set", () => {
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmModal
+        title="Delete location"
+        message="This cannot be undone."
+        actionLabel="Delete"
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        requireDeleteText
+      />
+    );
+
+    const confirmBtn = screen.getByText("Delete").closest("button") as HTMLButtonElement;
+    expect(confirmBtn).toBeDisabled();
+
+    fireEvent.click(confirmBtn);
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    const input = screen.getByPlaceholderText("Type DELETE");
+    fireEvent.change(input, { target: { value: "delete" } });
+    expect(confirmBtn).not.toBeDisabled();
+
+    fireEvent.click(confirmBtn);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("uppercases typed text so lowercase 'delete' still matches", () => {
+    render(
+      <ConfirmModal
+        title="Delete location"
+        message="This cannot be undone."
+        actionLabel="Delete"
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        requireDeleteText
+      />
+    );
+
+    const input = screen.getByPlaceholderText("Type DELETE") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "delete" } });
+    expect(input.value).toBe("DELETE");
   });
 });

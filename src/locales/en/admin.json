@@ -46,7 +46,10 @@
     "removeMemberTitle": "Remove team member",
     "removeMemberPrefix": "Remove",
     "removeMemberSuffix": "from the team? This cannot be undone.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "typeToConfirm": "Type",
+    "toConfirm": "to confirm.",
+    "placeholder": "Type DELETE"
   },
   "locationLimit": {
     "title": "Add more locations with Growth",

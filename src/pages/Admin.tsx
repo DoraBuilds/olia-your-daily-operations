@@ -165,6 +165,7 @@ export default function Admin() {
       title: t("confirm.deleteLocationTitle"),
       message: t("confirm.deleteLocationMessage"),
       actionLabel: t("confirm.delete"),
+      requireDeleteText: true,
       onConfirm: () => {
         deleteLocationMut.mutate(id, {
           onSuccess: () => toast.success(t("toast.locationDeleted")),
@@ -219,6 +220,7 @@ export default function Admin() {
         </>
       ),
       actionLabel: t("confirm.deletePermanently"),
+      requireDeleteText: true,
       onConfirm: () => {
         deleteStaffMut.mutate(sp.id);
         setConfirmModal(null);
@@ -259,6 +261,7 @@ export default function Admin() {
         <>{t("confirm.removeMemberPrefix")} <strong className="text-foreground">{m.name}</strong> {t("confirm.removeMemberSuffix")}</>
       ),
       actionLabel: t("confirm.remove"),
+      requireDeleteText: true,
       onConfirm: () => {
         deleteMemberMut.mutate(m.id);
         setConfirmModal(null);

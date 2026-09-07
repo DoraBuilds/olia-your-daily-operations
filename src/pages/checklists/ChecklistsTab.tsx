@@ -120,6 +120,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [newFolderName, setNewFolderName] = useState("");
   const [contextMenu, setContextMenu] = useState<{ id: string; type: "folder" | "checklist" } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: "folder" | "checklist"; name: string } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [moveTarget, setMoveTarget] = useState<{ id: string; type: "folder" | "checklist" } | null>(null);
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
   const [prefillTitle, setPrefillTitle] = useState("");
@@ -249,6 +250,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         ? folders.find(f => f.id === contextMenu.id)?.name ?? t("deleteConfirm.fallbackFolder")
         : checklists.find(c => c.id === contextMenu.id)?.title ?? t("deleteConfirm.fallbackChecklist");
       setDeleteConfirm({ id: contextMenu.id, type: contextMenu.type, name });
+      setDeleteConfirmText("");
     } else if (action === "duplicate" && contextMenu.type === "checklist") {
       const orig = dbChecklists.find(c => c.id === contextMenu.id);
       if (orig) saveChecklistMut.mutate({ ...orig, id: "", title: `${orig.title} (copy)` });
@@ -566,17 +568,34 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">{t("deleteConfirm.body", { name: deleteConfirm.name })}</p>
               </div>
             </div>
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {t("deleteConfirm.typeToConfirm")} <strong className="text-foreground">DELETE</strong> {t("deleteConfirm.toConfirm")}
+              </p>
+              <input
+                autoFocus
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder={t("deleteConfirm.placeholder")}
+                className="mt-2 w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirm(null)}
+              <button onClick={() => { setDeleteConfirm(null); setDeleteConfirmText(""); }}
                 className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
                 {t("deleteConfirm.cancel")}
               </button>
-              <button onClick={() => {
-                if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id);
-                else deleteChecklistMut.mutate(deleteConfirm.id);
-                setDeleteConfirm(null);
-              }}
-                className="flex-1 py-3 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity">
+              <button
+                disabled={deleteConfirmText !== "DELETE"}
+                onClick={() => {
+                  if (deleteConfirmText !== "DELETE") return;
+                  if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id);
+                  else deleteChecklistMut.mutate(deleteConfirm.id);
+                  setDeleteConfirm(null);
+                  setDeleteConfirmText("");
+                }}
+                className="flex-1 py-3 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40">
                 {t("deleteConfirm.confirm")}
               </button>
             </div>
