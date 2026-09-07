@@ -4,15 +4,7 @@
 
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
-
-// Mirrors stripe-webhook/index.ts's planFromMetadata() — keep these in sync.
-// Maps Stripe product metadata to an Olia plan name. Fallback is "starter"
-// (safe default — never accidentally assigns a paid tier).
-function planFromMetadata(metadata: Record<string, string>): string {
-  const plan = metadata?.olia_plan;
-  if (plan === "growth" || plan === "enterprise") return plan;
-  return "starter";
-}
+import { planFromPriceMetadata } from "../_shared/plan-from-price.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -94,7 +86,7 @@ Deno.serve(async (req) => {
     // unknown id).
     const price = await stripe.prices.retrieve(priceId, { expand: ["product"] });
     const product = price.product as Stripe.Product;
-    const olia_plan = planFromMetadata(product?.metadata ?? {});
+    const olia_plan = planFromPriceMetadata(priceId, product?.metadata, "create-checkout-session");
 
     // Reuse existing Stripe customer or create a new one
     let customerId = org.stripe_customer_id;

@@ -453,7 +453,7 @@ export default function Billing() {
 
         {/* ── Plan cards ──────────────────────────────────────────────────── */}
         <div className="pt-5 pb-3">
-        <div className="grid gap-4 lg:gap-5 lg:grid-cols-3 lg:items-stretch xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
+        <div className="grid gap-4 lg:gap-5 lg:grid-cols-2 lg:items-stretch xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.1fr)_minmax(0,0.95fr)]">
         {plans.map((p) => {
           const isCurrent  = p === plan;
           const price      = PLAN_PRICES[p];
@@ -494,7 +494,7 @@ export default function Billing() {
 
                 {/* Plan name + price */}
                 <div className="flex min-h-[7.75rem] items-start justify-between gap-4">
-                  <div className="max-w-[15rem]">
+                  <div className="min-w-0 max-w-[15rem]">
                     <p className="font-semibold text-lg text-foreground">
                       {PLAN_LABELS[p]}
                     </p>

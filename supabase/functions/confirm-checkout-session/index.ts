@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import { planFromMetadata, planFromPriceMetadata } from "../_shared/plan-from-price.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -21,12 +22,6 @@ const err = (message: string) =>
     status: 200,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
-
-function planFromMetadata(metadata: Record<string, string> | null | undefined): "starter" | "growth" | "enterprise" {
-  const plan = metadata?.olia_plan;
-  if (plan === "growth" || plan === "enterprise") return plan;
-  return "starter";
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -91,7 +86,7 @@ Deno.serve(async (req) => {
     if (plan === "starter") {
       const linePrice = session.line_items?.data?.[0]?.price;
       const product = linePrice?.product as Stripe.Product | undefined;
-      const productPlan = planFromMetadata(product?.metadata);
+      const productPlan = planFromPriceMetadata(linePrice?.id, product?.metadata, "confirm-checkout-session");
       if (productPlan !== "starter") {
         plan = productPlan;
       }
