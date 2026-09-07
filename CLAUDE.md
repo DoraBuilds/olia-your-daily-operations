@@ -11,7 +11,7 @@ bun run lint             # ESLint
 bun run test             # Run unit tests once
 bun run test:watch       # Unit tests in watch mode
 bun run test:coverage    # Unit tests + coverage report (./coverage/index.html)
-bun run test:ci          # Unit tests + coverage WITH 95% threshold enforcement
+bun run test:ci          # Unit tests + coverage WITH threshold enforcement (see vitest.config.ts)
 bun run milestone        # Full milestone gate: lint + test:ci + build (must all pass)
 bun run e2e              # Run all Maestro e2e flows (simulator must be running)
 bun run e2e:kiosk        # Kiosk flows only (01–03)
@@ -30,18 +30,20 @@ Use `bun` as the package manager (bun.lockb is present). If `bun` is not in PATH
 
 These are non-negotiable requirements enforced at every milestone.
 
-### Unit Test Coverage — 95% minimum
+### Unit Test Coverage
 
-All four coverage metrics must be ≥ 95% to pass `bun run test:ci`:
+The aspirational target is 95%, but the actual enforced gate is lower and moves incrementally — **`vitest.config.ts` is the source of truth**, never this doc. As of this writing the enforced `thresholds` block there is:
 
-| Metric     | Threshold |
-|------------|-----------|
-| Lines      | 95%       |
-| Functions  | 95%       |
-| Branches   | 95%       |
-| Statements | 95%       |
+| Metric     | Enforced (vitest.config.ts) |
+|------------|------------------------------|
+| Lines      | 65%       |
+| Functions  | 50%       |
+| Branches   | 55%       |
+| Statements | 65%       |
 
-Coverage is measured with **Vitest + istanbul**, configured in `vitest.config.ts`.
+These are raised a few points at a time as the suite gets more coverage — see `docs/coverage-ratchet.md` for the ratchet policy. Don't hardcode 95% anywhere else (docs, CI configs, PR checklists); point to `vitest.config.ts` instead so this doesn't drift again.
+
+Coverage is measured with **Vitest + the v8 provider**, configured in `vitest.config.ts`.
 HTML report is written to `./coverage/index.html` after each run.
 
 Excluded from coverage (generated/bootstrap — not our business logic):
@@ -49,7 +51,7 @@ Excluded from coverage (generated/bootstrap — not our business logic):
 - `src/main.tsx` — Capacitor native bootstrap
 - `src/test/**` — test setup and fixtures
 
-**Every new feature or bug fix must ship with tests that keep coverage at or above 95%.**
+**Every new feature or bug fix must ship with tests that keep coverage at or above the enforced gate in `vitest.config.ts`.**
 
 #### What coverage does NOT guarantee
 
@@ -96,7 +98,7 @@ bun run milestone
 
 This runs in sequence and fails fast:
 1. `bun run lint` — zero ESLint errors
-2. `bun run test:ci` — all unit tests pass AND coverage ≥ 95%
+2. `bun run test:ci` — all unit tests pass AND coverage clears the thresholds in `vitest.config.ts`
 3. `bun run build` — production build succeeds
 4. (manual) `bun run e2e` — all Maestro flows pass on simulator
 
