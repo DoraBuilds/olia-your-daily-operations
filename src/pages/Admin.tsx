@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { readKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
-import { PLAN_LABELS } from "@/lib/plan-features";
+import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
 import {
   useStaffProfiles, useSaveStaffProfile, useArchiveStaffProfile,
@@ -22,6 +22,7 @@ import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, 
 import { useDepartments } from "@/hooks/useDepartments";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
+import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 // Re-export parseGoogleOpeningHours so existing import paths keep working
@@ -53,6 +54,7 @@ export default function Admin() {
   const [kioskAdminSession] = useState(() => readKioskAdminSession());
   const userId = kioskAdminSession?.userId ?? null;
   const { plan, billingUnavailable } = usePlan();
+  const isNative = useIsNativeApp();
 
   // Data — from Supabase
   const {
@@ -144,11 +146,12 @@ export default function Admin() {
           err.message?.toLowerCase().includes("policy");
         if (isLimitError && !loc.id) {
           // Only INSERT can hit the limit; UPDATE (loc.id truthy) never will.
-          // Every self-serve plan is capped at 1 location — only Enterprise
-          // offers more, so the CTA is the same regardless of current plan.
+          // Only Starter is capped at 1 location — Growth and Enterprise are
+          // both unlimited (maxLocations -1), so this can only fire for a
+          // Starter org. The CTA is always "upgrade to Growth".
           toast.error(
             t("toast.locationLimitError"),
-            { action: { label: t("toast.bookADemo"), onClick: () => window.location.href = "mailto:enterprise@olia.com" } },
+            { action: { label: t("toast.upgrade"), onClick: () => navigate("/billing") } },
           );
         } else {
           toast.error(t("toast.saveLocationFailed", { error: err.message }));
@@ -412,9 +415,9 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* Every self-serve plan (Starter and Growth) is capped at 1
-                location — only Enterprise offers more, so there's a single
-                prompt regardless of which plan hit the limit. */}
+            {/* Only Starter is capped at 1 location — Growth and Enterprise
+                are both unlimited, so this can only ever fire for a Starter
+                org. Always a self-serve "upgrade to Growth" prompt. */}
             <div className="text-center space-y-2">
               <h2 className="font-display text-xl text-foreground">
                 {t("locationLimit.title")}
@@ -422,16 +425,32 @@ export default function Admin() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {t("locationLimit.body")}
               </p>
+              {!isNative && (
+                <p className="text-xs font-medium text-foreground/70">
+                  {t("locationLimit.growthPricePerMonth", { currency: PLAN_PRICES.growth.currency, price: PLAN_PRICES.growth.monthly })}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">{t("locationLimit.currentPlan", { plan: PLAN_LABELS[plan] })}</p>
             </div>
             <div className="space-y-2 pt-1">
-              <a
-                href="mailto:enterprise@olia.com"
-                onClick={() => setShowLocationLimitModal(false)}
-                className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
-              >
-                {t("locationLimit.bookADemo")}
-              </a>
+              {isNative ? (
+                <a
+                  href="https://olia.app/billing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowLocationLimitModal(false)}
+                  className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors flex items-center justify-center"
+                >
+                  {t("locationLimit.upgradeAtOlia")}
+                </a>
+              ) : (
+                <button
+                  onClick={() => { setShowLocationLimitModal(false); navigate("/billing"); }}
+                  className="w-full py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
+                >
+                  {t("locationLimit.upgradeToGrowth")}
+                </button>
+              )}
               <button
                 onClick={() => setShowLocationLimitModal(false)}
                 className="w-full py-3 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"

@@ -29,7 +29,7 @@
     "unlimitedLocationsIncluded": "Ubicaciones ilimitadas incluidas.",
     "locationsIncluded_one": "{{count}} ubicación incluida.",
     "locationsIncluded_other": "{{count}} ubicaciones incluidas.",
-    "upgradeHint": "Actualiza a Growth para hasta 40 perfiles de personal e informes avanzados.",
+    "upgradeHint": "Actualiza a Growth para ubicaciones ilimitadas e informes avanzados.",
     "manageSubscription": "Gestionar suscripción en Stripe",
     "customerPortalNotConfigured": "El portal de clientes no está configurado."
   },
@@ -47,9 +47,9 @@
       "locationHint": "1 ubicación incluida"
     },
     "growth": {
-      "description": "Para equipos en crecimiento que necesitan más capacidad de personal, informes más profundos y flujos de trabajo asistidos por IA.",
-      "highlights": ["Hasta 40 perfiles de personal", "Informes y análisis avanzados", "Modo de capacitación para incorporación", "Centro de mantenimiento — OCR, tendencias de refrigeración, salud de maquinaria", "Alertas integradas con el clima", "Asistente de IA entrenado con tu negocio"],
-      "locationHint": "1 ubicación incluida"
+      "description": "Para operadores que agregan ubicaciones, con más capacidad de personal, informes más profundos y flujos de trabajo asistidos por IA.",
+      "highlights": ["Ubicaciones ilimitadas, facturadas por ubicación", "Hasta 40 perfiles de personal", "Informes y análisis avanzados", "Modo de capacitación para incorporación", "Centro de mantenimiento — OCR, tendencias de refrigeración, salud de maquinaria", "Alertas integradas con el clima", "Asistente de IA entrenado con tu negocio"],
+      "locationHint": "Ubicaciones ilimitadas, facturadas por ubicación"
     },
     "enterprise": {
       "description": "Para grupos hoteleros más grandes con necesidades operativas complejas.",

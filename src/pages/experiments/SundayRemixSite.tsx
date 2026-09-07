@@ -624,7 +624,7 @@ const manifesto = [
 // Full pricing feature matrix behind the "Compare all features" toggle.
 // `true`/`false` render as check/dash; strings render as-is (locations, staff caps).
 const compareRows: { feature: string; starter: boolean | string; growth: boolean | string; enterprise: boolean | string }[] = [
-  { feature: "Locations", starter: "1", growth: "1", enterprise: "Contact us" },
+  { feature: "Locations", starter: "1", growth: "Unlimited (per location)", enterprise: "Contact us" },
   { feature: "Staff", starter: "20", growth: "40", enterprise: "Unlimited" },
   { feature: "Checklists", starter: "Unlimited", growth: "Unlimited", enterprise: "Unlimited" },
   { feature: "Checklist builder, folders & logic", starter: true, growth: true, enterprise: true },
@@ -663,7 +663,7 @@ const faqs = [
   },
   {
     q: "Can I use Olia across multiple venues?",
-    a: "Yes. The Growth plan includes a multi-location dashboard for up to 10 venues; Enterprise supports unlimited locations with advanced permissions.",
+    a: "Yes. The Growth plan gives you a multi-location dashboard with no cap on venues — each one is simply billed per location; Enterprise is a custom, volume-priced contract for larger groups.",
   },
   {
     q: "Is there a contract, or can I cancel anytime?",
@@ -1048,7 +1048,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Everything in Starter, plus:", "Up to 40 staff", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Starter, plus:", "Unlimited locations, billed per location", "Up to 40 staff", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <span className="rx-shine-wrap block"><Link to="/signup" className="rx-pbtn rx-pbtn-neon">Start with Growth</Link></span>
             </div>
@@ -1058,7 +1058,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">tailored to your requirements</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Everything in Growth, plus:", "Unlimited locations", "Unlimited staff", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Growth, plus:", "Volume pricing across locations", "Unlimited staff", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openDemo}>Contact sales</a>
             </div>

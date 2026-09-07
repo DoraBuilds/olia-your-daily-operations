@@ -58,9 +58,9 @@ describe("PLAN_FEATURES", () => {
       expect(growth.aiBuilder).toBe(true);
       expect(growth.advancedReporting).toBe(true);
     });
-    it("is still capped at 1 location, same as starter", () => {
-      expect(growth.maxLocations).toBe(1);
-      expect(growth.multiLocation).toBe(false);
+    it("has unlimited locations, billed per location", () => {
+      expect(growth.maxLocations).toBe(-1);
+      expect(growth.multiLocation).toBe(true);
     });
     it("does not include priority support", () => {
       expect(growth.prioritySupport).toBe(false);

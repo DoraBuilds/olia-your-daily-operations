@@ -29,7 +29,7 @@
     "unlimitedLocationsIncluded": "Unlimited locations included.",
     "locationsIncluded_one": "{{count}} location included.",
     "locationsIncluded_other": "{{count}} locations included.",
-    "upgradeHint": "Upgrade to Growth for up to 40 staff profiles and advanced reporting.",
+    "upgradeHint": "Upgrade to Growth for unlimited locations and advanced reporting.",
     "manageSubscription": "Manage subscription on Stripe",
     "customerPortalNotConfigured": "Customer portal not configured."
   },
@@ -47,9 +47,9 @@
       "locationHint": "1 location included"
     },
     "growth": {
-      "description": "For growing teams that need more staff capacity, deeper reporting, and AI-assisted workflows.",
-      "highlights": ["Up to 40 staff profiles", "Advanced reporting & analytics", "Training mode for onboarding", "Maintenance Hub — OCR, fridge trends, machinery health", "Weather-integrated alerts", "AI assistant trained on your business"],
-      "locationHint": "1 location included"
+      "description": "For operators adding locations, with more staff capacity, deeper reporting, and AI-assisted workflows.",
+      "highlights": ["Unlimited locations, billed per location", "Up to 40 staff profiles", "Advanced reporting & analytics", "Training mode for onboarding", "Maintenance Hub — OCR, fridge trends, machinery health", "Weather-integrated alerts", "AI assistant trained on your business"],
+      "locationHint": "Unlimited locations, billed per location"
     },
     "enterprise": {
       "description": "For larger hospitality groups with complex operational needs.",
