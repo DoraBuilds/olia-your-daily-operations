@@ -53,6 +53,7 @@ vi.mock("@/lib/supabase", () => ({
         { id: "l2", name: "City Centre" },
       ], error: null }))),
     }),
+    functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
   },
 }));
 

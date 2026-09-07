@@ -88,6 +88,20 @@ Deno.serve(async (req) => {
     const product = price.product as Stripe.Product;
     const olia_plan = planFromPriceMetadata(priceId, product?.metadata, "create-checkout-session");
 
+    // Growth is billed per location — start the subscription at the org's
+    // current location count (at least 1) so the very first invoice already
+    // reflects reality instead of quietly undercharging until the next
+    // location add triggers sync-location-quantity. Starter is capped at 1
+    // location, so it's always quantity 1 regardless of count.
+    let quantity = 1;
+    if (olia_plan === "growth") {
+      const { count: locationCount } = await supabase
+        .from("locations")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", org.id);
+      quantity = Math.max(1, locationCount ?? 1);
+    }
+
     // Reuse existing Stripe customer or create a new one
     let customerId = org.stripe_customer_id;
     if (!customerId) {
@@ -111,7 +125,7 @@ Deno.serve(async (req) => {
     //                      derived server-side above, never client-supplied
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity }],
       mode: "subscription",
       success_url: `${returnUrl}?upgraded=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:  `${returnUrl}?canceled=1`,

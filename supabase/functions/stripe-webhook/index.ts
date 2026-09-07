@@ -20,9 +20,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 function locationLimitForPlan(plan: string): number {
-  if (plan === "enterprise") return -1;
-  if (plan === "growth") return 10;
-  return 1;
+  // Only Starter caps locations. Growth is billed per location (no cap,
+  // quantity synced by sync-location-quantity) and Enterprise is unlimited.
+  if (plan === "starter") return 1;
+  return -1;
 }
 
 async function getOrganizationBillingState(

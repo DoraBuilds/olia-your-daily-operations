@@ -5,6 +5,7 @@ import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLoc
 
 const mockFrom = vi.fn();
 const mockUsePlan = vi.fn();
+const mockInvoke = vi.fn().mockResolvedValue({ data: null, error: null });
 
 const { mockUseAuth } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("@/lib/supabase", () => ({
       }),
     },
     from: (...args: any[]) => mockFrom(...args),
+    functions: { invoke: (...args: any[]) => mockInvoke(...args) },
   },
 }));
 
@@ -38,6 +40,7 @@ function makeWrapper() {
 }
 
 beforeEach(() => {
+  mockInvoke.mockClear();
   mockUseAuth.mockReturnValue({
     teamMember: { id: "tm-1", organization_id: "org-1", name: "Test", email: "t@t.com", role: "Owner", location_ids: [], permissions: {} },
     user: { id: "tm-1" },
@@ -186,6 +189,8 @@ describe("useSaveLocation", () => {
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ organization_id: "org-1" }),
     );
+    // Growth is billed per location — adding one triggers a Stripe quantity sync
+    expect(mockInvoke).toHaveBeenCalledWith("sync-location-quantity");
   });
 });
 
@@ -198,5 +203,18 @@ describe("useDeleteLocation", () => {
   it("is not loading by default", () => {
     const { result } = renderHook(() => useDeleteLocation(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+
+  it("triggers a Stripe location-quantity sync after a successful delete", async () => {
+    mockFrom.mockReturnValue({
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({ data: [{ id: "l1" }], error: null }),
+    });
+
+    const { result } = renderHook(() => useDeleteLocation(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync("l1");
+
+    expect(mockInvoke).toHaveBeenCalledWith("sync-location-quantity");
   });
 });

@@ -86,7 +86,7 @@ export function AccountTab({
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
   const { teamMember: authTeamMember, updateLanguage } = useAuth();
-  const { plan, planStatus, isActive } = usePlan();
+  const { plan, planStatus, isActive, hasStripeSubscription } = usePlan();
   const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
   const sendInvite = useSendInvite();
@@ -131,6 +131,17 @@ export function AccountTab({
   useEffect(() => {
     setSelectedActiveLocationIds(activeLocationIds);
   }, [activeLocationIds]);
+
+  // Self-healing: Growth is billed per location. The displayed price above
+  // is always computed live from locations.length, but the real Stripe
+  // subscription quantity needs its own sync — this catches any drift the
+  // moment the Billing section of this tab is viewed, no action needed.
+  useEffect(() => {
+    if (plan !== "growth" || !hasStripeSubscription) return;
+    supabase.functions.invoke("sync-location-quantity").catch((err: unknown) => {
+      console.warn("[AccountTab] sync-location-quantity failed:", err);
+    });
+  }, [plan, hasStripeSubscription]);
 
   useEffect(() => {
     setCommittedActiveLocationIds(activeLocationIds);
@@ -942,7 +953,14 @@ export function AccountTab({
               <p className="text-sm text-muted-foreground mt-1">
                 {PLAN_PRICES[plan].monthly === 0
                   ? t("accountTab.freeNoBilling")
-                  : t("accountTab.pricePerMonth", { currency: PLAN_PRICES[plan].currency, price: PLAN_PRICES[plan].monthly })}
+                  : locations.length > 1
+                    ? t("accountTab.pricePerMonthBreakdown", {
+                        currency: PLAN_PRICES[plan].currency,
+                        total: PLAN_PRICES[plan].monthly * locations.length,
+                        count: locations.length,
+                        unitPrice: PLAN_PRICES[plan].monthly,
+                      })
+                    : t("accountTab.pricePerMonth", { currency: PLAN_PRICES[plan].currency, price: PLAN_PRICES[plan].monthly })}
               </p>
             </div>
             <span className={cn(

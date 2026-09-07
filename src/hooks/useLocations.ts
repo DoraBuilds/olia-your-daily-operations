@@ -78,6 +78,17 @@ export function useLocations() {
   };
 }
 
+/**
+ * Growth is billed per location — fire-and-forget the Stripe subscription
+ * quantity sync after a location is added or removed. Failure here must
+ * never block the location save/delete itself, so errors are only logged.
+ */
+function syncLocationQuantity() {
+  supabase.functions.invoke("sync-location-quantity").catch((err: unknown) => {
+    console.warn("[useLocations] sync-location-quantity failed:", err);
+  });
+}
+
 export function useSaveLocation() {
   const qc = useQueryClient();
   const { teamMember, user } = useAuth();
@@ -153,7 +164,10 @@ export function useSaveLocation() {
       }
     },
     onSuccess: (_, loc) => {
-      if (!loc.id) captureEvent("location_created");
+      if (!loc.id) {
+        captureEvent("location_created");
+        syncLocationQuantity();
+      }
       qc.invalidateQueries({ queryKey: ["locations"] });
     },
   });
@@ -181,6 +195,9 @@ export function useDeleteLocation() {
         throw new Error("Could not delete this location. It may have already been removed, or your session has expired — please refresh and try again.");
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["locations"] }),
+    onSuccess: () => {
+      syncLocationQuantity();
+      qc.invalidateQueries({ queryKey: ["locations"] });
+    },
   });
 }
