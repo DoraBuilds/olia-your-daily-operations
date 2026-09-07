@@ -1,6 +1,12 @@
 # Olia — MVP Implementation Plan
 _Lead Engineer Reference Document_
 
+> **Archived 2026-09-07 — historical, not a current task list.** This plan
+> responded to the findings in `HANDOFF_REVIEW_2.md` (same folder). A
+> `/graphify` audit confirmed the security fixes, real-data wiring, and
+> tier-rename work described below have all shipped. Kept for context on
+> what was built and why.
+
 ---
 
 ## 1. Executive Fix Plan

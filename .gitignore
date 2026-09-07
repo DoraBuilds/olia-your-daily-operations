@@ -31,6 +31,13 @@ playwright-report/
 supabase/.temp/
 supabase/.branches/
 
+# Maestro E2E screenshot artifacts — written to the repo root by `takeScreenshot`
+# steps in .maestro/flows/*.yaml, not meant to be committed (see #693)
+/0[0-9]-*.png
+
+# graphify knowledge-graph output — local tool artifact, not source
+graphify-out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -2,6 +2,14 @@
 
 Generated: 2026-03-10. All claims below are backed by exact code quotes.
 
+> **Archived 2026-09-07 — historical, not current state.** A `/graphify` audit
+> confirmed every finding below (PIN plaintext, anonymous PIN/RLS exposure,
+> checklist log injection, mock Dashboard/Kiosk data, missing error boundaries,
+> no offline queue, client-only plan limits) has since been fixed — see
+> `MVP_IMPLEMENTATION_PLAN.md` in this folder for the fixes and git history/
+> migrations for the actual commits. Kept for context on what shipped and why,
+> not as a live issue list.
+
 ---
 
 # 1. Claim Verification
