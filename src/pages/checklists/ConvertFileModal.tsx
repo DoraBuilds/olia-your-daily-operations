@@ -5,6 +5,7 @@ import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
+import { ensurePromiseWithResolvers } from "@/lib/promise-with-resolvers-polyfill";
 import type { SectionDef } from "./types";
 
 /** Reads a file as a base64-encoded string. */
@@ -18,12 +19,16 @@ async function fileToBase64(file: File): Promise<string> {
 
 /** Extracts text from a PDF using pdfjs-dist (client-side, no API required). */
 async function extractPdfText(file: File): Promise<string> {
+  // pdfjs-dist calls Promise.withResolvers(), unsupported before Safari 17.4.
+  ensurePromiseWithResolvers();
   const pdfjsLib = await import("pdfjs-dist");
   // Create the Worker ourselves so Vite bundles it with the right URL and Safari
   // doesn't have to handle pdf.js's internal new Worker() call, which fails on Safari
-  // when loading an ES-module worker from a path-relative URL.
+  // when loading an ES-module worker from a path-relative URL. Routed through our
+  // own entry file (rather than pdf.worker.min.mjs directly) so the same
+  // Promise.withResolvers polyfill applies inside the worker's own global scope.
   const worker = new Worker(
-    new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url),
+    new URL("../../lib/pdf-worker-entry.ts", import.meta.url),
     { type: "module" }
   );
   pdfjsLib.GlobalWorkerOptions.workerPort = worker;
