@@ -137,6 +137,40 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(afterInputs).toBe(beforeInputs + 1);
   });
 
+  it("moves a question into a different section when dragged and dropped there", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    // Add a second question to section 1
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[0]);
+    fireEvent.click(screen.getByText("Question"));
+    const [q1Input, q2Input] = screen.getAllByPlaceholderText("Write your question here");
+    fireEvent.change(q1Input, { target: { value: "Question A" } });
+    fireEvent.change(q2Input, { target: { value: "Question B" } });
+
+    // Add a second (empty) section after question B
+    fireEvent.click(screen.getAllByRole("button", { name: "Insert question or section" })[1]);
+    fireEvent.click(screen.getByText("Section"));
+
+    // Drag Question B (still in section 1) onto the empty section's drop zone
+    const dragHandle = q2Input.closest("[draggable]") as HTMLElement;
+    const dropZone = screen.getAllByRole("button", { name: "Insert question or section" })
+      .at(-1)!.parentElement as HTMLElement;
+
+    fireEvent.dragStart(dragHandle, { dataTransfer: {} });
+    fireEvent.dragOver(dropZone, { dataTransfer: {} });
+    fireEvent.drop(dropZone, { dataTransfer: {} });
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Cross-Section Checklist" },
+    });
+    fireEvent.click(screen.getByTestId("checklist-save-button"));
+
+    const saved = onAdd.mock.calls[0][0] as any;
+    expect(saved.sections).toHaveLength(2);
+    expect(saved.sections[0].questions.map((q: any) => q.text)).toEqual(["Question A"]);
+    expect(saved.sections[1].questions.map((q: any) => q.text)).toEqual(["Question B"]);
+  });
+
   it("has a Save button by default (new checklists start as Draft)", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
     expect(screen.getByTestId("checklist-save-button")).toHaveTextContent("Save");

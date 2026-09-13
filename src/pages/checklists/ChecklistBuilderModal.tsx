@@ -296,15 +296,14 @@ export function ChecklistBuilderModal({
     } : s));
   };
 
-  const moveQuestion = (sectionIdx: number, fromIdx: number, toIdx: number) => {
-    if (fromIdx === toIdx) return;
-    setSections(prev => prev.map((s, si) => {
-      if (si !== sectionIdx) return s;
-      const qs = [...s.questions];
-      const [moved] = qs.splice(fromIdx, 1);
-      qs.splice(toIdx, 0, moved);
-      return { ...s, questions: qs };
-    }));
+  const moveQuestion = (fromSectionIdx: number, fromIdx: number, toSectionIdx: number, toIdx: number) => {
+    if (fromSectionIdx === toSectionIdx && fromIdx === toIdx) return;
+    setSections(prev => {
+      const next = prev.map(s => ({ ...s, questions: [...s.questions] }));
+      const [moved] = next[fromSectionIdx].questions.splice(fromIdx, 1);
+      next[toSectionIdx].questions.splice(toIdx, 0, moved);
+      return next;
+    });
   };
 
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
@@ -834,7 +833,23 @@ export function ChecklistBuilderModal({
               </div>
             )}
 
-            {section.questions.length === 0 && renderInsertButton(si, -1)}
+            {section.questions.length === 0 && (
+              <div
+                onDragOver={e => { if (dragQuestionKey) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverKey(`${si}-empty`); } }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverKey(null); }}
+                onDrop={() => {
+                  if (dragQuestionKey) {
+                    const [fromSi, fromQi] = dragQuestionKey.split("-").map(Number);
+                    moveQuestion(fromSi, fromQi, si, 0);
+                  }
+                  setDragQuestionKey(null);
+                  setDragOverKey(null);
+                }}
+                className={cn("rounded-xl transition-colors", dragOverKey === `${si}-empty` && "bg-sage/10 ring-1 ring-sage/40")}
+              >
+                {renderInsertButton(si, -1)}
+              </div>
+            )}
 
             {section.questions.map((q, qi) => {
               const cfg = q.config || {};
@@ -857,7 +872,7 @@ export function ChecklistBuilderModal({
                     onDrop={() => {
                       if (dragQuestionKey && dragQuestionKey !== qKey) {
                         const [fromSi, fromQi] = dragQuestionKey.split("-").map(Number);
-                        if (fromSi === si) moveQuestion(si, fromQi, qi);
+                        moveQuestion(fromSi, fromQi, si, qi);
                       }
                       setDragQuestionKey(null);
                       setDragOverKey(null);
