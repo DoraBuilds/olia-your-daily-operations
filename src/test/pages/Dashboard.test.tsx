@@ -123,6 +123,24 @@ describe("Dashboard page", () => {
     expect(overdueEls.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("clicking the Checklists stat tile navigates to Reporting", () => {
+    renderWithProviders(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: "View checklist reporting" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/reporting");
+  });
+
+  it("clicking the Alerts stat tile navigates to Notifications", () => {
+    renderWithProviders(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: "View notifications" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/notifications");
+  });
+
+  it("clicking the Overdue stat tile navigates to Reporting filtered to unstarted", () => {
+    renderWithProviders(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: "View overdue checklists in reporting" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/reporting?status=unstarted");
+  });
+
   it("renders 'Daily compliance' section label", () => {
     renderWithProviders(<Dashboard />);
     expect(screen.getByText("Daily compliance")).toBeInTheDocument();

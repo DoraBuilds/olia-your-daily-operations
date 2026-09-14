@@ -4,10 +4,13 @@
   "stats": {
     "checklists": "Checklists",
     "checklistsCaption": "Logged today",
+    "checklistsAriaLabel": "View checklist reporting",
     "alerts": "Alerts",
     "alertsCaption": "Open right now",
+    "alertsAriaLabel": "View notifications",
     "overdue": "Overdue",
-    "overdueCaption": "Past their window"
+    "overdueCaption": "Past their window",
+    "overdueAriaLabel": "View overdue checklists in reporting"
   },
   "shiftCompletion": {
     "title": "Shift completion",

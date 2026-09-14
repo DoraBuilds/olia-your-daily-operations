@@ -4,10 +4,13 @@
   "stats": {
     "checklists": "Listas",
     "checklistsCaption": "Registradas hoy",
+    "checklistsAriaLabel": "Ver informes de listas",
     "alerts": "Alertas",
     "alertsCaption": "Abiertas ahora",
+    "alertsAriaLabel": "Ver notificaciones",
     "overdue": "Atrasado",
-    "overdueCaption": "Fuera de su horario"
+    "overdueCaption": "Fuera de su horario",
+    "overdueAriaLabel": "Ver listas atrasadas en informes"
   },
   "shiftCompletion": {
     "title": "Cumplimiento del turno",
