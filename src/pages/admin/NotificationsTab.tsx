@@ -83,7 +83,7 @@ export function NotificationsTab() {
 
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center">
+      <div className="bg-card border border-border rounded-[20px] p-6 text-center">
         <p className="text-sm text-muted-foreground">{t("notificationsTab.loading")}</p>
       </div>
     );
@@ -92,7 +92,7 @@ export function NotificationsTab() {
   return (
     <div className="space-y-4">
       {/* Main toggle card */}
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-5">
+      <div className="bg-card border border-border rounded-[20px] p-4 space-y-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Bell size={16} className="text-sage" />
@@ -207,7 +207,7 @@ export function NotificationsTab() {
 
       {/* Status note when enabled and saved */}
       {!isDirty && rules?.enabled && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-2xl">
+        <div className="flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-[18px]">
           <CheckCircle2 size={14} className="text-status-ok shrink-0" />
           <p className="text-xs text-muted-foreground">
             {t("notificationsTab.activeNotice", { time: HOURS[rules.notify_hour]?.label, email: rules.recipient_email })}
