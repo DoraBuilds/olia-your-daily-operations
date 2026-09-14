@@ -3,8 +3,22 @@
   "notificationsAriaLabel": "Notificaciones",
   "stats": {
     "checklists": "Listas",
+    "checklistsCaption": "Registradas hoy",
     "alerts": "Alertas",
-    "overdue": "Atrasado"
+    "alertsCaption": "Abiertas ahora",
+    "overdue": "Atrasado",
+    "overdueCaption": "Fuera de su horario"
+  },
+  "shiftCompletion": {
+    "title": "Cumplimiento del turno",
+    "subtitle": "{{completed}}/{{total}} listas completadas hoy",
+    "completed": "Completadas",
+    "remaining": "Pendientes"
+  },
+  "attention": {
+    "title": "Necesita atención",
+    "body": "{{name}} está al {{score}}% hoy — {{completed}}/{{count}} listas completadas.",
+    "cta": "Revisar ubicación"
   },
   "alerts": {
     "sectionLabel": "Alertas operativas",

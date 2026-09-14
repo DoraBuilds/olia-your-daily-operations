@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
-import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell } from "lucide-react";
+import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell, ClipboardCheck, Clock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAlerts } from "@/hooks/useAlerts";
@@ -81,6 +81,74 @@ function PaginationDots({ page, totalPages, setPage }: { page: number; totalPage
         <ChevronRight size={14} className="text-muted-foreground" />
       </button>
     </div>
+  );
+}
+
+// ─── Shift Completion Gauge ───────────────────────────────────────────────────
+
+function ShiftGauge({ completed, total, pct }: { completed: number; total: number; pct: number }) {
+  const { t } = useTranslation("dashboard");
+  const r = 50;
+  const halfCirc = Math.PI * r;
+  const dash = (pct / 100) * halfCirc;
+  return (
+    <div className="bg-card border border-border rounded-[20px] p-4 shadow-card">
+      <p className="text-xs font-semibold text-foreground">{t("shiftCompletion.title")}</p>
+      <div className="flex flex-col items-center mt-1">
+        <svg viewBox="0 0 120 68" width={150} height={85}>
+          <path d="M10,64 A50,50 0 0 1 110,64" fill="none" stroke="hsl(var(--muted))" strokeWidth={10} strokeLinecap="round" />
+          <path
+            d="M10,64 A50,50 0 0 1 110,64"
+            fill="none"
+            stroke="hsl(var(--powder-blue))"
+            strokeWidth={10}
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${halfCirc}`}
+            style={{ transition: "stroke-dasharray 0.5s ease" }}
+          />
+          <text x="60" y="52" fontSize="20" fontWeight={800} fill="hsl(var(--foreground))" textAnchor="middle">{pct}%</text>
+        </svg>
+        <p className="text-[11px] text-muted-foreground -mt-1">
+          {t("shiftCompletion.subtitle", { completed, total })}
+        </p>
+        <div className="flex items-center gap-4 mt-2">
+          <span className="flex items-center gap-1.5 text-[11px] text-foreground/80">
+            <span className="w-2 h-2 rounded-full bg-[hsl(var(--status-ok))]" />
+            {t("shiftCompletion.completed")} {completed}
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] text-foreground/80">
+            <span className="w-2 h-2 rounded-full bg-[hsl(var(--muted-foreground))]" />
+            {t("shiftCompletion.remaining")} {Math.max(total - completed, 0)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Needs-Attention Banner ───────────────────────────────────────────────────
+
+function AttentionBanner({ location, onReview }: { location: LocationCompliance; onReview: () => void }) {
+  const { t } = useTranslation("dashboard");
+  return (
+    <button
+      type="button"
+      onClick={onReview}
+      className="w-full text-left bg-gradient-to-br from-[hsl(var(--powder-blue-deep))] to-[hsl(173_55%_16%)] rounded-[20px] p-4 flex items-center gap-3 text-white transition-transform active:scale-[0.99]"
+    >
+      <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+        <AlertCircle size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold">{t("attention.title")}</p>
+        <p className="text-xs opacity-85 mt-0.5 leading-snug">
+          {t("attention.body", { name: location.name, score: location.avgScore, completed: location.completedCount, count: location.count })}
+        </p>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold mt-2 bg-white text-[hsl(var(--powder-blue-deep))] rounded-full px-3 py-1">
+          {t("attention.cta")} <ArrowRight size={12} />
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -168,6 +236,15 @@ export default function Dashboard() {
     }).sort((a, b) => a.avgScore - b.avgScore || a.name.localeCompare(b.name));
   }, [locations, periodLogs, checklists]);
 
+  // ── Shift completion (aggregate across today's compliance items) ──
+  const totalAssignedToday = complianceItems.reduce((sum, loc) => sum + loc.count, 0);
+  const totalCompletedToday = complianceItems.reduce((sum, loc) => sum + loc.completedCount, 0);
+  const shiftCompletionPct = totalAssignedToday > 0 ? Math.round((totalCompletedToday / totalAssignedToday) * 100) : 0;
+
+  // ── Needs-attention banner: the real worst-performing location today, if any ──
+  const worstLocation = complianceItems.length > 0 ? complianceItems[0] : null;
+  const showAttentionBanner = !!worstLocation && worstLocation.count > 0 && worstLocation.avgScore < 85;
+
   // ── Pagination applies to location cards ──
   const ITEMS_PER_PAGE = 4;
 
@@ -211,6 +288,7 @@ export default function Dashboard() {
       >
         {/* ── Greeting Hero ── */}
         <section className="pt-1 pb-2">
+        <div className="rounded-[24px] bg-gradient-to-b from-[hsl(var(--powder-blue-light))] to-transparent p-4">
           <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{dateLabel}</p>
           <h1 id="dashboard-greeting" className="font-display text-3xl text-foreground mt-1 leading-tight">
             {greeting}
@@ -218,34 +296,58 @@ export default function Dashboard() {
 
           {/* Quick stats strip */}
           <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
+            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+              <div className="w-7 h-7 rounded-[9px] bg-[hsl(var(--powder-blue-light))] flex items-center justify-center mx-auto mb-1.5">
+                <ClipboardCheck size={14} className="text-[hsl(var(--powder-blue-deep))]" />
+              </div>
               <p className="text-xl font-semibold text-[hsl(var(--powder-blue-deep))]">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.checklists")}</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.checklistsCaption")}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
+            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+              <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+                allAlerts.length === 0 ? "bg-[hsl(var(--status-ok-bg))]" : "bg-[hsl(var(--status-error-bg))]"
+              )}>
+                <AlertCircle size={14} className={allAlerts.length === 0 ? "text-status-ok" : "text-status-error"} />
+              </div>
               <p className={cn("text-xl font-semibold",
                 allAlerts.length === 0 ? "text-status-ok" : "text-status-error"
               )}>
                 {allAlerts.length}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.alerts")}</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.alertsCaption")}</p>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-3 text-center shadow-card">
+            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+              <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+                overdueCount > 0 ? "bg-[hsl(var(--status-warn-bg))]" : "bg-muted"
+              )}>
+                <Clock size={14} className={overdueCount > 0 ? "text-status-warn" : "text-muted-foreground"} />
+              </div>
               <p data-testid="stats-overdue" className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.overdue")}</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.overdueCaption")}</p>
             </div>
           </div>
+        </div>
         </section>
+
+        {/* ── Shift Completion ── */}
+        {totalAssignedToday > 0 && (
+          <section>
+            <ShiftGauge completed={totalCompletedToday} total={totalAssignedToday} pct={shiftCompletionPct} />
+          </section>
+        )}
 
         {/* ── A. Operational Alerts ── */}
         <section>
           <p className="section-label mb-3">{t("alerts.sectionLabel")}</p>
           {allAlerts.length === 0 ? (
-            <div className="bg-card border border-border rounded-2xl p-6 text-center">
+            <div className="bg-card border border-border rounded-[20px] p-6 text-center">
               <Bell size={20} className="mx-auto text-sage" aria-hidden="true" />
               <p className="text-sm font-medium text-foreground">{t("alerts.allClearTitle")}</p>
               <p className="text-xs text-muted-foreground mt-1">{t("alerts.allClearBody")}</p>
@@ -260,14 +362,18 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => navigate("/notifications")}
                     className={cn(
-                      "w-full bg-card border border-border rounded-2xl px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
+                      "w-full bg-card border border-border rounded-[18px] px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
                       alert.type === "error" ? "border-l-status-error" : "border-l-status-warn",
                     )}
                     aria-label={t("alerts.openAriaLabel", { title: copy.title })}
                   >
-                    <AlertCircle size={15}
-                      className={cn("mt-0.5 shrink-0", alert.type === "error" ? "text-status-error" : "text-status-warn")}
-                    />
+                    <span className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+                      alert.type === "error" ? "bg-[hsl(var(--status-error-bg))]" : "bg-[hsl(var(--status-warn-bg))]"
+                    )}>
+                      <AlertCircle size={14}
+                        className={alert.type === "error" ? "text-status-error" : "text-status-warn"}
+                      />
+                    </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground leading-snug">{copy.title}</p>
                       <p className="text-sm text-foreground/90 leading-snug mt-0.5">{copy.body}</p>
@@ -311,7 +417,7 @@ export default function Dashboard() {
           </div>
 
           {locations.length === 0 ? (
-            <div className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
+            <div className="bg-card border border-border rounded-[20px] p-8 flex flex-col items-center gap-3 text-center">
               <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center">
                 <TrendingUp size={20} className="text-sage" />
               </div>
@@ -334,7 +440,7 @@ export default function Dashboard() {
                       key={loc.locationId ?? loc.name}
                       data-testid="location-card"
                       onClick={() => navigate(`/reporting?location=${encodeURIComponent(loc.locationId ?? "")}`)}
-                      className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
+                      className="bg-card border border-border rounded-[20px] p-4 flex flex-col items-center gap-3 hover:bg-muted/30 transition-colors text-center active:scale-[0.98]"
                     >
                       <div className="relative" style={{ width: 72, height: 72 }}>
                         <ScoreRing score={loc.avgScore} size={72} />
@@ -359,6 +465,16 @@ export default function Dashboard() {
             </>
           )}
         </section>
+
+        {/* ── C. Needs Attention ── */}
+        {showAttentionBanner && worstLocation && (
+          <section>
+            <AttentionBanner
+              location={worstLocation}
+              onReview={() => navigate(`/reporting?location=${encodeURIComponent(worstLocation.locationId ?? "")}`)}
+            />
+          </section>
+        )}
 
         {/* Bottom spacer */}
         <div className="h-4" />

@@ -3,8 +3,22 @@
   "notificationsAriaLabel": "Notifications",
   "stats": {
     "checklists": "Checklists",
+    "checklistsCaption": "Logged today",
     "alerts": "Alerts",
-    "overdue": "Overdue"
+    "alertsCaption": "Open right now",
+    "overdue": "Overdue",
+    "overdueCaption": "Past their window"
+  },
+  "shiftCompletion": {
+    "title": "Shift completion",
+    "subtitle": "{{completed}}/{{total}} checklists done today",
+    "completed": "Completed",
+    "remaining": "Remaining"
+  },
+  "attention": {
+    "title": "Needs attention",
+    "body": "{{name}} is at {{score}}% today — {{completed}}/{{count}} checklists done.",
+    "cta": "Review location"
   },
   "alerts": {
     "sectionLabel": "Operational alerts",
