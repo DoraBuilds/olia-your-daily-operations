@@ -1634,6 +1634,32 @@ describe("Kiosk — Checklist Runner", () => {
     }));
   });
 
+  it("invalidates the alerts query cache after a successful out-of-range alert insert", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    await openRunnerWithQuestions([
+      {
+        id: "q-fridge-temp",
+        text: "Fridge temperature",
+        responseType: "number",
+        required: true,
+        config: { numberMin: 2, numberMax: 5 },
+      },
+    ]);
+
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "9" } });
+
+    await act(async () => { vi.advanceTimersByTime(90_000); });
+
+    expect(mockInsertKioskAlert).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["alerts"] });
+
+    invalidateSpy.mockRestore();
+  });
+
   it("cancels the out-of-range alert if the number is corrected within 90 seconds", async () => {
     await openRunnerWithQuestions([
       {
@@ -1757,6 +1783,25 @@ describe("Kiosk — Checklist Runner", () => {
       HTMLCanvasElement.prototype.toBlob = originalToBlob;
       HTMLMediaElement.prototype.play = originalPlay;
     }
+  });
+
+  it("invalidates the checklist_logs query cache after a successful submission, so Dashboard/Reporting refetch", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    await openRunnerWithQuestions([
+      { id: "q-1", text: "Everything stocked?", responseType: "checkbox", required: false },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+
+    await waitFor(() => {
+      expect(mockSubmitKioskLog).toHaveBeenCalled();
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["checklist_logs"] });
+
+    invalidateSpy.mockRestore();
   });
 });
 

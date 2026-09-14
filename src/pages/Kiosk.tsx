@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X, Check } from "lucide-react";
@@ -144,6 +145,7 @@ export default function Kiosk() {
   const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
   const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
+  const queryClient = useQueryClient();
 
   // Hydrate straight from localStorage on mount so a properly-configured
   // kiosk keeps working even when there is no live auth session yet (or
@@ -389,6 +391,8 @@ export default function Kiosk() {
     if (alertErr) {
       setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
       console.error("Alert insert failed for question:", question.text, alertErr);
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
     }
   };
 
@@ -431,6 +435,7 @@ export default function Kiosk() {
     const notifyAlerts = collectNotifyAlerts(questions, answers);
     if (notifyAlerts.length === 0) return;
 
+    let anySucceeded = false;
     for (const alert of notifyAlerts) {
       const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
         p_location_id: locationIdParam,
@@ -442,7 +447,13 @@ export default function Kiosk() {
 
       if (alertErr) {
         console.error("fireNotifyAlerts: alert insert failed:", alertErr.message);
+      } else {
+        anySucceeded = true;
       }
+    }
+
+    if (anySucceeded) {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
     }
   };
 
@@ -524,9 +535,12 @@ export default function Kiosk() {
         if (error) throw new Error(error.message);
       }
     }).then(n => {
-      if (n > 0) console.log(`Retried ${n} queued checklist log(s) successfully.`);
+      if (n > 0) {
+        console.log(`Retried ${n} queued checklist log(s) successfully.`);
+        queryClient.invalidateQueries({ queryKey: ["checklist_logs"] });
+      }
     });
-  }, [loading, locationId, user?.id]);
+  }, [loading, locationId, user?.id, queryClient]);
 
   // Fetch checklists for the selected location whenever it changes and keep the
   // grid fresh when the kiosk regains focus after checklist/admin edits.
@@ -706,6 +720,11 @@ export default function Kiosk() {
           dbError = error;
           // Tag with _log_id so the drain knows to call update_kiosk_log, not submit_kiosk_log
           enqueueLog({ ...updatePayload, _log_id: existingLogId });
+        } else {
+          // Dashboard/Reporting read checklist_logs via React Query — this RPC bypasses
+          // that cache entirely, so without an explicit invalidation the completion
+          // wouldn't show up anywhere until the 5-minute staleTime lapsed on its own.
+          queryClient.invalidateQueries({ queryKey: ["checklist_logs"] });
         }
       } else {
         // First submission: insert via SECURITY DEFINER RPC — org resolved server-side (SEQ-003)
@@ -727,6 +746,7 @@ export default function Kiosk() {
           const result = data as { log_id: string; edit_token: string } | null;
           returnedLogId = result?.log_id ?? null;
           returnedEditToken = result?.edit_token ?? null;
+          queryClient.invalidateQueries({ queryKey: ["checklist_logs"] });
         }
       }
 
