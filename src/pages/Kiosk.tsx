@@ -391,6 +391,8 @@ export default function Kiosk() {
     if (alertErr) {
       setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
       console.error("Alert insert failed for question:", question.text, alertErr);
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
     }
   };
 
@@ -433,6 +435,7 @@ export default function Kiosk() {
     const notifyAlerts = collectNotifyAlerts(questions, answers);
     if (notifyAlerts.length === 0) return;
 
+    let anySucceeded = false;
     for (const alert of notifyAlerts) {
       const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
         p_location_id: locationIdParam,
@@ -444,7 +447,13 @@ export default function Kiosk() {
 
       if (alertErr) {
         console.error("fireNotifyAlerts: alert insert failed:", alertErr.message);
+      } else {
+        anySucceeded = true;
       }
+    }
+
+    if (anySucceeded) {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
     }
   };
 
