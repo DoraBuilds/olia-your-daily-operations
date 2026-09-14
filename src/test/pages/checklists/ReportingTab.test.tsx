@@ -279,8 +279,18 @@ describe("ReportingTab", () => {
 
   it("shows 1 open action in Open Actions stat card", () => {
     render(<ReportingTab />, { wrapper });
-    const openActionsCard = screen.getByText("Open Actions").closest(".rounded-2xl");
+    const openActionsCard = screen.getByTestId("stat-open-actions");
     expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
+  });
+
+  it("renders an icon badge on every stat card", () => {
+    render(<ReportingTab />, { wrapper });
+    for (const testId of ["stat-completed", "stat-unfinished", "stat-unstarted", "stat-avg-score", "stat-open-actions"]) {
+      const card = screen.getByTestId(testId);
+      // the icon-badge wrapper is the w-7 h-7 square above the caption/number —
+      // distinct from the conditional trend/"none" indicator row below the number
+      expect(card.querySelector(".w-7.h-7 svg")).not.toBeNull();
+    }
   });
 
   it("shows Completion Log section", () => {
@@ -822,7 +832,7 @@ describe("ReportingTab", () => {
 
   it("Open Actions stat card is rendered with correct count", () => {
     render(<ReportingTab />, { wrapper });
-    const openActionsCard = screen.getByText("Open Actions").closest(".rounded-2xl");
+    const openActionsCard = screen.getByTestId("stat-open-actions");
     expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
   });
 

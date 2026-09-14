@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown, Search, User, X } from "lucide-react";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown, Search, User, X, CheckCircle2, Clock, Circle, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -410,7 +410,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
       {/* Stat cards — row 1: completion breakdown */}
       <div className="grid grid-cols-3 gap-2">
-        <div data-testid="stat-completed" className="bg-card border border-border rounded-2xl p-4 text-center">
+        <div data-testid="stat-completed" className="bg-card border border-border rounded-[18px] p-4 text-center">
+          <div className="w-7 h-7 rounded-[9px] bg-[hsl(var(--status-ok-bg))] flex items-center justify-center mx-auto mb-1.5">
+            <CheckCircle2 size={14} className="text-status-ok" />
+          </div>
           <p className="section-label mb-1">{t("reporting.stats.completed")}</p>
           <p className="text-2xl font-semibold text-status-ok">{isLoading ? "—" : completedCount}</p>
           {!isLoading && completedCount === 0 && (
@@ -420,7 +423,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           )}
         </div>
-        <div data-testid="stat-unfinished" className="bg-card border border-border rounded-2xl p-4 text-center">
+        <div data-testid="stat-unfinished" className="bg-card border border-border rounded-[18px] p-4 text-center">
+          <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+            unfinishedCount > 0 ? "bg-[hsl(var(--status-warn-bg))]" : "bg-muted"
+          )}>
+            <Clock size={14} className={unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground"} />
+          </div>
           <p className="section-label mb-1">{t("reporting.stats.unfinished")}</p>
           <p className={cn("text-2xl font-semibold", unfinishedCount > 0 ? "text-status-warn" : "text-muted-foreground")}>
             {isLoading ? "—" : unfinishedCount}
@@ -432,7 +440,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           )}
         </div>
-        <div data-testid="stat-unstarted" className="bg-card border border-border rounded-2xl p-4 text-center">
+        <div data-testid="stat-unstarted" className="bg-card border border-border rounded-[18px] p-4 text-center">
+          <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+            unstartedCount > 0 ? "bg-[hsl(var(--status-error-bg))]" : "bg-muted"
+          )}>
+            <Circle size={14} className={unstartedCount > 0 ? "text-status-error" : "text-muted-foreground"} />
+          </div>
           <p className="section-label mb-1">{t("reporting.stats.unstarted")}</p>
           <p className={cn("text-2xl font-semibold", unstartedCount > 0 ? "text-status-error" : "text-muted-foreground")}>
             {isLoading ? "—" : unstartedCount}
@@ -448,7 +461,20 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
       {/* Stat cards — row 2: score + actions */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-card border border-border rounded-2xl p-4 text-center">
+        <div data-testid="stat-avg-score" className="bg-card border border-border rounded-[18px] p-4 text-center">
+          <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+            avgScore == null ? "bg-muted" :
+            avgScoreValue >= 85 ? "bg-[hsl(var(--status-ok-bg))]" :
+            avgScoreValue >= 65 ? "bg-[hsl(var(--status-warn-bg))]" :
+            "bg-[hsl(var(--status-error-bg))]"
+          )}>
+            {avgScore == null || avgScoreValue >= 85
+              ? <TrendingUp size={14} className={avgScore == null ? "text-muted-foreground" : "text-status-ok"} />
+              : avgScoreValue >= 65
+              ? <Minus size={14} className="text-status-warn" />
+              : <TrendingDown size={14} className="text-status-error" />
+            }
+          </div>
           <p className="section-label mb-1">{t("reporting.stats.avgScore")}</p>
           <p className={cn("text-2xl font-semibold",
             avgScore == null ? "text-muted-foreground" :
@@ -469,7 +495,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           )}
         </div>
-        <div className="bg-card border border-border rounded-2xl p-4 text-center">
+        <div data-testid="stat-open-actions" className="bg-card border border-border rounded-[18px] p-4 text-center">
+          <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
+            openActionsCount > 0 ? "bg-[hsl(var(--status-error-bg))]" : "bg-[hsl(var(--status-ok-bg))]"
+          )}>
+            <AlertTriangle size={14} className={openActionsCount > 0 ? "text-status-error" : "text-status-ok"} />
+          </div>
           <p className="section-label mb-1">{t("reporting.stats.openActions")}</p>
           <p className={cn("text-2xl font-semibold", openActionsCount > 0 ? "text-status-error" : "text-status-ok")}>
             {openActionsCount}
@@ -484,7 +515,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
       </div>
 
       {/* Filter panel */}
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+      <div className="bg-card border border-border rounded-[20px] p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="section-label">{t("reporting.filters.heading")}</p>
           {hasActiveFilters && (
@@ -567,7 +598,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
       {/* Score Trend — Advanced reporting, gated to Growth+ */}
       {trendData.length > 0 && (
         can("advancedReporting") ? (
-          <div className="bg-card border border-border rounded-2xl p-4">
+          <div className="bg-card border border-border rounded-[20px] p-4">
             <div className="flex items-center justify-between mb-4">
               <p className="section-label">{t("reporting.scoreTrend.heading")}</p>
               {trendData.length >= 2 && (() => {
@@ -582,7 +613,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
         ) : (
           <button
             onClick={() => setShowReportingUpgrade(true)}
-            className="w-full text-left bg-card border border-border rounded-2xl p-4 hover:bg-muted/30 transition-colors"
+            className="w-full text-left bg-card border border-border rounded-[20px] p-4 hover:bg-muted/30 transition-colors"
           >
             <p className="section-label mb-1">{t("reporting.scoreTrend.heading")}</p>
             <p className="text-xs text-muted-foreground">{t("reporting.scoreTrend.upgradeLocked")}</p>
@@ -600,12 +631,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
         </div>
 
         {isLoading ? (
-          <div className="bg-card border border-border rounded-2xl p-6 text-center">
+          <div className="bg-card border border-border rounded-[20px] p-6 text-center">
             <p className="text-sm text-muted-foreground">{t("reporting.log.loading")}</p>
           </div>
         ) : statusFilter === "unstarted" ? (
           unstartedChecklists.length > 0 ? (
-            <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+            <div className="bg-card border border-border rounded-[20px] divide-y divide-border overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-24 text-right">{t("reporting.log.statusColumn")}</p>
@@ -621,12 +652,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               ))}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-2xl p-8 text-center">
+            <div className="bg-card border border-border rounded-[20px] p-8 text-center">
               <p className="text-sm text-muted-foreground">{t("reporting.log.allStarted")}</p>
             </div>
           )
         ) : logEntries.length > 0 || (statusFilter === "all" && unstartedChecklists.length > 0) ? (
-          <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+          <div className="bg-card border border-border rounded-[20px] divide-y divide-border overflow-hidden">
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
@@ -667,7 +698,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             ))}
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-2xl p-8 text-center">
+          <div className="bg-card border border-border rounded-[20px] p-8 text-center">
             <p className="text-sm text-muted-foreground">
               {hasActiveFilters ? t("reporting.log.noMatchFilters") : t("reporting.log.noneRecorded")}
             </p>
