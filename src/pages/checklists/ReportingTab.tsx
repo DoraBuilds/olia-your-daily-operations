@@ -131,7 +131,7 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
   );
 }
 
-export function ReportingTab({ initialLocationId }: { initialLocationId?: string }) {
+export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
   const [period, setPeriod] = useState<Period>("today");
@@ -144,11 +144,15 @@ export function ReportingTab({ initialLocationId }: { initialLocationId?: string
   const [locationFilter, setLocationFilter] = useState<string>(initialLocationId ?? "all");
   const [personFilter, setPersonFilter] = useState<string>("all");
   const [checklistSearch, setChecklistSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">(initialStatus ?? "all");
 
   useEffect(() => {
     setLocationFilter(initialLocationId ?? "all");
   }, [initialLocationId]);
+
+  useEffect(() => {
+    if (initialStatus) setStatusFilter(initialStatus);
+  }, [initialStatus]);
 
   const { data: locations = [] } = useLocations();
   const locationNameById = useMemo(

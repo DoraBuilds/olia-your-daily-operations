@@ -291,7 +291,14 @@ export default function Dashboard() {
 
           {/* Quick stats strip */}
           <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/reporting")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/reporting"); } }}
+              aria-label={t("stats.checklistsAriaLabel")}
+              className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card cursor-pointer hover:bg-muted/40 transition-colors active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-ring"
+            >
               <div className="w-7 h-7 rounded-[9px] bg-[hsl(var(--powder-blue-light))] flex items-center justify-center mx-auto mb-1.5">
                 <ClipboardCheck size={14} className="text-[hsl(var(--powder-blue-deep))]" />
               </div>
@@ -301,7 +308,14 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.checklists")}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.checklistsCaption")}</p>
             </div>
-            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/notifications")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/notifications"); } }}
+              aria-label={t("stats.alertsAriaLabel")}
+              className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card cursor-pointer hover:bg-muted/40 transition-colors active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-ring"
+            >
               <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
                 allAlerts.length === 0 ? "bg-[hsl(var(--status-ok-bg))]" : "bg-[hsl(var(--status-error-bg))]"
               )}>
@@ -315,7 +329,14 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.alerts")}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.alertsCaption")}</p>
             </div>
-            <div className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/reporting?status=unstarted")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/reporting?status=unstarted"); } }}
+              aria-label={t("stats.overdueAriaLabel")}
+              className="bg-card border border-border rounded-[18px] p-3 text-center shadow-card cursor-pointer hover:bg-muted/40 transition-colors active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-ring"
+            >
               <div className={cn("w-7 h-7 rounded-[9px] flex items-center justify-center mx-auto mb-1.5",
                 overdueCount > 0 ? "bg-[hsl(var(--status-warn-bg))]" : "bg-muted"
               )}>

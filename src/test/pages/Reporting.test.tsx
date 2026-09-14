@@ -23,12 +23,12 @@ vi.mock("@/contexts/AuthContext", () => ({
   AuthProvider: ({ children }: any) => children,
 }));
 
-const reportingTabMock = vi.fn(({ initialLocationId }: { initialLocationId?: string }) => (
-  <div>Reporting Tab {initialLocationId ?? "all"}</div>
+const reportingTabMock = vi.fn(({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: string }) => (
+  <div>Reporting Tab {initialLocationId ?? "all"} status:{initialStatus ?? "none"}</div>
 ));
 
 vi.mock("@/pages/checklists/ReportingTab", () => ({
-  ReportingTab: (props: { initialLocationId?: string }) => reportingTabMock(props),
+  ReportingTab: (props: { initialLocationId?: string; initialStatus?: string }) => reportingTabMock(props),
 }));
 
 describe("Reporting page", () => {
@@ -40,11 +40,21 @@ describe("Reporting page", () => {
     renderWithProviders(<Reporting />, { initialEntries: ["/reporting"] });
     expect(screen.getByRole("heading", { name: "Olia" })).toBeInTheDocument();
     expect(screen.getByText("Logs & compliance overview")).toBeInTheDocument();
-    expect(screen.getByText("Reporting Tab all")).toBeInTheDocument();
+    expect(screen.getByText("Reporting Tab all status:none")).toBeInTheDocument();
   });
 
   it("passes the location filter from the route to ReportingTab", () => {
     renderWithProviders(<Reporting />, { initialEntries: ["/reporting?location=loc-2"] });
-    expect(screen.getByText("Reporting Tab loc-2")).toBeInTheDocument();
+    expect(screen.getByText("Reporting Tab loc-2 status:none")).toBeInTheDocument();
+  });
+
+  it("passes a valid status filter from the route to ReportingTab", () => {
+    renderWithProviders(<Reporting />, { initialEntries: ["/reporting?status=unstarted"] });
+    expect(screen.getByText("Reporting Tab all status:unstarted")).toBeInTheDocument();
+  });
+
+  it("ignores an invalid status value from the route", () => {
+    renderWithProviders(<Reporting />, { initialEntries: ["/reporting?status=bogus"] });
+    expect(screen.getByText("Reporting Tab all status:none")).toBeInTheDocument();
   });
 });
