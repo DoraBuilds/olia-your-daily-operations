@@ -217,11 +217,14 @@ html { font-size: 16px; }                        /* mobile / default        */
 
   /* ── Cards ───────────────────────────────────────────────────────────────── */
 
-  /* Elevated card — border + shadow, no padding (add p-* in JSX) */
+  /* Elevated card — border + shadow, no padding (add p-* in JSX)
+     Radius is a literal 18px (not var(--radius)) so this tracks the
+     friendlier, bigger-radius card look rolled out on the Dashboard,
+     independent of the 14px --radius token still used by buttons/inputs. */
   .card-surface {
     background-color: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    border-radius: var(--radius);
+    border-radius: 1.125rem;
     box-shadow: var(--shadow-card);
   }
 
@@ -229,7 +232,7 @@ html { font-size: 16px; }                        /* mobile / default        */
   .card {
     background-color: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    border-radius: var(--radius);
+    border-radius: 1.125rem;
     box-shadow: var(--shadow-card);
     padding: var(--space-card-inset);
   }
