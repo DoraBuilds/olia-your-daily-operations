@@ -95,7 +95,7 @@ function ShiftGauge({ completed, total, pct }: { completed: number; total: numbe
     <div className="bg-card border border-border rounded-[20px] p-4 shadow-card">
       <p className="text-xs font-semibold text-foreground">{t("shiftCompletion.title")}</p>
       <div className="flex flex-col items-center mt-1">
-        <svg viewBox="0 0 120 68" width={150} height={85}>
+        <svg viewBox="0 0 120 80" width={150} height={100}>
           <path d="M10,64 A50,50 0 0 1 110,64" fill="none" stroke="hsl(var(--muted))" strokeWidth={10} strokeLinecap="round" />
           <path
             d="M10,64 A50,50 0 0 1 110,64"
@@ -108,7 +108,7 @@ function ShiftGauge({ completed, total, pct }: { completed: number; total: numbe
           />
           <text x="60" y="52" fontSize="20" fontWeight={800} fill="hsl(var(--foreground))" textAnchor="middle">{pct}%</text>
         </svg>
-        <p className="text-[11px] text-muted-foreground -mt-1">
+        <p className="text-[11px] text-muted-foreground mt-1">
           {t("shiftCompletion.subtitle", { completed, total })}
         </p>
         <div className="flex items-center gap-4 mt-2">
