@@ -1758,6 +1758,25 @@ describe("Kiosk — Checklist Runner", () => {
       HTMLMediaElement.prototype.play = originalPlay;
     }
   });
+
+  it("invalidates the checklist_logs query cache after a successful submission, so Dashboard/Reporting refetch", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+
+    await openRunnerWithQuestions([
+      { id: "q-1", text: "Everything stocked?", responseType: "checkbox", required: false },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+
+    await waitFor(() => {
+      expect(mockSubmitKioskLog).toHaveBeenCalled();
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["checklist_logs"] });
+
+    invalidateSpy.mockRestore();
+  });
 });
 
 // ─── URL param tests ──────────────────────────────────────────────────────────
