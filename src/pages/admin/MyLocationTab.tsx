@@ -112,7 +112,7 @@ export function MyLocationTab({
           this, the kiosk-escape guard (#631) permanently bounces this
           browser back to /kiosk with no in-product way out (#633). */}
       {kioskDeviceActive && (
-        <div className="rounded-2xl border border-status-warn/40 bg-status-warn/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="rounded-[18px] border border-status-warn/40 bg-status-warn/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
             <Tablet size={15} className="text-status-warn shrink-0" />
             <p className="text-xs text-status-warn font-medium">
@@ -227,7 +227,7 @@ export function MyLocationTab({
               href={`https://www.google.com/maps/search/?api=1&query=${currentLocation.lat},${currentLocation.lng}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-2xl overflow-hidden border border-border shadow-sm hover:opacity-90 transition-opacity block"
+              className="rounded-[20px] overflow-hidden border border-border shadow-sm hover:opacity-90 transition-opacity block"
               style={{ height: 120 }}
             >
               <iframe
@@ -243,7 +243,7 @@ export function MyLocationTab({
             </a>
           ) : (
             <div
-              className="rounded-2xl border border-border bg-muted flex items-center justify-center"
+              className="rounded-[20px] border border-border bg-muted flex items-center justify-center"
               style={{ height: 120 }}
             >
               <MapPin size={18} className="text-muted-foreground" />
@@ -369,7 +369,7 @@ export function MyLocationTab({
         {/* Auto-archive threshold — only shown when viewing archived staff,
             where the setting is contextually relevant. Hidden in active view. */}
         {showArchived && canEditThreshold && (
-          <div className="border border-border rounded-2xl px-4 py-3 bg-muted/30 mt-3">
+          <div className="border border-border rounded-[18px] px-4 py-3 bg-muted/30 mt-3">
             <p className="section-label mb-1">{t("myLocationTab.autoArchiveThreshold")}</p>
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
               {t("myLocationTab.autoArchiveDescription")}
