@@ -189,14 +189,6 @@ describe("Dashboard extended — notification badge & alert stats", () => {
     expect(countEl).toHaveClass("text-status-error");
   });
 
-  it("shows 'Operational alerts' section with content when alerts exist", () => {
-    alertsState.data = [makeAlert("a-1")];
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText("Operational alerts")).toBeInTheDocument();
-    // "All clear" should NOT be shown when there are alerts
-    expect(screen.queryByText("All clear")).not.toBeInTheDocument();
-  });
-
   it("stat strip shows error colour class on the Alerts count when alerts > 0", () => {
     alertsState.data = [makeAlert("a-1"), makeAlert("a-2")];
     renderWithProviders(<Dashboard />);
@@ -237,101 +229,6 @@ describe("Dashboard extended — notification badge & alert stats", () => {
     const overdueCard = overdueLabel.closest("div")!;
     const countEl = overdueCard.querySelector("p");
     expect(countEl).toHaveClass("text-status-warn");
-  });
-});
-
-describe("Dashboard extended — alert rendering (type variants and hasMore)", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-03-27T12:00:00"));
-    mockNavigate.mockReset();
-    checklistLogsState.data = [];
-    actionsState.data = [];
-    checklistsState.data = [];
-    locationsState.data = [];
-  });
-
-  afterEach(() => vi.useRealTimers());
-
-  it("renders alert with type='error' with error border class", () => {
-    alertsState.data = [makeAlert("e-1", "error", { message: "General error in the kitchen" })];
-    renderWithProviders(<Dashboard />);
-    // The alert button should have border-l-status-error class
-    const alertButtons = screen.getAllByRole("button").filter(b =>
-      b.classList.contains("border-l-4")
-    );
-    expect(alertButtons[0]).toHaveClass("border-l-status-error");
-  });
-
-  it("renders alert with type='warn' with warn border class", () => {
-    alertsState.data = [makeAlert("w-1", "warn", { message: "General warning in the bar" })];
-    renderWithProviders(<Dashboard />);
-    const alertButtons = screen.getAllByRole("button").filter(b =>
-      b.classList.contains("border-l-4")
-    );
-    expect(alertButtons[0]).toHaveClass("border-l-status-warn");
-  });
-
-  it("renders 'See all X alerts' button when there are more than 3 alerts", () => {
-    alertsState.data = [
-      makeAlert("a-1"), makeAlert("a-2"), makeAlert("a-3"), makeAlert("a-4"),
-    ];
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText(/See all 4 alerts/i)).toBeInTheDocument();
-  });
-
-  it("does NOT render 'See all' button when there are 3 or fewer alerts", () => {
-    alertsState.data = [makeAlert("a-1"), makeAlert("a-2"), makeAlert("a-3")];
-    renderWithProviders(<Dashboard />);
-    expect(screen.queryByText(/See all/i)).not.toBeInTheDocument();
-  });
-
-  it("only renders 3 alerts when hasMore is true", () => {
-    alertsState.data = [
-      makeAlert("a-1", "warn", { message: "Action required: \"Alpha\" answered Is N/A" }),
-      makeAlert("a-2", "warn", { message: "Action required: \"Beta\" answered Is N/A" }),
-      makeAlert("a-3", "warn", { message: "Action required: \"Gamma\" answered Is N/A" }),
-      makeAlert("a-4", "warn", { message: "Action required: \"Delta\" answered Is N/A" }),
-    ];
-    renderWithProviders(<Dashboard />);
-    // Only 3 alert buttons (plus the "See all" button)
-    const alertButtons = screen.getAllByRole("button").filter(b =>
-      b.classList.contains("border-l-4")
-    );
-    expect(alertButtons).toHaveLength(3);
-  });
-
-  it("clicking an alert card navigates to /notifications", () => {
-    alertsState.data = [makeAlert("a-1")];
-    renderWithProviders(<Dashboard />);
-    const alertBtn = screen.getAllByRole("button").find(b => b.classList.contains("border-l-4"))!;
-    fireEvent.click(alertBtn);
-    expect(mockNavigate).toHaveBeenCalledWith("/notifications");
-  });
-
-  it("clicking 'See all X alerts' button navigates to /notifications", () => {
-    alertsState.data = [
-      makeAlert("a-1"), makeAlert("a-2"), makeAlert("a-3"), makeAlert("a-4"),
-    ];
-    renderWithProviders(<Dashboard />);
-    fireEvent.click(screen.getByText(/See all 4 alerts/i));
-    expect(mockNavigate).toHaveBeenCalledWith("/notifications");
-  });
-
-  it("renders 'Needs attention' title for a fallback error-type alert", () => {
-    alertsState.data = [
-      makeAlert("e-2", "error", { message: "Something went wrong in the kitchen" }),
-    ];
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText("Needs attention")).toBeInTheDocument();
-  });
-
-  it("renders 'Check this item' title for a fallback warn-type alert", () => {
-    alertsState.data = [
-      makeAlert("w-2", "warn", { message: "Something to check at the bar" }),
-    ];
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText("Check this item")).toBeInTheDocument();
   });
 });
 

@@ -158,35 +158,6 @@ describe("Dashboard page", () => {
     expect(screen.queryByText("All locations")).not.toBeInTheDocument();
   });
 
-  it("shows Operational alerts section with empty state when no alerts", () => {
-    renderWithProviders(<Dashboard />);
-    expect(screen.getByText("Operational alerts")).toBeInTheDocument();
-    expect(screen.getByText("All clear")).toBeInTheDocument();
-    expect(screen.getByText("It looks like everything is calm now.")).toBeInTheDocument();
-  });
-
-  it("renders user-friendly alert copy instead of the raw trigger text", () => {
-    alertsState.data = [
-      {
-        id: "a-1",
-        type: "warn",
-        message: 'Action required: "Trigger test (n/a is the trigger) - " answered Is N/A',
-        area: "Kitchen",
-        time: "Now",
-        source: "action",
-        dismissed_at: null,
-        created_at: "2026-03-09T09:00:00Z",
-      },
-    ];
-
-    renderWithProviders(<Dashboard />);
-
-    expect(screen.getByText("Follow-up needed")).toBeInTheDocument();
-    expect(screen.getByText("Trigger test (n/a is the trigger) was left unanswered.")).toBeInTheDocument();
-    expect(screen.getByText("A response was not provided, so this item needs attention.")).toBeInTheDocument();
-    expect(screen.queryByText(/Action required:/i)).not.toBeInTheDocument();
-  });
-
   it("sorts location health from worst to best and opens reporting with the location filter", () => {
     renderWithProviders(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /^week$/i }));

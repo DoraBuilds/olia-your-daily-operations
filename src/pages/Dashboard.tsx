@@ -12,7 +12,6 @@ import { useActions } from "@/hooks/useActions";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { computeMissedChecklists, computeOverdueActions } from "@/lib/overdue-utils";
-import { formatOperationalAlertCopy } from "@/lib/alert-copy";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -92,10 +91,10 @@ function ShiftGauge({ completed, total, pct }: { completed: number; total: numbe
   const halfCirc = Math.PI * r;
   const dash = (pct / 100) * halfCirc;
   return (
-    <div className="bg-card border border-border rounded-[20px] p-4 shadow-card">
-      <p className="text-xs font-semibold text-foreground">{t("shiftCompletion.title")}</p>
-      <div className="flex flex-col items-center mt-1">
-        <svg viewBox="0 0 120 80" width={150} height={100}>
+    <div className="bg-card border border-border rounded-[24px] p-6 shadow-card">
+      <p className="text-sm font-semibold text-foreground">{t("shiftCompletion.title")}</p>
+      <div className="flex flex-col items-center mt-2">
+        <svg viewBox="0 0 120 80" width={220} height={147}>
           <path d="M10,64 A50,50 0 0 1 110,64" fill="none" stroke="hsl(var(--muted))" strokeWidth={10} strokeLinecap="round" />
           <path
             d="M10,64 A50,50 0 0 1 110,64"
@@ -108,16 +107,16 @@ function ShiftGauge({ completed, total, pct }: { completed: number; total: numbe
           />
           <text x="60" y="52" fontSize="20" fontWeight={800} fill="hsl(var(--foreground))" textAnchor="middle">{pct}%</text>
         </svg>
-        <p className="text-[11px] text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {t("shiftCompletion.subtitle", { completed, total })}
         </p>
-        <div className="flex items-center gap-4 mt-2">
-          <span className="flex items-center gap-1.5 text-[11px] text-foreground/80">
-            <span className="w-2 h-2 rounded-full bg-[hsl(var(--status-ok))]" />
+        <div className="flex items-center gap-5 mt-3">
+          <span className="flex items-center gap-1.5 text-xs text-foreground/80">
+            <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--status-ok))]" />
             {t("shiftCompletion.completed")} {completed}
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-foreground/80">
-            <span className="w-2 h-2 rounded-full bg-[hsl(var(--muted-foreground))]" />
+          <span className="flex items-center gap-1.5 text-xs text-foreground/80">
+            <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--muted-foreground))]" />
             {t("shiftCompletion.remaining")} {Math.max(total - completed, 0)}
           </span>
         </div>
@@ -260,10 +259,6 @@ export default function Dashboard() {
   const missedChecklists = computeMissedChecklists(publishedChecklists, todayCompletedIds, nowMinutes);
   const overdueCount = overdueActions.length + missedChecklists.length;
 
-  // ── Alerts ──
-  const visibleAlerts = allAlerts.slice(0, 3);
-  const hasMore = allAlerts.length > 3;
-
   // ── Pagination: applies to location cards ──
   const paginationSource = complianceItems;
   const totalPages = Math.ceil(paginationSource.length / ITEMS_PER_PAGE);
@@ -342,59 +337,6 @@ export default function Dashboard() {
             <ShiftGauge completed={totalCompletedToday} total={totalAssignedToday} pct={shiftCompletionPct} />
           </section>
         )}
-
-        {/* ── A. Operational Alerts ── */}
-        <section>
-          <p className="section-label mb-3">{t("alerts.sectionLabel")}</p>
-          {allAlerts.length === 0 ? (
-            <div className="bg-card border border-border rounded-[20px] p-6 text-center">
-              <Bell size={20} className="mx-auto text-sage" aria-hidden="true" />
-              <p className="text-sm font-medium text-foreground">{t("alerts.allClearTitle")}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t("alerts.allClearBody")}</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {visibleAlerts.map(alert => {
-                const copy = formatOperationalAlertCopy(alert);
-                return (
-                  <button
-                    key={alert.id}
-                    type="button"
-                    onClick={() => navigate("/notifications")}
-                    className={cn(
-                      "w-full bg-card border border-border rounded-[18px] px-4 py-3 flex items-start gap-3 border-l-4 text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring",
-                      alert.type === "error" ? "border-l-status-error" : "border-l-status-warn",
-                    )}
-                    aria-label={t("alerts.openAriaLabel", { title: copy.title })}
-                  >
-                    <span className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-                      alert.type === "error" ? "bg-[hsl(var(--status-error-bg))]" : "bg-[hsl(var(--status-warn-bg))]"
-                    )}>
-                      <AlertCircle size={14}
-                        className={alert.type === "error" ? "text-status-error" : "text-status-warn"}
-                      />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground leading-snug">{copy.title}</p>
-                      <p className="text-sm text-foreground/90 leading-snug mt-0.5">{copy.body}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{copy.helper}</p>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {hasMore && (
-                <button
-                  onClick={() => navigate("/notifications")}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-sage font-semibold rounded-2xl border border-border bg-card hover:bg-muted transition-colors"
-                >
-                  {t("alerts.seeAll", { count: allAlerts.length })}
-                  <ChevronRight size={12} />
-                </button>
-              )}
-            </div>
-          )}
-        </section>
 
         {/* ── B. Daily Compliance ── */}
         <section>
