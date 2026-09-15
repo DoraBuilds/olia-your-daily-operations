@@ -68,6 +68,17 @@ describe("SidebarNav", () => {
     expect(adminLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
   });
 
+  it("drops the active glow shadow when collapsed, so the highlight stays a clean circle", () => {
+    localStorage.setItem("olia_sidebar_collapsed", "1");
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+
+    const dashLink = screen.getByRole("link", { name: "Dashboard" });
+    expect(dashLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
+    expect(dashLink.className).not.toContain("shadow-nav-active-soft");
+
+    localStorage.removeItem("olia_sidebar_collapsed");
+  });
+
   it("collapses to icon-only on toggle and hides nav labels", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("Dashboard");

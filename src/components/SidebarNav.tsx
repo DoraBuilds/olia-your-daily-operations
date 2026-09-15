@@ -84,7 +84,10 @@ export function SidebarNav() {
                       ? "h-11 w-11 justify-center rounded-2xl"
                       : "gap-3 rounded-2xl px-3 py-3 text-sm font-medium",
                     active
-                      ? "bg-[var(--nav-active-bg-soft)] text-[hsl(var(--nav-active-icon))] shadow-nav-active-soft"
+                      ? cn(
+                          "bg-[var(--nav-active-bg-soft)] text-[hsl(var(--nav-active-icon))]",
+                          !collapsed && "shadow-nav-active-soft",
+                        )
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
