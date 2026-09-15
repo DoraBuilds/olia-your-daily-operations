@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { SidebarNav } from "@/components/SidebarNav";
 import { renderWithProviders } from "../test-utils";
 
@@ -59,12 +59,32 @@ describe("SidebarNav", () => {
   it("marks Dashboard as active when on /dashboard", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).toContain("bg-[hsl(var(--nav-active-bg))]");
+    expect(dashLink.className).toContain("bg-[hsl(var(--nav-active-bg-soft))]");
   });
 
   it("marks Admin as active when on an /admin/* route", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
     const adminLink = screen.getByRole("link", { name: "Admin" });
-    expect(adminLink.className).toContain("bg-[hsl(var(--nav-active-bg))]");
+    expect(adminLink.className).toContain("bg-[hsl(var(--nav-active-bg-soft))]");
+  });
+
+  it("collapses to icon-only on toggle and hides nav labels", () => {
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+    expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("Dashboard");
+
+    fireEvent.click(screen.getByRole("button", { name: /collapse sidebar/i }));
+
+    // The label span is gone — only the icon (and the title attribute, which
+    // becomes the link's accessible name) remains.
+    expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("");
+    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
+  });
+
+  it("persists the collapsed state across mounts", () => {
+    localStorage.setItem("olia_sidebar_collapsed", "1");
+    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
+
+    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
+    localStorage.removeItem("olia_sidebar_collapsed");
   });
 });

@@ -3,7 +3,6 @@
     "label": "Idioma"
   },
   "nav": {
-    "sectionLabel": "Navegar",
     "dashboard": "Panel",
     "checklists": "Listas",
     "reporting": "Informes",
@@ -12,6 +11,8 @@
   },
   "layout": {
     "backToKiosk": "Kiosco",
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Contraer barra lateral"
   }
 }

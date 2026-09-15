@@ -110,6 +110,7 @@ export default {
         inset: "var(--shadow-inset)",    // inputs, pressed states
         panel: "var(--shadow-panel)",       // sidebar nav panel
         "nav-active": "var(--nav-active-shadow)", // active bottom-nav / sidebar pill
+        "nav-active-soft": "var(--nav-active-shadow-soft)", // active sidebar tab (half intensity)
       },
       transitionDuration: {
         instant: "var(--duration-instant)",  // 50ms

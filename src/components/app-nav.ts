@@ -4,7 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   LayoutDashboard,
-  ShieldCheck,
+  Settings,
 } from "lucide-react";
 
 export interface AppNavItem {
@@ -26,5 +26,5 @@ export const appNavItems: AppNavItem[] = [
   { id: "checklists", to: "/checklists", labelKey: "nav.checklists", icon: ClipboardList },
   { id: "reporting", to: "/reporting", labelKey: "nav.reporting", icon: BarChart3 },
   { id: "infohub", to: "/infohub", labelKey: "nav.infohub", icon: BookOpen },
-  { id: "admin", to: "/admin", labelKey: "nav.admin", icon: ShieldCheck },
+  { id: "admin", to: "/admin", labelKey: "nav.admin", icon: Settings },
 ];
