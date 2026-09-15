@@ -330,21 +330,21 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Brand name */}
+          {/* Company name */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">{t("signup.brandNameLabel")}</label>
+            <label className="text-xs text-muted-foreground mb-1 block">{t("signup.companyNameLabel")}</label>
             <input
               autoFocus
               id="signup-business-name"
               type="text"
               value={businessName}
               onChange={e => setBusinessName(e.target.value)}
-              placeholder={t("signup.brandNamePlaceholder")}
+              placeholder={t("signup.companyNamePlaceholder")}
               required
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              {t("signup.brandNameHint")}
+              {t("signup.companyNameHint")}
             </p>
           </div>
 

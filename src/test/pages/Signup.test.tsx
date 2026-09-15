@@ -85,14 +85,14 @@ describe("Signup page", () => {
     expect(screen.getByText("Create your account")).toBeInTheDocument();
   });
 
-  it("shows brand name input", () => {
+  it("shows company name input", () => {
     render(<Signup />, { wrapper });
     expect(screen.getByPlaceholderText(/Crown Restaurant/i)).toBeInTheDocument();
   });
 
-  it("shows helper text for brand name field", () => {
+  it("shows helper text for company name field", () => {
     render(<Signup />, { wrapper });
-    expect(screen.getByText(/name of your brand or restaurant/i)).toBeInTheDocument();
+    expect(screen.getByText(/name of your company/i)).toBeInTheDocument();
   });
 
   it("shows first name input", () => {
