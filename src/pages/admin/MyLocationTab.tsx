@@ -135,7 +135,6 @@ export function MyLocationTab({
                   clearKioskDeviceState();
                   setKioskDeviceActive(false);
                   setConfirmingKioskExit(false);
-                  window.location.href = "/";
                 }}
                 className="text-xs font-semibold text-status-error hover:underline"
               >
