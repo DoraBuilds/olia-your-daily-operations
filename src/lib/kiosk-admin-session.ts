@@ -21,9 +21,27 @@ interface KioskAdminSession {
   expiresAt: number;
 }
 
+// Layout.tsx's inactivity timer (and "Back to Kiosk" header button) must
+// react the instant this grant is cleared from somewhere else in the app
+// (e.g. Admin's "Exit kiosk mode" control) — not just on the next
+// navigation. grantKioskAdminSession/clearKioskAdminSession are the only
+// writers, so a tiny pub/sub here lets useSyncExternalStore subscribers
+// pick up the change immediately instead of reading a stale sessionStorage
+// snapshot from their last render.
+const listeners = new Set<() => void>();
+function notifyChange(): void {
+  listeners.forEach(listener => listener());
+}
+
+export function subscribeKioskAdminSession(callback: () => void): () => void {
+  listeners.add(callback);
+  return () => listeners.delete(callback);
+}
+
 export function grantKioskAdminSession(userId: string, locationId: string, ttlMs = DEFAULT_TTL_MS): void {
   const session: KioskAdminSession = { userId, locationId, expiresAt: Date.now() + ttlMs };
   sessionStorage.setItem(KIOSK_ADMIN_SESSION_KEY, JSON.stringify(session));
+  notifyChange();
 }
 
 // Non-destructive: callers may read this repeatedly (e.g. on every re-render
@@ -50,4 +68,5 @@ export function hasActiveKioskAdminSession(): boolean {
 
 export function clearKioskAdminSession(): void {
   sessionStorage.removeItem(KIOSK_ADMIN_SESSION_KEY);
+  notifyChange();
 }

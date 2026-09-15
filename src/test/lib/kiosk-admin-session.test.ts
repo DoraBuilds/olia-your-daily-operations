@@ -4,6 +4,7 @@ import {
   readKioskAdminSession,
   hasActiveKioskAdminSession,
   clearKioskAdminSession,
+  subscribeKioskAdminSession,
 } from "@/lib/kiosk-admin-session";
 
 beforeEach(() => {
@@ -54,5 +55,34 @@ describe("kiosk-admin-session", () => {
     grantKioskAdminSession("user-1", "location-1");
     clearKioskAdminSession();
     expect(hasActiveKioskAdminSession()).toBe(false);
+  });
+
+  // Layout.tsx's inactivity timer relies on subscribeKioskAdminSession to
+  // learn about a grant/clear the instant it happens elsewhere in the tree
+  // (e.g. Admin's "Exit kiosk mode" control), not just on its own next
+  // render (#727).
+  describe("subscribeKioskAdminSession", () => {
+    it("notifies subscribers when a session is granted", () => {
+      const listener = vi.fn();
+      subscribeKioskAdminSession(listener);
+      grantKioskAdminSession("user-1", "location-1");
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("notifies subscribers when a session is cleared", () => {
+      grantKioskAdminSession("user-1", "location-1");
+      const listener = vi.fn();
+      subscribeKioskAdminSession(listener);
+      clearKioskAdminSession();
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops notifying after unsubscribing", () => {
+      const listener = vi.fn();
+      const unsubscribe = subscribeKioskAdminSession(listener);
+      unsubscribe();
+      grantKioskAdminSession("user-1", "location-1");
+      expect(listener).not.toHaveBeenCalled();
+    });
   });
 });

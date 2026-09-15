@@ -1,11 +1,13 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import {
+  hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
+} from "@/lib/kiosk-admin-session";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -32,7 +34,12 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   // lingering owner session the kiosk device's PIN flow depends on) and
   // runs the 90s inactivity timer that returns to /kiosk — wherever in the
   // app that inactivity happens, not just on the admin page.
-  const isKioskAdminSession = hasActiveKioskAdminSession();
+  //
+  // useSyncExternalStore (not a plain call) because the grant can be
+  // cleared from elsewhere in the tree — e.g. Admin's "Exit kiosk mode"
+  // control (MyLocationTab.tsx) — and this needs to flip off immediately,
+  // not wait for Layout to re-render for some unrelated reason (#727).
+  const isKioskAdminSession = useSyncExternalStore(subscribeKioskAdminSession, hasActiveKioskAdminSession);
 
   const handleLogout = async () => {
     await signOut();
