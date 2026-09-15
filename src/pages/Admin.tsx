@@ -245,6 +245,27 @@ export default function Admin() {
     if (member) saveMemberMut.mutate({ ...member, permissions: perms });
   };
 
+  // Clicking "Kiosk" instantly and permanently turns *this* browser into
+  // the registered kiosk device for the location (see Kiosk.tsx's
+  // urlLocationId effect) — with no way to tell that's what's about to
+  // happen. A confirmation here is the only guard against someone
+  // previewing kiosk mode from their own laptop/phone and getting it
+  // silently locked into kiosk mode (#733).
+  const launchKiosk = () => {
+    const location = locations.find(l => l.id === currentLocationId);
+    setConfirmModal({
+      title: t("confirm.launchKioskTitle"),
+      message: t("confirm.launchKioskMessage", {
+        name: location?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
+      }),
+      actionLabel: t("confirm.launchKioskCta"),
+      onConfirm: () => {
+        navigate(`/kiosk?locationId=${currentLocationId}`);
+        setConfirmModal(null);
+      },
+    });
+  };
+
   const deleteMember = (m: TeamMember) => {
     // CRITICAL: Never allow deleting your own team_members row.
     // If you delete yourself, fetchTeamMember finds no row on next load,
@@ -379,7 +400,7 @@ export default function Admin() {
                       onArchiveStaff={archiveStaff}
                       onRestoreStaff={restoreStaff}
                       onDeleteStaff={deleteStaff}
-                      onLaunchKiosk={() => navigate(`/kiosk?locationId=${currentLocationId}`)}
+                      onLaunchKiosk={launchKiosk}
                     />
                     {isOwner && accountTabProps && <AccountTab {...accountTabProps} section="locations" />}
                   </div>

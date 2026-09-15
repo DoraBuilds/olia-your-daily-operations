@@ -47,6 +47,9 @@
     "removeMemberPrefix": "Remove",
     "removeMemberSuffix": "from the team? This cannot be undone.",
     "remove": "Remove",
+    "launchKioskTitle": "Set up this device as a kiosk",
+    "launchKioskMessage": "This browser will become the kiosk for {{name}} — it'll run the check-in screen instead of the regular app, and you'll only get back into Admin with a PIN. You can undo this later from Admin → Locations.",
+    "launchKioskCta": "Set up kiosk",
     "typeToConfirm": "Type",
     "toConfirm": "to confirm.",
     "placeholder": "Type DELETE"
