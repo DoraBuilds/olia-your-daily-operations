@@ -828,6 +828,16 @@ describe("Admin page", () => {
     });
   });
 
+  // 43b. Billing tab shows per-location unit price + location count, not the multiplied total
+  it("Billing tab shows per-location price and location count instead of the total", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/billing"] });
+    await waitFor(() => {
+      expect(screen.getByText("€99/month/location")).toBeInTheDocument();
+      expect(screen.getByText("(2 locations)")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/€198/)).not.toBeInTheDocument();
+  });
+
   // 44. Kiosk button in My Location tab
   it("My Location tab shows 'Kiosk' button", async () => {
     renderWithProviders(<Admin />);
