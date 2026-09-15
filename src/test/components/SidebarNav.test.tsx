@@ -59,13 +59,13 @@ describe("SidebarNav", () => {
   it("marks Dashboard as active when on /dashboard", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).toContain("bg-[hsl(var(--nav-active-bg-soft))]");
+    expect(dashLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
   });
 
   it("marks Admin as active when on an /admin/* route", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
     const adminLink = screen.getByRole("link", { name: "Admin" });
-    expect(adminLink.className).toContain("bg-[hsl(var(--nav-active-bg-soft))]");
+    expect(adminLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
   });
 
   it("collapses to icon-only on toggle and hides nav labels", () => {
