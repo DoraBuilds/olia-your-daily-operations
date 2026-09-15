@@ -259,7 +259,11 @@
       "notBetween": "No entre",
       "notProvided": "No proporcionado",
       "is": "Es",
-      "isNot": "No es"
+      "isNot": "No es",
+      "isSelected": "Está seleccionado",
+      "isNotSelected": "No está seleccionado",
+      "isOneOf": "Es uno de",
+      "isNotOneOf": "No es ninguno de"
     },
     "triggers": {
       "askQuestion": "Hacer pregunta",
@@ -290,6 +294,7 @@
     "leftUnanswered": "quedó sin responder",
     "answeredSimple": "respondió {{comparator}} {{value}}",
     "answeredBetween": "respondió {{comparator}} {{value}} y {{valueTo}}",
+    "answeredOneOf": "respondió {{comparator}} {{values}}",
     "actionRequiredTitle": "Acción requerida: \"{{question}}\" {{condition}}"
   },
   "followUpEditor": {

@@ -8,6 +8,7 @@
  */
 
 import type { LogicComparator, LogicRule } from "@/pages/checklists/types";
+import { normalizeAnswerText } from "./utils";
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export function evaluateRule(
   comparator: LogicComparator,
   ruleValue: string,
   ruleValueTo?: string,
+  ruleValues?: string[],
 ): boolean {
   // "unanswered" does not depend on the value at all
   if (comparator === "unanswered") {
@@ -29,14 +31,32 @@ export function evaluateRule(
   const numAnswer = Number(strAnswer);
   const numValue  = Number(ruleValue);
   const numValueTo = Number(ruleValueTo ?? "0");
+  const answerList = Array.isArray(answer) ? answer.map(item => normalizeAnswerText(item).toLowerCase()) : null;
 
   switch (comparator) {
     case "is":
-      // Case-insensitive string match (works for multiple_choice, checkbox, text)
+    case "is_selected":
+      // Case-insensitive string match (works for multiple_choice, checkbox, text);
+      // for a checkbox/multi-select answer, matches when the value is among those selected.
+      if (answerList) return answerList.includes(ruleValue.toLowerCase());
       return strAnswer.toLowerCase() === ruleValue.toLowerCase();
 
     case "is_not":
+    case "is_not_selected":
+      if (answerList) return !answerList.includes(ruleValue.toLowerCase());
       return strAnswer.toLowerCase() !== ruleValue.toLowerCase();
+
+    case "is_one_of": {
+      const values = (ruleValues ?? []).map(v => v.toLowerCase());
+      if (answerList) return answerList.some(item => values.includes(item));
+      return values.includes(strAnswer.toLowerCase());
+    }
+
+    case "is_not_one_of": {
+      const values = (ruleValues ?? []).map(v => v.toLowerCase());
+      if (answerList) return !answerList.some(item => values.includes(item));
+      return !values.includes(strAnswer.toLowerCase());
+    }
 
     case "eq":
       return !Number.isNaN(numAnswer) && numAnswer === numValue;
@@ -100,7 +120,7 @@ export function collectNotifyAlerts(
     const answer = answers[question.id];
 
     for (const rule of rules) {
-      const matched = evaluateRule(answer, rule.comparator, rule.value, rule.valueTo);
+      const matched = evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values);
       if (!matched) continue;
 
       for (const trigger of rule.triggers) {

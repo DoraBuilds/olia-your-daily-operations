@@ -222,19 +222,28 @@ export function doesRuleMatch(question: Question, rule: LogicRule, answers: Reco
   const answerText = normalizeAnswerText(rawAnswer).toLowerCase();
   const ruleValue = normalizeAnswerText(rule.value).toLowerCase();
   const ruleValueTo = normalizeAnswerText(rule.valueTo).toLowerCase();
+  const ruleValues = (rule.values ?? []).map(v => normalizeAnswerText(v).toLowerCase());
   const answerNumber = parseComparableNumber(rawAnswer);
   const ruleNumber = parseComparableNumber(rule.value);
   const ruleNumberTo = parseComparableNumber(rule.valueTo);
 
   switch (rule.comparator as LogicComparator) {
     case "is":
+    case "is_selected":
     case "eq":
       if (Array.isArray(rawAnswer)) return rawAnswer.map(item => normalizeAnswerText(item).toLowerCase()).includes(ruleValue);
       return answerText === ruleValue;
     case "is_not":
+    case "is_not_selected":
     case "neq":
       if (Array.isArray(rawAnswer)) return !rawAnswer.map(item => normalizeAnswerText(item).toLowerCase()).includes(ruleValue);
       return answerText !== ruleValue;
+    case "is_one_of":
+      if (Array.isArray(rawAnswer)) return rawAnswer.some(item => ruleValues.includes(normalizeAnswerText(item).toLowerCase()));
+      return ruleValues.includes(answerText);
+    case "is_not_one_of":
+      if (Array.isArray(rawAnswer)) return !rawAnswer.some(item => ruleValues.includes(normalizeAnswerText(item).toLowerCase()));
+      return !ruleValues.includes(answerText);
     case "lt":
       return answerNumber != null && ruleNumber != null ? answerNumber < ruleNumber : false;
     case "lte":
