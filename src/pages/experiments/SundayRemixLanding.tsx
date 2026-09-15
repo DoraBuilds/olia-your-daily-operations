@@ -493,7 +493,7 @@ export default function SundayRemixLanding() {
               <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link></span>
               <a href="#" className="rx-btn-hero-ghost" onClick={openDemo}>Book a demo</a>
             </div>
-            <p className="rx-hero-note">Starter from €49 · per location · <span className="rx-mark">no per-user fees</span></p>
+            <p className="rx-hero-note">Starter from €79 · per location · <span className="rx-mark">no per-user fees</span></p>
           </div>
           <div>
             <div className="rx-kiosk-card">
@@ -710,7 +710,7 @@ export default function SundayRemixLanding() {
           <div className="rx-pricing-grid">
             <div className="rx-pcard rx-fade">
               <div className="rx-pname">Starter</div>
-              <div className="rx-pamount"><span className="rx-pcur">€</span>49<span className="rx-pper"> / month</span></div>
+              <div className="rx-pamount"><span className="rx-pcur">€</span>79<span className="rx-pper"> / month</span></div>
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">

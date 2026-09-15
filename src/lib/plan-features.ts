@@ -83,7 +83,7 @@ export const PLAN_LABELS: Record<Plan, string> = {
 };
 
 export const PLAN_PRICES: Record<Plan, { monthly: number; annual: number; currency: string }> = {
-  starter:    { monthly: 49,  annual: 470,  currency: "€" },
+  starter:    { monthly: 79,  annual: 805,  currency: "€" },
   growth:     { monthly: 99,  annual: 950,  currency: "€" },
   enterprise: { monthly: 199, annual: 1910, currency: "€" },
 };

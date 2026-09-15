@@ -17,7 +17,7 @@ interface PlanProps {
 const PLANS: PlanProps[] = [
   {
     name: "Starter",
-    price: "€49",
+    price: "€79",
     period: "/ location / month",
     tagline: "For single-site restaurants and cafés getting started.",
     features: [

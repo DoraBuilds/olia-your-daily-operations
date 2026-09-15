@@ -46,7 +46,7 @@ export function HeroSection({ onBookDemo }: { onBookDemo?: () => void }) {
 
             {/* Trust line */}
             <p className="mt-5 text-sm text-muted-foreground">
-              Starter from €49 · per location · no per-user fees
+              Starter from €79 · per location · no per-user fees
             </p>
           </div>
 

@@ -583,7 +583,7 @@ export default function Landing() {
               <Link to="/signup" className="ol-btn-hero">Set up your first checklist →</Link>
               <a href="#" className="ol-btn-hero-ghost" onClick={openDemo}>Book a demo</a>
             </div>
-            <p className="ol-hero-note">Starter from €49 · per location · no per-user fees</p>
+            <p className="ol-hero-note">Starter from €79 · per location · no per-user fees</p>
           </div>
           <div>
             <div className="ol-kiosk-card">
@@ -741,7 +741,7 @@ export default function Landing() {
           <div className="ol-pricing-grid">
             <div className="ol-pcard ol-fade">
               <div className="ol-pname">Starter</div>
-              <div className="ol-pamount"><span className="ol-pcur">€</span>49<span className="ol-pper"> / month</span></div>
+              <div className="ol-pamount"><span className="ol-pcur">€</span>79<span className="ol-pper"> / month</span></div>
               <div className="ol-punit">per location · billed monthly</div>
               <div className="ol-pdiv" />
               <ul className="ol-pfeats">
