@@ -38,6 +38,15 @@ UPDATE public.team_members SET is_owner = true WHERE lower(role) = 'owner' AND N
 --       IMPORTANT: this trigger must be DROPPED in the migration that
 --       turns `role` into a free-text job title, or every role edit
 --       ("Head Chef" etc.) would incorrectly reset is_owner to false.
+--
+--       Fires on UPDATE OF role OR is_owner (not just role): an Owner
+--       caller passes the escalation check below regardless of which
+--       of the two columns they touch, so without covering is_owner
+--       here too, an Owner setting is_owner directly (without also
+--       touching role in the same statement) could desync the two —
+--       e.g. role='Owner' but is_owner=false. Covering both columns
+--       means any write to either always re-derives is_owner from the
+--       current role, so they can never drift apart.
 CREATE OR REPLACE FUNCTION public.sync_team_member_is_owner()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -53,7 +62,7 @@ $$;
 DROP TRIGGER IF EXISTS team_members_sync_is_owner ON team_members;
 
 CREATE TRIGGER team_members_sync_is_owner
-  BEFORE INSERT OR UPDATE OF role ON team_members
+  BEFORE INSERT OR UPDATE OF role, is_owner ON team_members
   FOR EACH ROW EXECUTE FUNCTION public.sync_team_member_is_owner();
 
 -- ── 2. Close a privilege-escalation gap: is_owner must be as
@@ -61,6 +70,15 @@ CREATE TRIGGER team_members_sync_is_owner
 --    Without this, the "update my own row" RLS branch (team_members_update)
 --    would let a non-owner flip their own is_owner to true directly,
 --    even though role/permissions stayed locked down.
+--
+--    The trigger itself already exists and is attached from
+--    20260821000001 (team_members_prevent_escalation, BEFORE UPDATE,
+--    unconditional — fires on every update, not just role/is_owner) —
+--    CREATE OR REPLACE FUNCTION below updates its body in place without
+--    needing to touch the trigger, since Postgres triggers reference
+--    functions by name and pick up a replaced body automatically.
+--    Re-declaring the trigger here too anyway, so this migration is
+--    self-contained and correct even if read or replayed in isolation.
 CREATE OR REPLACE FUNCTION public.prevent_team_member_self_escalation()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -82,6 +100,13 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS team_members_prevent_escalation ON team_members;
+
+CREATE TRIGGER team_members_prevent_escalation
+  BEFORE UPDATE ON team_members
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_team_member_self_escalation();
 
 -- ── 3. is_owner() — central helper (20260821000001) ──────────────
 CREATE OR REPLACE FUNCTION public.is_owner()
