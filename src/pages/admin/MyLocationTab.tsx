@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
+import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import {
   ROLE_COLOR_MAP,
 } from "./shared";
@@ -133,6 +134,13 @@ export function MyLocationTab({
               <button
                 onClick={() => {
                   clearKioskDeviceState();
+                  // This browser is no longer a kiosk device at all, so any
+                  // lingering PIN-granted admin session (and the inactivity
+                  // timer / "Back to Kiosk" button it drives in Layout.tsx)
+                  // must end here too — otherwise the timeout keeps firing
+                  // for someone doing ordinary admin work with no kiosk to
+                  // return to (#727).
+                  clearKioskAdminSession();
                   setKioskDeviceActive(false);
                   setConfirmingKioskExit(false);
                 }}

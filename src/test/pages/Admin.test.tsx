@@ -1,6 +1,7 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
+import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock("react-router-dom", async () => {
@@ -1097,6 +1098,7 @@ describe("Admin page", () => {
       localStorage.removeItem("kiosk_token");
       localStorage.removeItem("kiosk_owner_user_id");
       localStorage.removeItem("kiosk_owner_org_id");
+      sessionStorage.clear();
     });
 
     it("does not show the kiosk-device banner when this browser has no kiosk registered", async () => {
@@ -1166,6 +1168,27 @@ describe("Admin page", () => {
       // (its own content, not the marketing landing page) stays on screen.
       await waitFor(() => expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument());
       expect(screen.getByText("Location details")).toBeInTheDocument();
+    });
+
+    // Regression guard (#727): the previous fix left a lingering PIN-granted
+    // admin session (kiosk_admin_session in sessionStorage) in place after
+    // exiting, so Layout.tsx's 90s inactivity timer and "Back to Kiosk"
+    // button kept running with no kiosk device left to return to. Exiting
+    // must revoke that grant too, not just the device registration.
+    it("also revokes a live kiosk-PIN admin session when the exit is confirmed", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      grantKioskAdminSession("staff-1", "l1");
+      expect(hasActiveKioskAdminSession()).toBe(true);
+
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+      await waitFor(() => expect(screen.getByText("Stop treating this device as a kiosk?")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+
+      await waitFor(() => expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument());
+      expect(hasActiveKioskAdminSession()).toBe(false);
     });
   });
 });

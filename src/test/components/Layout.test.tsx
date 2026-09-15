@@ -1,6 +1,6 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
-import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
 
 // ─── Hoist mock vars ──────────────────────────────────────────────────────────
@@ -158,7 +158,9 @@ describe("Layout", () => {
       vi.useFakeTimers();
       renderWithProviders(<Layout title="T"><span /></Layout>);
 
-      vi.advanceTimersByTime(90000);
+      act(() => {
+        vi.advanceTimersByTime(90000);
+      });
 
       expect(mockNavigate).toHaveBeenCalledWith("/kiosk");
       expect(hasActiveKioskAdminSession()).toBe(false);
@@ -174,6 +176,31 @@ describe("Layout", () => {
 
       expect(mockNavigate).not.toHaveBeenCalledWith("/kiosk");
       expect(hasActiveKioskAdminSession()).toBe(true);
+    });
+
+    // Regression guard (#727): "Exit kiosk mode" in Admin's My Location tab
+    // clears this same grant from outside Layout's own tree. Layout must
+    // stop the timer and swap the button back immediately, not only after
+    // some unrelated re-render.
+    it("stops the inactivity timer and swaps back to a normal Log out button the instant the grant is cleared from elsewhere", () => {
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+      expect(screen.getByText(/back to kiosk|kiosk/i)).toBeInTheDocument();
+
+      act(() => {
+        clearKioskAdminSession();
+      });
+
+      expect(screen.queryByText(/back to kiosk/i)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+
+      // The effect's cleanup already tore down the real inactivity timer it
+      // had scheduled (isKioskAdminSession flipped false), so switching to
+      // fake timers now and fast-forwarding must not trigger a stray /kiosk
+      // navigation from that old timer.
+      vi.useFakeTimers();
+      mockNavigate.mockClear();
+      vi.advanceTimersByTime(90000);
+      expect(mockNavigate).not.toHaveBeenCalledWith("/kiosk");
     });
   });
 
