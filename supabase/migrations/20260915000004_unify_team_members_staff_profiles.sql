@@ -19,6 +19,15 @@
 -- later change once the new Users/Concepts UI ships.
 -- ================================================================
 
+-- pgcrypto (crypt, gen_salt) lives in the `extensions` schema on the
+-- hosted project (pre-provisioned there before any migration runs),
+-- but a fresh local dev DB's `CREATE EXTENSION IF NOT EXISTS pgcrypto`
+-- lands it in `public` instead — same root cause as 20260520000001,
+-- which fixed this for individual functions via `SET search_path =
+-- public, extensions`. This migration is a plain script, not a
+-- function, so the same fix applies at the session level instead.
+SET search_path = public, extensions;
+
 -- ── 1. team_members.id can no longer require a matching auth.users
 --    row — kiosk-only members (is_manager = false) have no admin-app
 --    login and never will unless promoted. This FK already doesn't
