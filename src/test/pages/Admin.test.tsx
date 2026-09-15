@@ -833,7 +833,7 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/billing"] });
     await waitFor(() => {
       expect(screen.getByText("€99/month/location")).toBeInTheDocument();
-      expect(screen.getByText("(2 locations)")).toBeInTheDocument();
+      expect(screen.getByText("(2 active locations)")).toBeInTheDocument();
     });
     expect(screen.queryByText(/€198/)).not.toBeInTheDocument();
   });

@@ -959,7 +959,7 @@ export function AccountTab({
               </p>
               {PLAN_PRICES[plan].monthly > 0 && (
                 <p className="text-xs text-muted-foreground/70 mt-0.5">
-                  ({t("accountTab.locationsCount", { count: Math.max(1, locations.length) })})
+                  ({t("accountTab.locationsCount", { count: Math.max(1, activeLocationIds.length) })})
                 </p>
               )}
             </div>
