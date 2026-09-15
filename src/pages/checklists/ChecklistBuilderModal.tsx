@@ -133,6 +133,7 @@ export function ChecklistBuilderModal({
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const suppressQuestionDragRef = useRef(false);
   const [insertDropdown, setInsertDropdown] = useState<{ si: number; qi: number } | null>(null);
   const insertDropdownRef = useRef<HTMLDivElement>(null);
   const footerPublishRef = useRef<HTMLButtonElement>(null);
@@ -866,7 +867,14 @@ export function ChecklistBuilderModal({
                   )}
                   <div
                     draggable
-                    onDragStart={e => { e.dataTransfer.effectAllowed = "move"; setDragQuestionKey(qKey); }}
+                    onMouseDown={e => {
+                      const tag = (e.target as HTMLElement).tagName;
+                      suppressQuestionDragRef.current = tag === "INPUT" || tag === "TEXTAREA";
+                    }}
+                    onDragStart={e => {
+                      if (suppressQuestionDragRef.current) { e.preventDefault(); return; }
+                      e.dataTransfer.effectAllowed = "move"; setDragQuestionKey(qKey);
+                    }}
                     onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverKey(qKey); }}
                     onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverKey(null); }}
                     onDrop={() => {
