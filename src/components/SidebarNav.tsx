@@ -1,26 +1,70 @@
+import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { PanelLeft } from "lucide-react";
 import { appNavItems } from "./app-nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+
+const COLLAPSED_STORAGE_KEY = "olia_sidebar_collapsed";
+
+function readStoredCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function SidebarNav() {
   const location = useLocation();
   const { t } = useTranslation();
   const { teamMember } = useAuth();
   const isOwner = teamMember?.role === "Owner";
+  const [collapsed, setCollapsed] = useState(readStoredCollapsed);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      // localStorage unavailable (private browsing, etc.) — collapse state
+      // just won't persist across reloads, which is fine.
+    }
+  }, [collapsed]);
+
+  const toggleLabel = collapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar");
 
   return (
-    <aside className="hidden md:flex md:w-[224px] md:shrink-0 pt-5 pb-8">
-      <div className="w-full h-fit rounded-[28px] border border-border bg-card/92 p-3 shadow-panel backdrop-blur-sm">
-        <div className="flex items-center gap-2.5 px-3 pt-1 pb-3 mb-1 border-b border-border/60">
-          <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-7 h-7 shrink-0" />
-          <span className="font-display text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
+    <aside
+      className={cn(
+        "hidden md:flex md:shrink-0 pt-5 pb-8 transition-[width] duration-base ease-inout",
+        collapsed ? "md:w-[68px]" : "md:w-[224px]",
+      )}
+    >
+      <div className="w-full h-fit rounded-[28px] bg-card/92 p-3 backdrop-blur-sm">
+        <div
+          className={cn(
+            "flex items-center pb-3 mb-1 border-b border-border/60",
+            collapsed ? "justify-center pt-1" : "justify-between gap-2.5 px-3 pt-1",
+          )}
+        >
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-7 h-7 shrink-0" />
+              <span className="font-display text-[17px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setCollapsed((prev) => !prev)}
+            aria-label={toggleLabel}
+            title={toggleLabel}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <PanelLeft size={18} strokeWidth={1.8} />
+          </button>
         </div>
-        <p className="px-3 pt-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          {t("nav.sectionLabel")}
-        </p>
-        <nav aria-label="Primary" className="space-y-1">
+        <nav aria-label="Primary" className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
           {appNavItems.map(({ to, labelKey, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);
             const label = t(labelKey);
@@ -30,27 +74,24 @@ export function SidebarNav() {
             }) ?? [];
 
             return (
-              <div key={to} className="space-y-1">
+              <div key={to} className={cn("space-y-1", collapsed && "w-full flex justify-center")}>
                 <NavLink
                   to={to}
+                  title={collapsed ? label : undefined}
                   className={cn(
-                    "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
+                    "group flex items-center transition-all",
+                    collapsed
+                      ? "h-11 w-11 justify-center rounded-2xl"
+                      : "gap-3 rounded-2xl px-3 py-3 text-sm font-medium",
                     active
-                      ? "bg-[hsl(var(--nav-active-bg))] text-[hsl(var(--nav-active-icon))] shadow-nav-active"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground hover:shadow-sm",
+                      ? "bg-[hsl(var(--nav-active-bg-soft))] text-[hsl(var(--nav-active-icon))] shadow-nav-active-soft"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-2xl transition-colors shadow-inset",
-                      active ? "bg-white/16" : "bg-muted text-muted-foreground group-hover:bg-card",
-                    )}
-                  >
-                    <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
-                  </span>
-                  <span className="tracking-[0.02em]">{label}</span>
+                  <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                  {!collapsed && <span className="tracking-[0.02em]">{label}</span>}
                 </NavLink>
-                {visibleChildren.length > 0 ? (
+                {!collapsed && visibleChildren.length > 0 ? (
                   <div className="ml-5 border-l border-border/70 pl-4 space-y-1">
                     {visibleChildren.map((child) => {
                       const childActive = location.pathname.startsWith(child.to);

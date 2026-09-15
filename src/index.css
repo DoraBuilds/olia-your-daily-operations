@@ -171,6 +171,11 @@ html { font-size: 16px; }                        /* mobile / default        */
     --nav-active-label: var(--powder-blue-deep);
     --nav-active-shadow: 0 6px 16px hsl(var(--powder-blue) / 0.35);
 
+    /* Sidebar-only: same teal, half the intensity (the sidebar panel has no
+       border/shadow of its own, so a full-strength fill reads too heavy) */
+    --nav-active-bg-soft:     hsl(var(--powder-blue) / 0.5);
+    --nav-active-shadow-soft: 0 6px 16px hsl(var(--powder-blue) / 0.175);
+
     /* Sidebar panel — deeper, layered elevation for a lifted, 3D feel */
     --shadow-panel: 0 2px 6px hsl(135 15% 5% / 0.08),
                     0 24px 60px -12px hsl(135 15% 5% / 0.22);

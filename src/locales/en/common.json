@@ -3,7 +3,6 @@
     "label": "Language"
   },
   "nav": {
-    "sectionLabel": "Navigate",
     "dashboard": "Dashboard",
     "checklists": "Checklists",
     "reporting": "Reporting",
@@ -12,6 +11,8 @@
   },
   "layout": {
     "backToKiosk": "Kiosk",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
   }
 }
