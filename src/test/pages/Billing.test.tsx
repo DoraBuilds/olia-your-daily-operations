@@ -287,7 +287,7 @@ describe("Billing page", () => {
 
     it("does not show any plan prices", () => {
       renderWithProviders(<Billing />);
-      expect(screen.queryByText(/€49/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/€79/)).not.toBeInTheDocument();
       expect(screen.queryByText(/€99/)).not.toBeInTheDocument();
     });
 

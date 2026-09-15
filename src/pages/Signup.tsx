@@ -34,7 +34,7 @@ function SignupHeader() {
 export default function Signup() {
   useDocumentMeta(
     "Get started — Olia",
-    "Set up your first checklist in under an hour. Starter plans from €49/month per location, no per-user fees.",
+    "Set up your first checklist in under an hour. Starter plans from €79/month per location, no per-user fees.",
   );
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
