@@ -297,6 +297,26 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(saved.sections[0].questions[0].config.logicRules[0].triggers[0].type).toBe("require_note");
   });
 
+  it("offers 'is one of' as a logic comparator and stores the picked values", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
+    fireEvent.change(screen.getByDisplayValue("is"), { target: { value: "is_one_of" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    fireEvent.click(screen.getByRole("button", { name: "No" }));
+
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "One Of Checklist" },
+    });
+    fireEvent.click(screen.getByTestId("checklist-save-button"));
+
+    const saved = onAdd.mock.calls[0][0] as any;
+    const rule = saved.sections[0].questions[0].config.logicRules[0];
+    expect(rule.comparator).toBe("is_one_of");
+    expect(rule.values).toEqual(["Yes", "No"]);
+  });
+
   it("shows colored multiple-choice options and hides the create action trigger option", async () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 

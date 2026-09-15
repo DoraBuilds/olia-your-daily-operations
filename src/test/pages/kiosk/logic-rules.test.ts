@@ -21,6 +21,32 @@ describe("evaluateRule", () => {
     it("is_not: does not match same value", () => expect(evaluateRule("Yes", "is_not", "yes")).toBe(false));
   });
 
+  describe("is_selected / is_not_selected", () => {
+    it("is_selected: matches a single-value answer case-insensitively", () =>
+      expect(evaluateRule("Broken", "is_selected", "broken")).toBe(true));
+    it("is_selected: matches when the value is among multiple selections", () =>
+      expect(evaluateRule(["Damaged", "Broken"], "is_selected", "Broken")).toBe(true));
+    it("is_selected: does not match when the value is absent from selections", () =>
+      expect(evaluateRule(["Damaged", "Missing"], "is_selected", "Broken")).toBe(false));
+    it("is_not_selected: matches when the value is absent from selections", () =>
+      expect(evaluateRule(["Damaged"], "is_not_selected", "Broken")).toBe(true));
+    it("is_not_selected: does not match when the value is present", () =>
+      expect(evaluateRule(["Damaged", "Broken"], "is_not_selected", "Broken")).toBe(false));
+  });
+
+  describe("is_one_of / is_not_one_of", () => {
+    it("is_one_of: matches when a single-select answer is in the value set", () =>
+      expect(evaluateRule("Fair", "is_one_of", "", undefined, ["Fair", "Poor"])).toBe(true));
+    it("is_one_of: does not match when the answer is outside the value set", () =>
+      expect(evaluateRule("Good", "is_one_of", "", undefined, ["Fair", "Poor"])).toBe(false));
+    it("is_one_of: matches when any multi-select answer overlaps the value set", () =>
+      expect(evaluateRule(["Good", "Poor"], "is_one_of", "", undefined, ["Fair", "Poor"])).toBe(true));
+    it("is_not_one_of: matches when the answer has no overlap with the value set", () =>
+      expect(evaluateRule("Good", "is_not_one_of", "", undefined, ["Fair", "Poor"])).toBe(true));
+    it("is_not_one_of: does not match when the answer overlaps the value set", () =>
+      expect(evaluateRule(["Good", "Poor"], "is_not_one_of", "", undefined, ["Fair", "Poor"])).toBe(false));
+  });
+
   describe("numeric comparators", () => {
     it("eq: matches equal numbers", () => expect(evaluateRule("5", "eq", "5")).toBe(true));
     it("eq: does not match different", () => expect(evaluateRule("4", "eq", "5")).toBe(false));

@@ -775,6 +775,159 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
       expect(screen.getByText("Triggered by is_not")).toBeInTheDocument();
     });
   });
+
+  it("comparator 'is_selected': triggers when the value is among multiple checkbox selections", async () => {
+    renderRunner(makeChecklist([
+      {
+        id: "q-selected",
+        text: "Issues found?",
+        type: "multiple_choice",
+        required: false,
+        selectionMode: "multiple",
+        options: ["Damaged", "Broken", "Missing"],
+        config: {
+          logicRules: [{
+            id: "rule-is-selected",
+            comparator: "is_selected",
+            value: "Broken",
+            triggers: [{
+              type: "ask_question",
+              config: {
+                followUpQuestion: {
+                  id: "q-triggered-selected",
+                  text: "Triggered by is_selected",
+                  responseType: "text",
+                  required: false,
+                  config: {},
+                },
+              },
+            }],
+          }],
+        },
+      },
+      { id: "q-final", text: "Final", type: "text", required: false },
+    ]));
+    fireEvent.click(screen.getByRole("button", { name: "Damaged" }));
+    fireEvent.click(screen.getByRole("button", { name: "Broken" }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Triggered by is_selected")).toBeInTheDocument();
+    });
+  });
+
+  it("comparator 'is_not_selected': triggers when the value is absent from the selections", async () => {
+    renderRunner(makeChecklist([
+      {
+        id: "q-notselected",
+        text: "Issues found?",
+        type: "multiple_choice",
+        required: false,
+        selectionMode: "multiple",
+        options: ["Damaged", "Broken", "Missing"],
+        config: {
+          logicRules: [{
+            id: "rule-is-not-selected",
+            comparator: "is_not_selected",
+            value: "Broken",
+            triggers: [{
+              type: "ask_question",
+              config: {
+                followUpQuestion: {
+                  id: "q-triggered-notselected",
+                  text: "Triggered by is_not_selected",
+                  responseType: "text",
+                  required: false,
+                  config: {},
+                },
+              },
+            }],
+          }],
+        },
+      },
+      { id: "q-final", text: "Final", type: "text", required: false },
+    ]));
+    fireEvent.click(screen.getByRole("button", { name: "Damaged" }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Triggered by is_not_selected")).toBeInTheDocument();
+    });
+  });
+
+  it("comparator 'is_one_of': triggers when the single-select answer is in the value set", async () => {
+    renderRunner(makeChecklist([
+      {
+        id: "q-oneof",
+        text: "Condition",
+        type: "multiple_choice",
+        required: false,
+        selectionMode: "single",
+        options: ["Good", "Fair", "Poor"],
+        config: {
+          logicRules: [{
+            id: "rule-one-of",
+            comparator: "is_one_of",
+            value: "",
+            values: ["Fair", "Poor"],
+            triggers: [{
+              type: "ask_question",
+              config: {
+                followUpQuestion: {
+                  id: "q-triggered-oneof",
+                  text: "Triggered by is_one_of",
+                  responseType: "text",
+                  required: false,
+                  config: {},
+                },
+              },
+            }],
+          }],
+        },
+      },
+      { id: "q-final", text: "Final", type: "text", required: false },
+    ]));
+    fireEvent.click(screen.getByRole("button", { name: "Poor" }));
+    await waitFor(() => {
+      expect(screen.getByText("Triggered by is_one_of")).toBeInTheDocument();
+    });
+  });
+
+  it("comparator 'is_not_one_of': triggers when the single-select answer is outside the value set", async () => {
+    renderRunner(makeChecklist([
+      {
+        id: "q-notoneof",
+        text: "Condition",
+        type: "multiple_choice",
+        required: false,
+        selectionMode: "single",
+        options: ["Good", "Fair", "Poor"],
+        config: {
+          logicRules: [{
+            id: "rule-not-one-of",
+            comparator: "is_not_one_of",
+            value: "",
+            values: ["Fair", "Poor"],
+            triggers: [{
+              type: "ask_question",
+              config: {
+                followUpQuestion: {
+                  id: "q-triggered-notoneof",
+                  text: "Triggered by is_not_one_of",
+                  responseType: "text",
+                  required: false,
+                  config: {},
+                },
+              },
+            }],
+          }],
+        },
+      },
+      { id: "q-final", text: "Final", type: "text", required: false },
+    ]));
+    fireEvent.click(screen.getByRole("button", { name: "Good" }));
+    await waitFor(() => {
+      expect(screen.getByText("Triggered by is_not_one_of")).toBeInTheDocument();
+    });
+  });
 });
 
 // ─── InstructionBlock — image lightbox ───────────────────────────────────────

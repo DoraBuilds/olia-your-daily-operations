@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, AlertTriangle, Mail, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import type { LogicRule, LogicComparator, LogicTrigger, LogicTriggerType, ResponseType } from "./types";
 
@@ -37,6 +38,10 @@ function useComparatorOptions(t: (key: string) => string) {
   const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
     { key: "is", label: t("logicRules.comparators.is") },
     { key: "is_not", label: t("logicRules.comparators.isNot") },
+    { key: "is_selected", label: t("logicRules.comparators.isSelected") },
+    { key: "is_not_selected", label: t("logicRules.comparators.isNotSelected") },
+    { key: "is_one_of", label: t("logicRules.comparators.isOneOf") },
+    { key: "is_not_one_of", label: t("logicRules.comparators.isNotOneOf") },
     { key: "unanswered", label: t("logicRules.comparators.notProvided") },
   ];
   const TEXT_COMPARATORS = CHOICE_COMPARATORS;
@@ -84,7 +89,18 @@ export function LogicRulesEditor({
     if ((rule.comparator === "between" || rule.comparator === "not_between") && rule.valueTo) {
       return t("logicRules.answeredBetween", { comparator: label.toLowerCase(), value: rule.value, valueTo: rule.valueTo });
     }
+    if (rule.comparator === "is_one_of" || rule.comparator === "is_not_one_of") {
+      return t("logicRules.answeredOneOf", { comparator: label.toLowerCase(), values: (rule.values ?? []).join(", ") });
+    }
     return t("logicRules.answeredSimple", { comparator: label.toLowerCase(), value: rule.value });
+  };
+
+  const isOneOfComparator = (comparator: LogicComparator) => comparator === "is_one_of" || comparator === "is_not_one_of";
+
+  const toggleRuleValue = (ri: number, choice: string) => {
+    const current = rules[ri].values ?? [];
+    const next = current.includes(choice) ? current.filter(v => v !== choice) : [...current, choice];
+    updateRule(ri, { values: next });
   };
 
   const addRule = () => {
@@ -158,6 +174,7 @@ export function LogicRulesEditor({
                       comparator: nextComparator,
                       value: nextComparator === "unanswered" ? "" : rule.value,
                       valueTo: nextComparator === "unanswered" ? undefined : rule.valueTo,
+                      values: isOneOfComparator(nextComparator) ? (rule.values ?? []) : undefined,
                     });
                   }}
                   className="text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
@@ -170,6 +187,25 @@ export function LogicRulesEditor({
                   <span className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-muted-foreground">
                     {t("logicRules.noResponseProvided")}
                   </span>
+                ) : isMcType && isOneOfComparator(rule.comparator) ? (
+                  <div className="flex flex-wrap gap-1">
+                    {choices.map(c => {
+                      const selected = (rule.values ?? []).includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => toggleRuleValue(ri, c)}
+                          className={cn(
+                            "text-xs px-2 py-1 rounded-full border transition-colors",
+                            selected ? "bg-sage/15 border-sage/40 text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
+                          )}
+                        >
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ) : isMcType ? (
                   <select
                     value={rule.value}

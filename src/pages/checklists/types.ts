@@ -51,7 +51,11 @@ export type ResponseType =
   // kiosk runner falls back to plain text input for all three
   | "datetime" | "signature" | "person";
 
-export type LogicComparator = "is" | "is_not" | "lt" | "lte" | "eq" | "neq" | "gte" | "gt" | "between" | "not_between" | "unanswered";
+export type LogicComparator =
+  | "is" | "is_not"
+  | "is_selected" | "is_not_selected"
+  | "is_one_of" | "is_not_one_of"
+  | "lt" | "lte" | "eq" | "neq" | "gte" | "gt" | "between" | "not_between" | "unanswered";
 export type LogicTriggerType = "ask_question" | "notify" | "require_note" | "require_media" | "require_action";
 
 export interface LogicTrigger {
@@ -70,7 +74,8 @@ export interface LogicRule {
   id: string;
   comparator: LogicComparator;
   value: string;
-  valueTo?: string; // for "between"
+  valueTo?: string; // for "between" / "not_between"
+  values?: string[]; // for "is_one_of" / "is_not_one_of"
   triggers: LogicTrigger[];
 }
 
