@@ -1147,19 +1147,10 @@ describe("Admin page", () => {
       await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
     });
 
-    it("clears kiosk device storage and hides the banner when the exit is confirmed", async () => {
+    it("clears kiosk device storage, hides the banner, and stays on the admin panel when the exit is confirmed", async () => {
       localStorage.setItem("kiosk_location_id", "l1");
       localStorage.setItem("kiosk_location_name", "Main Branch");
       localStorage.setItem("kiosk_token", "tok-1");
-
-      // Replace window.location wholesale so the handler's real navigation
-      // (window.location.href = "/") doesn't hit jsdom's unimplemented
-      // navigation path.
-      const originalLocation = window.location;
-      Object.defineProperty(window, "location", {
-        configurable: true,
-        value: { ...originalLocation, href: "" },
-      });
 
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
@@ -1170,9 +1161,11 @@ describe("Admin page", () => {
       expect(localStorage.getItem("kiosk_location_id")).toBeNull();
       expect(localStorage.getItem("kiosk_location_name")).toBeNull();
       expect(localStorage.getItem("kiosk_token")).toBeNull();
-      expect(window.location.href).toBe("/");
-
-      Object.defineProperty(window, "location", { configurable: true, value: originalLocation });
+      // Regression guard for the "exit kiosk mode dumps you on the landing
+      // page" bug: confirming must not navigate away — the admin panel
+      // (its own content, not the marketing landing page) stays on screen.
+      await waitFor(() => expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument());
+      expect(screen.getByText("Location details")).toBeInTheDocument();
     });
   });
 });
