@@ -1087,6 +1087,63 @@ describe("Admin page", () => {
     await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("delete_my_account"));
   });
 
+  // ── Launch kiosk confirmation (#733) ──────────────────────────────────────
+  // The "Kiosk" button used to navigate straight to /kiosk?locationId=..., and
+  // Kiosk.tsx registers *this* browser as the permanent kiosk device the
+  // instant that route mounts with a locationId param — no warning. A
+  // confirmation step here is the only thing standing between "curious click"
+  // and "device silently locked into kiosk mode".
+  describe("Launch kiosk confirmation", () => {
+    // mockNavigate is a single module-level mock shared (and never reset) by
+    // the whole file — clear it per test so an assertion here can't be
+    // polluted by a navigate() call some earlier test made.
+    beforeEach(() => {
+      mockNavigate.mockClear();
+    });
+
+    it("does not navigate immediately when the Kiosk button is clicked", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Kiosk" }));
+
+      expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/kiosk?locationId="));
+      await waitFor(() => {
+        expect(screen.getByText("Set up this device as a kiosk")).toBeInTheDocument();
+      });
+    });
+
+    it("names the current location in the confirmation message", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Kiosk" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/will become the kiosk for Main Branch/)).toBeInTheDocument();
+      });
+    });
+
+    it("navigates to /kiosk with the location id only after confirming", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Kiosk" }));
+      await waitFor(() => expect(screen.getByText("Set up kiosk")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Set up kiosk"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/kiosk?locationId=l1");
+    });
+
+    it("does not navigate when the confirmation is cancelled", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Kiosk" }));
+      await waitFor(() => expect(screen.getByText("Cancel")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Cancel"));
+
+      expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/kiosk?locationId="));
+      expect(screen.queryByText("Set up this device as a kiosk")).not.toBeInTheDocument();
+    });
+  });
+
   // ── Exit kiosk mode banner (#633) ─────────────────────────────────────────
   // This browser being "a configured kiosk" is a localStorage fact, not test
   // data — set/clear it around each test in this block so it never leaks

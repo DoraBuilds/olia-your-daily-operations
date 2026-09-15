@@ -47,6 +47,9 @@
     "removeMemberPrefix": "¿Quitar a",
     "removeMemberSuffix": "del equipo? Esto no se puede deshacer.",
     "remove": "Quitar",
+    "launchKioskTitle": "Configurar este dispositivo como kiosco",
+    "launchKioskMessage": "Este navegador se convertirá en el kiosco de {{name}}: mostrará la pantalla de fichaje en lugar de la app normal, y solo podrás volver a Admin con un PIN. Puedes deshacerlo más tarde desde Admin → Ubicaciones.",
+    "launchKioskCta": "Configurar kiosco",
     "typeToConfirm": "Escribe",
     "toConfirm": "para confirmar.",
     "placeholder": "Escribe DELETE"
