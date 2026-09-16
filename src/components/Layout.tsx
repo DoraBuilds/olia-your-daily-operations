@@ -25,7 +25,11 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
   const shellWidthClass = "mx-auto w-full max-w-[1240px]";
-  const contentWidthClass = "w-full min-w-0 max-w-[920px] xl:max-w-[900px]";
+  // mx-auto: without it, this max-width column pins to the left edge of
+  // <main> and any width freed up — e.g. by collapsing SidebarNav, or by a
+  // wide viewport under the shell's 1240px cap — just becomes dead space on
+  // the right instead of the column staying centered in the pane.
+  const contentWidthClass = "w-full min-w-0 max-w-[920px] xl:max-w-[900px] mx-auto";
 
   // Every authenticated page renders through here, so this is the one place
   // that has to know about a kiosk-PIN admin session (see
