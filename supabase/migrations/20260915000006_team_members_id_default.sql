@@ -1,0 +1,24 @@
+-- ================================================================
+-- Fix: team_members.id has no DEFAULT in the migration-file schema,
+-- so a plain client INSERT that omits id (the "invite team member" /
+-- "add team member" flow always has — see useSaveTeamMember) leaves
+-- NEW.id NULL when the BEFORE INSERT hash_team_member_pin trigger
+-- runs, which then fails inserting into pin_vault with:
+--   null value in column "member_id" of relation "pin_vault"
+--   violates not-null constraint
+--
+-- Caught by directly simulating the client's INSERT as an
+-- authenticated owner (not the JS client — this reproduces at the
+-- SQL layer, ruling out a client-side bug). Since the app's own
+-- accept_invite design (20260519000001) already assumes team_members
+-- rows are pre-created with a fresh id before any auth.users row
+-- exists for that person, id must be able to generate itself —
+-- this migration makes that actually true rather than assumed.
+--
+-- Idempotent regardless of whether the hosted project's live schema
+-- already has this default via a change not captured in migration
+-- history (e.g. an early manual dashboard edit) — setting it again
+-- is a no-op either way.
+-- ================================================================
+
+ALTER TABLE public.team_members ALTER COLUMN id SET DEFAULT gen_random_uuid();
