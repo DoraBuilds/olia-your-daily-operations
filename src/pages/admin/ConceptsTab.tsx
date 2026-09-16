@@ -20,6 +20,7 @@ import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { ConfirmModal, type ConfirmState } from "./SharedUI";
 
 export interface ConceptsTabProps {
   concepts: Concept[];
@@ -74,6 +75,7 @@ export function ConceptsTab({
   const [renamingDepartment, setRenamingDepartment] = useState<{ id: string; value: string } | null>(null);
   const [newDepartmentName, setNewDepartmentName] = useState("");
   const [showAddDepartment, setShowAddDepartment] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
 
   const departmentInUse = (dep: LocationDepartment) =>
     teamMembers.some(m => m.department_id === dep.id);
@@ -156,6 +158,21 @@ export function ConceptsTab({
     if (!trimmed || departments.some(d => d.id !== id && d.name.toLowerCase() === trimmed.toLowerCase())) return;
     saveDepartment.mutate({ id, location_id: currentLocation.id, name: trimmed });
     setRenamingDepartment(null);
+  };
+
+  const confirmDeleteDepartment = (dep: LocationDepartment) => {
+    setConfirmModal({
+      title: t("confirm.deleteDepartmentTitle"),
+      message: (
+        <>{t("confirm.deleteDepartmentPrefix")} <strong className="text-foreground">{dep.name}</strong>{t("confirm.deleteDepartmentSuffix")}</>
+      ),
+      actionLabel: t("confirm.delete"),
+      requireDeleteText: true,
+      onConfirm: () => {
+        deleteDepartment.mutate({ id: dep.id, location_id: currentLocation.id });
+        setConfirmModal(null);
+      },
+    });
   };
 
   return (
@@ -281,7 +298,7 @@ export function ConceptsTab({
                         <>
                           <button onClick={() => setRenamingDepartment({ id: dep.id, value: dep.name })} className="p-1 rounded hover:bg-muted"><Pencil size={12} className="text-muted-foreground" /></button>
                           <button
-                            onClick={() => deleteDepartment.mutate({ id: dep.id, location_id: currentLocation.id })}
+                            onClick={() => confirmDeleteDepartment(dep)}
                             disabled={inUse}
                             title={inUse ? t("accountTab.departmentInUse") : t("accountTab.deleteDepartment")}
                             className={cn("p-1 rounded", inUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted")}
@@ -401,6 +418,10 @@ export function ConceptsTab({
             <Trash2 size={12} /> {t("conceptsTab.deleteLocation")}
           </button>
         </div>
+      )}
+
+      {confirmModal && (
+        <ConfirmModal {...confirmModal} onClose={() => setConfirmModal(null)} />
       )}
     </div>
   );

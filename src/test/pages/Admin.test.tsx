@@ -159,6 +159,9 @@ const { mockSaveTeamMember } = vi.hoisted(() => ({
 const { mockUseTeamMemberInvites } = vi.hoisted(() => ({
   mockUseTeamMemberInvites: vi.fn(() => ({ data: [] as unknown[], isLoading: false })),
 }));
+const { mockDeleteDepartment } = vi.hoisted(() => ({
+  mockDeleteDepartment: { mutate: vi.fn() },
+}));
 mockUseLocations.mockReturnValue({
   data: mockLocations,
   allLocations: mockLocations,
@@ -191,7 +194,7 @@ vi.mock("@/hooks/useDepartments", () => ({
     { id: "d2", location_id: "l1", name: "Back of House" },
   ], isLoading: false }),
   useSaveDepartment: () => ({ mutate: vi.fn() }),
-  useDeleteDepartment: () => ({ mutate: vi.fn() }),
+  useDeleteDepartment: () => mockDeleteDepartment,
 }));
 
 vi.mock("@/hooks/useTeamMembers", () => ({
@@ -338,6 +341,36 @@ describe("Admin page", () => {
     await waitFor(() => {
       expect(screen.getByText("Front of House")).toBeInTheDocument();
       expect(screen.getByText("Back of House")).toBeInTheDocument();
+    });
+  });
+
+  describe("Delete department confirmation", () => {
+    beforeEach(() => {
+      mockDeleteDepartment.mutate.mockClear();
+    });
+
+    it("does not delete immediately when the department delete button is clicked", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
+      fireEvent.click(screen.getAllByTitle("Delete department")[0]);
+
+      expect(mockDeleteDepartment.mutate).not.toHaveBeenCalled();
+      await waitFor(() => expect(screen.getByText("Delete department", { selector: "h2" })).toBeInTheDocument());
+    });
+
+    it("calls deleteDepartment.mutate only after typing DELETE and confirming", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
+      fireEvent.click(screen.getAllByTitle("Delete department")[0]);
+      await waitFor(() => screen.getByPlaceholderText(/Type DELETE/i));
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      expect(mockDeleteDepartment.mutate).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByPlaceholderText(/Type DELETE/i), { target: { value: "DELETE" } });
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+      expect(mockDeleteDepartment.mutate).toHaveBeenCalledWith({ id: "d1", location_id: "l1" });
     });
   });
 
