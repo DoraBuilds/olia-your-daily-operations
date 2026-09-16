@@ -238,15 +238,16 @@ describe("Admin page", () => {
     expect(screen.getByText("Owner details")).toBeInTheDocument();
   });
 
-  it("shows a single concept's locations without a concept picker (only one concept)", async () => {
+  it("still shows the concept picker (and an Add concept affordance) with only one concept, so a second concept can always be added", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.queryByText("Concept")).not.toBeInTheDocument();
+    expect(screen.getByText("Concept")).toBeInTheDocument();
+    expect(screen.getByText("Add concept")).toBeInTheDocument();
   });
 
-  it("shows a concept picker when there is more than one concept", async () => {
+  it("shows a concept picker with multiple concepts selectable", async () => {
     // mockReturnValue (not Once): Admin's concept-default effect triggers a
     // second render, which would consume a "Once" value on the first render
     // and fall back to the single-concept default before the assertion runs.
@@ -257,6 +258,7 @@ describe("Admin page", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
       expect(screen.getByText("Concept")).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Second Brand" })).toBeInTheDocument();
     });
     mockUseConcepts.mockReturnValue({ data: mockConcepts, isLoading: false });
   });
