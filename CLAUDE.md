@@ -4,27 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-```bash
-bun run dev              # Start dev server at http://localhost:8080
-bun run build            # Production build
-bun run lint             # ESLint
-bun run test             # Run unit tests once
-bun run test:watch       # Unit tests in watch mode
-bun run test:coverage    # Unit tests + coverage report (./coverage/index.html)
-bun run test:ci          # Unit tests + coverage WITH threshold enforcement (see vitest.config.ts)
-bun run milestone        # Full milestone gate: lint + test:ci + build (must all pass)
-bun run e2e              # Run all Maestro e2e flows (simulator must be running)
-bun run e2e:kiosk        # Kiosk flows only (01–03)
-bun run e2e:admin        # Admin flows
-bun run e2e:nav          # Navigation flows
-bun run e2e:runner       # Checklist runner flows
-bun run e2e:studio       # Open Maestro Studio (visual recorder)
-bun run cap:ios          # Sync & open iOS project
-bun run cap:android      # Sync & open Android project
-bun install              # Install dependencies
-```
-
-Use `bun` as the package manager (bun.lockb is present). If `bun` is not in PATH, invoke it as `~/.bun/bin/bun`.
+Use `bun` as the package manager (bun.lockb is present). If `bun` is not in PATH, invoke it as `~/.bun/bin/bun`. See `package.json` scripts for the full command list.
 
 ## Quality Standards
 
@@ -65,28 +45,7 @@ Two rules that catch the bugs coverage misses:
 
 ### E2E Tests — 100% passing
 
-Maestro flows in `.maestro/flows/` must all pass before a milestone is signed off.
-
-| Flows | Coverage |
-|-------|----------|
-| `01` Kiosk setup screen | UI elements, mock fallback locations |
-| `02` Kiosk grid | Setup → Launch → agenda grid |
-| `03` PIN entry modal | Numpad, backspace, dismiss |
-| `04` Admin login modal | Form, validation, close |
-| `05–08` Authenticated pages | Dashboard, nav, checklists, infohub |
-| `09` Checklist runner | Full PIN + runner flow |
-| `10` Admin page | My Location + Account tabs |
-
-Run e2e tests with a simulator booted and the app installed:
-```bash
-bun run cap:ios       # or cap:android
-bun run e2e
-```
-
-E2e tests require:
-- Java 21 at `~/Library/Java/jdk21`
-- Maestro at `~/.maestro/bin`
-- iOS Simulator or Android Emulator running with the app installed
+Maestro flows in `.maestro/flows/` must all pass before a milestone is signed off. See the `run-e2e` skill for the flow list, run commands, and environment requirements.
 
 ### Milestone Checklist
 
@@ -105,39 +64,6 @@ This runs in sequence and fails fast:
 ## Architecture
 
 **Olia** is a mobile-first PWA for hospitality operations management. Uses Supabase for auth, database, and edge functions. React Query manages server state; local UI state uses `useState`.
-
-### Stack
-- React 18 + TypeScript + Vite (SWC)
-- React Router v6 for routing
-- Supabase (auth + Postgres + edge functions)
-- React Query (`@tanstack/react-query`) for data fetching
-- Tailwind CSS + shadcn/ui (Radix UI) for UI
-- Recharts for charts (LineChart in ReportingTab)
-- Vitest + Testing Library for tests
-- Capacitor for iOS/Android builds
-
-### Page Structure
-Routes are defined in `src/App.tsx`:
-
-| Route | File | Size |
-|-------|------|------|
-| `/kiosk` | `src/pages/Kiosk.tsx` | ~1077 lines |
-| `/dashboard` | `src/pages/Dashboard.tsx` | ~587 lines |
-| `/notifications` | `src/pages/Notifications.tsx` | — |
-| `/checklists/*` | `src/pages/Checklists.tsx` | ~41 lines (shell) |
-| `/infohub/*` | `src/pages/Infohub.tsx` | ~1213 lines |
-| `/admin` | `src/pages/Admin.tsx` | ~1338 lines |
-| `/billing` | `src/pages/Billing.tsx` | — |
-| `*` | `src/pages/NotFound.tsx` | — |
-
-Checklists is split into sub-modules in `src/pages/checklists/` (ChecklistsTab, ReportingTab, ChecklistBuilderModal, etc.). Related sub-components live alongside their parent page.
-
-### Layout System
-Every page wraps its content in `src/components/Layout.tsx`, which provides:
-- Sticky header with title, subtitle, and optional action controls
-- Scrollable content area with fade-in animation
-- Fixed bottom nav (`BottomNav.tsx`) with 4 tabs
-- Max-width of 480px (mobile-first)
 
 ### Shared State & Data Layer
 
@@ -166,14 +92,7 @@ Infohub documents/training are Supabase-backed via `useInfohubContent` (React Qu
 - **Score rings:** SVG circles with dynamic color (≥85% green, ≥65% amber, <65% red)
 
 ### Design System
-Color tokens are CSS custom properties defined in `src/index.css`:
-- Primary: `--sage` (Midnight Blue #1A2A47), `--lavender` (Dusty Lavender #B8A5C8)
-- Backgrounds: `--background` (Alabaster White #FDFAF7), `--card` (white)
-- Status: `--status-ok` (Forest Green), `--status-warn` (Warm Amber), `--status-error` (Deep Rose)
-
-Fonts: DM Serif Display for headings (`font-display`), DM Sans for body (`font-body`).
-
-Reusable CSS utility classes: `.status-ok/warn/error`, `.card-surface`, `.section-label`, `.score-ring`.
+Color/font tokens are defined in `src/index.css`.
 
 shadcn/ui components are in `src/components/ui/` — do not edit these files manually; use the shadcn CLI to add/update them.
 

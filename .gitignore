@@ -20,8 +20,13 @@ dist-ssr
 .env.prod
 .env.*.local
 
-# Claude Code internal workspace — never commit
-.claude/
+# Claude Code internal workspace — never commit (agent worktrees, local
+# settings, downloaded skill packages), except run-e2e: a small project-
+# authored skill that CLAUDE.md points to, so it needs to ship with the repo
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/run-e2e/
 
 # Coverage reports — generated artifact, not source
 coverage/
