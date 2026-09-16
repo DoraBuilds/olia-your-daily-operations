@@ -2,6 +2,16 @@ import { screen, fireEvent, within } from "@testing-library/react";
 import Infohub from "@/pages/Infohub";
 import { renderWithProviders } from "../test-utils";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 const mockNavigate = vi.fn();
 
 vi.mock("react-router-dom", async () => {

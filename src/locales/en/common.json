@@ -14,5 +14,9 @@
     "logOut": "Log out",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
+  },
+  "conceptFilter": {
+    "label": "Concept",
+    "allConcepts": "All concepts"
   }
 }

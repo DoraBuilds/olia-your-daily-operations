@@ -8,6 +8,7 @@ import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
+import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { FolderBreadcrumb } from "./FolderBreadcrumb";
@@ -33,17 +34,35 @@ function checklistAppliesToLocation(
   return assignedIds.includes(locationId);
 }
 
+function checklistInScope(
+  checklist: { location_id: string | null; location_ids?: string[] | null },
+  scopedLocationIds: string[] | null,
+) {
+  if (scopedLocationIds === null) return true;
+  const assignedIds = checklist.location_ids?.length
+    ? checklist.location_ids
+    : (checklist.location_id ? [checklist.location_id] : null);
+
+  if (!assignedIds || assignedIds.length === 0) return true;
+  return assignedIds.some(id => scopedLocationIds.includes(id));
+}
+
 export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
   const { t } = useTranslation("checklists");
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
-  const { data: dbLocations = [] } = useLocations();
+  const { data: allDbLocations = [] } = useLocations();
+  const { scopedLocationIds } = useConceptFilter();
+  const dbLocations = scopedLocationIds === null
+    ? allDbLocations
+    : allDbLocations.filter(l => scopedLocationIds.includes(l.id));
   const allLocationsLabel = t("locations.all");
   const locationOptions = [allLocationsLabel, ...dbLocations.map(l => l.name)];
 
   // DB data
   const { data: dbFolders = [] } = useFolders();
-  const { data: dbChecklists = [] } = useChecklists();
+  const { data: allDbChecklists = [] } = useChecklists();
+  const dbChecklists = allDbChecklists.filter(c => checklistInScope(c, scopedLocationIds));
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
   const reorderFoldersMut = useReorderFolders();
@@ -100,6 +119,15 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(allLocationsLabel);
+  // If the in-page location filter points at a location outside the newly
+  // selected concept (or a deleted location), fall back to "all" rather than
+  // silently showing an empty list under a stale label.
+  useEffect(() => {
+    if (selectedLocation === allLocationsLabel) return;
+    if (!dbLocations.some(l => l.name === selectedLocation)) {
+      setSelectedLocation(allLocationsLabel);
+    }
+  }, [dbLocations, selectedLocation, allLocationsLabel]);
   const [showLocationDrop, setShowLocationDrop] = useState(false);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(() => {

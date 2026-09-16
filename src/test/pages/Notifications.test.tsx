@@ -41,6 +41,16 @@ vi.mock("@/hooks/useAlerts", () => ({
 // Import Notifications after the mocks are set up
 import Notifications from "@/pages/Notifications";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 describe("Notifications page", () => {
   beforeEach(() => {
     alertsState.data = [];

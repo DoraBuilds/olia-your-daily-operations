@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, ChevronDown } from "lucide-react";
 import { appNavItems } from "./app-nav";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConceptFilter, ALL_CONCEPTS } from "@/contexts/ConceptFilterContext";
 
 const COLLAPSED_STORAGE_KEY = "olia_sidebar_collapsed";
 
@@ -22,6 +23,7 @@ export function SidebarNav() {
   const { teamMember } = useAuth();
   const isOwner = teamMember?.is_owner ?? false;
   const [collapsed, setCollapsed] = useState(readStoredCollapsed);
+  const { concepts, selectedConceptId, setSelectedConceptId } = useConceptFilter();
 
   useEffect(() => {
     try {
@@ -64,6 +66,27 @@ export function SidebarNav() {
             <PanelLeft size={18} strokeWidth={1.8} />
           </button>
         </div>
+        {!collapsed && concepts.length > 0 && (
+          <div className="px-3 mb-3">
+            <label htmlFor="sidebar-concept-filter" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 block">
+              {t("conceptFilter.label")}
+            </label>
+            <div className="relative">
+              <select
+                id="sidebar-concept-filter"
+                value={selectedConceptId}
+                onChange={(e) => setSelectedConceptId(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-border/60 bg-muted/60 px-3 py-2 pr-8 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value={ALL_CONCEPTS}>{t("conceptFilter.allConcepts")}</option>
+                {concepts.map((concept) => (
+                  <option key={concept.id} value={concept.id}>{concept.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+        )}
         <nav aria-label="Primary" className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
           {appNavItems.map(({ to, labelKey, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);

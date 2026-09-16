@@ -6,6 +6,7 @@ import { Layout } from "@/components/Layout";
 import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell, ClipboardCheck, Clock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useActions } from "@/hooks/useActions";
@@ -35,6 +36,19 @@ function checklistAppliesToLocation(
 
   if (!assignedIds || assignedIds.length === 0) return true;
   return assignedIds.includes(locationId);
+}
+
+function checklistInScope(
+  checklist: { location_id: string | null; location_ids?: string[] | null },
+  scopedLocationIds: string[] | null,
+) {
+  if (scopedLocationIds === null) return true;
+  const assignedIds = checklist.location_ids?.length
+    ? checklist.location_ids
+    : (checklist.location_id ? [checklist.location_id] : null);
+
+  if (!assignedIds || assignedIds.length === 0) return true;
+  return assignedIds.some(id => scopedLocationIds.includes(id));
 }
 
 
@@ -167,12 +181,37 @@ export default function Dashboard() {
   const { teamMember } = useAuth();
   const currentUser = teamMember?.name ?? "";
 
+  // ── Concept scope ──
+  const { scopedLocationIds } = useConceptFilter();
+
   // ── Data hooks ──
   const { data: allAlerts = [] }    = useAlerts();
-  const { data: logs      = [] }    = useChecklistLogs();
-  const { data: actions   = [] }    = useActions();
-  const { data: checklists = [] }   = useChecklists();
-  const { data: locations = [] }    = useLocations();
+  const { data: allLogs      = [] } = useChecklistLogs();
+  const { data: allActions   = [] } = useActions();
+  const { data: allChecklists = [] } = useChecklists();
+  const { data: allLocations = [] } = useLocations();
+
+  const locations = useMemo(
+    () => scopedLocationIds === null ? allLocations : allLocations.filter(l => scopedLocationIds.includes(l.id)),
+    [allLocations, scopedLocationIds],
+  );
+  const checklists = useMemo(
+    () => allChecklists.filter(c => checklistInScope(c, scopedLocationIds)),
+    [allChecklists, scopedLocationIds],
+  );
+  const logs = useMemo(
+    () => scopedLocationIds === null
+      ? allLogs
+      : allLogs.filter(l => l.location_id === null || scopedLocationIds.includes(l.location_id)),
+    [allLogs, scopedLocationIds],
+  );
+  const scopedChecklistIds = useMemo(() => new Set(checklists.map(c => c.id)), [checklists]);
+  const actions = useMemo(
+    () => scopedLocationIds === null
+      ? allActions
+      : allActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
+    [allActions, scopedLocationIds, scopedChecklistIds],
+  );
 
   // ── Date helpers ──
   const pad = (n: number) => String(n).padStart(2, "0");

@@ -3,6 +3,16 @@ import { Layout } from "@/components/Layout";
 import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 // ─── Hoist mock vars ──────────────────────────────────────────────────────────
 const { mockSignOut, mockNavigate, mockUseAuth } = vi.hoisted(() => ({
   mockSignOut: vi.fn().mockResolvedValue({}),

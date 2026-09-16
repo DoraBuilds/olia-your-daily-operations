@@ -1,9 +1,17 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+/**
+ * Concept-scoping coverage for ChecklistsTab — verifies the sidebar's concept
+ * dropdown (ConceptFilterContext.scopedLocationIds) narrows:
+ *  - the in-page location filter dropdown's options
+ *  - which checklists are listed (org-wide/unassigned checklists always stay visible)
+ */
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
+
+const conceptFilterState: { scopedLocationIds: string[] | null } = { scopedLocationIds: null };
 
 vi.mock("@/contexts/ConceptFilterContext", () => ({
   ALL_CONCEPTS: "all",
@@ -11,11 +19,10 @@ vi.mock("@/contexts/ConceptFilterContext", () => ({
     concepts: [],
     selectedConceptId: "all",
     setSelectedConceptId: () => {},
-    scopedLocationIds: null,
+    scopedLocationIds: conceptFilterState.scopedLocationIds,
   }),
 }));
 
-// useBlocker requires a data router; stub it for MemoryRouter-based tests
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
@@ -99,19 +106,22 @@ vi.mock("@/hooks/usePlan", () => ({
 }));
 
 vi.mock("@/hooks/useChecklists", () => {
-  // Use stable references — a fresh [] on every call causes useEffect([dbFolders])
-  // to fire infinitely, hanging the test runner inside act().
-  const FOLDERS = [{ id: "f1", name: "Daily Operations", parent_id: null, location_id: null }];
+  const FOLDERS: any[] = [];
   const CHECKLISTS = [{
-    id: "cl-1", title: "Opening Checklist", folder_id: "f1",
-    location_id: null, schedule: "daily", sections: [],
+    id: "cl-1", title: "Main Branch Only", folder_id: null,
+    location_id: "loc-1", location_ids: null, schedule: "daily", sections: [],
     is_published: true,
     created_at: "2026-01-01", updated_at: "2026-01-01",
   }, {
-    id: "cl-2", title: "Unfinished Checklist", folder_id: null,
-    location_id: null, schedule: null, sections: [],
-    is_published: false,
+    id: "cl-2", title: "Terrace Only", folder_id: null,
+    location_id: "loc-2", location_ids: null, schedule: "daily", sections: [],
+    is_published: true,
     created_at: "2026-01-02", updated_at: "2026-01-02",
+  }, {
+    id: "cl-3", title: "Org Wide Checklist", folder_id: null,
+    location_id: null, location_ids: null, schedule: null, sections: [],
+    is_published: true,
+    created_at: "2026-01-03", updated_at: "2026-01-03",
   }];
   return {
     useFolders: () => ({ data: FOLDERS, isLoading: false }),
@@ -133,67 +143,37 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe("ChecklistsTab", () => {
+describe("ChecklistsTab concept scoping", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    conceptFilterState.scopedLocationIds = null;
   });
 
-  it("renders without crashing", () => {
+  it("lists every checklist and location when no concept is selected", () => {
     render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
+    expect(screen.getByText("Terrace Only")).toBeInTheDocument();
+    expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
   });
 
-  it("shows search input", () => {
+  it("narrows the location filter dropdown to the selected concept's locations", () => {
+    conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByPlaceholderText(/Search/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("All locations"));
+    expect(screen.getByText("Main Branch")).toBeInTheDocument();
+    expect(screen.queryByText("Terrace")).not.toBeInTheDocument();
   });
 
-  it("shows folders in list", () => {
+  it("hides checklists assigned to a location outside the selected concept", () => {
+    conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByText("Daily Operations")).toBeInTheDocument();
+    expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
+    expect(screen.queryByText("Terrace Only")).not.toBeInTheDocument();
   });
 
-  it("shows checklists in list", async () => {
+  it("keeps an org-wide (unassigned) checklist visible even when a concept is selected", () => {
+    conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ChecklistsTab />, { wrapper });
-    // Opening Checklist is in folder f1 - need to navigate into folder
-    await waitFor(() => {
-      expect(screen.getByText("Daily Operations")).toBeInTheDocument();
-    });
-  });
-
-  it("has a FAB/add button", () => {
-    render(<ChecklistsTab />, { wrapper });
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
-  });
-
-  it("clicking folder shows checklist inside", async () => {
-    render(<ChecklistsTab />, { wrapper });
-    fireEvent.click(screen.getByText("Daily Operations"));
-    await waitFor(() => {
-      expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
-    });
-  });
-
-  it("shows location filter dropdown", () => {
-    render(<ChecklistsTab />, { wrapper });
-    // Location dropdown is the filter control
-    expect(screen.getByText("All locations")).toBeInTheDocument();
-  });
-
-  it("shows a Draft badge for unpublished checklists but not published ones", async () => {
-    render(<ChecklistsTab />, { wrapper });
-    // cl-2 (unpublished, root level) is visible without navigating into a folder
-    await waitFor(() => {
-      expect(screen.getByText("Unfinished Checklist")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Draft")).toBeInTheDocument();
-
-    // cl-1 (published) lives inside the "Daily Operations" folder — no Draft badge for it
-    fireEvent.click(screen.getByText("Daily Operations"));
-    await waitFor(() => {
-      expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
-    });
-    expect(screen.queryAllByText("Draft")).toHaveLength(0);
+    expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
   });
 });
