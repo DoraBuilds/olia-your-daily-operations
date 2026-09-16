@@ -19,6 +19,24 @@ export function useDepartments(locationId: string | null | undefined) {
   });
 }
 
+/** Departments across several locations at once — for pickers where a team member spans multiple locations. */
+export function useDepartmentsForLocations(locationIds: string[]) {
+  const sortedIds = [...locationIds].sort();
+  return useQuery({
+    queryKey: ["departments", "multi", sortedIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, location_id, name")
+        .in("location_id", sortedIds)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as LocationDepartment[];
+    },
+    enabled: sortedIds.length > 0,
+  });
+}
+
 export function useSaveDepartment() {
   const qc = useQueryClient();
   return useMutation({
@@ -36,8 +54,11 @@ export function useSaveDepartment() {
         if (error) throw error;
       }
     },
-    onSuccess: (_, dep) => {
-      qc.invalidateQueries({ queryKey: ["departments", dep.location_id] });
+    onSuccess: () => {
+      // Broad "departments" prefix so both the single-location cache and the
+      // multi-location picker's cache (queryKey ["departments", "multi", ...])
+      // get refreshed — a location-scoped key wouldn't match the multi one.
+      qc.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 }
@@ -49,8 +70,8 @@ export function useDeleteDepartment() {
       const { error } = await supabase.from("departments").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: (_, dep) => {
-      qc.invalidateQueries({ queryKey: ["departments", dep.location_id] });
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 }

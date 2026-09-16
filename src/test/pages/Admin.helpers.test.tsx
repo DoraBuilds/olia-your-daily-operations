@@ -176,6 +176,7 @@ vi.mock("@/hooks/useConcepts", () => ({
 
 vi.mock("@/hooks/useDepartments", () => ({
   useDepartments: () => ({ data: [], isLoading: false }),
+  useDepartmentsForLocations: () => ({ data: [], isLoading: false }),
   useSaveDepartment: () => ({ mutate: vi.fn() }),
   useDeleteDepartment: () => ({ mutate: vi.fn() }),
 }));

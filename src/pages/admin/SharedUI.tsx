@@ -2,7 +2,7 @@
 // BottomSheet, ModalHeader, FormField, SaveButton,
 // ConfirmModal, TeamMemberModal, ConceptModal, LocationModal
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,7 +21,7 @@ import {
   DEFAULT_PERMISSIONS,
   getInitials, generatePin,
 } from "@/lib/admin-repository";
-import { useDepartments } from "@/hooks/useDepartments";
+import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import {
   PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP, getPermLabel,
 } from "./shared";
@@ -167,12 +167,23 @@ export function TeamMemberModal({
   const [showRevealedPin, setShowRevealedPin] = useState(false);
   const [revealLoading, setRevealLoading] = useState(false);
 
-  // Department is a per-location concept — only meaningful when the member
-  // is assigned to exactly one location. Ambiguous for multi-location
-  // managers, so the picker is hidden rather than guessing which location's
-  // list applies.
-  const singleLocationId = locationIds.length === 1 ? locationIds[0] : null;
-  const { data: locationDepartments = [] } = useDepartments(singleLocationId);
+  // Department rows are scoped per-location, but a manager can cover several
+  // locations (e.g. two sites sharing a department structure) — offer every
+  // department across all their assigned locations rather than hiding the
+  // picker once they have more than one (#776).
+  const { data: assignedDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(locationIds);
+  const locationById = new Map(locations.map(l => [l.id, l.name]));
+  const multipleLocations = locationIds.length > 1;
+
+  // Clear a stale pick once we know it no longer belongs to any currently
+  // selected location (e.g. that location was just deselected) — the <select>
+  // would otherwise silently fall back to "No department" on screen while
+  // the old id is still saved underneath it.
+  useEffect(() => {
+    if (!departmentsLoading && departmentId && !assignedDepartments.some(d => d.id === departmentId)) {
+      setDepartmentId(null);
+    }
+  }, [departmentId, assignedDepartments, departmentsLoading]);
 
   const handleRevealPin = async () => {
     if (!member?.id) return;
@@ -210,7 +221,7 @@ export function TeamMemberModal({
       email: email.trim() || null,
       role: role.trim(),
       location_ids: locationIds,
-      department_id: singleLocationId ? departmentId : null,
+      department_id: departmentId,
       is_manager: isManager,
       // is_owner is never set by this modal — passed through unchanged
       // purely to satisfy the TeamMember shape; useSaveTeamMember ignores
@@ -267,7 +278,7 @@ export function TeamMemberModal({
             ))}
           </div>
         </FormField>
-        {singleLocationId && (
+        {locationIds.length > 0 && (
           <FormField label={t("sharedUI.teamMember.department")}>
             <div className="relative">
               <select
@@ -276,8 +287,10 @@ export function TeamMemberModal({
                 className={cn(inputCls, "appearance-none pr-10")}
               >
                 <option value="">{t("sharedUI.teamMember.noDepartment")}</option>
-                {locationDepartments.map(dep => (
-                  <option key={dep.id} value={dep.id}>{dep.name}</option>
+                {assignedDepartments.map(dep => (
+                  <option key={dep.id} value={dep.id}>
+                    {multipleLocations ? `${dep.name} — ${locationById.get(dep.location_id) ?? ""}` : dep.name}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
