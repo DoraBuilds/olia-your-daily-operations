@@ -48,6 +48,8 @@ vi.mock("@/contexts/AuthContext", () => ({
       name: "Sarah",
       email: "s@test.com",
       role: "Owner",
+      is_owner: true,
+      is_manager: true,
       location_ids: [],
       permissions: {},
     },

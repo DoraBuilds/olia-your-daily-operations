@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
 
 # Environment files — .env.local contains real keys and must NEVER be committed
 # .env.example (no secrets) is safe to commit and documents required variables

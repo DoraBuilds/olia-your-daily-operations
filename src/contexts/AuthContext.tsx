@@ -9,8 +9,11 @@ interface TeamMemberProfile {
   id: string;
   organization_id: string;
   name: string;
-  email: string;
+  email: string | null;
   role: string;
+  is_owner: boolean;
+  is_manager: boolean;
+  department_id: string | null;
   location_ids: string[];
   permissions: Record<string, boolean>;
   pin_reset_required?: boolean;

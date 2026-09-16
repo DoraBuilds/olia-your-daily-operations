@@ -1,6 +1,6 @@
 // ─── Shared UI components for the Admin page ─────────────────────────────────
-// BottomSheet, ModalHeader, FormField, SaveButton, DepartmentRolePicker,
-// ConfirmModal, StaffProfileModal, TeamMemberModal, LocationModal
+// BottomSheet, ModalHeader, FormField, SaveButton,
+// ConfirmModal, TeamMemberModal, ConceptModal, LocationModal
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,11 +17,11 @@ import {
   PlacesAutocompleteInput, StaticMapPreview, type PlaceResult,
 } from "@/components/PlacesAutocompleteInput";
 import {
-  type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
-  type StaffDepartment, type AccountRole,
+  type Location, type Concept, type TeamMember, type ManagerPermissions,
   DEFAULT_PERMISSIONS,
-  getRoleDepartment, getInitials, generatePin,
+  getInitials, generatePin,
 } from "@/lib/admin-repository";
+import { useDepartments } from "@/hooks/useDepartments";
 import {
   PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP, getPermLabel,
 } from "./shared";
@@ -91,41 +91,6 @@ export function SaveButton({ disabled, label }: { disabled: boolean; label: stri
   );
 }
 
-// ─── DepartmentRolePicker ─────────────────────────────────────────────────────
-
-export function DepartmentRolePicker({
-  departments,
-  value,
-  onChange,
-}: {
-  departments: StaffDepartment[];
-  value: string;
-  onChange: (role: string) => void;
-}) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {departments.map(department => {
-        const departmentSelected = value === department.name;
-        return (
-          <button
-            key={department.name}
-            type="button"
-            onClick={() => onChange(department.name)}
-            className={cn(
-              "w-full rounded-xl border px-3 py-3 text-left text-sm font-medium transition-colors",
-              departmentSelected
-                ? "bg-sage text-primary-foreground border-sage"
-                : "bg-card border-border text-foreground hover:border-sage/40",
-            )}
-          >
-            {department.name}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
 export function ConfirmModal({
@@ -175,179 +140,12 @@ export function ConfirmModal({
   );
 }
 
-// ─── StaffProfileModal ────────────────────────────────────────────────────────
-
-export function StaffProfileModal({
-  profile, locations, departments, onClose, onSave, isOwner,
-}: {
-  profile: StaffProfile | null; locations: Location[]; departments: StaffDepartment[];
-  onClose: () => void; onSave: (p: StaffProfile & { rawPin?: string }) => void;
-  isOwner?: boolean;
-}) {
-  const { t } = useTranslation("admin");
-  const isEdit = !!profile;
-  const [firstName, setFirstName] = useState(profile?.first_name ?? "");
-  const [lastName, setLastName] = useState(profile?.last_name ?? "");
-  const [locationId, setLocationId] = useState(profile?.location_id ?? locations[0]?.id ?? "");
-  const [role, setRole] = useState(getRoleDepartment(profile?.role ?? departments[0]?.name ?? ""));
-  const [email, setEmail] = useState(profile?.email ?? "");
-  // New staff: generate a PIN upfront; editing: leave empty (only set if manager enters a new one)
-  const [pin, setPin] = useState(() => isEdit ? "" : generatePin());
-  const [revealedPin, setRevealedPin] = useState<string | null>(null);
-  const [showRevealedPin, setShowRevealedPin] = useState(false);
-  const [revealLoading, setRevealLoading] = useState(false);
-
-  const handleRevealPin = async () => {
-    if (!profile?.id) return;
-    setRevealLoading(true);
-    try {
-      const { data, error } = await supabase.rpc("admin_reveal_pin", {
-        p_member_type: "staff_profile",
-        p_member_id: profile.id,
-      });
-      if (error) throw error;
-      setRevealedPin((data as string) ?? "");
-      setShowRevealedPin(true);
-    } catch (err) {
-      const msg = (err as any)?.message ?? t("sharedUI.couldNotRevealPin");
-      toast.error(msg);
-    } finally {
-      setRevealLoading(false);
-    }
-  };
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!firstName.trim() || !locationId) return;
-    if (!isEdit && !pin) return; // new staff must have a PIN
-    const now = new Date().toISOString();
-    onSave({
-      id: profile?.id ?? "",
-      location_id: locationId,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      role,
-      email: email.trim() || null,
-      status: profile?.status ?? "active",
-      // rawPin triggers SHA-256 hashing in useSaveStaffProfile;
-      // omit for edits where the manager didn't enter a new PIN (existing PIN preserved)
-      ...(pin ? { rawPin: pin } : {}),
-      pin: profile?.pin ?? "",   // satisfies StaffProfile type; hook uses rawPin when present
-      last_used_at: profile?.last_used_at ?? null,
-      archived_at: profile?.archived_at ?? null,
-      created_at: profile?.created_at ?? now,
-    });
-    onClose();
-  };
-
-  return (
-    <BottomSheet onClose={onClose}>
-      <ModalHeader title={isEdit ? t("sharedUI.staffProfile.editTitle") : t("sharedUI.staffProfile.addTitle")} onClose={onClose} />
-      <form onSubmit={handleSave} className="space-y-3">
-        <FormField label={t("sharedUI.staffProfile.locationRequired")}>
-          <div className="flex gap-2 flex-wrap">
-            {locations.map(loc => (
-              <button
-                type="button" key={loc.id} onClick={() => setLocationId(loc.id)}
-                className={cn(
-                  "flex-1 py-2 text-xs rounded-lg border transition-colors",
-                  locationId === loc.id
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {loc.name}
-              </button>
-            ))}
-          </div>
-        </FormField>
-        <FormField label={t("sharedUI.staffProfile.firstNameRequired")}>
-          <input
-            autoFocus type="text" value={firstName}
-            onChange={e => setFirstName(e.target.value)}
-            placeholder={t("sharedUI.staffProfile.firstNamePlaceholder")} className={inputCls}
-          />
-        </FormField>
-        <FormField label={t("sharedUI.staffProfile.lastName")}>
-          <input
-            type="text" value={lastName}
-            onChange={e => setLastName(e.target.value)}
-            placeholder={t("sharedUI.staffProfile.lastNamePlaceholder")} className={inputCls}
-          />
-        </FormField>
-        <FormField label={t("sharedUI.staffProfile.emailOptional")}>
-          <input
-            type="email" value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder={t("sharedUI.staffProfile.emailPlaceholder")} className={inputCls}
-          />
-          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            {t("sharedUI.staffProfile.emailHint")}
-          </p>
-        </FormField>
-        <FormField label={t("sharedUI.staffProfile.role")}>
-          <DepartmentRolePicker departments={departments} value={role} onChange={setRole} />
-        </FormField>
-        <FormField label={isEdit ? t("sharedUI.staffProfile.newPinOptional") : t("sharedUI.staffProfile.staffPin")}>
-          {isEdit ? (
-            <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
-              {t("sharedUI.staffProfile.editPinHint")}
-            </p>
-          ) : (
-            <p className="text-xs status-warn rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              {t("sharedUI.staffProfile.newPinHint")}
-            </p>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text" value={pin} maxLength={4}
-              onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              className={cn(inputCls, "text-center font-mono text-lg tracking-widest flex-1")}
-              placeholder={isEdit ? t("sharedUI.staffProfile.newPinToChange") : t("sharedUI.staffProfile.fourDigitPin")}
-            />
-            <button type="button" onClick={() => setPin(generatePin())}
-              className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors">
-              {t("sharedUI.staffProfile.generate")}
-            </button>
-          </div>
-          {isEdit && isOwner && (
-            <div className="flex items-center gap-2 mt-1.5">
-              {revealedPin !== null ? (
-                <>
-                  <span className="text-xs text-muted-foreground">
-                    {t("sharedUI.staffProfile.currentPin")}&nbsp;
-                    <span className="font-mono font-medium">
-                      {showRevealedPin ? revealedPin : "••••"}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowRevealedPin(v => !v)}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showRevealedPin ? <EyeOff size={13} /> : <Eye size={13} />}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleRevealPin}
-                  disabled={revealLoading}
-                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
-                >
-                  {revealLoading ? t("sharedUI.staffProfile.loading") : t("sharedUI.staffProfile.viewCurrentPin")}
-                </button>
-              )}
-            </div>
-          )}
-        </FormField>
-        <SaveButton disabled={!firstName.trim() || !locationId || (!isEdit && !pin)} label={isEdit ? t("sharedUI.staffProfile.saveChanges") : t("sharedUI.staffProfile.addProfile")} />
-      </form>
-    </BottomSheet>
-  );
-}
-
 // ─── TeamMemberModal ──────────────────────────────────────────────────────────
+// Unified add/edit for every team member (#748). Default access is kiosk-PIN
+// only (mirrors the old StaffProfileModal); the "Manager role" toggle opts
+// into admin-app login + permissions (the old TeamMemberModal's behavior).
+// is_owner is never editable here — it's a non-removable status stamped only
+// at signup.
 
 export function TeamMemberModal({
   member, locations, onClose, onSave, isOwner,
@@ -359,13 +157,22 @@ export function TeamMemberModal({
   const { t } = useTranslation("admin");
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
-  const [role, setRole] = useState<AccountRole>(member?.role ?? "Manager");
+  const [role, setRole] = useState(member?.role ?? "");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
+  const [isManager, setIsManager] = useState(member?.is_manager ?? false);
+  const [departmentId, setDepartmentId] = useState<string | null>(member?.department_id ?? null);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
   const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
   const [revealedPin, setRevealedPin] = useState<string | null>(null);
   const [showRevealedPin, setShowRevealedPin] = useState(false);
   const [revealLoading, setRevealLoading] = useState(false);
+
+  // Department is a per-location concept — only meaningful when the member
+  // is assigned to exactly one location. Ambiguous for multi-location
+  // managers, so the picker is hidden rather than guessing which location's
+  // list applies.
+  const singleLocationId = locationIds.length === 1 ? locationIds[0] : null;
+  const { data: locationDepartments = [] } = useDepartments(singleLocationId);
 
   const handleRevealPin = async () => {
     if (!member?.id) return;
@@ -390,22 +197,29 @@ export function TeamMemberModal({
     setLocationIds(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
   };
 
+  const canSave = name.trim().length > 0
+    && (member?.id || pin.trim().length > 0)
+    && (!isManager || email.trim().length > 0);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    if (!member && !pin.trim()) return;
+    if (!canSave) return;
     onSave({
       id: member?.id ?? "",
       name: name.trim(),
-      email: email.trim(),
-      role,
+      email: email.trim() || null,
+      role: role.trim(),
       location_ids: locationIds,
+      department_id: singleLocationId ? departmentId : null,
+      is_manager: isManager,
+      // is_owner is never set by this modal — passed through unchanged
+      // purely to satisfy the TeamMember shape; useSaveTeamMember ignores
+      // it entirely when building the actual write payload.
+      is_owner: member?.is_owner ?? false,
       initials: getInitials(name),
-      permissions: role === "Owner"
-        ? { ...DEFAULT_PERMISSIONS }
-        : role === "Manager"
+      permissions: isManager
         ? perms
-        : Object.fromEntries(Object.keys(DEFAULT_PERMISSIONS).map(k => [k, false])) as ManagerPermissions,
+        : (Object.fromEntries(Object.keys(DEFAULT_PERMISSIONS).map(k => [k, false])) as unknown as ManagerPermissions),
       ...(pin ? { rawPin: pin } : {}),
     });
     onClose();
@@ -422,7 +236,7 @@ export function TeamMemberModal({
             placeholder={t("sharedUI.teamMember.fullNamePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label={t("sharedUI.teamMember.email")}>
+        <FormField label={isManager ? t("sharedUI.teamMember.emailRequired") : t("sharedUI.teamMember.emailOptional")}>
           <input
             type="email" value={email}
             onChange={e => setEmail(e.target.value)}
@@ -430,23 +244,47 @@ export function TeamMemberModal({
           />
         </FormField>
         <FormField label={t("sharedUI.teamMember.role")}>
-          <div className="flex gap-2">
-            {(["Owner", "Manager", "Member"] as AccountRole[]).map(r => (
+          <input
+            type="text" value={role}
+            onChange={e => setRole(e.target.value)}
+            placeholder={t("sharedUI.teamMember.rolePlaceholder")} className={inputCls}
+          />
+        </FormField>
+        <FormField label={t("sharedUI.teamMember.locations")}>
+          <div className="flex gap-2 flex-wrap">
+            {locations.map(loc => (
               <button
-                type="button" key={r} onClick={() => setRole(r)}
+                type="button" key={loc.id} onClick={() => toggleLocation(loc.id)}
                 className={cn(
-                  "flex-1 py-2 text-xs rounded-lg border transition-colors",
-                  role === r
+                  "py-2 px-3 text-xs rounded-lg border transition-colors",
+                  locationIds.includes(loc.id)
                     ? "bg-sage text-primary-foreground border-sage"
                     : "border-border text-muted-foreground hover:border-sage/40",
                 )}
               >
-                {t(`roles.${r}`)}
+                {loc.name}
               </button>
             ))}
           </div>
         </FormField>
-        <FormField label={role === "Owner" ? t("sharedUI.teamMember.adminPin") : t("sharedUI.teamMember.kioskPin")}>
+        {singleLocationId && (
+          <FormField label={t("sharedUI.teamMember.department")}>
+            <div className="relative">
+              <select
+                value={departmentId ?? ""}
+                onChange={e => setDepartmentId(e.target.value || null)}
+                className={cn(inputCls, "appearance-none pr-10")}
+              >
+                <option value="">{t("sharedUI.teamMember.noDepartment")}</option>
+                {locationDepartments.map(dep => (
+                  <option key={dep.id} value={dep.id}>{dep.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </FormField>
+        )}
+        <FormField label={t("sharedUI.teamMember.kioskPin")}>
           {member?.id ? (
             <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
               {t("sharedUI.staffProfile.editPinHint")}
@@ -504,25 +342,15 @@ export function TeamMemberModal({
             </div>
           )}
         </FormField>
-        <FormField label={t("sharedUI.teamMember.locations")}>
-          <div className="flex gap-2 flex-wrap">
-            {locations.map(loc => (
-              <button
-                type="button" key={loc.id} onClick={() => toggleLocation(loc.id)}
-                className={cn(
-                  "py-2 px-3 text-xs rounded-lg border transition-colors",
-                  locationIds.includes(loc.id)
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {loc.name}
-              </button>
-            ))}
+        <div className="border-t border-border pt-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">{t("sharedUI.teamMember.managerRole")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("sharedUI.teamMember.managerRoleHint")}</p>
           </div>
-        </FormField>
-        {role === "Manager" && (
-          <div className="border-t border-border pt-3 space-y-3">
+          <Switch checked={isManager} onCheckedChange={setIsManager} />
+        </div>
+        {isManager && (
+          <div className="space-y-3">
             <p className="section-label">{t("sharedUI.teamMember.permissions")}</p>
             {(Object.keys(PERM_LABELS) as (keyof ManagerPermissions)[]).map(key => (
               <div key={key} className="flex items-center justify-between gap-3">
@@ -533,14 +361,48 @@ export function TeamMemberModal({
                 />
               </div>
             ))}
+            {!member && (
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
+                {t("sharedUI.teamMember.inviteNotice")}
+              </p>
+            )}
           </div>
         )}
-        {!member && (
-          <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2 leading-relaxed">
-            {t("sharedUI.teamMember.inviteNotice")}
-          </p>
-        )}
-        <SaveButton disabled={!name.trim() || (!member && !pin.trim())} label={member ? t("sharedUI.teamMember.saveChanges") : t("sharedUI.teamMember.addTeamMember")} />
+        <SaveButton disabled={!canSave} label={member ? t("sharedUI.teamMember.saveChanges") : t("sharedUI.teamMember.addTeamMember")} />
+      </form>
+    </BottomSheet>
+  );
+}
+
+// ─── ConceptModal ─────────────────────────────────────────────────────────────
+
+export function ConceptModal({
+  concept, onClose, onSave,
+}: {
+  concept: Concept | null; onClose: () => void; onSave: (c: { id?: string; name: string }) => void;
+}) {
+  const { t } = useTranslation("admin");
+  const [name, setName] = useState(concept?.name ?? "");
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ id: concept?.id, name: name.trim() });
+    onClose();
+  };
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <ModalHeader title={concept ? t("sharedUI.concept.editTitle") : t("sharedUI.concept.newTitle")} onClose={onClose} />
+      <form onSubmit={handleSave} className="space-y-3">
+        <FormField label={t("sharedUI.concept.nameRequired")}>
+          <input
+            autoFocus type="text" value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder={t("sharedUI.concept.namePlaceholder")} className={inputCls}
+          />
+        </FormField>
+        <SaveButton disabled={!name.trim()} label={concept ? t("sharedUI.concept.saveChanges") : t("sharedUI.concept.addConcept")} />
       </form>
     </BottomSheet>
   );
@@ -549,9 +411,9 @@ export function TeamMemberModal({
 // ─── LocationModal ────────────────────────────────────────────────────────────
 
 export function LocationModal({
-  location, onClose, onSave,
+  location, conceptId, onClose, onSave,
 }: {
-  location: Location | null; onClose: () => void; onSave: (loc: Location) => void;
+  location: Location | null; conceptId?: string | null; onClose: () => void; onSave: (loc: Location) => void;
 }) {
   const { t } = useTranslation("admin");
   const [name, setName] = useState(location?.name ?? "");
@@ -583,6 +445,7 @@ export function LocationModal({
     if (!name.trim()) return;
     onSave({
       id: location?.id ?? "",
+      concept_id: location?.concept_id ?? conceptId ?? null,
       name: name.trim(),
       address: address.trim(),
       trading_hours: null,

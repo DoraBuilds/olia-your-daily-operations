@@ -37,7 +37,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   //
   // useSyncExternalStore (not a plain call) because the grant can be
   // cleared from elsewhere in the tree — e.g. Admin's "Exit kiosk mode"
-  // control (MyLocationTab.tsx) — and this needs to flip off immediately,
+  // control (ConceptsTab.tsx) — and this needs to flip off immediately,
   // not wait for Layout to re-render for some unrelated reason (#727).
   const isKioskAdminSession = useSyncExternalStore(subscribeKioskAdminSession, hasActiveKioskAdminSession);
 

@@ -20,7 +20,7 @@ export function SidebarNav() {
   const location = useLocation();
   const { t } = useTranslation();
   const { teamMember } = useAuth();
-  const isOwner = teamMember?.role === "Owner";
+  const isOwner = teamMember?.is_owner ?? false;
   const [collapsed, setCollapsed] = useState(readStoredCollapsed);
 
   useEffect(() => {

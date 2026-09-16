@@ -1,9 +1,16 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { TeamMemberModal, ConfirmModal } from "@/pages/admin/SharedUI";
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    }),
   },
 }));
 
@@ -11,60 +18,62 @@ vi.mock("@/components/ui/sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-describe("TeamMemberModal", () => {
-  it("keeps the generated PIN when switching roles instead of regenerating it", () => {
-    render(
+function renderModal(props: Partial<Parameters<typeof TeamMemberModal>[0]> = {}) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
       <TeamMemberModal
         member={null}
         locations={[]}
         onClose={vi.fn()}
         onSave={vi.fn()}
+        {...props}
       />
-    );
+    </QueryClientProvider>,
+  );
+}
+
+describe("TeamMemberModal", () => {
+  it("keeps the generated PIN when toggling the manager-role switch", () => {
+    renderModal();
 
     const pinInput = screen.getByPlaceholderText("4-digit PIN") as HTMLInputElement;
     const initialPin = pinInput.value;
     expect(initialPin).toMatch(/^\d{4}$/);
 
-    fireEvent.click(screen.getByRole("button", { name: "Manager" }));
+    const managerSwitch = screen.getByRole("switch");
+    fireEvent.click(managerSwitch);
     expect(pinInput.value).toBe(initialPin);
 
-    fireEvent.click(screen.getByRole("button", { name: "Owner" }));
+    fireEvent.click(managerSwitch);
     expect(pinInput.value).toBe(initialPin);
   });
 
-  it("keeps a manually-typed PIN when switching roles", () => {
-    render(
-      <TeamMemberModal
-        member={null}
-        locations={[]}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />
-    );
+  it("keeps a manually-typed PIN when toggling the manager-role switch", () => {
+    renderModal();
 
     const pinInput = screen.getByPlaceholderText("4-digit PIN") as HTMLInputElement;
     fireEvent.change(pinInput, { target: { value: "1234" } });
     expect(pinInput.value).toBe("1234");
 
-    fireEvent.click(screen.getByRole("button", { name: "Member" }));
+    fireEvent.click(screen.getByRole("switch"));
     expect(pinInput.value).toBe("1234");
   });
 
   it("still lets Generate produce a new PIN on demand", () => {
-    render(
-      <TeamMemberModal
-        member={null}
-        locations={[]}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />
-    );
+    renderModal();
 
     const pinInput = screen.getByPlaceholderText("4-digit PIN") as HTMLInputElement;
     fireEvent.change(pinInput, { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Generate" }));
     expect(pinInput.value).toMatch(/^\d{4}$/);
+  });
+
+  it("only shows the permissions list once manager role is enabled", () => {
+    renderModal();
+    expect(screen.queryByText("Permissions")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch"));
+    expect(screen.getByText("Permissions")).toBeInTheDocument();
   });
 });
 

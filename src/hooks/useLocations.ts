@@ -15,7 +15,7 @@ export function useLocations() {
       const { data, error } = await supabase
         .from("locations")
         .select(
-          "id, organization_id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
+          "id, organization_id, concept_id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
         )
         .order("name");
       if (error) throw error;
@@ -122,6 +122,7 @@ export function useSaveLocation() {
         // Omitting organization_id from the UPDATE leaves the column unchanged,
         // so it always satisfies the promoted WITH CHECK.
         const updatePayload = {
+          concept_id: loc.concept_id ?? null,
           name: loc.name,
           address: loc.address ?? null,
           contact_email: loc.contact_email ?? null,
@@ -147,6 +148,7 @@ export function useSaveLocation() {
         // INSERT — organization_id is required for the plan-limit RLS policy.
         const insertPayload = {
           organization_id: member.organization_id,
+          concept_id: loc.concept_id ?? null,
           name: loc.name,
           address: loc.address ?? null,
           contact_email: loc.contact_email ?? null,

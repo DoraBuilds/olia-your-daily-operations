@@ -331,7 +331,7 @@ export function useInfohubContent() {
     role: teamMember?.role ?? null,
     locationIds: teamMember?.location_ids ?? [],
     permissions: teamMember?.permissions ?? null,
-    isOwner: teamMember?.role === "Owner",
+    isOwner: teamMember?.is_owner ?? false,
   });
   const queryKey = ["infohub-content", organizationId] as const;
 

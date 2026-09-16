@@ -5,21 +5,16 @@ import { Layout } from "@/components/Layout";
 import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  type Location, type StaffProfile, type TeamMember, type ManagerPermissions,
-  staffDisplayName, getInitials,
+  type Location, type Concept, type TeamMember, type ManagerPermissions,
+  getInitials,
 } from "@/lib/admin-repository";
 import { useAuth } from "@/contexts/AuthContext";
 import { readKioskAdminSession } from "@/lib/kiosk-admin-session";
-import { useAuditLog } from "@/hooks/useAuditLog";
 import { usePlan, useSaveActiveLocationsSelection } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLocations";
-import {
-  useStaffProfiles, useSaveStaffProfile, useArchiveStaffProfile,
-  useRestoreStaffProfile, useDeleteStaffProfile,
-} from "@/hooks/useStaffProfiles";
+import { useConcepts, useSaveConcept, useDeleteConcept } from "@/hooks/useConcepts";
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, useTeamMemberInvites } from "@/hooks/useTeamMembers";
-import { useDepartments } from "@/hooks/useDepartments";
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
@@ -27,11 +22,11 @@ import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 // Re-export parseGoogleOpeningHours so existing import paths keep working
 export { parseGoogleOpeningHours } from "./admin/shared";
-import { MyLocationTab } from "./admin/MyLocationTab";
+import { ConceptsTab } from "./admin/ConceptsTab";
 import { AccountTab } from "./admin/AccountTab";
 import { NotificationsTab } from "./admin/NotificationsTab";
 import {
-  ConfirmModal, LocationModal, StaffProfileModal, TeamMemberModal,
+  ConfirmModal, LocationModal, TeamMemberModal, ConceptModal,
   type ConfirmState,
 } from "./admin/SharedUI";
 
@@ -47,7 +42,7 @@ export default function Admin() {
   // Read once at mount (not from the "?from=kiosk" query param, which the
   // tab-switcher below drops on every navigate) so the PIN-granted session —
   // and the userId/permission scoping derived from it — survives switching
-  // between My Location / Users / Account / Billing / Notifications.
+  // between Concepts / Users / Account / Billing / Notifications.
   // ProtectedRoute already guarantees a kiosk device can't reach this page
   // at all without a live grant, so there's no separate "invalid token"
   // redirect to handle here.
@@ -68,25 +63,18 @@ export default function Admin() {
     isGraceExpired,
     effectiveActiveLocationIds,
   } = useLocations();
-  const { data: staffProfiles = [] } = useStaffProfiles();
+  const { data: concepts = [] } = useConcepts();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: checklists = [] } = useChecklists();
   const saveActiveLocationsMut = useSaveActiveLocationsSelection();
   const saveLocationMut = useSaveLocation();
   const deleteLocationMut = useDeleteLocation();
-  const saveStaffMut = useSaveStaffProfile();
-  const archiveStaffMut = useArchiveStaffProfile();
-  const restoreStaffMut = useRestoreStaffProfile();
-  const deleteStaffMut = useDeleteStaffProfile();
+  const saveConceptMut = useSaveConcept();
+  const deleteConceptMut = useDeleteConcept();
   const saveMemberMut = useSaveTeamMember();
   const deleteMemberMut = useDeleteTeamMember();
   const sendInviteMut = useSendInvite();
   const { data: pendingInvites = [] } = useTeamMemberInvites();
-
-  // Local state (not persisted to DB yet)
-  const { departments, setDepartments } = useDepartments();
-  const staffRoleOptions = departments.map(d => d.name);
-  const { data: auditLog = [] } = useAuditLog();
 
   // UI state
   const routeTab: "location" | "users" | "account" | "billing" | "notifications" =
@@ -95,18 +83,33 @@ export default function Admin() {
     location.pathname.startsWith("/admin/billing") ? "billing" :
     location.pathname.startsWith("/admin/notifications") ? "notifications" : "location";
   const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing" | "notifications">(routeTab);
+  const [currentConceptId, setCurrentConceptId] = useState("");
   const [currentLocationId, setCurrentLocationId] = useState("");
 
-  // Set default location once data loads
+  // Default to the first concept once data loads
   useEffect(() => {
-    if (locations.length > 0 && !currentLocationId) {
-      setCurrentLocationId(locations[0].id);
+    if (concepts.length > 0 && !currentConceptId) {
+      setCurrentConceptId(concepts[0].id);
     }
-  }, [locations, currentLocationId]);
+  }, [concepts, currentConceptId]);
+
+  // Default currentLocationId to the current concept's first location —
+  // ConceptsTab falls back to this internally for its own rendering, but
+  // Admin.tsx's own handlers (launchKiosk in particular) read this state
+  // directly, so it must actually be set once data loads, not just visually
+  // implied (#regression: launchKiosk silently used an empty locationId for
+  // an Owner who hadn't yet clicked a location card).
+  useEffect(() => {
+    if (!currentConceptId) return;
+    const stillValid = locations.some(l => l.id === currentLocationId && l.concept_id === currentConceptId);
+    if (stillValid) return;
+    const firstInConcept = locations.find(l => l.concept_id === currentConceptId);
+    setCurrentLocationId(firstInConcept?.id ?? "");
+  }, [locations, currentConceptId, currentLocationId]);
 
   // Modal state
   const [locationModal, setLocationModal] = useState<Location | null | "new">(null);
-  const [staffModal, setStaffModal] = useState<StaffProfile | null | "new">(null);
+  const [conceptModal, setConceptModal] = useState<Concept | null | "new">(null);
   const [memberModal, setMemberModal] = useState<TeamMember | null | "new">(null);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
   // Location-limit upgrade prompt — rendered AFTER </Layout> so position:fixed
@@ -115,7 +118,7 @@ export default function Admin() {
 
   // Determine active user from URL param
   const activeUser = userId ? (teamMembers.find(m => m.id === userId) ?? null) : null;
-  const isOwner = !activeUser || activeUser.role === "Owner";
+  const isOwner = !activeUser || activeUser.is_owner;
 
   useEffect(() => {
     if (!isOwner && (routeTab === "account" || routeTab === "notifications")) {
@@ -126,12 +129,14 @@ export default function Admin() {
   }, [isOwner, navigate, routeTab]);
   const permissions: ManagerPermissions | null = isOwner ? null : (activeUser?.permissions ?? null);
 
-  // Restrict manager to their first assigned location
+  // Restrict manager to their first assigned location (and its concept)
   useEffect(() => {
     if (!isOwner && activeUser && activeUser.location_ids.length > 0) {
+      const loc = locations.find(l => l.id === activeUser.location_ids[0]);
       setCurrentLocationId(activeUser.location_ids[0]);
+      if (loc?.concept_id) setCurrentConceptId(loc.concept_id);
     }
-  }, [isOwner, activeUser]);
+  }, [isOwner, activeUser, locations]);
 
   // ─── CRUD Handlers ──────────────────────────────────────────────────────────
 
@@ -176,53 +181,45 @@ export default function Admin() {
     });
   };
 
-  const saveStaff = (sp: StaffProfile) => {
-    saveStaffMut.mutate(sp, {
-      onSuccess: () => toast.success(sp.id ? t("toast.staffProfileUpdated") : t("toast.staffProfileCreated")),
-      onError: (err: Error) => toast.error(t("toast.saveStaffFailed", { error: err.message })),
-    });
+  // Plan-limit gating for adding a location, lifted here so both the
+  // Concepts tab's "Add location" card and onboarding CTA route through it.
+  const atLocationLimit = maxLocations !== -1 && locations.length >= maxLocations;
+  const handleAddLocationClick = () => {
+    if (billingUnavailable) {
+      toast.error(t("accountTab.toast.billingUnavailableError"));
+      return;
+    }
+    if (atLocationLimit) {
+      setShowLocationLimitModal(true);
+    } else {
+      setLocationModal("new");
+    }
   };
 
-  const archiveStaff = (sp: StaffProfile) => {
-    setConfirmModal({
-      title: t("confirm.archiveStaffTitle"),
-      message: (
-        <>
-          <strong className="text-foreground">{staffDisplayName(sp)}</strong>
-          {" "}{t("confirm.archiveStaffMessage")}
-        </>
-      ),
-      actionLabel: t("confirm.archive"),
-      onConfirm: () => {
-        archiveStaffMut.mutate(sp.id, {
-          onSuccess: () => toast.success(t("toast.staffArchived", { name: staffDisplayName(sp) })),
-          onError: (err: Error) => toast.error(t("toast.archiveStaffFailed", { error: err.message })),
-        });
-        setConfirmModal(null);
+  const saveConcept = (c: { id?: string; name: string }) => {
+    saveConceptMut.mutate(c, {
+      onSuccess: (newId) => {
+        toast.success(c.id ? t("toast.conceptUpdated") : t("toast.conceptCreated"));
+        if (!c.id && typeof newId === "string") setCurrentConceptId(newId);
       },
+      onError: (err: Error) => toast.error(t("toast.saveConceptFailed", { error: err.message })),
     });
   };
 
-  const restoreStaff = (id: string) => {
-    restoreStaffMut.mutate(id, {
-      onSuccess: () => toast.success(t("toast.profileRestored")),
-      onError: (err: Error) => toast.error(t("toast.restoreStaffFailed", { error: err.message })),
-    });
-  };
-
-  const deleteStaff = (sp: StaffProfile) => {
+  const deleteConcept = (id: string) => {
     setConfirmModal({
-      title: t("confirm.deleteStaffTitle"),
-      message: (
-        <>
-          {t("confirm.deleteStaffPrefix")}{" "}
-          <strong className="text-foreground">{staffDisplayName(sp)}</strong>{t("confirm.deleteStaffSuffix")}
-        </>
-      ),
-      actionLabel: t("confirm.deletePermanently"),
+      title: t("confirm.deleteConceptTitle"),
+      message: t("confirm.deleteConceptMessage"),
+      actionLabel: t("confirm.delete"),
       requireDeleteText: true,
       onConfirm: () => {
-        deleteStaffMut.mutate(sp.id);
+        deleteConceptMut.mutate(id, {
+          onSuccess: () => {
+            toast.success(t("toast.conceptDeleted"));
+            setCurrentConceptId("");
+          },
+          onError: (err: Error) => toast.error(t("toast.deleteConceptFailed", { error: err.message })),
+        });
         setConfirmModal(null);
       },
     });
@@ -230,9 +227,17 @@ export default function Admin() {
 
   const saveMember = (m: TeamMember & { rawPin?: string }) => {
     const isNew = !m.id;
+    // Kiosk-only members (is_manager = false) never get admin-app login, so
+    // there's no invite email to send for them — the PIN alone is their
+    // access. An invite is only needed the moment a member first becomes a
+    // manager: either brand new, or an existing kiosk-only member whose
+    // manager-role toggle was just switched on.
+    const wasManager = !isNew && (teamMembers.find(existing => existing.id === m.id)?.is_manager ?? false);
+    const needsInvite = m.is_manager && (isNew || !wasManager);
     saveMemberMut.mutateAsync(m).then(newId => {
-      if (isNew && newId) {
-        sendInviteMut.mutate(newId, {
+      const memberId = newId ?? m.id;
+      if (needsInvite && memberId) {
+        sendInviteMut.mutate(memberId, {
           onSuccess: () => toast.success(t("toast.inviteSent", { email: m.email })),
           onError: () => toast.error(t("toast.inviteFailed")),
         });
@@ -252,11 +257,11 @@ export default function Admin() {
   // previewing kiosk mode from their own laptop/phone and getting it
   // silently locked into kiosk mode (#733).
   const launchKiosk = () => {
-    const location = locations.find(l => l.id === currentLocationId);
+    const loc = locations.find(l => l.id === currentLocationId);
     setConfirmModal({
       title: t("confirm.launchKioskTitle"),
       message: t("confirm.launchKioskMessage", {
-        name: location?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
+        name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
       }),
       actionLabel: t("confirm.launchKioskCta"),
       onConfirm: () => {
@@ -292,10 +297,11 @@ export default function Admin() {
 
   // ─── Derived values ─────────────────────────────────────────────────────────
 
+  const roleLabel = (m: { is_owner: boolean; role: string }) => (m.is_owner ? t("roles.Owner") : m.role);
   const userLabel = activeUser
-    ? `${t(`roles.${activeUser.role}`)} · ${activeUser.name}`
+    ? `${roleLabel(activeUser)} · ${activeUser.name}`
     : authMember
-    ? `${t(`roles.${authMember.role}`)} · ${authMember.name}`
+    ? `${roleLabel(authMember)} · ${authMember.name}`
     : t("userLabelFallback");
 
   const TABS = [
@@ -338,22 +344,20 @@ export default function Admin() {
               locations: allLocations,
               activeLocationIds: effectiveActiveLocationIds,
               inactiveLocationIds: inactiveLocations.map((location) => location.id),
-              staffProfiles,
               teamMembers,
-              checklists,
               onSavePerms: savePerms,
               onSaveAccount: (payload: any) => saveMemberMut.mutateAsync(payload),
-              departments,
-              setDepartments,
-              auditLog,
               authAccount: authMember ? {
                 id: authMember.id,
                 name: authMember.name,
                 email: user?.email ?? authMember.email,
                 role: authMember.role,
+                is_owner: authMember.is_owner,
+                is_manager: authMember.is_manager,
+                department_id: authMember.department_id,
                 initials: getInitials(authMember.name),
                 location_ids: authMember.location_ids,
-                permissions: authMember.permissions,
+                permissions: authMember.permissions as unknown as ManagerPermissions,
                 pin_reset_required: authMember.pin_reset_required ?? false,
               } : null,
               authMemberId: authMember?.id,
@@ -365,10 +369,6 @@ export default function Admin() {
               locationGraceEndsAt: graceEndsAt,
               isGraceActive,
               isGraceExpired,
-              onAddLocation: () => setLocationModal("new"),
-              onLocationLimitReached: () => setShowLocationLimitModal(true),
-              onEditLocation: (loc: any) => setLocationModal(loc),
-              onDeleteLocation: deleteLocation,
               onSaveActiveLocations: (locationIds: any) => saveActiveLocationsMut.mutateAsync(locationIds),
               savingActiveLocations: saveActiveLocationsMut.isPending,
               pendingInviteStatus: new Map(
@@ -382,28 +382,25 @@ export default function Admin() {
             return (
               <>
                 {activeTab === "location" && (
-                  <div className="space-y-4">
-                    <MyLocationTab
-                      locations={locations}
-                      staffProfiles={staffProfiles}
-                      checklists={checklists}
-                      roles={staffRoleOptions}
-                      currentLocationId={currentLocationId}
-                      setCurrentLocationId={setCurrentLocationId}
-                      isOwner={isOwner}
-                      permissions={permissions}
-                      onAddLocation={() => setLocationModal("new")}
-                      onEditLocation={loc => setLocationModal(loc)}
-                      onUpdateLocation={saveLocation}
-                      onAddStaff={() => setStaffModal("new")}
-                      onEditStaff={sp => setStaffModal(sp)}
-                      onArchiveStaff={archiveStaff}
-                      onRestoreStaff={restoreStaff}
-                      onDeleteStaff={deleteStaff}
-                      onLaunchKiosk={launchKiosk}
-                    />
-                    {isOwner && accountTabProps && <AccountTab {...accountTabProps} section="locations" />}
-                  </div>
+                  <ConceptsTab
+                    concepts={concepts}
+                    locations={locations}
+                    teamMembers={teamMembers}
+                    checklists={checklists}
+                    currentConceptId={currentConceptId}
+                    setCurrentConceptId={setCurrentConceptId}
+                    currentLocationId={currentLocationId}
+                    setCurrentLocationId={setCurrentLocationId}
+                    isOwner={isOwner}
+                    permissions={permissions}
+                    onAddConcept={() => setConceptModal("new")}
+                    onEditConcept={c => setConceptModal(c)}
+                    onDeleteConcept={deleteConcept}
+                    onAddLocation={handleAddLocationClick}
+                    onEditLocation={loc => setLocationModal(loc)}
+                    onDeleteLocation={deleteLocation}
+                    onLaunchKiosk={launchKiosk}
+                  />
                 )}
                 {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}
                 {activeTab === "account" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="account" />}
@@ -489,19 +486,17 @@ export default function Admin() {
       {locationModal !== null && (
         <LocationModal
           location={locationModal === "new" ? null : locationModal}
+          conceptId={currentConceptId}
           onClose={() => setLocationModal(null)}
           onSave={loc => { saveLocation(loc); setLocationModal(null); }}
         />
       )}
 
-      {staffModal !== null && (
-        <StaffProfileModal
-          profile={staffModal === "new" ? null : staffModal}
-          locations={locations}
-          departments={departments}
-          onClose={() => setStaffModal(null)}
-          onSave={sp => { saveStaff(sp); setStaffModal(null); }}
-          isOwner={isOwner}
+      {conceptModal !== null && (
+        <ConceptModal
+          concept={conceptModal === "new" ? null : conceptModal}
+          onClose={() => setConceptModal(null)}
+          onSave={saveConcept}
         />
       )}
 

@@ -49,6 +49,8 @@ beforeEach(() => {
   mockFrom.mockReturnValue({
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data: [], error: null }),
     update: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnValue({ select: mockInsertSelect }),
@@ -77,6 +79,7 @@ describe("useTeamMembers", () => {
   it("maps data and adds initials", async () => {
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({
         data: [
           {
@@ -147,13 +150,14 @@ describe("useSaveTeamMember", () => {
     );
   });
 
-  it("marks a newly created owner PIN as needing a reset", async () => {
+  it("never marks a newly created member's PIN as needing a reset — is_owner is never settable through this flow", async () => {
     const insertSingle = vi.fn().mockResolvedValue({ data: { id: "new-uuid" }, error: null });
     const insertSelect = vi.fn().mockReturnValue({ single: insertSingle });
     const insert = vi.fn().mockReturnValue({ select: insertSelect });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
       update: vi.fn().mockReturnValue({ eq: vi.fn() }),
       insert,
@@ -163,9 +167,10 @@ describe("useSaveTeamMember", () => {
     const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
     await act(async () => {
       await result.current.mutateAsync({
-        name: "Test Owner",
-        email: "owner@example.com",
-        role: "Owner",
+        name: "Test Member",
+        email: "member@example.com",
+        role: "Head Chef",
+        is_manager: false,
         location_ids: [],
         permissions: {},
         rawPin: "1234",
@@ -173,7 +178,7 @@ describe("useSaveTeamMember", () => {
     });
 
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({
-      pin_reset_required: true,
+      pin_reset_required: false,
     }));
   });
 

@@ -1,5 +1,5 @@
 // ─── Shared constants, types, and helpers for the Admin page ─────────────────
-// Used by both MyLocationTab and AccountTab (and the modals they render).
+// Used by both ConceptsTab and AccountTab (and the modals they render).
 
 import i18n from "@/lib/i18n";
 import {
