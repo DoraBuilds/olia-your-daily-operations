@@ -128,11 +128,15 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
           {/* Only this column scrolls */}
           <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 pt-5 animate-fade-in md:pb-8 flex flex-col">
-            {/* my-auto centers content vertically when it's shorter than the
-                pane (e.g. a short list on a tall tablet screen) — auto margins
-                collapse to 0 once content overflows, so long pages still start
-                at the top and scroll normally. */}
-            <div className={cn(contentWidthClass, "min-w-0 space-y-4 my-auto")}>
+            {/* portrait:my-auto centers content vertically only on tall/narrow
+                (portrait) viewports, e.g. a short list on a tablet-portrait
+                screen — auto margins collapse to 0 once content overflows, so
+                long pages still start at the top and scroll normally. Scoped
+                to portrait only (not applied unconditionally) so a short page
+                viewed in landscape/desktop — e.g. the Admin Billing tab —
+                stays anchored under the header instead of drifting to the
+                vertical middle of the pane (#regression from #642). */}
+            <div className={cn(contentWidthClass, "min-w-0 space-y-4 portrait:my-auto")}>
               {children}
             </div>
           </main>

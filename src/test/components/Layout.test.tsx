@@ -92,16 +92,19 @@ describe("Layout", () => {
     expect(screen.getByText("Right Btn")).toBeInTheDocument();
   });
 
-  it("vertically centers short page content via a flex column + auto-margin wrapper, so a short page doesn't strand content at the top with a large empty gap below on a tall (e.g. tablet-portrait) viewport", () => {
+  it("vertically centers short page content via a flex column + auto-margin wrapper on portrait viewports only, so a short page doesn't strand content at the top with a large empty gap below on a tall (e.g. tablet-portrait) viewport — while staying top-anchored under the header in landscape/desktop", () => {
     renderWithProviders(<Layout title="T"><p>content</p></Layout>);
     const contentText = screen.getByText("content");
     const main = contentText.closest("main");
     expect(main).not.toBeNull();
     expect(main).toHaveClass("flex", "flex-col");
-    // The immediate wrapper around children carries my-auto: its margin
-    // collapses to 0 once content overflows the pane (long pages still
-    // start at the top and scroll normally), but centers a short page.
-    expect(contentText.parentElement).toHaveClass("my-auto");
+    // The immediate wrapper around children carries portrait:my-auto: its
+    // margin collapses to 0 once content overflows the pane (long pages
+    // still start at the top and scroll normally), and it only centers a
+    // short page in portrait orientation — landscape/desktop pages (e.g.
+    // the Admin Billing tab) stay anchored under the header instead of
+    // drifting to the vertical middle of the pane.
+    expect(contentText.parentElement).toHaveClass("portrait:my-auto");
   });
 
   it("renders the BottomNav", () => {
