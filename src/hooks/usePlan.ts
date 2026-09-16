@@ -101,6 +101,35 @@ export function usePlan() {
   };
 }
 
+export function useUpdateOrganizationName() {
+  const qc = useQueryClient();
+  const { organizationId } = usePlan();
+
+  return useMutation({
+    mutationFn: async (name: string) => {
+      if (!organizationId) {
+        throw new Error("Your organization could not be resolved.");
+      }
+      const trimmed = name.trim();
+      if (!trimmed) {
+        throw new Error("Company name can't be empty.");
+      }
+      const { data, error } = await supabase
+        .from("organizations")
+        .update({ name: trimmed })
+        .eq("id", organizationId)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Could not update the company name. Please refresh and try again.");
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["organization", organizationId] });
+    },
+  });
+}
+
 export function useSaveActiveLocationsSelection() {
   const qc = useQueryClient();
   const { organizationId } = usePlan();

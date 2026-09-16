@@ -59,8 +59,16 @@ export const DEFAULT_PERMISSIONS: ManagerPermissions = {
   override_inactivity_threshold: true,
 };
 
+export interface Concept {
+  id: string;
+  organization_id: string;
+  name: string;
+  created_at?: string;
+}
+
 export interface Location {
   id: string;
+  concept_id: string | null;
   name: string;
   address: string;
   contact_email: string;
@@ -74,6 +82,13 @@ export interface Location {
   place_id?: string | null;
 }
 
+export interface LocationDepartment {
+  id: string;
+  location_id: string;
+  name: string;
+}
+
+/** @deprecated staff_profiles is unified into team_members — see #748. Kept only for reading pre-migration historical data (checklist_logs.staff_profile_id). */
 export interface StaffProfile {
   id: string;
   location_id: string;
@@ -91,15 +106,22 @@ export interface StaffProfile {
 export interface TeamMember {
   id: string;
   name: string;
-  email: string;
-  role: AccountRole;
+  email: string | null;
+  /** Free-text job title (e.g. "Head Chef") — not a permission tier. See is_owner/is_manager. */
+  role: string;
+  /** Non-removable status for the account creator only. */
+  is_owner: boolean;
+  /** false = kiosk-PIN-only access (no admin-app login, permissions ignored). true = admin-app login + permissions apply. */
+  is_manager: boolean;
   location_ids: string[];
+  department_id: string | null;
   initials: string;
   permissions: ManagerPermissions;
   /** PIN is never returned from the server — only used transiently when saving. */
   pin?: undefined;
   pin_reset_required?: boolean;
   last_seen_at?: string | null;
+  archived_at?: string | null;
 }
 
 export interface AuditLogEntry {

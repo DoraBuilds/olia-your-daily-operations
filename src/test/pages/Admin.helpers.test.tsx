@@ -2,10 +2,9 @@
  * Admin.helpers.test.tsx
  *
  * Tests focused on Admin.tsx internal helper functions and UI behaviors that
- * are currently 0% covered. We drive them through the rendered UI since the
- * helpers (parseHours, formatHoursText, normalizeDayHours, cloneDayHours,
- * addSplitWindow, removeSplitWindow, copyHoursToLaterDays, setDayOpen,
- * DepartmentRolePicker, ConfirmModal, etc.) are not exported.
+ * are not exercised by the main Admin.test.tsx suite (parseGoogleOpeningHours
+ * edge cases, trading_hours rendering, LocationModal add-new-location path,
+ * ConfirmModal for deleting a location).
  */
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
@@ -43,15 +42,13 @@ vi.mock("@/lib/supabase", () => ({
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockResolvedValue({ error: null }),
       update: vi.fn().mockReturnThis(),
       upsert: vi.fn().mockResolvedValue({ error: null }),
       delete: vi.fn().mockReturnThis(),
-      then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [
-        { id: "l1", name: "Main Branch" },
-        { id: "l2", name: "City Centre" },
-      ], error: null }))),
+      then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
     }),
     functions: { invoke: vi.fn().mockResolvedValue({ data: null, error: null }) },
   },
@@ -61,7 +58,11 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "u1", email: "manager@example.com" },
     session: { user: { id: "u1" } },
-    teamMember: { id: "u1", organization_id: "org1", name: "Sarah", email: "sarah@example.com", role: "Owner", location_ids: [], permissions: {}, pin_reset_required: false },
+    teamMember: {
+      id: "u1", organization_id: "org1", name: "Sarah", email: "sarah@example.com",
+      role: "Owner", is_owner: true, is_manager: true, department_id: null,
+      location_ids: [], permissions: {}, pin_reset_required: false,
+    },
     loading: false,
     signOut: vi.fn(),
   }),
@@ -75,6 +76,7 @@ vi.mock("@/hooks/usePlan", () => ({
     planStatus: "active",
     billingUnavailable: false,
     features: { aiBuilder: true, fileConvert: true, recharts: true, maxLocations: 10, maxStaff: 200, maxChecklists: -1 },
+    org: { name: "Test Org" },
     can: () => true,
     withinLimit: () => true,
     isActive: true,
@@ -85,11 +87,16 @@ vi.mock("@/hooks/usePlan", () => ({
     mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
   }),
+  useUpdateOrganizationName: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({}),
+    isPending: false,
+  }),
 }));
 
 const mockLocations = [
   {
     id: "l1",
+    concept_id: "concept-1",
     name: "Main Branch",
     address: "123 High Street",
     contact_email: "main@test.com",
@@ -110,6 +117,7 @@ const mockLocations = [
   },
   {
     id: "l2",
+    concept_id: "concept-1",
     name: "City Centre",
     address: "456 Main Ave",
     contact_email: "city@test.com",
@@ -119,12 +127,15 @@ const mockLocations = [
   },
 ];
 
-const mockStaff = [
-  { id: "sp1", location_id: "l1", first_name: "Alice", last_name: "Smith", role: "Front of House", status: "active", pin: "1234", last_used_at: null, archived_at: null, created_at: "2024-01-01T00:00:00Z" },
-];
+const mockConcepts = [{ id: "concept-1", organization_id: "org1", name: "The Crown Restaurant" }];
 
 const mockTeam = [
-  { id: "tm1", name: "Sarah Owner", email: "sarah@example.com", role: "Owner", initials: "SO", location_ids: ["l1"], pin_reset_required: false, permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: true, view_reporting: true, edit_location_details: true, manage_alerts: true, export_data: true, override_inactivity_threshold: true } },
+  {
+    id: "tm1", name: "Sarah Owner", email: "sarah@example.com", role: "Owner",
+    is_owner: true, is_manager: true, department_id: null,
+    initials: "SO", location_ids: ["l1"], pin_reset_required: false,
+    permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: true, view_reporting: true, edit_location_details: true, manage_alerts: true, export_data: true, override_inactivity_threshold: true },
+  },
 ];
 
 const { mockUseLocations } = vi.hoisted(() => ({ mockUseLocations: vi.fn() }));
@@ -147,12 +158,16 @@ vi.mock("@/hooks/useLocations", () => ({
   useDeleteLocation: () => ({ mutate: vi.fn() }),
 }));
 
-vi.mock("@/hooks/useStaffProfiles", () => ({
-  useStaffProfiles: () => ({ data: mockStaff, isLoading: false }),
-  useSaveStaffProfile: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
-  useArchiveStaffProfile: () => ({ mutate: vi.fn() }),
-  useRestoreStaffProfile: () => ({ mutate: vi.fn() }),
-  useDeleteStaffProfile: () => ({ mutate: vi.fn() }),
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({ data: mockConcepts, isLoading: false }),
+  useSaveConcept: () => ({ mutate: vi.fn(), mutateAsync: vi.fn() }),
+  useDeleteConcept: () => ({ mutate: vi.fn() }),
+}));
+
+vi.mock("@/hooks/useDepartments", () => ({
+  useDepartments: () => ({ data: [], isLoading: false }),
+  useSaveDepartment: () => ({ mutate: vi.fn() }),
+  useDeleteDepartment: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/hooks/useTeamMembers", () => ({
@@ -244,24 +259,20 @@ describe("Admin — parseGoogleOpeningHours helper", () => {
       "Monday: NOT_A_TIME",
       "Tuesday: 9:00 AM – 5:00 PM",
     ]);
-    // Tuesday should be parsed
     expect(result).not.toBeNull();
     expect(result!.tue.open).toBe(true);
-    // Monday has no valid windows — stays at cloned DEFAULT_HOURS (open with 1 default window)
-    // parseGoogleOpeningHours does NOT override parsed[day] when windows.length === 0
     expect(result!.mon).toBeDefined();
   });
 });
 
-// ─── Location detail — formatHoursText / parseHours via UI rendering ──────────
+// ─── Location detail — trading_hours is never rendered ───────────────────────
 
 describe("Admin — location detail renders parsed JSON trading_hours", () => {
   it("does not show trading_hours in the location detail card", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Location details")).toBeInTheDocument();
+      expect(screen.getByText("Address")).toBeInTheDocument();
     });
-    // Opening hours display has been removed — hours should not appear in the card
     const hoursEl = Array.from(document.querySelectorAll("p")).find(el =>
       el.textContent?.includes("09:00") || el.textContent?.includes("Mon:")
     );
@@ -269,12 +280,10 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
   });
 
   it("does not crash for a location with plain-text trading_hours (fallback path)", async () => {
-    // Temporarily point to l2 which has "9-17" plain text
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Location details")).toBeInTheDocument();
+      expect(screen.getByText("Address")).toBeInTheDocument();
     });
-    // Shouldn't throw. Body is always defined means no crash.
     expect(document.body).toBeDefined();
   });
 });
@@ -284,7 +293,7 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
 describe("Admin — LocationModal add-new-location path", () => {
   it("opening 'Add location' form does not show opening hours", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    const addBtn = await screen.findByRole("button", { name: /add location/i });
+    const addBtn = await screen.findByText("Add location");
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
     expect(screen.queryByText("Opening hours")).not.toBeInTheDocument();
@@ -292,26 +301,22 @@ describe("Admin — LocationModal add-new-location path", () => {
 
   it("submitting without a name keeps the form open (disabled save button)", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    const addBtn = await screen.findByRole("button", { name: /add location/i });
+    const addBtn = await screen.findByText("Add location");
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
-    // When modal is open there are two "Add location" buttons: the header link and the form submit.
-    // The form submit is type="submit" inside the modal form.
     const saveBtn = document.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(saveBtn).not.toBeNull();
-    // saveBtn inside the form should be disabled when name is empty
     expect(saveBtn).toBeDisabled();
   });
 
   it("entering a location name and email enables the save button", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    const addBtn = await screen.findByRole("button", { name: /add location/i });
+    const addBtn = await screen.findByText("Add location");
     fireEvent.click(addBtn);
     await waitFor(() => expect(screen.getByText("New location")).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. Main Branch/i), {
       target: { value: "The Rooftop Bar" },
     });
-    // Alert email is also required (added after the original test was written)
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. main@olia\.app/i), {
       target: { value: "rooftop@example.com" },
     });
@@ -321,31 +326,23 @@ describe("Admin — LocationModal add-new-location path", () => {
   });
 });
 
-// ─── StaffProfileModal — DepartmentRolePicker ────────────────────────────────
+// ─── TeamMemberModal — free-text role field (replaces the old DepartmentRolePicker) ──
 
-describe("Admin — StaffProfileModal DepartmentRolePicker", () => {
-  async function openAddStaffForm() {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Staff profiles")).toBeInTheDocument());
-    const addBtns = screen.getAllByText("Add");
-    fireEvent.click(addBtns[0]);
-    await waitFor(() => expect(screen.getByText("Add staff profile")).toBeInTheDocument());
+describe("Admin — TeamMemberModal role field", () => {
+  async function openAddTeamMemberForm() {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+    await waitFor(() => expect(screen.getByText("Add a team member")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Add a team member"));
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Add team member" })).toBeInTheDocument());
   }
 
-  it("DepartmentRolePicker shows department buttons", async () => {
-    await openAddStaffForm();
-    // DepartmentRolePicker renders department name buttons inside the Role section
-    expect(screen.getByText("Role")).toBeInTheDocument();
-  });
-
-  it("clicking a department button selects that role", async () => {
-    await openAddStaffForm();
-    // Front of House should be one of the department options rendered
-    const fohBtns = screen.getAllByText(/front of house/i);
-    if (fohBtns.length > 0) {
-      fireEvent.click(fohBtns[0]);
-      expect(document.body).toBeDefined(); // no crash
-    }
+  it("role is a free-text input, not a fixed set of buttons", async () => {
+    await openAddTeamMemberForm();
+    const roleInput = screen.getByPlaceholderText("e.g. Head Chef, Waiter, General Manager");
+    fireEvent.change(roleInput, { target: { value: "Head Chef" } });
+    expect((roleInput as HTMLInputElement).value).toBe("Head Chef");
+    expect(screen.queryByRole("button", { name: "Owner" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manager" })).not.toBeInTheDocument();
   });
 });
 
@@ -354,47 +351,22 @@ describe("Admin — StaffProfileModal DepartmentRolePicker", () => {
 describe("Admin — ConfirmModal (delete location)", () => {
   it("clicking location delete button opens a confirm modal", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    // "All locations" appears in both the section label and a plan description. Use getAllByText.
-    await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
-
-    // The delete buttons in the locations list are icon-only (Trash2, no aria-label).
-    // Query them via the SVG lucide class.
-    const trashBtns = document.querySelectorAll("button svg.lucide-trash-2");
-    if (trashBtns.length > 0) {
-      fireEvent.click(trashBtns[0].closest("button")!);
-      await waitFor(() => {
-        const confirmText =
-          screen.queryByText(/permanently remove/i) ||
-          screen.queryByText(/cannot be undone/i) ||
-          screen.queryByText(/delete location/i);
-        expect(confirmText || document.body).toBeTruthy();
-      });
-    } else {
-      // No trash buttons found — test is a no-op (icon-only buttons are inaccessible)
-      expect(document.body).toBeDefined();
-    }
+    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Delete location"));
+    await waitFor(() => {
+      expect(screen.getByText("This will permanently remove the location and cannot be undone.")).toBeInTheDocument();
+    });
   });
 
   it("confirm modal Cancel button closes the modal", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getAllByText("All locations").length).toBeGreaterThan(0));
-
-    const trashBtns = document.querySelectorAll("button svg.lucide-trash-2");
-    if (trashBtns.length > 0) {
-      fireEvent.click(trashBtns[0].closest("button")!);
-      await waitFor(() => {
-        const cancelBtn = screen.queryByRole("button", { name: /^cancel$/i });
-        if (cancelBtn) {
-          expect(cancelBtn).toBeInTheDocument();
-          fireEvent.click(cancelBtn);
-          // modal should close — ConfirmModal is gone
-        }
-        // Even if modal didn't open, no crash is acceptable
-        expect(document.body).toBeDefined();
-      });
-    } else {
-      expect(document.body).toBeDefined();
-    }
+    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Delete location"));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+    await waitFor(() => {
+      expect(screen.queryByText("This will permanently remove the location and cannot be undone.")).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -412,14 +384,13 @@ describe("Admin — parseGoogleOpeningHours time parsing edge cases", () => {
     const result = parseGoogleOpeningHours(["Monday: 09:30 – 17:30"]);
     expect(result).not.toBeNull();
     if (result!.mon.open && result!.mon.windows.length > 0) {
-      // 09:30 has no AM/PM — treated as-is
       expect(result!.mon.windows[0].start).toBe("09:30");
     }
   });
 
   it("ignores entries with invalid day labels", () => {
     const result = parseGoogleOpeningHours([
-      "Funday: 9 AM – 5 PM",   // not a valid day
+      "Funday: 9 AM – 5 PM",
       "Tuesday: 9 AM – 5 PM",
     ]);
     expect(result).not.toBeNull();
@@ -427,9 +398,7 @@ describe("Admin — parseGoogleOpeningHours time parsing edge cases", () => {
   });
 
   it("skips windows with unparseable time values", () => {
-    const result = parseGoogleOpeningHours(["Monday: abc – xyz"]);
-    // No valid windows — matchedAnyDay is still true since Monday is valid
-    // but windows will be empty/defaulted
+    parseGoogleOpeningHours(["Monday: abc – xyz"]);
     expect(document.body).toBeDefined(); // no crash
   });
 });
@@ -449,8 +418,8 @@ describe("Admin — formatHoursText (via location detail card)", () => {
     });
 
     const closedLocationReturn = {
-      data: [{ id: "l1", name: "Main Branch", address: "123 High Street", trading_hours: closedHours, archive_threshold_days: 90, contact_email: "", contact_phone: "" }],
-      allLocations: [{ id: "l1", name: "Main Branch", address: "123 High Street", trading_hours: closedHours, archive_threshold_days: 90, contact_email: "", contact_phone: "" }],
+      data: [{ id: "l1", concept_id: "concept-1", name: "Main Branch", address: "123 High Street", trading_hours: closedHours, archive_threshold_days: 90, contact_email: "", contact_phone: "" }],
+      allLocations: [{ id: "l1", concept_id: "concept-1", name: "Main Branch", address: "123 High Street", trading_hours: closedHours, archive_threshold_days: 90, contact_email: "", contact_phone: "" }],
       inactiveLocations: [],
       maxLocations: 10,
       isOverLimit: false,
@@ -461,26 +430,11 @@ describe("Admin — formatHoursText (via location detail card)", () => {
       isLoading: false,
     };
 
-    mockUseLocations.mockReturnValue(closedLocationReturn);
+    mockUseLocations.mockReturnValueOnce(closedLocationReturn);
 
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Location details")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
 
-    // Opening hours display has been removed — should not appear
     expect(screen.queryByText("Closed all week")).not.toBeInTheDocument();
-
-    // Restore default mock
-    mockUseLocations.mockReturnValue({
-      data: mockLocations,
-      allLocations: mockLocations,
-      inactiveLocations: [],
-      maxLocations: 10,
-      isOverLimit: false,
-      graceEndsAt: null,
-      isGraceActive: false,
-      isGraceExpired: false,
-      effectiveActiveLocationIds: mockLocations.map(l => l.id),
-      isLoading: false,
-    });
   });
 });

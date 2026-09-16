@@ -1,7 +1,7 @@
 {
   "close": "Cerrar",
   "tabs": {
-    "locations": "Ubicaciones",
+    "locations": "Conceptos",
     "users": "Usuarios",
     "account": "Cuenta",
     "notifications": "Notificaciones",
@@ -30,11 +30,18 @@
     "restoreStaffFailed": "No se pudo restaurar: {{error}}",
     "inviteSent": "Invitación enviada a {{email}}",
     "inviteFailed": "Miembro del equipo guardado, pero falló el correo de invitación. Intenta reenviarlo desde la fila del miembro.",
-    "cannotRemoveSelf": "No puedes eliminarte a ti mismo del equipo."
+    "cannotRemoveSelf": "No puedes eliminarte a ti mismo del equipo.",
+    "conceptCreated": "Concepto creado",
+    "conceptUpdated": "Concepto actualizado",
+    "saveConceptFailed": "No se pudo guardar el concepto: {{error}}",
+    "conceptDeleted": "Concepto eliminado",
+    "deleteConceptFailed": "No se pudo eliminar el concepto: {{error}}"
   },
   "confirm": {
     "deleteLocationTitle": "Eliminar ubicación",
     "deleteLocationMessage": "Esto eliminará permanentemente la ubicación y no se puede deshacer.",
+    "deleteConceptTitle": "Eliminar concepto",
+    "deleteConceptMessage": "Esto eliminará permanentemente el concepto. Solo disponible cuando no tiene locales.",
     "delete": "Eliminar",
     "archiveStaffTitle": "Archivar perfil de personal",
     "archiveStaffMessage": "será archivado y eliminado de las listas activas. Se puede restaurar más tarde.",
@@ -128,6 +135,29 @@
     "neverUsed": "Nunca usado",
     "lastUsed": "Último uso: {{day}}, {{time}}"
   },
+  "conceptsTab": {
+    "onboarding": {
+      "conceptHeading": "Agrega tu primer concepto",
+      "conceptBody": "Un concepto es una marca dentro de tu empresa — crea uno para empezar a agregar locales.",
+      "addConceptCta": "Agregar un concepto",
+      "locationHeading": "Agrega un local a {{concept}}",
+      "locationBody": "Los locales son donde trabaja tu equipo. Configura el primero para empezar a crear listas, gestionar personal y usar el kiosco.",
+      "addLocationCta": "Agregar un local"
+    },
+    "conceptLabel": "Concepto",
+    "addConcept": "Agregar concepto",
+    "editConcept": "Editar concepto",
+    "deleteConcept": "Eliminar concepto",
+    "addLocation": "Agregar local",
+    "deleteLocation": "Eliminar local",
+    "departments": "Departamentos",
+    "noDepartments": "Aún no hay departamentos.",
+    "address": "Dirección",
+    "noAddress": "Sin dirección registrada — toca Editar para agregar una.",
+    "teamMembers": "Miembros del equipo",
+    "teamMembersWithCount": "Miembros del equipo ({{count}})",
+    "noTeamMembers": "Aún no hay miembros del equipo asignados a este local."
+  },
   "perms": {
     "create_edit_checklists": "Crear y editar listas",
     "assign_checklists": "Asignar listas",
@@ -171,17 +201,30 @@
       "addTitle": "Agregar miembro del equipo",
       "fullName": "Nombre completo",
       "fullNamePlaceholder": "p. ej. Marc Devaux",
-      "email": "Correo",
+      "emailRequired": "Correo (requerido para acceso de gerente)",
+      "emailOptional": "Correo (opcional)",
       "emailPlaceholder": "p. ej. marc@example.com",
       "role": "Rol",
-      "adminPin": "PIN de administrador",
+      "rolePlaceholder": "p. ej. Jefe de cocina, Camarero, Gerente general",
       "kioskPin": "PIN de kiosco",
       "newPinPlaceholder": "Este PIN se usa para acceder al kiosco. Genera uno ahora para que el miembro del equipo pueda iniciar sesión.",
       "locations": "Ubicación(es)",
+      "department": "Departamento",
+      "noDepartment": "Sin departamento",
+      "managerRole": "Rol de gerente",
+      "managerRoleHint": "Otorga acceso a la app de administración y permisos configurables. Desactivado por defecto — solo acceso por PIN de kiosco.",
       "permissions": "Permisos",
       "inviteNotice": "Se enviará un correo de invitación a esta dirección para que el miembro del equipo pueda iniciar sesión en la app de administración de Olia.",
       "saveChanges": "Guardar cambios",
       "addTeamMember": "Agregar miembro del equipo"
+    },
+    "concept": {
+      "editTitle": "Editar concepto",
+      "newTitle": "Nuevo concepto",
+      "nameRequired": "Nombre del concepto (requerido)",
+      "namePlaceholder": "p. ej. El Restaurante Real",
+      "saveChanges": "Guardar cambios",
+      "addConcept": "Agregar concepto"
     },
     "location": {
       "editTitle": "Editar ubicación",
@@ -227,9 +270,14 @@
       "activeLocationsUpdated": "Ubicaciones activas actualizadas",
       "couldNotUpdateActiveLocations": "No se pudieron actualizar las ubicaciones activas",
       "inviteResent": "Invitación reenviada a {{email}}",
-      "resendInviteFailed": "Error al reenviar la invitación"
+      "resendInviteFailed": "Error al reenviar la invitación",
+      "companyNameSaved": "Nombre de la empresa guardado",
+      "couldNotSaveCompanyName": "No se pudo guardar el nombre de la empresa"
     },
-    "myAccount": "Mi cuenta",
+    "companyDetails": "Detalles de la empresa",
+    "companyName": "Nombre de la empresa",
+    "kioskOnly": "Solo acceso por PIN de kiosco",
+    "myAccount": "Detalles del propietario",
     "fullName": "Nombre completo",
     "email": "Correo",
     "language": "Idioma",
@@ -268,6 +316,7 @@
     "teamMembersNotice": "Todos los miembros del equipo en todas las ubicaciones de la organización.",
     "name": "Nombre",
     "role": "Rol",
+    "noRoleSet": "—",
     "inviteExpired": "Invitación vencida",
     "invitePending": "Invitación pendiente",
     "lastSeen": "Visto por última vez {{date}}",

@@ -11,9 +11,14 @@ export function useTeamMembers() {
   return useQuery({
     queryKey: ["team_members", teamMember?.id ?? null, teamMember?.organization_id ?? null],
     queryFn: async () => {
+      // archived_at excluded here on purpose (this list is the "active"
+      // team — kiosk-only members that were once staff_profiles carry an
+      // archived_at from the unification migration; useArchivedTeamMembers
+      // below is the filtered view for the archive/restore UI).
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, location_ids, permissions, pin_reset_required, last_seen_at")
+        .select("id, organization_id, name, email, role, is_owner, is_manager, department_id, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .is("archived_at", null)
         .order("name");
       if (error) throw error;
       return ((data ?? []) as any[])
@@ -23,12 +28,92 @@ export function useTeamMembers() {
           initials: getInitials(m.name),
           permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
           location_ids: m.location_ids ?? [],
+          is_owner: m.is_owner ?? false,
+          is_manager: m.is_manager ?? false,
+          department_id: m.department_id ?? null,
           pin_reset_required: m.pin_reset_required ?? false,
           last_seen_at: m.last_seen_at ?? null,
           pin: undefined,   // never send hashed PIN to the browser
         })) as TeamMember[];
     },
     enabled: !!teamMember?.organization_id,
+  });
+}
+
+/** Archived (former staff_profiles) team members — for an "Archived" toggle, mirroring the old staff-profile archive/restore UX. */
+export function useArchivedTeamMembers() {
+  const { teamMember } = useAuth();
+  return useQuery({
+    queryKey: ["team_members_archived", teamMember?.organization_id ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("id, organization_id, name, email, role, is_owner, is_manager, department_id, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .not("archived_at", "is", null)
+        .order("name");
+      if (error) throw error;
+      return ((data ?? []) as any[])
+        .filter((member) => member.organization_id === teamMember?.organization_id)
+        .map((m) => ({
+          ...m,
+          initials: getInitials(m.name),
+          permissions: (m.permissions ?? DEFAULT_PERMISSIONS) as ManagerPermissions,
+          location_ids: m.location_ids ?? [],
+          is_owner: m.is_owner ?? false,
+          is_manager: m.is_manager ?? false,
+          department_id: m.department_id ?? null,
+          pin_reset_required: m.pin_reset_required ?? false,
+          last_seen_at: m.last_seen_at ?? null,
+          pin: undefined,
+        })) as TeamMember[];
+    },
+    enabled: !!teamMember?.organization_id,
+  });
+}
+
+export function useArchiveTeamMember() {
+  const qc = useQueryClient();
+  const { teamMember } = useAuth();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: updated, error } = await supabase
+        .from("team_members")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", id)
+        .select("id");
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Could not archive this team member. Please refresh and try again.");
+      }
+      if (teamMember) writeAuditLog({ action: "archive_team_member", entity_type: "team_member", entity_id: id }, teamMember);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_members_archived"] });
+    },
+  });
+}
+
+export function useRestoreTeamMember() {
+  const qc = useQueryClient();
+  const { teamMember } = useAuth();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data: updated, error } = await supabase
+        .from("team_members")
+        .update({ archived_at: null })
+        .eq("id", id)
+        .select("id");
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("Could not restore this team member. Please refresh and try again.");
+      }
+      if (teamMember) writeAuditLog({ action: "restore_team_member", entity_type: "team_member", entity_id: id }, teamMember);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team_members"] });
+      qc.invalidateQueries({ queryKey: ["team_members_archived"] });
+    },
   });
 }
 
@@ -41,11 +126,17 @@ export function useSaveTeamMember() {
         throw new Error("Your account setup is not complete. Please refresh the page and try again.");
       }
 
+      // is_owner is intentionally never sent from the client — it's a
+      // non-removable status for the account creator only, derived
+      // server-side (team_members_sync_is_owner trigger) and protected by
+      // the escalation trigger. This modal can never grant it.
       if (tm.id) {
         const updatePayload: Record<string, unknown> = {
           name: tm.name,
-          email: tm.email,
-          role: tm.role ?? "Manager",
+          email: tm.email?.trim() || null,
+          role: tm.role ?? "",
+          is_manager: tm.is_manager ?? false,
+          department_id: tm.department_id ?? null,
           location_ids: tm.location_ids ?? [],
           permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
         };
@@ -73,18 +164,22 @@ export function useSaveTeamMember() {
         return;
       }
 
+      if (!tm.rawPin) {
+        throw new Error("A kiosk PIN is required for new team members.");
+      }
+
       const insertPayload: Record<string, unknown> = {
         organization_id: teamMember.organization_id,
         name: tm.name,
-        email: tm.email,
-        role: tm.role ?? "Manager",
+        email: tm.email?.trim() || null,
+        role: tm.role ?? "",
+        is_manager: tm.is_manager ?? false,
+        department_id: tm.department_id ?? null,
         location_ids: tm.location_ids ?? [],
         permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
+        pin: tm.rawPin,
+        pin_reset_required: false,
       };
-      if (tm.rawPin) {
-        insertPayload.pin = tm.rawPin;
-      }
-      insertPayload.pin_reset_required = tm.pin_reset_required ?? (tm.role === "Owner");
 
       const { data: inserted, error } = await supabase
         .from("team_members")

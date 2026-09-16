@@ -1,47 +1,56 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { DEFAULT_STAFF_DEPARTMENTS } from "@/lib/admin-repository";
-import type { StaffDepartment } from "@/lib/admin-repository";
-import { usePlan } from "./usePlan";
+import type { LocationDepartment } from "@/lib/admin-repository";
 
-export function useDepartments() {
-  const { org, organizationId } = usePlan();
-  const qc = useQueryClient();
-
-  const departments: StaffDepartment[] =
-    org?.departments && org.departments.length > 0
-      ? (org.departments as StaffDepartment[])
-      : DEFAULT_STAFF_DEPARTMENTS.map(d => ({ name: d.name }));
-
-  const mutation = useMutation({
-    mutationFn: async (next: StaffDepartment[]) => {
-      if (!organizationId) throw new Error("Organization not found");
-      const { error } = await supabase
-        .from("organizations")
-        .update({ departments: next })
-        .eq("id", organizationId);
+/** Departments for a single location — departments vary by venue size, so they're scoped per-location, not org-wide. */
+export function useDepartments(locationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["departments", locationId ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, location_id, name")
+        .eq("location_id", locationId as string)
+        .order("name");
       if (error) throw error;
+      return (data ?? []) as LocationDepartment[];
     },
-    onMutate: async (next) => {
-      await qc.cancelQueries({ queryKey: ["organization", organizationId] });
-      const prev = qc.getQueryData(["organization", organizationId]);
-      qc.setQueryData(["organization", organizationId], (old: any) =>
-        old ? { ...old, departments: next } : old
-      );
-      return { prev };
+    enabled: !!locationId,
+  });
+}
+
+export function useSaveDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dep: { id?: string; location_id: string; name: string }) => {
+      if (dep.id) {
+        const { error } = await supabase
+          .from("departments")
+          .update({ name: dep.name })
+          .eq("id", dep.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("departments")
+          .insert({ location_id: dep.location_id, name: dep.name });
+        if (error) throw error;
+      }
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["organization", organizationId], ctx.prev);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["organization", organizationId] });
+    onSuccess: (_, dep) => {
+      qc.invalidateQueries({ queryKey: ["departments", dep.location_id] });
     },
   });
+}
 
-  const setDepartments = (updater: React.SetStateAction<StaffDepartment[]>) => {
-    const next = typeof updater === "function" ? updater(departments) : updater;
-    mutation.mutate(next);
-  };
-
-  return { departments, setDepartments };
+export function useDeleteDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; location_id: string }) => {
+      const { error } = await supabase.from("departments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, dep) => {
+      qc.invalidateQueries({ queryKey: ["departments", dep.location_id] });
+    },
+  });
 }

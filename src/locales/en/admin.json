@@ -1,7 +1,7 @@
 {
   "close": "Close",
   "tabs": {
-    "locations": "Locations",
+    "locations": "Concepts",
     "users": "Users",
     "account": "Account",
     "notifications": "Notifications",
@@ -30,11 +30,18 @@
     "restoreStaffFailed": "Could not restore: {{error}}",
     "inviteSent": "Invite sent to {{email}}",
     "inviteFailed": "Team member saved, but invite email failed. Try re-sending from the member row.",
-    "cannotRemoveSelf": "You cannot remove yourself from the team."
+    "cannotRemoveSelf": "You cannot remove yourself from the team.",
+    "conceptCreated": "Concept created",
+    "conceptUpdated": "Concept updated",
+    "saveConceptFailed": "Failed to save concept: {{error}}",
+    "conceptDeleted": "Concept deleted",
+    "deleteConceptFailed": "Failed to delete concept: {{error}}"
   },
   "confirm": {
     "deleteLocationTitle": "Delete location",
     "deleteLocationMessage": "This will permanently remove the location and cannot be undone.",
+    "deleteConceptTitle": "Delete concept",
+    "deleteConceptMessage": "This will permanently remove the concept. Only available once it has no locations left.",
     "delete": "Delete",
     "archiveStaffTitle": "Archive staff profile",
     "archiveStaffMessage": "will be archived and removed from active lists. They can be restored later.",
@@ -128,6 +135,29 @@
     "neverUsed": "Never used",
     "lastUsed": "Last used: {{day}}, {{time}}"
   },
+  "conceptsTab": {
+    "onboarding": {
+      "conceptHeading": "Add your first concept",
+      "conceptBody": "A concept is a brand within your company — set one up to start adding locations.",
+      "addConceptCta": "Add a concept",
+      "locationHeading": "Add a location to {{concept}}",
+      "locationBody": "Locations are where your team works. Set up your first one to start creating checklists, managing staff, and using the kiosk.",
+      "addLocationCta": "Add a location"
+    },
+    "conceptLabel": "Concept",
+    "addConcept": "Add concept",
+    "editConcept": "Edit concept",
+    "deleteConcept": "Delete concept",
+    "addLocation": "Add location",
+    "deleteLocation": "Delete location",
+    "departments": "Departments",
+    "noDepartments": "No departments yet.",
+    "address": "Address",
+    "noAddress": "No address on file — tap Edit to add one.",
+    "teamMembers": "Team members",
+    "teamMembersWithCount": "Team members ({{count}})",
+    "noTeamMembers": "No team members assigned to this location yet."
+  },
   "perms": {
     "create_edit_checklists": "Create & edit checklists",
     "assign_checklists": "Assign checklists",
@@ -171,17 +201,30 @@
       "addTitle": "Add team member",
       "fullName": "Full name",
       "fullNamePlaceholder": "e.g. Marc Devaux",
-      "email": "Email",
+      "emailRequired": "Email (required for manager access)",
+      "emailOptional": "Email (optional)",
       "emailPlaceholder": "e.g. marc@example.com",
       "role": "Role",
-      "adminPin": "Admin PIN",
+      "rolePlaceholder": "e.g. Head Chef, Waiter, General Manager",
       "kioskPin": "Kiosk PIN",
       "newPinPlaceholder": "This PIN is used for kiosk access. Generate one now so the team member can log in.",
       "locations": "Location(s)",
+      "department": "Department",
+      "noDepartment": "No department",
+      "managerRole": "Manager role",
+      "managerRoleHint": "Grants admin app login and configurable permissions. Off by default — kiosk PIN access only.",
       "permissions": "Permissions",
       "inviteNotice": "An invitation email will be sent to this address so the team member can sign in to the Olia admin app.",
       "saveChanges": "Save changes",
       "addTeamMember": "Add team member"
+    },
+    "concept": {
+      "editTitle": "Edit concept",
+      "newTitle": "New concept",
+      "nameRequired": "Concept name (required)",
+      "namePlaceholder": "e.g. The Crown Restaurant",
+      "saveChanges": "Save changes",
+      "addConcept": "Add concept"
     },
     "location": {
       "editTitle": "Edit location",
@@ -227,9 +270,14 @@
       "activeLocationsUpdated": "Active locations updated",
       "couldNotUpdateActiveLocations": "Could not update active locations",
       "inviteResent": "Invite resent to {{email}}",
-      "resendInviteFailed": "Failed to resend invite"
+      "resendInviteFailed": "Failed to resend invite",
+      "companyNameSaved": "Company name saved",
+      "couldNotSaveCompanyName": "Could not save company name"
     },
-    "myAccount": "My account",
+    "companyDetails": "Company details",
+    "companyName": "Company name",
+    "kioskOnly": "Kiosk PIN access only",
+    "myAccount": "Owner details",
     "fullName": "Full name",
     "email": "Email",
     "language": "Language",
@@ -268,6 +316,7 @@
     "teamMembersNotice": "All team members across all locations in the organisation.",
     "name": "Name",
     "role": "Role",
+    "noRoleSet": "—",
     "inviteExpired": "Invite expired",
     "invitePending": "Invite pending",
     "lastSeen": "Last seen {{date}}",

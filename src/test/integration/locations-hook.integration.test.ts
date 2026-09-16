@@ -265,6 +265,7 @@ describe("useSaveLocation integration — mutation pipeline", () => {
     await act(async () => {
       await result.current.mutateAsync({
         id:                    "",
+        concept_id:            null,
         name:                  "New Branch",
         address:               "3 Main St",
         contact_email:         "new@test.com",
@@ -288,6 +289,7 @@ describe("useSaveLocation integration — mutation pipeline", () => {
     await act(async () => {
       await result.current.mutateAsync({
         id:                    "loc-1",
+        concept_id:            null,
         name:                  "Updated Name",
         address:               "3 Main St",
         contact_email:         "upd@test.com",
@@ -327,6 +329,7 @@ describe("useSaveLocation integration — mutation pipeline", () => {
     await act(async () => {
       await result.current.mutateAsync({
         id:                    "loc-1",
+        concept_id:            null,
         name:                  "Updated Name",
         address:               null,
         contact_email:         null,
@@ -363,6 +366,7 @@ describe("useSaveLocation integration — mutation pipeline", () => {
       act(async () => {
         await result.current.mutateAsync({
           id:                    "loc-blocked",
+          concept_id:            null,
           name:                  "Blocked",
           address:               null,
           contact_email:         null,

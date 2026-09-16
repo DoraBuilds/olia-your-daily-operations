@@ -1,15 +1,9 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { useDepartments } from "@/hooks/useDepartments";
-import { DEFAULT_STAFF_DEPARTMENTS } from "@/lib/admin-repository";
+import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
 
-const mockUseAuth = vi.fn();
 const mockFrom = vi.fn();
-
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => mockUseAuth(),
-}));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -26,113 +20,83 @@ function makeWrapper() {
   };
 }
 
-function makeOrgQuery(orgData: unknown) {
+function makeSelectQuery(data: unknown) {
   return {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: orgData, error: null }),
-    update: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data, error: null }),
   };
 }
 
-const BASE_ORG = {
-  id: "org-1",
-  name: "Test Org",
-  plan: "starter",
-  plan_status: "active",
-  stripe_customer_id: null,
-  stripe_subscription_id: null,
-  trial_ends_at: null,
-  location_grace_period_ends_at: null,
-  active_location_ids: null,
-  departments: null,
-};
-
 beforeEach(() => {
-  mockUseAuth.mockReset();
   mockFrom.mockReset();
-  mockUseAuth.mockReturnValue({
-    user: { id: "user-1" },
-    teamMember: { id: "user-1", organization_id: "org-1" },
-    loading: false,
-  });
 });
 
 describe("useDepartments", () => {
-  it("falls back to DEFAULT_STAFF_DEPARTMENTS when org has no departments saved", async () => {
-    mockFrom.mockImplementation(() => makeOrgQuery(BASE_ORG));
+  it("returns departments scoped to the given location", async () => {
+    const stored = [
+      { id: "dep-1", location_id: "loc-1", name: "Bar" },
+      { id: "dep-2", location_id: "loc-1", name: "Kitchen" },
+    ];
+    mockFrom.mockImplementation(() => makeSelectQuery(stored));
 
-    const { result } = renderHook(() => useDepartments(), { wrapper: makeWrapper() });
+    const { result } = renderHook(() => useDepartments("loc-1"), { wrapper: makeWrapper() });
 
-    await waitFor(() =>
-      expect(result.current.departments).toEqual(
-        DEFAULT_STAFF_DEPARTMENTS.map(d => ({ name: d.name }))
-      )
-    );
+    await waitFor(() => expect(result.current.data).toEqual(stored));
+    expect(mockFrom).toHaveBeenCalledWith("departments");
   });
 
-  it("returns stored departments from Supabase when they exist", async () => {
-    const stored = [{ name: "Kitchen" }, { name: "Bar" }];
-    mockFrom.mockImplementation(() => makeOrgQuery({ ...BASE_ORG, departments: stored }));
+  it("is disabled (no query) when locationId is null", () => {
+    mockFrom.mockImplementation(() => makeSelectQuery([]));
+    const { result } = renderHook(() => useDepartments(null), { wrapper: makeWrapper() });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+});
 
-    const { result } = renderHook(() => useDepartments(), { wrapper: makeWrapper() });
+describe("useSaveDepartment", () => {
+  it("inserts a new department when no id is given", async () => {
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    mockFrom.mockImplementation(() => ({ insert: insertMock }));
 
-    await waitFor(() => expect(result.current.departments).toEqual(stored));
+    const { result } = renderHook(() => useSaveDepartment(), { wrapper: makeWrapper() });
+
+    await act(async () => {
+      await result.current.mutateAsync({ location_id: "loc-1", name: "Barista" });
+    });
+
+    expect(insertMock).toHaveBeenCalledWith({ location_id: "loc-1", name: "Barista" });
   });
 
-  it("calls supabase update when setDepartments is invoked with a new array", async () => {
-    const updateMock = vi.fn().mockReturnValue({
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "organizations") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: BASE_ORG, error: null }),
-          update: updateMock,
-        };
-      }
-      return makeOrgQuery(null);
+  it("updates an existing department's name when id is given", async () => {
+    const eqMock = vi.fn().mockResolvedValue({ error: null });
+    const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
+    mockFrom.mockImplementation(() => ({ update: updateMock }));
+
+    const { result } = renderHook(() => useSaveDepartment(), { wrapper: makeWrapper() });
+
+    await act(async () => {
+      await result.current.mutateAsync({ id: "dep-1", location_id: "loc-1", name: "Front of House" });
     });
 
-    const { result } = renderHook(() => useDepartments(), { wrapper: makeWrapper() });
-    await waitFor(() => expect(result.current.departments.length).toBeGreaterThan(0));
-
-    const newDepts = [{ name: "Barista" }];
-    act(() => {
-      result.current.setDepartments(newDepts);
-    });
-
-    await waitFor(() => expect(updateMock).toHaveBeenCalledWith({ departments: newDepts }));
+    expect(updateMock).toHaveBeenCalledWith({ name: "Front of House" });
+    expect(eqMock).toHaveBeenCalledWith("id", "dep-1");
   });
+});
 
-  it("supports functional updater form for setDepartments", async () => {
-    const stored = [{ name: "Front of House" }, { name: "Bar" }];
-    const updateMock = vi.fn().mockReturnValue({
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
-    mockFrom.mockImplementation((table: string) => {
-      if (table === "organizations") {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: { ...BASE_ORG, departments: stored }, error: null }),
-          update: updateMock,
-        };
-      }
-      return makeOrgQuery(null);
+describe("useDeleteDepartment", () => {
+  it("deletes a department by id", async () => {
+    const eqMock = vi.fn().mockResolvedValue({ error: null });
+    const deleteMock = vi.fn().mockReturnValue({ eq: eqMock });
+    mockFrom.mockImplementation(() => ({ delete: deleteMock }));
+
+    const { result } = renderHook(() => useDeleteDepartment(), { wrapper: makeWrapper() });
+
+    await act(async () => {
+      await result.current.mutateAsync({ id: "dep-1", location_id: "loc-1" });
     });
 
-    const { result } = renderHook(() => useDepartments(), { wrapper: makeWrapper() });
-    await waitFor(() => expect(result.current.departments).toEqual(stored));
-
-    act(() => {
-      result.current.setDepartments(prev => prev.filter(d => d.name !== "Bar"));
-    });
-
-    await waitFor(() =>
-      expect(updateMock).toHaveBeenCalledWith({ departments: [{ name: "Front of House" }] })
-    );
+    expect(deleteMock).toHaveBeenCalled();
+    expect(eqMock).toHaveBeenCalledWith("id", "dep-1");
   });
 });
