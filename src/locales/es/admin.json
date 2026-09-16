@@ -148,6 +148,7 @@
     },
     "conceptLabel": "Concepto",
     "addConcept": "Agregar concepto",
+    "conceptOptionsAria": "Opciones del concepto",
     "editConcept": "Editar concepto",
     "deleteConcept": "Eliminar concepto",
     "addLocation": "Agregar local",
