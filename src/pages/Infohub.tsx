@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
 import { supabase } from "@/lib/supabase";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
@@ -38,11 +39,22 @@ import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentVi
 
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
+// Content restricted by role/team-member (not location) isn't tied to any
+// concept, so it stays visible regardless of the sidebar's concept scope —
+// only content explicitly restricted to specific locations gets narrowed.
+function inConceptScope(access: InfohubAccessControl, scopedLocationIds: string[] | null): boolean {
+  if (scopedLocationIds === null) return true;
+  if (access.accessScope === "org") return true;
+  if (access.allowedLocationIds.length === 0) return true;
+  return access.allowedLocationIds.some(id => scopedLocationIds.includes(id));
+}
+
 export default function Infohub() {
   const { t } = useTranslation("infohub");
   const location = useLocation();
   const navigate = useNavigate();
   const { teamMember } = useAuth();
+  const { scopedLocationIds } = useConceptFilter();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: locations = [] } = useLocations();
   const {
@@ -125,8 +137,8 @@ export default function Infohub() {
     [libFolders, currentLibFolder, normalizedSearch]
   );
   const accessibleLibFolders = useMemo(() =>
-    visibleLibFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
-    [visibleLibFolders, currentPrincipal]
+    visibleLibFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal) && inConceptScope(folder.access, scopedLocationIds)),
+    [visibleLibFolders, currentPrincipal, scopedLocationIds]
   );
   const docsInCurrentFolder = useMemo(() =>
     (normalizedSearch
@@ -141,8 +153,8 @@ export default function Infohub() {
     [libDocs, currentLibFolder, normalizedSearch]
   );
   const accessibleDocsInCurrentFolder = useMemo(() =>
-    docsInCurrentFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
-    [docsInCurrentFolder, currentPrincipal]
+    docsInCurrentFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
+    [docsInCurrentFolder, currentPrincipal, scopedLocationIds]
   );
   const visibleTrainFolders = useMemo(() =>
     sortFolders(trainFolders.filter((folder) => {
@@ -152,8 +164,8 @@ export default function Infohub() {
     [trainFolders, currentTrainFolder, normalizedSearch]
   );
   const accessibleTrainFolders = useMemo(() =>
-    visibleTrainFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal)),
-    [visibleTrainFolders, currentPrincipal]
+    visibleTrainFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal) && inConceptScope(folder.access, scopedLocationIds)),
+    [visibleTrainFolders, currentPrincipal, scopedLocationIds]
   );
   const docsInCurrentTrainFolder = useMemo(() =>
     normalizedSearch
@@ -164,16 +176,16 @@ export default function Infohub() {
     [trainDocs, currentTrainFolder, normalizedSearch]
   );
   const accessibleDocsInCurrentTrainFolder = useMemo(() =>
-    docsInCurrentTrainFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
-    [docsInCurrentTrainFolder, currentPrincipal]
+    docsInCurrentTrainFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
+    [docsInCurrentTrainFolder, currentPrincipal, scopedLocationIds]
   );
   const visibleLibDocs = useMemo(() =>
-    libDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
-    [libDocs, currentPrincipal]
+    libDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
+    [libDocs, currentPrincipal, scopedLocationIds]
   );
   const visibleTrainDocs = useMemo(() =>
-    trainDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal)),
-    [trainDocs, currentPrincipal]
+    trainDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
+    [trainDocs, currentPrincipal, scopedLocationIds]
   );
 
   // Drag reorder

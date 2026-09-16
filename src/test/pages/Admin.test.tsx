@@ -3,6 +3,16 @@ import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");

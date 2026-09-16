@@ -5,6 +5,16 @@ import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 // Unlike ChecklistsTab.test.tsx, this file leaves ItemContextMenu unmocked so the
 // full "open menu -> Delete -> type DELETE -> confirm" flow can be exercised.
 

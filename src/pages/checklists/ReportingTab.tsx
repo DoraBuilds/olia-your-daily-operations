@@ -11,6 +11,7 @@ import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useActions } from "@/hooks/useActions";
 import { useLocations } from "@/hooks/useLocations";
+import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
@@ -154,11 +155,27 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     if (initialStatus) setStatusFilter(initialStatus);
   }, [initialStatus]);
 
-  const { data: locations = [] } = useLocations();
-  const locationNameById = useMemo(
-    () => new Map(locations.map(location => [location.id, location.name])),
-    [locations]
+  const { scopedLocationIds } = useConceptFilter();
+  const { data: allLocations = [] } = useLocations();
+  // Narrow the location dropdown to the selected concept's locations, mirroring
+  // ChecklistsTab's in-page location filter.
+  const locations = useMemo(
+    () => scopedLocationIds === null ? allLocations : allLocations.filter(l => scopedLocationIds.includes(l.id)),
+    [allLocations, scopedLocationIds],
   );
+  const locationNameById = useMemo(
+    () => new Map(allLocations.map(location => [location.id, location.name])),
+    [allLocations]
+  );
+
+  // If the concept changes out from under a location-specific filter, fall
+  // back to "all" rather than silently showing an empty report.
+  useEffect(() => {
+    if (locationFilter === "all") return;
+    if (!locations.some(l => l.id === locationFilter)) {
+      setLocationFilter("all");
+    }
+  }, [locations, locationFilter]);
 
   // Build date + location filters
   const filters = useMemo(() => {
@@ -183,9 +200,35 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     return { location_id: locationFilter !== "all" ? locationFilter : undefined };
   }, [period, dateRange, locationFilter]);
 
-  const { data: logs = [], isLoading } = useChecklistLogs(filters);
-  const { data: allChecklists = [] } = useChecklists();
-  const { data: actions = [] } = useActions();
+  const { data: rawLogs = [], isLoading } = useChecklistLogs(filters);
+  // useChecklistLogs only supports filtering to a single location server-side,
+  // so when "All concepts' locations" is the effective scope (locationFilter
+  // is "all" but a concept is selected), narrow the fetched logs client-side.
+  const logs = useMemo(
+    () => (locationFilter !== "all" || scopedLocationIds === null)
+      ? rawLogs
+      : rawLogs.filter(l => l.location_id === null || scopedLocationIds.includes(l.location_id)),
+    [rawLogs, locationFilter, scopedLocationIds],
+  );
+  const { data: allDbChecklists = [] } = useChecklists();
+  const allChecklists = useMemo(
+    () => (locationFilter !== "all" || scopedLocationIds === null)
+      ? allDbChecklists
+      : allDbChecklists.filter(c => {
+          const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : null);
+          if (!locIds || locIds.length === 0) return true;
+          return locIds.some(id => scopedLocationIds.includes(id));
+        }),
+    [allDbChecklists, locationFilter, scopedLocationIds],
+  );
+  const { data: rawActions = [] } = useActions();
+  const scopedChecklistIds = useMemo(() => new Set(allChecklists.map(c => c.id)), [allChecklists]);
+  const actions = useMemo(
+    () => (locationFilter !== "all" || scopedLocationIds === null)
+      ? rawActions
+      : rawActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
+    [rawActions, locationFilter, scopedLocationIds, scopedChecklistIds],
+  );
   const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
   const peopleOptions = useMemo(
     () => Array.from(new Set(logs.map(log => log.completed_by).filter(Boolean))).sort((a, b) => a.localeCompare(b)),

@@ -10,6 +10,16 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 vi.mock("@/lib/runtime-config", () => ({
   runtimeConfig: { googleMapsApiKey: "test-key" },
   getRuntimeConfig: () => ({

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { ConceptFilterProvider } from "@/contexts/ConceptFilterContext";
 import { hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -59,5 +60,5 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <>{children}</>;
+  return <ConceptFilterProvider>{children}</ConceptFilterProvider>;
 }

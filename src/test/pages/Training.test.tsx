@@ -3,6 +3,16 @@ import Training from "@/pages/Training";
 import { renderWithProviders } from "../test-utils";
 import { supabase } from "@/lib/supabase";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     functions: {

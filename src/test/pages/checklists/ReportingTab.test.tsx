@@ -5,6 +5,16 @@ import { ReactNode } from "react";
 import { ReportingTab } from "@/pages/checklists/ReportingTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
+vi.mock("@/contexts/ConceptFilterContext", () => ({
+  ALL_CONCEPTS: "all",
+  useConceptFilter: () => ({
+    concepts: [],
+    selectedConceptId: "all",
+    setSelectedConceptId: () => {},
+    scopedLocationIds: null,
+  }),
+}));
+
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
