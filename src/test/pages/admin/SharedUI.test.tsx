@@ -1,15 +1,19 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { TeamMemberModal, ConfirmModal } from "@/pages/admin/SharedUI";
 
+const { mockDepartmentsOrder } = vi.hoisted(() => ({
+  mockDepartmentsOrder: vi.fn().mockResolvedValue({ data: [], error: null }),
+}));
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      in: vi.fn().mockReturnThis(),
+      order: mockDepartmentsOrder,
     }),
   },
 }));
@@ -74,6 +78,51 @@ describe("TeamMemberModal", () => {
     expect(screen.queryByText("Permissions")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("switch"));
     expect(screen.getByText("Permissions")).toBeInTheDocument();
+  });
+
+  describe("Department picker with multiple locations (#776)", () => {
+    const locations = [
+      { id: "l1", name: "Main Branch" },
+      { id: "l2", name: "City Centre" },
+    ] as Parameters<typeof TeamMemberModal>[0]["locations"];
+
+    beforeEach(() => {
+      mockDepartmentsOrder.mockResolvedValue({
+        data: [
+          { id: "d1", location_id: "l1", name: "Kitchen" },
+          { id: "d2", location_id: "l2", name: "Front of House" },
+        ],
+        error: null,
+      });
+    });
+
+    it("keeps the department picker visible after a second location is selected", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+      await waitFor(() => expect(screen.getByText("Department")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("City Centre"));
+      expect(screen.getByText("Department")).toBeInTheDocument();
+    });
+
+    it("lists departments from every selected location, labeled by location", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+      fireEvent.click(screen.getByText("City Centre"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument();
+        expect(screen.getByText("Front of House — City Centre")).toBeInTheDocument();
+      });
+    });
+
+    it("shows a plain department name (no location suffix) for a single selected location", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+
+      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
+      expect(screen.queryByText("Kitchen — Main Branch")).not.toBeInTheDocument();
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
+import { useDepartments, useDepartmentsForLocations, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
 
 const mockFrom = vi.fn();
 
@@ -28,6 +28,14 @@ function makeSelectQuery(data: unknown) {
   };
 }
 
+function makeMultiSelectQuery(data: unknown) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data, error: null }),
+  };
+}
+
 beforeEach(() => {
   mockFrom.mockReset();
 });
@@ -49,6 +57,30 @@ describe("useDepartments", () => {
   it("is disabled (no query) when locationId is null", () => {
     mockFrom.mockImplementation(() => makeSelectQuery([]));
     const { result } = renderHook(() => useDepartments(null), { wrapper: makeWrapper() });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+});
+
+describe("useDepartmentsForLocations", () => {
+  it("returns departments across every given location", async () => {
+    const stored = [
+      { id: "dep-1", location_id: "loc-1", name: "Bar" },
+      { id: "dep-2", location_id: "loc-2", name: "Kitchen" },
+    ];
+    const query = makeMultiSelectQuery(stored);
+    mockFrom.mockImplementation(() => query);
+
+    const { result } = renderHook(() => useDepartmentsForLocations(["loc-1", "loc-2"]), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.data).toEqual(stored));
+    expect(mockFrom).toHaveBeenCalledWith("departments");
+    expect(query.in).toHaveBeenCalledWith("location_id", ["loc-1", "loc-2"]);
+  });
+
+  it("is disabled (no query) when the location list is empty", () => {
+    mockFrom.mockImplementation(() => makeMultiSelectQuery([]));
+    const { result } = renderHook(() => useDepartmentsForLocations([]), { wrapper: makeWrapper() });
     expect(result.current.fetchStatus).toBe("idle");
     expect(mockFrom).not.toHaveBeenCalled();
   });

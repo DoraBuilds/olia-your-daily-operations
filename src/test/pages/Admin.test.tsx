@@ -193,6 +193,10 @@ vi.mock("@/hooks/useDepartments", () => ({
     { id: "d1", location_id: "l1", name: "Front of House" },
     { id: "d2", location_id: "l1", name: "Back of House" },
   ], isLoading: false }),
+  useDepartmentsForLocations: () => ({ data: [
+    { id: "d1", location_id: "l1", name: "Front of House" },
+    { id: "d2", location_id: "l1", name: "Back of House" },
+  ], isLoading: false }),
   useSaveDepartment: () => ({ mutate: vi.fn() }),
   useDeleteDepartment: () => mockDeleteDepartment,
 }));
