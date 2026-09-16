@@ -70,11 +70,11 @@ export function buildDigestEmail(opts: {
 
   const htmlUnstarted = unstarted.length > 0
     ? `<h3 style="color:#C05621;margin:16px 0 8px">🔲 Not started (${unstarted.length})</h3>
-       <ul style="margin:0;padding-left:18px">${unstarted.map(t => `<li style="margin-bottom:4px">${t}</li>`).join("")}</ul>`
+       <ul style="margin:0;padding-left:18px">${unstarted.map(t => `<li style="margin-bottom:4px">${esc(t)}</li>`).join("")}</ul>`
     : "";
   const htmlUnfinished = unfinished.length > 0
     ? `<h3 style="color:#C05621;margin:16px 0 8px">⚠️ Unfinished (${unfinished.length})</h3>
-       <ul style="margin:0;padding-left:18px">${unfinished.map(t => `<li style="margin-bottom:4px">${t}</li>`).join("")}</ul>`
+       <ul style="margin:0;padding-left:18px">${unfinished.map(t => `<li style="margin-bottom:4px">${esc(t)}</li>`).join("")}</ul>`
     : "";
   const htmlNothingPending = isTest && !hasAnything
     ? `<p style="color:#2D6A4F">✅ All checklists are on track today — this is a test email.</p>`
@@ -96,4 +96,8 @@ export function buildDigestEmail(opts: {
 </html>`;
 
   return { subject, textBody, htmlBody };
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

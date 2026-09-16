@@ -80,6 +80,17 @@ describe("check-checklist-alerts digest helpers", () => {
       expect(email.htmlBody).toContain("All checklists are on track today");
     });
 
+    it("escapes HTML in checklist titles so a title can't inject markup", () => {
+      const email = buildDigestEmail({
+        dateStr: "16 September 2026",
+        unstarted: ["<img src=x onerror=alert(1)>"],
+        unfinished: [],
+        isTest: false,
+      });
+      expect(email.htmlBody).not.toContain("<img src=x onerror=alert(1)>");
+      expect(email.htmlBody).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    });
+
     it("omits the nothing-pending note on a real (non-test) send", () => {
       const email = buildDigestEmail({
         dateStr: "16 September 2026",
