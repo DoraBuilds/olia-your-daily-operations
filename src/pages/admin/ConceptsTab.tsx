@@ -106,7 +106,7 @@ export function ConceptsTab({
   if (conceptLocations.length === 0) {
     return (
       <div className="space-y-4">
-        {concepts.length > 1 && (
+        {isOwner && (
           <ConceptPicker
             concepts={concepts}
             currentConceptId={currentConcept?.id ?? ""}
@@ -194,7 +194,7 @@ export function ConceptsTab({
         </div>
       )}
 
-      {concepts.length > 1 && (
+      {isOwner && (
         <ConceptPicker
           concepts={concepts}
           currentConceptId={currentConcept?.id ?? ""}
