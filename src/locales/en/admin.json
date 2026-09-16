@@ -148,6 +148,7 @@
     },
     "conceptLabel": "Concept",
     "addConcept": "Add concept",
+    "conceptOptionsAria": "Concept options",
     "editConcept": "Edit concept",
     "deleteConcept": "Delete concept",
     "addLocation": "Add location",

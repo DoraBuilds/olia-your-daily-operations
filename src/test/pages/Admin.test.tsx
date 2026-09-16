@@ -273,6 +273,36 @@ describe("Admin page", () => {
     mockUseConcepts.mockReturnValue({ data: mockConcepts, isLoading: false });
   });
 
+  it("opens a concept options menu with Edit concept and Delete concept when the kebab next to Add concept is clicked", async () => {
+    mockUseConcepts.mockReturnValue({
+      data: [...mockConcepts, { id: "concept-2", organization_id: "org1", name: "Second Brand" }],
+      isLoading: false,
+    });
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+    await waitFor(() => {
+      expect(screen.getByText("Concept")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Edit concept")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Concept options" }));
+
+    expect(screen.getByText("Edit concept")).toBeInTheDocument();
+    expect(screen.getByText("Delete concept")).toBeInTheDocument();
+    mockUseConcepts.mockReturnValue({ data: mockConcepts, isLoading: false });
+  });
+
+  it("hides Delete concept in the kebab menu when there's only one concept", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+    await waitFor(() => {
+      expect(screen.getByText("Concept")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Concept options" }));
+
+    expect(screen.getByText("Edit concept")).toBeInTheDocument();
+    expect(screen.queryByText("Delete concept")).not.toBeInTheDocument();
+  });
+
   it("location detail card is rendered when location is selected", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {

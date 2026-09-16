@@ -5,11 +5,11 @@
 // concept, and a location detail view (departments, address, kiosk launch,
 // filtered team members, filtered checklists).
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Building2, UtensilsCrossed, MapPin, Mail, Pencil, Trash2, Plus,
-  ChevronDown, Tablet, Check, X,
+  ChevronDown, Tablet, Check, X, MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -112,19 +112,9 @@ export function ConceptsTab({
             currentConceptId={currentConcept?.id ?? ""}
             onChange={setCurrentConceptId}
             onAddConcept={onAddConcept}
+            onEditConcept={() => onEditConcept(currentConcept!)}
+            onDeleteConcept={() => onDeleteConcept(currentConcept!.id)}
           />
-        )}
-        {isOwner && (
-          <div className="flex items-center justify-end gap-3">
-            <button onClick={() => onEditConcept(currentConcept!)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
-              <Pencil size={12} /> {t("conceptsTab.editConcept")}
-            </button>
-            {concepts.length > 1 && (
-              <button onClick={() => onDeleteConcept(currentConcept!.id)} className="flex items-center gap-1 text-xs text-status-error font-medium hover:underline">
-                <Trash2 size={12} /> {t("conceptsTab.deleteConcept")}
-              </button>
-            )}
-          </div>
         )}
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
           <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center">
@@ -212,20 +202,9 @@ export function ConceptsTab({
           currentConceptId={currentConcept?.id ?? ""}
           onChange={id => { setCurrentConceptId(id); setCurrentLocationId(""); }}
           onAddConcept={onAddConcept}
+          onEditConcept={() => onEditConcept(currentConcept!)}
+          onDeleteConcept={() => onDeleteConcept(currentConcept!.id)}
         />
-      )}
-
-      {isOwner && (
-        <div className="flex items-center justify-end gap-3">
-          <button onClick={() => onEditConcept(currentConcept!)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
-            <Pencil size={12} /> {t("conceptsTab.editConcept")}
-          </button>
-          {concepts.length > 1 && (
-            <button onClick={() => onDeleteConcept(currentConcept!.id)} className="flex items-center gap-1 text-xs text-status-error font-medium hover:underline">
-              <Trash2 size={12} /> {t("conceptsTab.deleteConcept")}
-            </button>
-          )}
-        </div>
       )}
 
       {/* Location cards */}
@@ -430,11 +409,28 @@ export function ConceptsTab({
 // ─── ConceptPicker ────────────────────────────────────────────────────────────
 
 function ConceptPicker({
-  concepts, currentConceptId, onChange, onAddConcept,
+  concepts, currentConceptId, onChange, onAddConcept, onEditConcept, onDeleteConcept,
 }: {
-  concepts: Concept[]; currentConceptId: string; onChange: (id: string) => void; onAddConcept: () => void;
+  concepts: Concept[];
+  currentConceptId: string;
+  onChange: (id: string) => void;
+  onAddConcept: () => void;
+  onEditConcept: () => void;
+  onDeleteConcept: () => void;
 }) {
   const { t } = useTranslation("admin");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
   return (
     <div>
       <p className="section-label mb-2">{t("conceptsTab.conceptLabel")}</p>
@@ -457,6 +453,33 @@ function ConceptPicker({
         >
           <Plus size={13} /> {t("conceptsTab.addConcept")}
         </button>
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            aria-label={t("conceptsTab.conceptOptionsAria")}
+            className="h-full px-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors flex items-center"
+          >
+            <MoreVertical size={16} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[180px] py-1 animate-fade-in">
+              <button
+                onClick={() => { setMenuOpen(false); onEditConcept(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Pencil size={14} /> {t("conceptsTab.editConcept")}
+              </button>
+              {concepts.length > 1 && (
+                <button
+                  onClick={() => { setMenuOpen(false); onDeleteConcept(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-status-error hover:bg-muted/50 transition-colors"
+                >
+                  <Trash2 size={14} /> {t("conceptsTab.deleteConcept")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
