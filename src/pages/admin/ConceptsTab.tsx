@@ -114,6 +114,18 @@ export function ConceptsTab({
             onAddConcept={onAddConcept}
           />
         )}
+        {isOwner && (
+          <div className="flex items-center justify-end gap-3">
+            <button onClick={() => onEditConcept(currentConcept!)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
+              <Pencil size={12} /> {t("conceptsTab.editConcept")}
+            </button>
+            {concepts.length > 1 && (
+              <button onClick={() => onDeleteConcept(currentConcept!.id)} className="flex items-center gap-1 text-xs text-status-error font-medium hover:underline">
+                <Trash2 size={12} /> {t("conceptsTab.deleteConcept")}
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
           <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center">
             <UtensilsCrossed size={28} className="text-sage" />
@@ -208,7 +220,7 @@ export function ConceptsTab({
           <button onClick={() => onEditConcept(currentConcept!)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
             <Pencil size={12} /> {t("conceptsTab.editConcept")}
           </button>
-          {conceptLocations.length === 0 && (
+          {concepts.length > 1 && (
             <button onClick={() => onDeleteConcept(currentConcept!.id)} className="flex items-center gap-1 text-xs text-status-error font-medium hover:underline">
               <Trash2 size={12} /> {t("conceptsTab.deleteConcept")}
             </button>

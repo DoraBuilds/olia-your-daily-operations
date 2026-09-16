@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { SupportedLanguage } from "@/lib/i18n";
 import {
-  type Location, type TeamMember, type ManagerPermissions,
+  type Location, type Concept, type TeamMember, type ManagerPermissions,
   DEFAULT_ADMIN_PIN, DEFAULT_PERMISSIONS, daysAgoTooltip,
 } from "@/lib/admin-repository";
 import { usePlan, useUpdateOrganizationName } from "@/hooks/usePlan";
@@ -26,6 +26,10 @@ import { ConfirmModal } from "./SharedUI";
 
 export interface AccountTabProps {
   locations: Location[];
+  concepts: Concept[];
+  onAddConcept: () => void;
+  onEditConcept: (c: Concept) => void;
+  onDeleteConcept: (id: string) => void;
   activeLocationIds: string[];
   inactiveLocationIds: string[];
   teamMembers: TeamMember[];
@@ -53,7 +57,8 @@ export interface AccountTabProps {
 }
 
 export function AccountTab({
-  locations, activeLocationIds, inactiveLocationIds, teamMembers, onSavePerms,
+  locations, concepts, onAddConcept, onEditConcept, onDeleteConcept,
+  activeLocationIds, inactiveLocationIds, teamMembers, onSavePerms,
   onSaveAccount, authAccount, authMemberId, authUserEmail, authUserName,
   locationLimit, isLocationOverLimit, locationGraceEndsAt, isGraceActive, isGraceExpired,
   onSaveActiveLocations, savingActiveLocations,
@@ -325,6 +330,64 @@ export function AccountTab({
           >
             {companyNameSaving ? t("accountTab.saving") : t("accountTab.save")}
           </button>
+        </section>
+      )}
+
+      {/* Concepts */}
+      {show("account") && (
+        <section>
+          <div className="flex items-center justify-between mb-1">
+            <p className="section-label">{t("accountTab.concepts", { count: concepts.length })}</p>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            {t("accountTab.conceptsNotice")}
+          </p>
+          <div className="card-surface divide-y divide-border">
+            {concepts.length === 0 ? (
+              <p className="px-4 py-4 text-sm text-muted-foreground">{t("accountTab.noConcepts")}</p>
+            ) : (
+              concepts.map(concept => {
+                const locationCount = locations.filter(l => l.concept_id === concept.id).length;
+                return (
+                  <div key={concept.id} className="flex items-center gap-3 px-4 py-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{concept.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {t("accountTab.conceptLocationsCount", { count: locationCount })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => onEditConcept(concept)}
+                      aria-label={t("accountTab.editConceptAria", { name: concept.name })}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Pencil size={14} className="text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteConcept(concept.id)}
+                      disabled={concepts.length <= 1}
+                      title={concepts.length <= 1 ? t("accountTab.lastConceptNotice") : t("accountTab.deleteConceptAria", { name: concept.name })}
+                      aria-label={t("accountTab.deleteConceptAria", { name: concept.name })}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors",
+                        concepts.length <= 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-muted",
+                      )}
+                    >
+                      <Trash2 size={14} className="text-status-error" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+            <div className="flex justify-end px-4 py-3 border-t border-border">
+              <button
+                onClick={onAddConcept}
+                className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
+              >
+                <Plus size={14} /> {t("accountTab.addConcept")}
+              </button>
+            </div>
+          </div>
         </section>
       )}
 

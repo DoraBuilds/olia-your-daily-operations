@@ -207,16 +207,19 @@ export default function Admin() {
   };
 
   const deleteConcept = (id: string) => {
+    const conceptLocationCount = locations.filter(l => l.concept_id === id).length;
     setConfirmModal({
       title: t("confirm.deleteConceptTitle"),
-      message: t("confirm.deleteConceptMessage"),
+      message: conceptLocationCount > 0
+        ? t("confirm.deleteConceptWithLocationsMessage", { count: conceptLocationCount })
+        : t("confirm.deleteConceptMessage"),
       actionLabel: t("confirm.delete"),
       requireDeleteText: true,
       onConfirm: () => {
         deleteConceptMut.mutate(id, {
           onSuccess: () => {
             toast.success(t("toast.conceptDeleted"));
-            setCurrentConceptId("");
+            if (currentConceptId === id) setCurrentConceptId("");
           },
           onError: (err: Error) => toast.error(t("toast.deleteConceptFailed", { error: err.message })),
         });
@@ -342,6 +345,10 @@ export default function Admin() {
           {(() => {
             const accountTabProps = isOwner ? {
               locations: allLocations,
+              concepts,
+              onAddConcept: () => setConceptModal("new"),
+              onEditConcept: (c: Concept) => setConceptModal(c),
+              onDeleteConcept: deleteConcept,
               activeLocationIds: effectiveActiveLocationIds,
               inactiveLocationIds: inactiveLocations.map((location) => location.id),
               teamMembers,
