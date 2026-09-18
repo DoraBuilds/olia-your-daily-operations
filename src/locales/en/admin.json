@@ -39,7 +39,8 @@
   },
   "confirm": {
     "deleteLocationTitle": "Delete location",
-    "deleteLocationMessage": "This will permanently remove the location and cannot be undone.",
+    "deleteLocationMessage": "This will permanently remove \"{{name}}\" and cannot be undone.",
+    "deleteLocationMessageGeneric": "This will permanently remove the location and cannot be undone.",
     "deleteConceptTitle": "Delete concept",
     "deleteConceptMessage": "This will permanently remove the concept and cannot be undone.",
     "deleteConceptWithLocationsMessage_one": "This concept has {{count}} location. Deleting it will also permanently delete that location (and any checklist folders tied to it — checklists and staff themselves are kept, just unassigned). This cannot be undone.",

@@ -39,7 +39,8 @@
   },
   "confirm": {
     "deleteLocationTitle": "Eliminar ubicación",
-    "deleteLocationMessage": "Esto eliminará permanentemente la ubicación y no se puede deshacer.",
+    "deleteLocationMessage": "Esto eliminará permanentemente \"{{name}}\" y no se puede deshacer.",
+    "deleteLocationMessageGeneric": "Esto eliminará permanentemente la ubicación y no se puede deshacer.",
     "deleteConceptTitle": "Eliminar concepto",
     "deleteConceptMessage": "Esto eliminará permanentemente el concepto. Esto no se puede deshacer.",
     "deleteConceptWithLocationsMessage_one": "Este concepto tiene {{count}} local. Al eliminarlo también se eliminará permanentemente ese local (y las carpetas de listas asociadas a él — las listas y el personal se conservan, solo quedan sin asignar). Esto no se puede deshacer.",
