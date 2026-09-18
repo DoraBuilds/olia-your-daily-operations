@@ -23,7 +23,6 @@ const API_KEY = runtimeConfig.googleMapsApiKey;
 type ScriptStatus = "unavailable" | "idle" | "loading" | "ready" | "error";
 
 let _scriptStatus: ScriptStatus = API_KEY ? "idle" : "unavailable";
-let _placesLib: any = null;
 const _listeners = new Set<() => void>();
 
 function _notifyListeners() {
@@ -42,21 +41,7 @@ function ensureGoogleMapsScript() {
   script.id = "olia-gmaps";
   script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&loading=async`;
   script.async = true;
-  script.onload = () => {
-    const g = (window as any).google;
-    g.maps.importLibrary("places")
-      .then((lib: any) => {
-        _placesLib = lib;
-        _scriptStatus = "ready";
-        _notifyListeners();
-        _listeners.clear();
-      })
-      .catch(() => {
-        _scriptStatus = "error";
-        _notifyListeners();
-        _listeners.clear();
-      });
-  };
+  script.onload = () => { _scriptStatus = "ready";  _notifyListeners(); _listeners.clear(); };
   script.onerror = () => { _scriptStatus = "error";  _notifyListeners(); _listeners.clear(); };
   document.head.appendChild(script);
 }
@@ -124,16 +109,17 @@ export function PlacesAutocompleteInput({
   }, []);
 
   const fetchPredictions = useCallback((input: string) => {
-    if (!ready || !_placesLib || input.trim().length < 3) {
+    const g = (window as any).google;
+    if (!ready || !g?.maps?.places?.AutocompleteSuggestion || input.trim().length < 3) {
       setPredictions([]);
       setShowDropdown(false);
       return;
     }
     if (!sessionTokenRef.current) {
-      sessionTokenRef.current = new _placesLib.AutocompleteSessionToken();
+      sessionTokenRef.current = new g.maps.places.AutocompleteSessionToken();
     }
     setLoading(true);
-    _placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+    g.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
       input: input.trim(),
       sessionToken: sessionTokenRef.current,
     })
