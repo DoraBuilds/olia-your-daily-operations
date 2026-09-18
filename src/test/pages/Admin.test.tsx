@@ -19,7 +19,10 @@ vi.mock("@/contexts/ConceptFilterContext", () => ({
   }),
 }));
 
-const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+const { mockNavigate, mockSignOut } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockSignOut: vi.fn().mockResolvedValue({}),
+}));
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return { ...actual, useNavigate: () => mockNavigate };
@@ -83,7 +86,7 @@ vi.mock("@/contexts/AuthContext", () => ({
       location_ids: [], permissions: {}, pin_reset_required: true,
     },
     loading: false,
-    signOut: vi.fn(),
+    signOut: mockSignOut,
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -887,29 +890,45 @@ describe("Admin page", () => {
     await waitFor(() => expect(document.body).toBeDefined());
   });
 
-  it("shows 'Delete account' button in the Account tab for an Owner", async () => {
+  it("calls signOut and navigates to / when 'Log out' is clicked", async () => {
+    mockSignOut.mockClear();
+    mockNavigate.mockClear();
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
-    await waitFor(() => expect(screen.getByRole("button", { name: /delete account/i })).toBeInTheDocument());
+    await waitFor(() => screen.getByRole("button", { name: /log out/i }));
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith("/");
+    });
   });
 
-  it("opens the delete confirmation modal when the button is clicked", async () => {
+  it("shows 'Log out' and an account-options menu (with 'Delete account') in the Account tab for an Owner", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
-    await waitFor(() => screen.getByRole("button", { name: /delete account/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /account options/i }));
+    expect(screen.getByRole("button", { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  it("opens the delete confirmation modal when 'Delete account' is clicked from the menu", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+    await waitFor(() => screen.getByRole("button", { name: /account options/i }));
+    fireEvent.click(screen.getByRole("button", { name: /account options/i }));
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
-    await waitFor(() => expect(screen.getByText(/permanently delete your organisation/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/cancels your subscription/i)).toBeInTheDocument());
   });
 
-  it("calls delete_my_account RPC when DELETE is typed and confirm is clicked", async () => {
+  it("calls the delete-my-account edge function when DELETE is typed and confirm is clicked", async () => {
     const { supabase } = await import("@/lib/supabase");
     renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
-    await waitFor(() => screen.getByRole("button", { name: /delete account/i }));
+    await waitFor(() => screen.getByRole("button", { name: /account options/i }));
+    fireEvent.click(screen.getByRole("button", { name: /account options/i }));
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
     await waitFor(() => screen.getByPlaceholderText(/Type DELETE/i));
 
     fireEvent.change(screen.getByPlaceholderText(/Type DELETE/i), { target: { value: "DELETE" } });
-    fireEvent.click(screen.getByRole("button", { name: /yes, delete everything/i }));
+    fireEvent.click(screen.getByRole("button", { name: /yes, delete my account/i }));
 
-    await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("delete_my_account"));
+    await waitFor(() => expect(supabase.functions.invoke).toHaveBeenCalledWith("delete-my-account"));
   });
 
   describe("Launch kiosk confirmation", () => {

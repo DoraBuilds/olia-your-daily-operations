@@ -285,8 +285,6 @@ export default function Infohub() {
     />
   );
 
-  const subtitle = subTab === "library" ? t("subtitleLibrary") : t("subtitleTraining");
-
   // Folder menu actions
   const folderActions = (folder: { id: string; name: string; access: InfohubAccessControl }, section: "library" | "training") => {
     const actions = [
@@ -361,8 +359,7 @@ export default function Infohub() {
   };
 
   return (
-    <Layout title="Olia" subtitle={subtitle}
-    >
+    <Layout>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

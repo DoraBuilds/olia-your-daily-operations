@@ -119,7 +119,7 @@ describe("Infohub page", () => {
 
   it("training route shows training modules", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
-    expect(screen.getByText("Staff training modules")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search training and folders…")).toBeInTheDocument();
   });
 
   it("shows folder list on Library tab including 'Cleaning & Maintenance'", () => {
@@ -667,14 +667,14 @@ describe("Infohub page", () => {
     expect(screen.getAllByText("Infohub").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("Library tab subtitle shows 'Documents & SOPs'", () => {
+  it("shows the Library search placeholder by default", () => {
     renderWithProviders(<Infohub />);
-    expect(screen.getByText("Documents & SOPs")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search documents and folders…")).toBeInTheDocument();
   });
 
-  it("Training tab subtitle changes when tab switched", () => {
+  it("shows the Training search placeholder when the Training tab is active", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
-    expect(screen.getByText("Staff training modules")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search training and folders…")).toBeInTheDocument();
   });
 
   it("folder items show document count", () => {

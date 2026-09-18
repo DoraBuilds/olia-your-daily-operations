@@ -17,20 +17,14 @@ export default function Notifications() {
   const clearOne = (id: string) => dismissMut.mutate(id);
 
   return (
-    <Layout
-      title="Olia"
-      subtitle={t("subtitle")}
-      headerLeft={
+    <Layout>
+      <section>
         <button
           onClick={() => navigate("/dashboard")}
-          className="p-2 rounded-full hover:bg-muted transition-colors"
-          aria-label={t("backAriaLabel")}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
         >
-          <ArrowLeft size={18} className="text-muted-foreground" />
+          <ArrowLeft size={16} /> {t("backAriaLabel")}
         </button>
-      }
-    >
-      <section>
         <div className="flex items-center justify-between mb-3">
           <p className="section-label">{t("count", { count: alerts.length })}</p>
           {alerts.length > 0 && (

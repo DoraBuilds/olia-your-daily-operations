@@ -273,6 +273,7 @@
       "couldNotUpdatePin": "No se pudo actualizar el PIN de administrador",
       "couldNotRevealPin": "No se pudo revelar el PIN",
       "couldNotDeleteAccount": "No se pudo eliminar la cuenta",
+      "couldNotLogOut": "No se pudo cerrar sesión",
       "billingUnavailableError": "No pudimos verificar tu plan de facturación. Abre Facturación y actualiza el estado de la suscripción primero.",
       "chooseExactLocations_one": "Elige exactamente {{count}} ubicación activa para continuar.",
       "chooseExactLocations_other": "Elige exactamente {{count}} ubicaciones activas para continuar.",
@@ -312,8 +313,10 @@
     "loading": "Cargando…",
     "viewCurrentPin": "Ver PIN actual",
     "createNewPin": "Crear nuevo PIN",
-    "dangerZone": "Zona de peligro",
-    "dangerZoneNotice": "Elimina permanentemente tu cuenta y todos los datos de la organización. Esto no se puede deshacer.",
+    "session": "Sesión",
+    "logOut": "Cerrar sesión",
+    "loggingOut": "Cerrando sesión…",
+    "accountOptionsAria": "Opciones de la cuenta",
     "deleteAccount": "Eliminar cuenta",
     "allLocations": "Todas las ubicaciones",
     "billingUnavailableBadge": "Facturación no disponible",
@@ -368,13 +371,14 @@
     "manageAtOlia": "Gestionar en olia.app",
     "deleteAccountModal": {
       "title": "Eliminar cuenta",
-      "body": "Esto eliminará permanentemente tu organización, todas las ubicaciones, listas de verificación, perfiles de personal y miembros del equipo.",
-      "cannotBeUndone": "Esto no se puede deshacer.",
+      "body": "Esto cancela tu suscripción y cierra tu sesión de la organización —todas las ubicaciones, listas de verificación, perfiles de personal y miembros del equipo— de inmediato.",
+      "retentionNotice": "Tus datos se conservan durante 30 días por si esto fue un error.",
+      "afterRetention": "Después de eso se eliminan de forma permanente y no podremos restaurarlos.",
       "typeToConfirm": "Escribe",
       "toConfirm": "para confirmar.",
       "placeholder": "Escribe DELETE",
       "deleting": "Eliminando…",
-      "confirmAction": "Sí, eliminar todo"
+      "confirmAction": "Sí, eliminar mi cuenta"
     }
   }
 }

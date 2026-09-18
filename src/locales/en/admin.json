@@ -273,6 +273,7 @@
       "couldNotUpdatePin": "Could not update admin PIN",
       "couldNotRevealPin": "Could not reveal PIN",
       "couldNotDeleteAccount": "Could not delete account",
+      "couldNotLogOut": "Could not log out",
       "billingUnavailableError": "We couldn't verify your billing plan. Open Billing and refresh the subscription status first.",
       "chooseExactLocations_one": "Choose exactly {{count}} active location to continue.",
       "chooseExactLocations_other": "Choose exactly {{count}} active locations to continue.",
@@ -312,8 +313,10 @@
     "loading": "Loading…",
     "viewCurrentPin": "View current PIN",
     "createNewPin": "Create new PIN",
-    "dangerZone": "Danger zone",
-    "dangerZoneNotice": "Permanently delete your account and all organisation data. This cannot be undone.",
+    "session": "Session",
+    "logOut": "Log out",
+    "loggingOut": "Logging out…",
+    "accountOptionsAria": "Account options",
     "deleteAccount": "Delete account",
     "allLocations": "All locations",
     "billingUnavailableBadge": "Billing unavailable",
@@ -368,13 +371,14 @@
     "manageAtOlia": "Manage at olia.app",
     "deleteAccountModal": {
       "title": "Delete account",
-      "body": "This will permanently delete your organisation, all locations, checklists, staff profiles, and team members.",
-      "cannotBeUndone": "This cannot be undone.",
+      "body": "This cancels your subscription and signs you out of your organisation — all locations, checklists, staff profiles, and team members — immediately.",
+      "retentionNotice": "Your data is kept for 30 days in case this was a mistake.",
+      "afterRetention": "After that it's permanently deleted and we won't be able to restore it.",
       "typeToConfirm": "Type",
       "toConfirm": "to confirm.",
       "placeholder": "Type DELETE",
       "deleting": "Deleting…",
-      "confirmAction": "Yes, delete everything"
+      "confirmAction": "Yes, delete my account"
     }
   }
 }

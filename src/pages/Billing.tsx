@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Check, Loader2, AlertCircle, ExternalLink, Zap, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, AlertCircle, ExternalLink, Zap, MapPin, Building2, PauseCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -94,6 +94,36 @@ export default function Billing() {
   const [loading, setLoading] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activationError, setActivationError] = useState<string | null>(null);
+
+  // Reflects only the outcome of an action taken this session — there's no
+  // synced "is this subscription set to cancel" column on organizations, so
+  // a page reload always shows "Pause subscription" again even if it's
+  // already paused. Toggling it again is harmless (Stripe just re-applies
+  // the same cancel_at_period_end value).
+  const [subscriptionActionLoading, setSubscriptionActionLoading] = useState(false);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const [periodEndLabel, setPeriodEndLabel] = useState<string | null>(null);
+
+  const handleToggleSubscriptionPause = async () => {
+    setSubscriptionActionLoading(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("manage-subscription", {
+        body: { action: cancelAtPeriodEnd ? "resume" : "pause" },
+      });
+      if (fnError) throw fnError;
+      if (!data?.success) throw new Error(data?.reason ?? t("planSummary.couldNotUpdateSubscription"));
+      setCancelAtPeriodEnd(Boolean(data.cancelAtPeriodEnd));
+      setPeriodEndLabel(
+        data.currentPeriodEnd
+          ? new Date(data.currentPeriodEnd * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+          : null,
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t("planSummary.couldNotUpdateSubscription"));
+    } finally {
+      setSubscriptionActionLoading(false);
+    }
+  };
 
   const upgraded = searchParams.get("upgraded") === "1";
   const canceled  = searchParams.get("canceled")  === "1";
@@ -300,20 +330,14 @@ export default function Billing() {
 
   if (isNative) {
     return (
-      <Layout
-        title="Olia"
-        subtitle={t("subtitle")}
-        headerLeft={
+      <Layout>
+        <section className="space-y-4 pb-6">
           <button
             onClick={() => navigate("/admin")}
-            className="p-2 rounded-full hover:bg-muted transition-colors"
-            aria-label={t("back")}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft size={18} className="text-muted-foreground" />
+            <ArrowLeft size={16} /> {t("back")}
           </button>
-        }
-      >
-        <section className="space-y-4 pb-6">
           <div className="card-surface p-5 space-y-3">
             <p className="text-sm font-medium text-foreground">{t("native.currentPlan")}</p>
             <p className="text-xl font-display font-semibold text-foreground capitalize">{plan}</p>
@@ -335,20 +359,14 @@ export default function Billing() {
   }
 
   return (
-    <Layout
-      title="Olia"
-      subtitle={t("subtitle")}
-      headerLeft={
+    <Layout>
+      <section className="space-y-4 pb-6">
         <button
           onClick={() => navigate("/admin")}
-          className="p-2 rounded-full hover:bg-muted transition-colors"
-          aria-label={t("back")}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft size={18} className="text-muted-foreground" />
+          <ArrowLeft size={16} /> {t("back")}
         </button>
-      }
-    >
-      <section className="space-y-4 pb-6">
 
         {/* ── Post-checkout banners ────────────────────────────────────────── */}
         {upgraded && (
@@ -415,19 +433,41 @@ export default function Billing() {
           </div>
 
           {hasStripeSubscription && (
-            <button
-              onClick={() => {
-                const portalUrl = runtimeConfig.stripe.customerPortalUrl;
-                if (!portalUrl) { alert(t("planSummary.customerPortalNotConfigured")); return; }
-                window.open(portalUrl, "_blank");
-              }}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              <ExternalLink size={12} />
-              {t("planSummary.manageSubscription")}
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => {
+                  const portalUrl = runtimeConfig.stripe.customerPortalUrl;
+                  if (!portalUrl) { alert(t("planSummary.customerPortalNotConfigured")); return; }
+                  window.open(portalUrl, "_blank");
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink size={12} />
+                {t("planSummary.manageSubscription")}
+              </button>
+              <button
+                onClick={handleToggleSubscriptionPause}
+                disabled={subscriptionActionLoading}
+                className="flex items-center gap-1.5 text-xs font-medium text-status-error hover:opacity-80 transition-opacity disabled:opacity-50"
+              >
+                <PauseCircle size={13} />
+                {subscriptionActionLoading
+                  ? t("planSummary.pauseSubscriptionWorking")
+                  : cancelAtPeriodEnd
+                    ? t("planSummary.resumeSubscription")
+                    : t("planSummary.pauseSubscription")}
+              </button>
+            </div>
           )}
         </div>
+
+        {cancelAtPeriodEnd && (
+          <p className="text-xs text-status-warn bg-status-warn/10 border border-status-warn/20 rounded-xl px-3 py-2">
+            {periodEndLabel
+              ? t("planSummary.pausedNoticeWithDate", { date: periodEndLabel })
+              : t("planSummary.pausedNotice")}
+          </p>
+        )}
 
         {/* ── Billing period toggle ────────────────────────────────────────── */}
         <div className="flex items-center justify-center gap-2">

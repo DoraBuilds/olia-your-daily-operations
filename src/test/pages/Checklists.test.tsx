@@ -91,8 +91,9 @@ describe("Checklists page", () => {
 
   it("Checklists tab is active by default", () => {
     renderWithProviders(<Checklists />);
-    // The subtitle should show "Manage your checklists & inspections"
-    expect(screen.getByText("Manage your checklists & inspections")).toBeInTheDocument();
+    // No more Layout header/subtitle — ChecklistsTab renders straight in.
+    expect(document.querySelector("header")).toBeNull();
+    expect(screen.getByPlaceholderText("Search checklists…")).toBeInTheDocument();
   });
 
   it("shows search input with placeholder 'Search checklists…'", () => {
@@ -155,11 +156,9 @@ describe("Checklists page", () => {
     expect(document.body).toBeDefined();
   });
 
-  it("renders header with correct title", () => {
+  it("does not render a Layout header", () => {
     renderWithProviders(<Checklists />);
-    const h1s = document.querySelectorAll("h1");
-    const oliaH1 = Array.from(h1s).find(el => el.textContent === "Olia");
-    expect(oliaH1).toBeTruthy();
+    expect(document.querySelector("header")).toBeNull();
   });
 });
 

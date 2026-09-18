@@ -1,10 +1,9 @@
 import { ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
 } from "@/lib/kiosk-admin-session";
@@ -19,7 +18,6 @@ interface LayoutProps {
 }
 
 export function Layout({ children, title, subtitle, headerRight, headerLeft }: LayoutProps) {
-  const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,11 +42,6 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   // control (ConceptsTab.tsx) — and this needs to flip off immediately,
   // not wait for Layout to re-render for some unrelated reason (#727).
   const isKioskAdminSession = useSyncExternalStore(subscribeKioskAdminSession, hasActiveKioskAdminSession);
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   const handleBackToKiosk = () => {
     clearKioskAdminSession();
@@ -83,43 +76,55 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
   return (
     <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
-      {/* Header */}
-      {title && (
+      {/* Header — the "Olia" + owner-name banner that used to live here for
+          every page is gone; "Olia" branding lives only in SidebarNav now,
+          and Log out/Delete account moved into Admin > Account (AccountTab).
+          What's left: (a) the full title/subtitle bar, kept only for pages
+          that still pass a distinct `title` (e.g. Maintenance, SOP Library,
+          Training), and (b) a title-less "Back to Kiosk" strip so a kiosk
+          PIN grant (see kiosk-admin-session.ts) always has an exit, even on
+          pages that dropped their title — that control is unrelated to the
+          removed Log out button and would otherwise strand a shared kiosk
+          device unlocked. */}
+      {(title || isKioskAdminSession) && (
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
           <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8 xl:px-10")}>
-            {headerLeft ? (
-              <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
-            ) : <div className="w-8" />}
-            <div className="flex-1 min-w-0 text-center">
-              <h1 className="font-display text-lg text-foreground leading-tight truncate">{title}</h1>
-              {subtitle && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {headerRight && (
-                <div className="flex items-center gap-2">{headerRight}</div>
-              )}
-              {isKioskAdminSession ? (
-                <button
-                  onClick={handleBackToKiosk}
-                  className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
-                >
-                  <ArrowLeft size={14} /> {t("layout.backToKiosk")}
-                </button>
-              ) : user ? (
-                <button
-                  onClick={handleLogout}
-                  aria-label={t("layout.logOut")}
-                  className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <LogOut size={16} />
-                </button>
-              ) : (
-                /* spacer keeps header balanced when no right content exists */
-                !headerRight && <div className="w-8" />
-              )}
-            </div>
+            {title ? (
+              <>
+                {headerLeft ? (
+                  <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
+                ) : <div className="w-8" />}
+                <div className="flex-1 min-w-0 text-center">
+                  <h1 className="font-display text-lg text-foreground leading-tight truncate">{title}</h1>
+                  {subtitle && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {headerRight && (
+                    <div className="flex items-center gap-2">{headerRight}</div>
+                  )}
+                  {isKioskAdminSession ? (
+                    <button
+                      onClick={handleBackToKiosk}
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                    >
+                      <ArrowLeft size={14} /> {t("layout.backToKiosk")}
+                    </button>
+                  ) : (
+                    /* spacer keeps header balanced when no right content exists */
+                    !headerRight && <div className="w-8" />
+                  )}
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={handleBackToKiosk}
+                className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+              >
+                <ArrowLeft size={14} /> {t("layout.backToKiosk")}
+              </button>
+            )}
           </div>
         </header>
       )}
