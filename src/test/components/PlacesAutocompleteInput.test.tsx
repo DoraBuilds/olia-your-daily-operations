@@ -66,7 +66,7 @@ describe("PlacesAutocompleteInput", () => {
       configurable: true,
       value: {
         maps: {
-          importLibrary: vi.fn(() => Promise.resolve(placesLibrary)),
+          places: placesLibrary,
         },
       },
     });
