@@ -368,15 +368,21 @@ export function NumberPad({
   );
 }
 
-// ─── PinEntryModal (Screen 2) ─────────────────────────────────────────────────
-export function PinEntryModal({
-  checklist, locationId, onSuccess, onCancel,
-}: {
-  checklist: KioskChecklist;
-  locationId: string;
-  onSuccess: (staffId: string | null, staffName: string, orgId: string) => void;
-  onCancel: () => void;
-}) {
+// ─── Shared kiosk PIN identity check ───────────────────────────────────────────
+// Tries a team member PIN (org-wide, any device physically at the location),
+// then falls back to a legacy staff_profiles PIN. Shared by PinEntryModal
+// (identifies who's completing ONE checklist — attribution, unchanged) and
+// IdentifyModal (identifies who's browsing the grid — visibility filtering
+// only, see kiosk-staff-session.ts). Both hand this the location and get back
+// the same lockout/attempts/error state machine.
+export interface KioskIdentity {
+  staffId: string | null;
+  staffName: string;
+  organizationId: string;
+  departmentIds: string[];
+}
+
+function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIdentity) => void) {
   const { t } = useTranslation("kiosk");
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -384,8 +390,6 @@ export function PinEntryModal({
   const [lockSecondsLeft, setLockSecondsLeft] = useState(0);
   const [error, setError] = useState("");
   const [validating, setValidating] = useState(false);
-
-  const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
 
   // Lock countdown
   useEffect(() => {
@@ -436,7 +440,12 @@ export function PinEntryModal({
       setValidating(false);
       const member = memberData[0];
       captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false });
-      onSuccess(null, member.name, member.organization_id ?? "");
+      onSuccess({
+        staffId: null,
+        staffName: member.name,
+        organizationId: member.organization_id ?? "",
+        departmentIds: member.department_ids ?? [],
+      });
       return;
     }
 
@@ -462,7 +471,13 @@ export function PinEntryModal({
     if (!staffRpcError && staffData && staffData.length > 0) {
       const staff = staffData[0];
       captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false, staff_profile_id: staff.id });
-      onSuccess(staff.id, `${staff.first_name} ${staff.last_name}`.trim(), staff.organization_id ?? "");
+      onSuccess({
+        staffId: staff.id,
+        staffName: `${staff.first_name} ${staff.last_name}`.trim(),
+        organizationId: staff.organization_id ?? "",
+        // Legacy staff_profiles has no department concept — unrestricted.
+        departmentIds: [],
+      });
       return;
     }
 
@@ -502,6 +517,24 @@ export function PinEntryModal({
 
   const canStart = pin.length >= 4 && !validating && !lockedUntil;
 
+  return { pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate };
+}
+
+// ─── PinEntryModal (Screen 2) ─────────────────────────────────────────────────
+export function PinEntryModal({
+  checklist, locationId, onSuccess, onCancel,
+}: {
+  checklist: KioskChecklist;
+  locationId: string;
+  onSuccess: (staffId: string | null, staffName: string, orgId: string) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation("kiosk");
+  const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
+  const {
+    pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate,
+  } = useKioskPinValidator(locationId, identity => onSuccess(identity.staffId, identity.staffName, identity.organizationId));
+
   return (
     <KioskPinShell
       title={t("pin.insertTitle")}
@@ -520,6 +553,92 @@ export function PinEntryModal({
       secondsLeft={secondsLeft}
       onCancelCountdown={cancelCountdown}
     />
+  );
+}
+
+// ─── IdentifyModal (Screen 0) ───────────────────────────────────────────────────
+// Shown before the grid on every kiosk boot (#780). Identifies who's about to
+// browse so the grid can filter to their department(s) — NOT an attribution
+// step (PinEntryModal above still runs per-checklist, unchanged). No idle
+// timer: unlike PinEntryModal there's no other screen to fall back to.
+export function IdentifyModal({
+  locationId, onSuccess, onAdminClick, onLibraryClick,
+}: {
+  locationId: string;
+  onSuccess: (identity: KioskIdentity) => void;
+  onAdminClick: () => void;
+  onLibraryClick: () => void;
+}) {
+  const { t } = useTranslation("kiosk");
+  const {
+    pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate,
+  } = useKioskPinValidator(locationId, onSuccess);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="px-5 pt-6 pb-4 flex items-center justify-end gap-2">
+        <button
+          id="library-btn"
+          onClick={onLibraryClick}
+          className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+        >
+          {t("grid.library")}
+        </button>
+        <button
+          id="admin-btn"
+          onClick={onAdminClick}
+          className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+        >
+          {t("grid.admin")}
+        </button>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-4 pb-10">
+        <div className="w-full max-w-sm space-y-5">
+          <div className="text-center space-y-1">
+            <h1 className="font-display text-2xl text-foreground">{t("pin.identifyTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("pin.identifySubtitle")}</p>
+          </div>
+
+          <PinDots count={pin.length} />
+
+          {error && !validating && (
+            <p className="text-center text-xs text-status-error">{error}</p>
+          )}
+          {validating && (
+            <p className="text-center text-xs text-muted-foreground">{t("pin.checking")}</p>
+          )}
+
+          {lockedUntil ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">
+                <Trans
+                  i18nKey="kiosk:pin.tryAgainIn"
+                  values={{ seconds: lockSecondsLeft }}
+                  components={{ bold: <span className="font-bold text-foreground" /> }}
+                />
+              </p>
+            </div>
+          ) : (
+            <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
+          )}
+
+          <button
+            id="identify-start-btn"
+            data-testid="identify-start-btn"
+            onClick={() => canStart && validate(pin)}
+            disabled={!canStart}
+            className={cn(
+              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-all active:scale-[0.98]",
+              canStart
+                ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
+                : "bg-muted text-muted-foreground cursor-not-allowed",
+            )}
+          >
+            {t("pin.startButton")}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

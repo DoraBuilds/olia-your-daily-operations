@@ -372,6 +372,20 @@
       "specificSelectedCountFooter": "{{count}} specific locations are selected.",
       "selectAtLeastOne": "Select at least one location or switch back to all locations."
     },
+    "departments": {
+      "heading": "Departments",
+      "all": "All departments",
+      "selectSpecific": "Select specific departments",
+      "selectAll": "Select all",
+      "loading": "Loading departments…",
+      "noneAvailable": "No departments set up yet for the selected location(s).",
+      "appearEverywhere": "This checklist will appear for every department.",
+      "chooseOneOrMore": "Choose one or more departments.",
+      "selectedOne": "Selected: {{name}}",
+      "selectedCount": "{{count}} departments selected",
+      "specificSelectedOne": "Specific department selected",
+      "specificSelectedCount": "{{count}} specific departments selected"
+    },
     "title": {
       "label": "Title",
       "placeholder": "e.g. Morning Opening Checklist"

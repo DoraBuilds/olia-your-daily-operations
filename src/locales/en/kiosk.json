@@ -6,6 +6,8 @@
   "pin": {
     "adminTitle": "Admin PIN",
     "insertTitle": "Insert PIN",
+    "identifyTitle": "Who's there?",
+    "identifySubtitle": "Enter your PIN to see your checklists.",
     "staffLibraryTitle": "Staff Library",
     "checking": "Checking PIN…",
     "tryAgainIn": "Try again in <bold>{{seconds}}s</bold>",
@@ -71,6 +73,8 @@
   },
   "grid": {
     "kioskFallbackName": "Kiosk",
+    "identifiedAs": "Hi, {{name}}",
+    "notYou": "Not you?",
     "library": "Library",
     "admin": "Admin",
     "stats": {

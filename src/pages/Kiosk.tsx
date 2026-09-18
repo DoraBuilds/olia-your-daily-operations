@@ -22,7 +22,8 @@ import {
   dbToKioskChecklist,
 } from "./kiosk/utils";
 import { KioskSetupScreen } from "./kiosk/KioskSetupScreen";
-import { AdminLoginModal, PinEntryModal, LibraryPinModal, ensureKioskToken } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken } from "./kiosk/PinEntryModal";
+import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, type KioskStaffSession } from "@/lib/kiosk-staff-session";
 import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
@@ -52,8 +53,11 @@ function clearKioskOwnership() {
   localStorage.removeItem("kiosk_owner_org_id");
 }
 
-async function fetchKioskChecklists(locationId: string) {
-  const { data, error } = await supabase.rpc("get_kiosk_checklists", { p_location_id: locationId });
+async function fetchKioskChecklists(locationId: string, departmentIds: string[]) {
+  const { data, error } = await supabase.rpc("get_kiosk_checklists", {
+    p_location_id: locationId,
+    p_department_ids: departmentIds,
+  });
   if (error) throw error;
   return (data ?? []).map(dbToKioskChecklist);
 }
@@ -462,6 +466,11 @@ export default function Kiosk() {
   const [checklistsLoading, setChecklistsLoading] = useState(false);
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
+  // Who's currently browsing the grid (#780) — filters which checklists show,
+  // separate from the per-checklist PIN in PinEntryModal (attribution,
+  // unchanged). null means "not identified yet", gated below the setup screen.
+  const [staffIdentity, setStaffIdentity] = useState<KioskStaffSession | null>(() => readKioskStaffSession());
+
   useEffect(() => {
     if (loading || !user?.id || !locationId || !locationsFetched || locationsErrored) return;
     const matchedLocation = allLocations.find((location) => location.id === locationId);
@@ -556,7 +565,7 @@ export default function Kiosk() {
       if (showSpinner) setChecklistsLoading(true);
       setChecklistsError(null);
       try {
-        const next = await fetchKioskChecklists(locationId);
+        const next = await fetchKioskChecklists(locationId, staffIdentity?.departmentIds ?? []);
         if (!cancelled) {
           setKioskChecklists(next);
         }
@@ -590,7 +599,7 @@ export default function Kiosk() {
       window.removeEventListener("focus", handleFocusRefresh);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id]);
+  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id, staffIdentity]);
 
   // Proactively refresh kiosk_token whenever the locationId is resolved.
   // Covers the case where the kiosk was set up before the token feature was
@@ -846,6 +855,36 @@ export default function Kiosk() {
     );
   }
 
+  // ── Identify screen (Screen 0) ───────────────────────────────────────────
+  // Always shown before the grid loads (#780), so the grid can be filtered to
+  // whoever's PIN just unlocked it. Admin/Library stay reachable from here too.
+  // Placed after the runner/completion/library checks above so leaving the
+  // grid for one of those (e.g. tapping Library before ever identifying)
+  // isn't bounced straight back here.
+  if (!staffIdentity) {
+    return (
+      <>
+        <IdentifyModal
+          locationId={locationId}
+          onSuccess={(identity) => {
+            grantKioskStaffSession(identity);
+            setStaffIdentity(readKioskStaffSession());
+          }}
+          onAdminClick={handleAdminButtonClick}
+          onLibraryClick={() => setShowLibraryPin(true)}
+        />
+        {showAdminLogin && <AdminLoginModal onClose={() => setShowAdminLogin(false)} kioskLocationId={locationId} />}
+        {showLibraryPin && (
+          <LibraryPinModal
+            locationId={locationId}
+            onSuccess={handleLibraryPinSuccess}
+            onCancel={() => setShowLibraryPin(false)}
+          />
+        )}
+      </>
+    );
+  }
+
   // ── Grid screen (Screen 1) ────────────────────────────────────────────────
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -890,6 +929,22 @@ export default function Kiosk() {
         <h1 className="font-display text-3xl text-foreground leading-tight text-center">
           {locationName || t("grid.kioskFallbackName")}
         </h1>
+
+        <p className="text-center text-xs text-muted-foreground mt-1">
+          <span>{t("grid.identifiedAs", { name: staffIdentity.staffName })}</span>
+          {" · "}
+          <button
+            id="switch-identity-btn"
+            type="button"
+            onClick={() => {
+              clearKioskStaffSession();
+              setStaffIdentity(null);
+            }}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            {t("grid.notYou")}
+          </button>
+        </p>
 
         {/* Stat strip — DUE / OVERDUE / UPCOMING / DONE */}
         <div className="grid grid-cols-4 gap-2 mt-5">
@@ -970,7 +1025,7 @@ export default function Kiosk() {
               onClick={() => {
                 setChecklistsError(null);
                 setChecklistsLoading(true);
-                fetchKioskChecklists(locationId!)
+                fetchKioskChecklists(locationId!, staffIdentity?.departmentIds ?? [])
                   .then((data) => {
                     setKioskChecklists(data);
                   })

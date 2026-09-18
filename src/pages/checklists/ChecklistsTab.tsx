@@ -86,6 +86,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     folderId: c.folder_id,
     location_id: c.location_id,
     location_ids: c.location_ids ?? (c.location_id ? [c.location_id] : null),
+    department_ids: c.department_ids ?? null,
     start_date: c.start_date ?? null,
     createdAt: c.created_at,
     sections: c.sections as SectionDef[],
@@ -154,6 +155,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [prefillTitle, setPrefillTitle] = useState("");
   const [prefillSections, setPrefillSections] = useState<SectionDef[] | undefined>(undefined);
   const [prefillLocationIds, setPrefillLocationIds] = useState<string[] | null | undefined>(undefined);
+  const [prefillDepartmentIds, setPrefillDepartmentIds] = useState<string[] | null | undefined>(undefined);
   const [dragFolderId, setDragFolderId] = useState<string | null>(null);
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [isBuilderDirty, setIsBuilderDirty] = useState(false);
@@ -193,6 +195,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     setPrefillTitle("");
     setPrefillSections(undefined);
     setPrefillLocationIds(undefined);
+    setPrefillDepartmentIds(undefined);
     setEditingChecklistId(null);
     setIsBuilderDirty(false);
     onBuilderTitleChange?.(null);
@@ -265,6 +268,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         setPrefillTitle(cl.title);
         setPrefillSections(cl.sections);
         setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
+        setPrefillDepartmentIds(cl.department_ids ?? null);
         setShowBuilder(true);
         onBuilderTitleChange?.(cl.title);
       }
@@ -303,6 +307,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             folder_id: currentFolder,
             location_id: item.location_id ?? null,
             location_ids: item.location_ids ?? null,
+            department_ids: item.department_ids ?? null,
             start_date: item.start_date ?? null,
             sections: item.sections ?? [],
             schedule: item.schedule ?? null,
@@ -325,6 +330,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             schedule: updates.schedule ?? orig.schedule,
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
             location_ids: updates.location_ids !== undefined ? updates.location_ids : orig.location_ids,
+            department_ids: updates.department_ids !== undefined ? updates.department_ids : orig.department_ids,
             start_date: updates.start_date !== undefined ? updates.start_date : orig.start_date,
             time_of_day: "anytime",
             due_time: updates.due_time !== undefined ? updates.due_time : orig.due_time,
@@ -337,6 +343,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialDescription={editingChecklist?.description ?? undefined}
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
+        initialDepartmentIds={prefillDepartmentIds}
         initialSchedule={editingChecklist?.schedule ?? null}
         initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
@@ -472,6 +479,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 setPrefillTitle(cl.title);
                 setPrefillSections(cl.sections);
                 setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
+                setPrefillDepartmentIds(cl.department_ids ?? null);
                 setShowBuilder(true);
                 onBuilderTitleChange?.(cl.title);
               }}
