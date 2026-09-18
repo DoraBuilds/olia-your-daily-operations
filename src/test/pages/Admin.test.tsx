@@ -608,12 +608,12 @@ describe("Admin page", () => {
     });
   });
 
-  it("clicking delete on a location shows confirm modal", async () => {
+  it("clicking delete on a location shows confirm modal with the location's name", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => {
-      expect(screen.getByText("This will permanently remove the location and cannot be undone.")).toBeInTheDocument();
+      expect(screen.getByText('This will permanently remove "Main Branch" and cannot be undone.')).toBeInTheDocument();
     });
   });
 

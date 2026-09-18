@@ -166,9 +166,12 @@ export default function Admin() {
   };
 
   const deleteLocation = (id: string) => {
+    const locationName = (locations.find(l => l.id === id) ?? allLocations.find(l => l.id === id))?.name;
     setConfirmModal({
       title: t("confirm.deleteLocationTitle"),
-      message: t("confirm.deleteLocationMessage"),
+      message: locationName
+        ? t("confirm.deleteLocationMessage", { name: locationName })
+        : t("confirm.deleteLocationMessageGeneric"),
       actionLabel: t("confirm.delete"),
       requireDeleteText: true,
       onConfirm: () => {
