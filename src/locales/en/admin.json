@@ -39,7 +39,7 @@
   },
   "confirm": {
     "deleteLocationTitle": "Delete location",
-    "deleteLocationMessage": "This will permanently remove \"{{name}}\" and cannot be undone.",
+    "deleteLocationMessage": "This will permanently remove \"<bold>{{name}}</bold>\" and cannot be undone.",
     "deleteLocationMessageGeneric": "This will permanently remove the location and cannot be undone.",
     "deleteConceptTitle": "Delete concept",
     "deleteConceptMessage": "This will permanently remove the concept and cannot be undone.",

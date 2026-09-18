@@ -3,6 +3,12 @@ import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
+// The delete-location confirm message now bolds the location name via <Trans>,
+// splitting it across a <strong> child — match on the containing element's
+// full text content instead of a single text node.
+const byFullText = (expected: string) => (_content: string, element: Element | null) =>
+  element?.textContent === expected;
+
 vi.mock("@/contexts/ConceptFilterContext", () => ({
   ALL_CONCEPTS: "all",
   useConceptFilter: () => ({
@@ -613,7 +619,7 @@ describe("Admin page", () => {
     await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => {
-      expect(screen.getByText('This will permanently remove "Main Branch" and cannot be undone.')).toBeInTheDocument();
+      expect(screen.getByText(byFullText('This will permanently remove "Main Branch" and cannot be undone.'))).toBeInTheDocument();
     });
   });
 

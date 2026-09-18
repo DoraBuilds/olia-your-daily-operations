@@ -39,7 +39,7 @@
   },
   "confirm": {
     "deleteLocationTitle": "Eliminar ubicación",
-    "deleteLocationMessage": "Esto eliminará permanentemente \"{{name}}\" y no se puede deshacer.",
+    "deleteLocationMessage": "Esto eliminará permanentemente \"<bold>{{name}}</bold>\" y no se puede deshacer.",
     "deleteLocationMessageGeneric": "Esto eliminará permanentemente la ubicación y no se puede deshacer.",
     "deleteConceptTitle": "Eliminar concepto",
     "deleteConceptMessage": "Esto eliminará permanentemente el concepto. Esto no se puede deshacer.",

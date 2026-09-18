@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -170,7 +170,13 @@ export default function Admin() {
     setConfirmModal({
       title: t("confirm.deleteLocationTitle"),
       message: locationName
-        ? t("confirm.deleteLocationMessage", { name: locationName })
+        ? (
+          <Trans
+            i18nKey="admin:confirm.deleteLocationMessage"
+            values={{ name: locationName }}
+            components={{ bold: <strong className="text-foreground" /> }}
+          />
+        )
         : t("confirm.deleteLocationMessageGeneric"),
       actionLabel: t("confirm.delete"),
       requireDeleteText: true,
