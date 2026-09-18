@@ -13,7 +13,7 @@ interface TeamMemberProfile {
   role: string;
   is_owner: boolean;
   is_manager: boolean;
-  department_id: string | null;
+  department_ids: string[];
   location_ids: string[];
   permissions: Record<string, boolean>;
   pin_reset_required?: boolean;

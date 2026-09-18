@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   MapPin, Plus, Pencil, X,
-  ChevronDown, Eye, EyeOff,
+  Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -160,7 +160,7 @@ export function TeamMemberModal({
   const [role, setRole] = useState(member?.role ?? "");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
   const [isManager, setIsManager] = useState(member?.is_manager ?? false);
-  const [departmentId, setDepartmentId] = useState<string | null>(member?.department_id ?? null);
+  const [departmentIds, setDepartmentIds] = useState<string[]>(member?.department_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
   const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
   const [revealedPin, setRevealedPin] = useState<string | null>(null);
@@ -175,15 +175,19 @@ export function TeamMemberModal({
   const locationById = new Map(locations.map(l => [l.id, l.name]));
   const multipleLocations = locationIds.length > 1;
 
-  // Clear a stale pick once we know it no longer belongs to any currently
-  // selected location (e.g. that location was just deselected) — the <select>
-  // would otherwise silently fall back to "No department" on screen while
-  // the old id is still saved underneath it.
+  // Drop any stale picks once we know they no longer belong to any currently
+  // selected location (e.g. that location was just deselected) — the toggle
+  // list would otherwise silently show fewer chips on screen while the old
+  // ids are still saved underneath it.
   useEffect(() => {
-    if (!departmentsLoading && departmentId && !assignedDepartments.some(d => d.id === departmentId)) {
-      setDepartmentId(null);
+    if (!departmentsLoading && departmentIds.some(id => !assignedDepartments.some(d => d.id === id))) {
+      setDepartmentIds(prev => prev.filter(id => assignedDepartments.some(d => d.id === id)));
     }
-  }, [departmentId, assignedDepartments, departmentsLoading]);
+  }, [departmentIds, assignedDepartments, departmentsLoading]);
+
+  const toggleDepartment = (id: string) => {
+    setDepartmentIds(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]);
+  };
 
   const handleRevealPin = async () => {
     if (!member?.id) return;
@@ -221,7 +225,7 @@ export function TeamMemberModal({
       email: email.trim() || null,
       role: role.trim(),
       location_ids: locationIds,
-      department_id: departmentId,
+      department_ids: departmentIds,
       is_manager: isManager,
       // is_owner is never set by this modal — passed through unchanged
       // purely to satisfy the TeamMember shape; useSaveTeamMember ignores
@@ -280,21 +284,39 @@ export function TeamMemberModal({
         </FormField>
         {locationIds.length > 0 && (
           <FormField label={t("sharedUI.teamMember.department")}>
-            <div className="relative">
-              <select
-                value={departmentId ?? ""}
-                onChange={e => setDepartmentId(e.target.value || null)}
-                className={cn(inputCls, "appearance-none pr-10")}
-              >
-                <option value="">{t("sharedUI.teamMember.noDepartment")}</option>
-                {assignedDepartments.map(dep => (
-                  <option key={dep.id} value={dep.id}>
-                    {multipleLocations ? `${dep.name} — ${locationById.get(dep.location_id) ?? ""}` : dep.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+            {assignedDepartments.length > 0 ? (
+              <>
+                <div className="flex gap-2 flex-wrap">
+                  {assignedDepartments.map(dep => (
+                    <button
+                      type="button" key={dep.id} onClick={() => toggleDepartment(dep.id)}
+                      className={cn(
+                        "py-2 px-3 text-xs rounded-lg border transition-colors",
+                        departmentIds.includes(dep.id)
+                          ? "bg-sage text-primary-foreground border-sage"
+                          : "border-border text-muted-foreground hover:border-sage/40",
+                      )}
+                    >
+                      {multipleLocations ? `${dep.name} — ${locationById.get(dep.location_id) ?? ""}` : dep.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDepartmentIds(prev =>
+                    prev.length === assignedDepartments.length ? [] : assignedDepartments.map(d => d.id))}
+                  className="mt-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  {departmentIds.length === assignedDepartments.length
+                    ? t("sharedUI.teamMember.clearDepartments")
+                    : t("sharedUI.teamMember.selectAllDepartments")}
+                </button>
+              </>
+            ) : (
+              !departmentsLoading && (
+                <p className="text-xs text-muted-foreground">{t("sharedUI.teamMember.noDepartment")}</p>
+              )
+            )}
           </FormField>
         )}
         <FormField label={t("sharedUI.teamMember.kioskPin")}>

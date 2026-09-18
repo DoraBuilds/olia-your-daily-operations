@@ -70,7 +70,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     session: { user: { id: "u1" } },
     teamMember: {
       id: "u1", organization_id: "org1", name: "Sarah", email: "sarah@example.com",
-      role: "Owner", is_owner: true, is_manager: true, department_id: null,
+      role: "Owner", is_owner: true, is_manager: true, department_ids: [],
       location_ids: [], permissions: {}, pin_reset_required: false,
     },
     loading: false,
@@ -142,7 +142,7 @@ const mockConcepts = [{ id: "concept-1", organization_id: "org1", name: "The Cro
 const mockTeam = [
   {
     id: "tm1", name: "Sarah Owner", email: "sarah@example.com", role: "Owner",
-    is_owner: true, is_manager: true, department_id: null,
+    is_owner: true, is_manager: true, department_ids: [],
     initials: "SO", location_ids: ["l1"], pin_reset_required: false,
     permissions: { create_edit_checklists: true, assign_checklists: true, manage_staff_profiles: true, view_reporting: true, edit_location_details: true, manage_alerts: true, export_data: true, override_inactivity_threshold: true },
   },

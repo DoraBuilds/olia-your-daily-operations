@@ -361,7 +361,7 @@ export default function Admin() {
                 role: authMember.role,
                 is_owner: authMember.is_owner,
                 is_manager: authMember.is_manager,
-                department_id: authMember.department_id,
+                department_ids: authMember.department_ids,
                 initials: getInitials(authMember.name),
                 location_ids: authMember.location_ids,
                 permissions: authMember.permissions as unknown as ManagerPermissions,
