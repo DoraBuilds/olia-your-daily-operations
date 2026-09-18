@@ -3,6 +3,7 @@ import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { CompletionScreen } from "@/pages/kiosk/CompletionScreen";
 import i18n from "@/lib/i18n";
 import { renderWithProviders } from "../test-utils";
+import { grantKioskStaffSession } from "@/lib/kiosk-staff-session";
 
 const mockNavigate = vi.fn();
 const { mockUseAuth, mockUseLocations } = vi.hoisted(() => ({
@@ -263,6 +264,13 @@ async function openRunnerWithQuestions(questions: any[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
+  // Most tests in this file exercise the grid/runner/completion flow, which
+  // is unrelated to the new identify-first gate (#780) — pre-seed a valid
+  // "already identified" session so they see the grid immediately, same as
+  // before that gate existed. The "Identify Screen" describe block below
+  // clears this per-test to exercise the gate itself.
+  grantKioskStaffSession({ staffId: "tm-1", staffName: "Sarah Owner", organizationId: "org-1", departmentIds: [] });
   mockSubmitKioskLog.mockClear();
   alertsInsert.mockClear();
   mockInsertKioskAlert.mockClear();
@@ -1012,6 +1020,108 @@ describe("Kiosk — PIN Entry Modal", () => {
     await waitFor(() => {
       expect(screen.queryByText(/Connection error/i)).not.toBeNull();
     }, { timeout: 3000 });
+  });
+});
+
+// ─── Identify Screen tests (#780) ──────────────────────────────────────────────
+
+describe("Kiosk — Identify Screen", () => {
+  beforeEach(() => {
+    // Override the beforeEach seed above — these tests exercise the gate itself.
+    sessionStorage.clear();
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    localStorage.setItem("kiosk_location_name", "Terrace");
+    localStorage.setItem("kiosk_owner_user_id", "u1");
+    localStorage.setItem("kiosk_owner_org_id", "org-1");
+    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
+    mockUseAuth.mockReturnValue({
+      user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn(),
+    });
+  });
+
+  it("shows the identify PIN screen instead of the grid when no session exists", async () => {
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => {
+      expect(screen.getByText("Who's there?")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("kiosk-tab-due")).not.toBeInTheDocument();
+  });
+
+  it("identifies a team member by PIN and reveals the department-filtered grid", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "get_kiosk_checklists") {
+        return Promise.resolve({
+          data: [{ id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] }],
+          error: null,
+        });
+      }
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_kiosk_member_pin") {
+        return Promise.resolve({
+          data: [{ id: "tm-2", name: "Priya GM", organization_id: "org-1", role: "Manager", location_ids: [], department_ids: ["dep-1", "dep-2"] }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+
+    for (const d of ["1", "2", "3", "4"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await screen.findByTestId("kiosk-tab-due");
+    expect(screen.getByText("Hi, Priya GM")).toBeInTheDocument();
+    expect(supabase.rpc).toHaveBeenCalledWith("get_kiosk_checklists", expect.objectContaining({
+      p_location_id: "00000000-0000-0000-0000-000000000011",
+      p_department_ids: ["dep-1", "dep-2"],
+    }));
+  });
+
+  it("shows the same 'not recognised' error as the per-checklist PIN modal for an unknown PIN", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_staff_pin") return Promise.resolve({ data: [], error: null });
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+
+    for (const d of ["9", "9", "9", "9"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText("PIN not recognised. Please try again.")).toBeInTheDocument();
+    });
+  });
+
+  it("'Not you?' clears the session and returns to the identify screen", async () => {
+    grantKioskStaffSession({ staffId: "tm-1", staffName: "Sarah Owner", organizationId: "org-1", departmentIds: [] });
+    await renderGridScreen();
+
+    fireEvent.click(screen.getByText("Not you?"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Who's there?")).toBeInTheDocument();
+    });
+  });
+
+  it("Admin and Library stay reachable from the identify screen", async () => {
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+
+    expect(document.getElementById("admin-btn")).not.toBeNull();
+    fireEvent.click(document.getElementById("library-btn")!);
+    await waitFor(() => {
+      expect(screen.getByText("Staff Library")).toBeInTheDocument();
+    });
   });
 });
 

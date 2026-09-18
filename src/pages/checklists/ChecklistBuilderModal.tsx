@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { useCreateAlert } from "@/hooks/useAlerts";
 import { useLocations } from "@/hooks/useLocations";
+import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,6 +66,7 @@ interface ChecklistBuilderModalProps {
   initialSections?: SectionDef[];
   initialDescription?: string;
   initialLocationIds?: string[] | null;
+  initialDepartmentIds?: string[] | null;
   initialSchedule?: string | null;
   initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
@@ -81,8 +83,8 @@ interface ChecklistBuilderModalProps {
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
-  initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil, initialIsPublished,
-  editId, asPage = false, onDirtyChange,
+  initialDepartmentIds, initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil,
+  initialIsPublished, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const { t } = useTranslation("checklists");
   const MC_COLOR_OPTIONS = useMcColorOptions(t);
@@ -121,6 +123,12 @@ export function ChecklistBuilderModal({
     initialLocationIds?.length ? initialLocationIds : [],
   );
   const [locationSearch, setLocationSearch] = useState("");
+  const [departmentMode, setDepartmentMode] = useState<"all" | "specific">(
+    initialDepartmentIds && initialDepartmentIds.length > 0 ? "specific" : "all",
+  );
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>(
+    initialDepartmentIds?.length ? initialDepartmentIds : [],
+  );
   const [sections, setSections] = useState<SectionDef[]>(
     draft?.sections ?? initialSections ?? [{
       id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
@@ -149,6 +157,8 @@ export function ChecklistBuilderModal({
     visibilityUntil: visibilityWindowEnabled ? visibilityUntil : null,
     locationMode,
     selectedLocationIds: locationMode === "specific" ? [...selectedLocationIds].sort() : [],
+    departmentMode,
+    selectedDepartmentIds: departmentMode === "specific" ? [...selectedDepartmentIds].sort() : [],
     isPublished,
   });
 
@@ -159,7 +169,8 @@ export function ChecklistBuilderModal({
     startDate != null ||
     schedule !== "none" ||
     visibilityWindowEnabled ||
-    locationMode === "specific"
+    locationMode === "specific" ||
+    departmentMode === "specific"
   );
 
   // Snapshot the actual initial state values (not the raw props) so that
@@ -217,7 +228,8 @@ export function ChecklistBuilderModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, sections, startDate, schedule, customRecurrence,
       visibilityWindowEnabled, visibilityFrom, visibilityUntil,
-      locationMode, selectedLocationIds, savedId, onDirtyChange]);
+      locationMode, selectedLocationIds, departmentMode, selectedDepartmentIds,
+      savedId, onDirtyChange]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -316,6 +328,26 @@ export function ChecklistBuilderModal({
     return loc.name.toLowerCase().includes(q) || (loc.address || "").toLowerCase().includes(q);
   });
 
+  // Departments are scoped per-location: "all locations" mode offers every
+  // department across the org, "specific" mode narrows to the chosen ones.
+  const departmentLocationIds = locationMode === "all" ? dbLocations.map(loc => loc.id) : selectedLocationIds;
+  const { data: availableDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(departmentLocationIds);
+  const locationNameById = new Map(dbLocations.map(loc => [loc.id, loc.name]));
+  const multipleDepartmentLocations = departmentLocationIds.length > 1;
+  const selectedDepartments = availableDepartments.filter(dep => selectedDepartmentIds.includes(dep.id));
+
+  // Drop stale picks once a department no longer belongs to the currently
+  // targeted location(s) — e.g. a location was deselected. Gated on
+  // !departmentsLoading so the initial (pre-fetch) empty array doesn't wipe
+  // out an existing checklist's saved department_ids before they've loaded.
+  useEffect(() => {
+    if (departmentsLoading) return;
+    setSelectedDepartmentIds(prev => {
+      const next = prev.filter(id => availableDepartments.some(dep => dep.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [availableDepartments, departmentsLoading]);
+
   const filteredInstructionResources = linkableInfohubResources.filter((resource) => {
     const matchesSection = instructionResourceSection === "all" || resource.section === instructionResourceSection;
     const query = instructionResourceSearch.trim().toLowerCase();
@@ -410,6 +442,9 @@ export function ChecklistBuilderModal({
     const selectedIds = locationMode === "all" ? [] : selectedLocationIds.filter(id => allLocationIds.includes(id));
     if (locationMode === "specific" && selectedIds.length === 0) return;
     const isAllLocations = locationMode === "all";
+    const allDepartmentIds = availableDepartments.map(dep => dep.id);
+    const selectedDeptIds = departmentMode === "all" ? [] : selectedDepartmentIds.filter(id => allDepartmentIds.includes(id));
+    if (departmentMode === "specific" && selectedDeptIds.length === 0) return;
     const payload: Partial<ChecklistItem> = {
       title: title.trim(),
       description: description.trim() || null,
@@ -423,6 +458,7 @@ export function ChecklistBuilderModal({
       visibility_until: visibilityWindowEnabled ? visibilityUntil : null,
       location_id: isAllLocations ? null : (selectedIds.length === 1 ? selectedIds[0] : null),
       location_ids: isAllLocations ? null : selectedIds,
+      department_ids: departmentMode === "all" ? null : selectedDeptIds,
       is_published: isPublished,
     };
 
@@ -647,6 +683,103 @@ export function ChecklistBuilderModal({
                   {selectedLocations.length === 1
                     ? t("builder.locations.specificSelectedOne")
                     : t("builder.locations.specificSelectedCount", { count: selectedLocations.length })}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Departments */}
+        <div className="space-y-3">
+          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.departments.heading")}</label>
+          <div className="rounded-2xl border border-border bg-muted/40 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDepartmentMode("all")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                  departmentMode === "all"
+                    ? "bg-sage text-primary-foreground border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40",
+                )}
+              >
+                {t("builder.departments.all")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDepartmentMode("specific")}
+                className={cn(
+                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
+                  departmentMode === "specific"
+                    ? "bg-sage text-primary-foreground border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40",
+                )}
+              >
+                {t("builder.departments.selectSpecific")}
+              </button>
+              {departmentMode === "specific" && availableDepartments.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDepartmentIds(availableDepartments.map(dep => dep.id))}
+                  className="ml-auto text-xs text-sage hover:text-sage-deep transition-colors"
+                >
+                  {t("builder.departments.selectAll")}
+                </button>
+              )}
+            </div>
+
+            {departmentMode === "specific" && (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {departmentsLoading ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("builder.departments.loading")}</p>
+                ) : availableDepartments.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("builder.departments.noneAvailable")}</p>
+                ) : availableDepartments.map(dep => {
+                  const selected = selectedDepartmentIds.includes(dep.id);
+                  return (
+                    <button
+                      key={dep.id}
+                      type="button"
+                      onClick={() => setSelectedDepartmentIds(prev => (
+                        prev.includes(dep.id)
+                          ? prev.filter(id => id !== dep.id)
+                          : [...prev, dep.id]
+                      ))}
+                      className={cn(
+                        "w-full flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
+                        selected
+                          ? "bg-sage-light border-sage/40 text-sage-deep"
+                          : "bg-background border-border hover:border-sage/40",
+                      )}
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        {selected ? <CheckSquare size={16} /> : <Square size={16} />}
+                      </div>
+                      <p className="text-sm font-medium truncate">
+                        {multipleDepartmentLocations ? `${dep.name} — ${locationNameById.get(dep.location_id) ?? ""}` : dep.name}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                {departmentMode === "all"
+                  ? t("builder.departments.appearEverywhere")
+                  : selectedDepartments.length === 0
+                    ? t("builder.departments.chooseOneOrMore")
+                    : selectedDepartments.length === 1
+                      ? t("builder.departments.selectedOne", { name: selectedDepartments[0].name })
+                      : t("builder.departments.selectedCount", { count: selectedDepartments.length })}
+              </p>
+              {departmentMode === "specific" && selectedDepartments.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
+                  {selectedDepartments.length === 1
+                    ? t("builder.departments.specificSelectedOne")
+                    : t("builder.departments.specificSelectedCount", { count: selectedDepartments.length })}
                 </span>
               )}
             </div>

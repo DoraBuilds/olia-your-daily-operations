@@ -372,6 +372,20 @@
       "specificSelectedCountFooter": "Se han seleccionado {{count}} ubicaciones específicas.",
       "selectAtLeastOne": "Selecciona al menos una ubicación o vuelve a todas las ubicaciones."
     },
+    "departments": {
+      "heading": "Departamentos",
+      "all": "Todos los departamentos",
+      "selectSpecific": "Seleccionar departamentos específicos",
+      "selectAll": "Seleccionar todos",
+      "loading": "Cargando departamentos…",
+      "noneAvailable": "Aún no hay departamentos para la(s) ubicación(es) seleccionada(s).",
+      "appearEverywhere": "Esta lista aparecerá para todos los departamentos.",
+      "chooseOneOrMore": "Elige uno o más departamentos.",
+      "selectedOne": "Seleccionado: {{name}}",
+      "selectedCount": "{{count}} departamentos seleccionados",
+      "specificSelectedOne": "Departamento específico seleccionado",
+      "specificSelectedCount": "{{count}} departamentos específicos seleccionados"
+    },
     "title": {
       "label": "Título",
       "placeholder": "p. ej. Lista de apertura matutina"
