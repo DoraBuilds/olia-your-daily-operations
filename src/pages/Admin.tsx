@@ -309,13 +309,6 @@ export default function Admin() {
 
   // ─── Derived values ─────────────────────────────────────────────────────────
 
-  const roleLabel = (m: { is_owner: boolean; role: string }) => (m.is_owner ? t("roles.Owner") : m.role);
-  const userLabel = activeUser
-    ? `${roleLabel(activeUser)} · ${activeUser.name}`
-    : authMember
-    ? `${roleLabel(authMember)} · ${authMember.name}`
-    : t("userLabelFallback");
-
   const TABS = [
     { key: "location" as const, label: t("tabs.locations") },
     ...(isOwner ? [
@@ -329,10 +322,7 @@ export default function Admin() {
 
   return (
     <>
-      <Layout
-        title="Olia"
-        subtitle={userLabel}
-      >
+      <Layout>
         <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
           {/* Sub-tab pill toggle */}
           <div className="flex gap-1 bg-muted rounded-2xl p-1">

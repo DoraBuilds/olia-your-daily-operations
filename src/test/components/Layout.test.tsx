@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { screen, fireEvent, act } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
 import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
@@ -14,14 +14,15 @@ vi.mock("@/contexts/ConceptFilterContext", () => ({
 }));
 
 // ─── Hoist mock vars ──────────────────────────────────────────────────────────
-const { mockSignOut, mockNavigate, mockUseAuth } = vi.hoisted(() => ({
-  mockSignOut: vi.fn().mockResolvedValue({}),
+// Layout itself no longer calls useAuth() (Log out moved to AccountTab.tsx —
+// see src/test/pages/admin/AccountTab.test.tsx), but SidebarNav (rendered
+// inside Layout) still does, so this mock stays for its sake.
+const { mockNavigate, mockUseAuth } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
 
-// Default: not logged in
-mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
+mockUseAuth.mockReturnValue({ teamMember: null });
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: mockUseAuth,
@@ -32,13 +33,9 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const MOCK_USER = { id: "user-1", email: "owner@example.com" };
-
 describe("Layout", () => {
   beforeEach(() => {
-    mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
-    mockSignOut.mockClear();
+    mockUseAuth.mockReturnValue({ teamMember: null });
     mockNavigate.mockClear();
   });
 
@@ -114,43 +111,20 @@ describe("Layout", () => {
     expect(screen.getAllByText("Reporting").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("does NOT show logout button when user is not authenticated", () => {
-    mockUseAuth.mockReturnValue({ user: null, signOut: mockSignOut });
-    renderWithProviders(<Layout title="T"><span /></Layout>);
-    expect(screen.queryByRole("button", { name: /log out/i })).toBeNull();
-  });
-
-  it("shows logout button when user is authenticated", () => {
-    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
-    renderWithProviders(<Layout title="T"><span /></Layout>);
-    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
-  });
-
-  it("logout button is visible alongside custom headerRight content", () => {
-    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
-    renderWithProviders(
-      <Layout title="T" headerRight={<button>Action</button>}><span /></Layout>
-    );
-    expect(screen.getByText("Action")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
-  });
-
-  it("calls signOut and navigates to / when logout button is clicked", async () => {
-    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
-    renderWithProviders(<Layout title="T"><span /></Layout>);
-
-    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
-
-    await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledTimes(1);
-      expect(mockNavigate).toHaveBeenCalledWith("/");
-    });
+  it("does NOT render a header at all for a title-less page with no kiosk session (Log out lives in Admin > Account now)", () => {
+    renderWithProviders(<Layout><p>no title</p></Layout>);
+    expect(document.querySelector("header")).toBeNull();
   });
 
   describe("with a live kiosk-PIN admin session", () => {
     beforeEach(() => {
-      mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
       grantKioskAdminSession("staff-1", "location-1");
+    });
+
+    it("shows a title-less 'Back to Kiosk' strip even on a page with no title, so a kiosk grant always has an exit", () => {
+      renderWithProviders(<Layout><p>no title</p></Layout>);
+      expect(document.querySelector("header")).not.toBeNull();
+      expect(screen.getByText(/back to kiosk|kiosk/i)).toBeInTheDocument();
     });
 
     it("shows 'Back to Kiosk' instead of the real Log out button — signing out the real session would break the kiosk's PIN flow for everyone", () => {
@@ -164,7 +138,6 @@ describe("Layout", () => {
       fireEvent.click(screen.getByText(/kiosk/i));
       expect(mockNavigate).toHaveBeenCalledWith("/kiosk");
       expect(hasActiveKioskAdminSession()).toBe(false);
-      expect(mockSignOut).not.toHaveBeenCalled();
     });
 
     it("auto-returns to /kiosk and revokes the grant after 90s of inactivity", () => {
@@ -193,9 +166,9 @@ describe("Layout", () => {
 
     // Regression guard (#727): "Exit kiosk mode" in Admin's My Location tab
     // clears this same grant from outside Layout's own tree. Layout must
-    // stop the timer and swap the button back immediately, not only after
+    // stop the timer and drop "Back to Kiosk" immediately, not only after
     // some unrelated re-render.
-    it("stops the inactivity timer and swaps back to a normal Log out button the instant the grant is cleared from elsewhere", () => {
+    it("stops the inactivity timer and hides 'Back to Kiosk' the instant the grant is cleared from elsewhere", () => {
       renderWithProviders(<Layout title="T"><span /></Layout>);
       expect(screen.getByText(/back to kiosk|kiosk/i)).toBeInTheDocument();
 
@@ -204,7 +177,6 @@ describe("Layout", () => {
       });
 
       expect(screen.queryByText(/back to kiosk/i)).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
 
       // The effect's cleanup already tore down the real inactivity timer it
       // had scheduled (isKioskAdminSession flipped false), so switching to
@@ -215,11 +187,5 @@ describe("Layout", () => {
       vi.advanceTimersByTime(90000);
       expect(mockNavigate).not.toHaveBeenCalledWith("/kiosk");
     });
-  });
-
-  it("shows the real Log out button (not 'Back to Kiosk') for a normal authenticated session with no kiosk grant", () => {
-    mockUseAuth.mockReturnValue({ user: MOCK_USER, signOut: mockSignOut });
-    renderWithProviders(<Layout title="T"><span /></Layout>);
-    expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
   });
 });

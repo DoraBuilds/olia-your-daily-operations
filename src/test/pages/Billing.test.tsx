@@ -165,9 +165,10 @@ describe("Billing page", () => {
     expect(screen.getByText(growthAnnualPrice)).toBeInTheDocument();
   });
 
-  it("renders 'Manage your plan' subtitle", () => {
+  it("renders an inline 'Back' link to Admin (no more Layout header)", () => {
     renderWithProviders(<Billing />);
-    expect(screen.getByText("Manage your plan")).toBeInTheDocument();
+    expect(document.querySelector("header")).toBeNull();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
   });
 
   it("shows 'Current' badge on the current plan card", () => {
@@ -280,6 +281,38 @@ describe("Billing page", () => {
     const growthElements = screen.getAllByText(PLAN_LABELS["growth"]);
     expect(growthElements.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Manage subscription on Stripe")).toBeInTheDocument();
+  });
+
+  it("calls manage-subscription with action 'pause' and shows the paused notice on success", async () => {
+    mockUsePlan.mockReturnValue({
+      plan: "growth",
+      planStatus: "active",
+      org: { id: "org-1", plan: "growth", plan_status: "active", stripe_subscription_id: "sub_123" },
+      isLoading: false,
+      isActive: true,
+      can: vi.fn().mockReturnValue(true),
+      withinLimit: vi.fn().mockReturnValue(true),
+      hasStripeSubscription: true,
+      features: {
+        maxLocations: 5, maxStaff: 100, maxChecklists: -1, aiBuilder: true, fileConvert: true,
+        advancedReporting: true, exportPdf: true, exportCsv: true, multiLocation: true, prioritySupport: false,
+      },
+    });
+    mockInvoke.mockImplementation((name: string) => {
+      if (name === "manage-subscription") {
+        return Promise.resolve({ data: { success: true, cancelAtPeriodEnd: true, currentPeriodEnd: null }, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+
+    renderWithProviders(<Billing />);
+    fireEvent.click(screen.getByRole("button", { name: /pause subscription/i }));
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("manage-subscription", { body: { action: "pause" } });
+      expect(screen.getByText(/won't renew/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /resume subscription/i })).toBeInTheDocument();
+    });
   });
 
   describe("native (iOS/Android)", () => {

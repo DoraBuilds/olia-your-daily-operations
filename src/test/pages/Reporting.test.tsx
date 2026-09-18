@@ -48,8 +48,8 @@ describe("Reporting page", () => {
 
   it("renders the top-level Reporting page", () => {
     renderWithProviders(<Reporting />, { initialEntries: ["/reporting"] });
-    expect(screen.getByRole("heading", { name: "Olia" })).toBeInTheDocument();
-    expect(screen.getByText("Logs & compliance overview")).toBeInTheDocument();
+    // No more "Olia" + subtitle header — the page renders straight into ReportingTab.
+    expect(document.querySelector("header")).toBeNull();
     expect(screen.getByText("Reporting Tab all status:none")).toBeInTheDocument();
   });
 

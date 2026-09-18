@@ -31,7 +31,13 @@
     "locationsIncluded_other": "{{count}} ubicaciones incluidas.",
     "upgradeHint": "Actualiza a Growth para ubicaciones ilimitadas e informes avanzados.",
     "manageSubscription": "Gestionar suscripción en Stripe",
-    "customerPortalNotConfigured": "El portal de clientes no está configurado."
+    "customerPortalNotConfigured": "El portal de clientes no está configurado.",
+    "pauseSubscription": "Pausar suscripción",
+    "resumeSubscription": "Reanudar suscripción",
+    "pauseSubscriptionWorking": "Actualizando…",
+    "pausedNotice": "Tu suscripción no se renovará: conservarás el acceso hasta el final del período de facturación actual.",
+    "pausedNoticeWithDate": "Tu suscripción no se renovará: conservarás el acceso hasta el {{date}}.",
+    "couldNotUpdateSubscription": "No se pudo actualizar tu suscripción. Inténtalo de nuevo."
   },
   "period": {
     "monthly": "Mensual",

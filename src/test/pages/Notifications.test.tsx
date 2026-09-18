@@ -138,9 +138,10 @@ describe("Notifications page", () => {
     expect(screen.getAllByText("Olia")[0]).toBeInTheDocument();
   });
 
-  it("renders subtitle 'Active operational alerts'", () => {
+  it("renders an inline 'Back' link to the dashboard (no more Layout header)", () => {
     renderWithProviders(<Notifications />);
-    expect(screen.getByText("Active operational alerts")).toBeInTheDocument();
+    expect(document.querySelector("header")).toBeNull();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
   });
 
   it("shows correct count when multiple alerts", () => {

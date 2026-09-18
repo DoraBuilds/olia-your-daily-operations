@@ -1,10 +1,11 @@
 // ─── AccountTab ───────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown, MailCheck, Send, Eye, EyeOff, X,
+  LogOut, MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -66,7 +67,7 @@ export function AccountTab({
 }: AccountTabProps) {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  const { teamMember: authTeamMember, updateLanguage } = useAuth();
+  const { teamMember: authTeamMember, updateLanguage, signOut } = useAuth();
   const { plan, planStatus, isActive, hasStripeSubscription, org } = usePlan();
   const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
@@ -113,6 +114,17 @@ export function AccountTab({
   const [committedActiveLocationIds, setCommittedActiveLocationIds] = useState<string[]>(activeLocationIds);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [dangerMenuOpen, setDangerMenuOpen] = useState(false);
+  const dangerMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dangerMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dangerMenuRef.current && !dangerMenuRef.current.contains(e.target as Node)) setDangerMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dangerMenuOpen]);
 
   useEffect(() => {
     setProfileName(authUserName ?? currentAccount?.name ?? "");
@@ -249,7 +261,10 @@ export function AccountTab({
   const deleteAccount = async () => {
     setDeleting(true);
     try {
-      const { data, error } = await supabase.rpc("delete_my_account");
+      // delete-my-account also cancels the Stripe subscription (if any) before
+      // marking the org for the 30-day purge window — see delete_my_account()
+      // and purge_expired_deleted_organizations() in the DB.
+      const { data, error } = await supabase.functions.invoke("delete-my-account");
       if (error) throw error;
       if (!data?.success) throw new Error(data?.reason ?? "Could not delete account");
       // Navigate before signOut to avoid ProtectedRoute race
@@ -260,6 +275,18 @@ export function AccountTab({
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const [loggingOut, setLoggingOut] = useState(false);
+  const logOut = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      navigate("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("accountTab.toast.couldNotLogOut"));
+      setLoggingOut(false);
     }
   };
 
@@ -545,20 +572,45 @@ export function AccountTab({
         </div>
       </section>}
 
-      {/* Danger zone — owner only */}
+      {/* Session — Log out lives here now (the header's logout icon is gone
+          app-wide). Only owners ever see this tab, and only owners have a
+          real login to sign out of (staff use kiosk-PIN grants, exited via
+          "Back to Kiosk" in Layout.tsx, not this). Delete account is tucked
+          behind the kebab menu so it's not sitting right next to Log out. */}
       {show("account") && currentAccount?.is_owner && (
-        <section className="card-surface p-4 border border-status-error/20">
-          <p className="section-label text-status-error mb-2">{t("accountTab.dangerZone")}</p>
-          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            {t("accountTab.dangerZoneNotice")}
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold border border-status-error text-status-error hover:bg-status-error/5 transition-colors"
-          >
-            {t("accountTab.deleteAccount")}
-          </button>
+        <section className="card-surface p-4">
+          <p className="section-label mb-2">{t("accountTab.session")}</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={logOut}
+              disabled={loggingOut}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-border text-foreground hover:bg-muted transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <LogOut size={15} /> {loggingOut ? t("accountTab.loggingOut") : t("accountTab.logOut")}
+            </button>
+            <div ref={dangerMenuRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setDangerMenuOpen(v => !v)}
+                aria-label={t("accountTab.accountOptionsAria")}
+                className="h-full px-3 py-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors flex items-center"
+              >
+                <MoreVertical size={16} />
+              </button>
+              {dangerMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[200px] py-1 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => { setDangerMenuOpen(false); setShowDeleteModal(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-status-error hover:bg-muted/50 transition-colors"
+                  >
+                    <Trash2 size={14} /> {t("accountTab.deleteAccount")}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
@@ -833,7 +885,8 @@ export function AccountTab({
           message={
             <span>
               {t("accountTab.deleteAccountModal.body")}{" "}
-              <strong>{t("accountTab.deleteAccountModal.cannotBeUndone")}</strong>
+              {t("accountTab.deleteAccountModal.retentionNotice")}{" "}
+              <strong>{t("accountTab.deleteAccountModal.afterRetention")}</strong>
             </span>
           }
           actionLabel={deleting ? t("accountTab.deleteAccountModal.deleting") : t("accountTab.deleteAccountModal.confirmAction")}

@@ -11,7 +11,6 @@
   },
   "layout": {
     "backToKiosk": "Kiosco",
-    "logOut": "Cerrar sesión",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Contraer barra lateral"
   },
