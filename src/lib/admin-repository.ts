@@ -114,7 +114,7 @@ export interface TeamMember {
   /** false = kiosk-PIN-only access (no admin-app login, permissions ignored). true = admin-app login + permissions apply. */
   is_manager: boolean;
   location_ids: string[];
-  department_id: string | null;
+  department_ids: string[];
   initials: string;
   permissions: ManagerPermissions;
   /** PIN is never returned from the server — only used transiently when saving. */

@@ -99,10 +99,10 @@ describe("TeamMemberModal", () => {
     it("keeps the department picker visible after a second location is selected", async () => {
       renderModal({ locations });
       fireEvent.click(screen.getByText("Main Branch"));
-      await waitFor(() => expect(screen.getByText("Department")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("Department(s)")).toBeInTheDocument());
 
       fireEvent.click(screen.getByText("City Centre"));
-      expect(screen.getByText("Department")).toBeInTheDocument();
+      expect(screen.getByText("Department(s)")).toBeInTheDocument();
     });
 
     it("lists departments from every selected location, labeled by location", async () => {
@@ -122,6 +122,68 @@ describe("TeamMemberModal", () => {
 
       await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
       expect(screen.queryByText("Kitchen — Main Branch")).not.toBeInTheDocument();
+    });
+
+    it("allows selecting more than one department at once", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+      fireEvent.click(screen.getByText("City Centre"));
+
+      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
+      const kitchen = screen.getByText("Kitchen — Main Branch");
+      const foh = screen.getByText("Front of House — City Centre");
+
+      fireEvent.click(kitchen);
+      fireEvent.click(foh);
+
+      expect(kitchen.closest("button")).toHaveClass("bg-sage");
+      expect(foh.closest("button")).toHaveClass("bg-sage");
+    });
+
+    it("toggles a selected department off when clicked again", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+
+      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
+      const kitchen = screen.getByText("Kitchen");
+
+      fireEvent.click(kitchen);
+      expect(kitchen.closest("button")).toHaveClass("bg-sage");
+
+      fireEvent.click(kitchen);
+      expect(kitchen.closest("button")).not.toHaveClass("bg-sage");
+    });
+
+    it("selects and clears every department via the Select all / Clear all toggle", async () => {
+      renderModal({ locations });
+      fireEvent.click(screen.getByText("Main Branch"));
+      fireEvent.click(screen.getByText("City Centre"));
+
+      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("Select all"));
+      expect(screen.getByText("Kitchen — Main Branch").closest("button")).toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House — City Centre").closest("button")).toHaveClass("bg-sage");
+
+      fireEvent.click(screen.getByText("Clear all"));
+      expect(screen.getByText("Kitchen — Main Branch").closest("button")).not.toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House — City Centre").closest("button")).not.toHaveClass("bg-sage");
+    });
+
+    it("pre-selects every department already assigned to the member being edited", async () => {
+      renderModal({
+        locations,
+        member: {
+          id: "m1", name: "Sam", email: "sam@example.com", role: "GM",
+          is_owner: false, is_manager: true, location_ids: ["l1", "l2"],
+          department_ids: ["d1", "d2"], initials: "S",
+          permissions: {} as any,
+        } as Parameters<typeof TeamMemberModal>[0]["member"],
+      });
+
+      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
+      expect(screen.getByText("Kitchen — Main Branch").closest("button")).toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House — City Centre").closest("button")).toHaveClass("bg-sage");
     });
   });
 });

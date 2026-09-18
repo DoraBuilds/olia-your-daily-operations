@@ -91,7 +91,7 @@ export function AccountTab({
     role: "Owner",
     is_owner: true,
     is_manager: true,
-    department_id: null,
+    department_ids: [],
     location_ids: [],
     permissions: DEFAULT_PERMISSIONS,
     pin_reset_required: false,

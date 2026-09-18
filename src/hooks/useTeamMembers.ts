@@ -17,7 +17,7 @@ export function useTeamMembers() {
       // below is the filtered view for the archive/restore UI).
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, is_owner, is_manager, department_id, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .select("id, organization_id, name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
         .is("archived_at", null)
         .order("name");
       if (error) throw error;
@@ -30,7 +30,7 @@ export function useTeamMembers() {
           location_ids: m.location_ids ?? [],
           is_owner: m.is_owner ?? false,
           is_manager: m.is_manager ?? false,
-          department_id: m.department_id ?? null,
+          department_ids: m.department_ids ?? [],
           pin_reset_required: m.pin_reset_required ?? false,
           last_seen_at: m.last_seen_at ?? null,
           pin: undefined,   // never send hashed PIN to the browser
@@ -48,7 +48,7 @@ export function useArchivedTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, is_owner, is_manager, department_id, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .select("id, organization_id, name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
         .not("archived_at", "is", null)
         .order("name");
       if (error) throw error;
@@ -61,7 +61,7 @@ export function useArchivedTeamMembers() {
           location_ids: m.location_ids ?? [],
           is_owner: m.is_owner ?? false,
           is_manager: m.is_manager ?? false,
-          department_id: m.department_id ?? null,
+          department_ids: m.department_ids ?? [],
           pin_reset_required: m.pin_reset_required ?? false,
           last_seen_at: m.last_seen_at ?? null,
           pin: undefined,
@@ -136,7 +136,7 @@ export function useSaveTeamMember() {
           email: tm.email?.trim() || null,
           role: tm.role ?? "",
           is_manager: tm.is_manager ?? false,
-          department_id: tm.department_id ?? null,
+          department_ids: tm.department_ids ?? [],
           location_ids: tm.location_ids ?? [],
           permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
         };
@@ -174,7 +174,7 @@ export function useSaveTeamMember() {
         email: tm.email?.trim() || null,
         role: tm.role ?? "",
         is_manager: tm.is_manager ?? false,
-        department_id: tm.department_id ?? null,
+        department_ids: tm.department_ids ?? [],
         location_ids: tm.location_ids ?? [],
         permissions: tm.permissions ?? DEFAULT_PERMISSIONS,
         pin: tm.rawPin,

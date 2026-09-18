@@ -78,7 +78,7 @@ export function ConceptsTab({
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
 
   const departmentInUse = (dep: LocationDepartment) =>
-    teamMembers.some(m => m.department_id === dep.id);
+    teamMembers.some(m => m.department_ids.includes(dep.id));
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
   if (concepts.length === 0) {
