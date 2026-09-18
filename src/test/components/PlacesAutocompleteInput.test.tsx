@@ -24,57 +24,49 @@ vi.mock("@/lib/runtime-config", () => ({
 
 describe("PlacesAutocompleteInput", () => {
   beforeEach(() => {
-    const autocompleteService = {
-      getPlacePredictions: vi.fn((request, callback) => {
-        callback(
-          [{
-            place_id: "place-1",
-            description: "14 Rue de la Paix, Lyon, France",
-            structured_formatting: {
-              main_text: "14 Rue de la Paix",
-              secondary_text: "Lyon, France",
-            },
-          }],
-          "OK",
-        );
-      }),
+    const place = {
+      id: "place-1",
+      formattedAddress: "14 Rue de la Paix, 69002 Lyon, France",
+      location: {
+        lat: () => 45.7608,
+        lng: () => 4.8597,
+      },
+      regularOpeningHours: {
+        weekdayDescriptions: [
+          "Monday: 9:00 AM – 6:00 PM",
+          "Tuesday: 9:00 AM – 6:00 PM",
+          "Wednesday: 9:00 AM – 6:00 PM",
+          "Thursday: 9:00 AM – 6:00 PM",
+          "Friday: 9:00 AM – 6:00 PM",
+          "Saturday: Closed",
+          "Sunday: Closed",
+        ],
+      },
+      fetchFields: vi.fn(() => Promise.resolve({ place })),
     };
 
-    const placesService = {
-      getDetails: vi.fn((request, callback) => {
-        callback({
-          place_id: request.placeId,
-          formatted_address: "14 Rue de la Paix, 69002 Lyon, France",
-          opening_hours: {
-            weekday_text: [
-              "Monday: 9:00 AM – 6:00 PM",
-              "Tuesday: 9:00 AM – 6:00 PM",
-              "Wednesday: 9:00 AM – 6:00 PM",
-              "Thursday: 9:00 AM – 6:00 PM",
-              "Friday: 9:00 AM – 6:00 PM",
-              "Saturday: Closed",
-              "Sunday: Closed",
-            ],
-          },
-          geometry: {
-            location: {
-              lat: () => 45.7608,
-              lng: () => 4.8597,
-            },
-          },
-        }, "OK");
-      }),
+    const suggestion = {
+      placePrediction: {
+        placeId: "place-1",
+        text: { text: "14 Rue de la Paix, Lyon, France" },
+        mainText: { text: "14 Rue de la Paix" },
+        secondaryText: { text: "Lyon, France" },
+        toPlace: () => place,
+      },
+    };
+
+    const placesLibrary = {
+      AutocompleteSuggestion: {
+        fetchAutocompleteSuggestions: vi.fn(() => Promise.resolve({ suggestions: [suggestion] })),
+      },
+      AutocompleteSessionToken: vi.fn(() => ({})),
     };
 
     Object.defineProperty(window, "google", {
       configurable: true,
       value: {
         maps: {
-          places: {
-            AutocompleteService: vi.fn(() => autocompleteService),
-            PlacesService: vi.fn(() => placesService),
-            PlacesServiceStatus: { OK: "OK" },
-          },
+          importLibrary: vi.fn(() => Promise.resolve(placesLibrary)),
         },
       },
     });
@@ -104,6 +96,8 @@ describe("PlacesAutocompleteInput", () => {
     if (script) {
       await act(async () => {
         fireEvent.load(script as HTMLScriptElement);
+        await Promise.resolve();
+        await Promise.resolve();
       });
     }
 
@@ -120,6 +114,8 @@ describe("PlacesAutocompleteInput", () => {
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /14 rue de la paix/i }));
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
     await waitFor(() => {
