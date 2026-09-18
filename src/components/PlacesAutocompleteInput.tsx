@@ -6,7 +6,7 @@
  *
  * Required Google Cloud APIs:
  *   - Maps JavaScript API  (autocomplete widget)
- *   - Places API           (place predictions + details)
+ *   - Places API (New)     (place predictions + details — AutocompleteSuggestion/Place)
  *   - Maps Static API      (mini map preview image)
  */
 
@@ -23,6 +23,7 @@ const API_KEY = runtimeConfig.googleMapsApiKey;
 type ScriptStatus = "unavailable" | "idle" | "loading" | "ready" | "error";
 
 let _scriptStatus: ScriptStatus = API_KEY ? "idle" : "unavailable";
+let _placesLib: any = null;
 const _listeners = new Set<() => void>();
 
 function _notifyListeners() {
@@ -41,7 +42,21 @@ function ensureGoogleMapsScript() {
   script.id = "olia-gmaps";
   script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&loading=async`;
   script.async = true;
-  script.onload = () => { _scriptStatus = "ready";  _notifyListeners(); _listeners.clear(); };
+  script.onload = () => {
+    const g = (window as any).google;
+    g.maps.importLibrary("places")
+      .then((lib: any) => {
+        _placesLib = lib;
+        _scriptStatus = "ready";
+        _notifyListeners();
+        _listeners.clear();
+      })
+      .catch(() => {
+        _scriptStatus = "error";
+        _notifyListeners();
+        _listeners.clear();
+      });
+  };
   script.onerror = () => { _scriptStatus = "error";  _notifyListeners(); _listeners.clear(); };
   document.head.appendChild(script);
 }
@@ -72,15 +87,6 @@ export interface PlaceResult {
   openingHoursText?: string[] | null;
 }
 
-interface Prediction {
-  place_id: string;
-  description: string;
-  structured_formatting?: {
-    main_text: string;
-    secondary_text?: string;
-  };
-}
-
 // ── PlacesAutocompleteInput ───────────────────────────────────────────────────
 
 interface PlacesAutocompleteInputProps {
@@ -99,12 +105,12 @@ export function PlacesAutocompleteInput({
   placeholder = "e.g. 14 Rue de la Paix, Lyon",
 }: PlacesAutocompleteInputProps) {
   const ready = useGoogleMapsReady();
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [predictions, setPredictions] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const svcRef = useRef<any>(null);
+  const sessionTokenRef = useRef<any>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,38 +123,36 @@ export function PlacesAutocompleteInput({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const getAutocompleteService = useCallback(() => {
-    const g = (window as any).google;
-    if (!ready || !g?.maps?.places) return null;
-    if (!svcRef.current) {
-      svcRef.current = new g.maps.places.AutocompleteService();
-    }
-    return svcRef.current;
-  }, [ready]);
-
   const fetchPredictions = useCallback((input: string) => {
-    const svc = getAutocompleteService();
-    if (!svc || input.trim().length < 3) {
+    if (!ready || !_placesLib || input.trim().length < 3) {
       setPredictions([]);
       setShowDropdown(false);
       return;
     }
+    if (!sessionTokenRef.current) {
+      sessionTokenRef.current = new _placesLib.AutocompleteSessionToken();
+    }
     setLoading(true);
-    svc.getPlacePredictions(
-      { input: input.trim() },
-      (results: Prediction[] | null, status: string) => {
+    _placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+      input: input.trim(),
+      sessionToken: sessionTokenRef.current,
+    })
+      .then(({ suggestions }: { suggestions: any[] }) => {
         setLoading(false);
-        const OK = (window as any).google.maps.places.PlacesServiceStatus.OK;
-        if (status === OK && results?.length) {
-          setPredictions(results);
+        if (suggestions?.length) {
+          setPredictions(suggestions);
           setShowDropdown(true);
         } else {
           setPredictions([]);
           setShowDropdown(false);
         }
-      },
-    );
-  }, [getAutocompleteService]);
+      })
+      .catch(() => {
+        setLoading(false);
+        setPredictions([]);
+        setShowDropdown(false);
+      });
+  }, [ready]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -157,29 +161,29 @@ export function PlacesAutocompleteInput({
     debounceRef.current = setTimeout(() => fetchPredictions(val), 320);
   };
 
-  const selectPrediction = (p: Prediction) => {
+  const selectPrediction = (suggestion: any) => {
     setShowDropdown(false);
     setPredictions([]);
-    onChange(p.description);
+    const prediction = suggestion.placePrediction;
+    onChange(prediction.text.text);
 
-    // Fetch place details to get lat/lng
-    const g = (window as any).google;
-    const helperDiv = document.createElement("div");
-    const placeSvc = new g.maps.places.PlacesService(helperDiv);
-    placeSvc.getDetails(
-      { placeId: p.place_id, fields: ["geometry", "formatted_address", "place_id", "opening_hours"] },
-      (place: any, status: string) => {
-        if (status === g.maps.places.PlacesServiceStatus.OK && place?.geometry) {
-          onPlaceSelect({
-            address: place.formatted_address ?? p.description,
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-            placeId: place.place_id,
-            openingHoursText: place.opening_hours?.weekday_text ?? null,
-          });
-        }
-      },
-    );
+    const place = prediction.toPlace();
+    place
+      .fetchFields({ fields: ["location", "formattedAddress", "id", "regularOpeningHours"] })
+      .then(() => {
+        onPlaceSelect({
+          address: place.formattedAddress ?? prediction.text.text,
+          lat: place.location.lat(),
+          lng: place.location.lng(),
+          placeId: place.id,
+          openingHoursText: place.regularOpeningHours?.weekdayDescriptions ?? null,
+        });
+        // New search session for the next lookup, per Google's session-token billing model
+        sessionTokenRef.current = null;
+      })
+      .catch(() => {
+        // Place details fetch failed - leave the text filled in, no coordinates
+      });
   };
 
   // Graceful fallback when no API key is configured
@@ -217,26 +221,29 @@ export function PlacesAutocompleteInput({
 
       {showDropdown && predictions.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-          {predictions.slice(0, 5).map(p => (
-            <button
-              key={p.place_id}
-              type="button"
-              onClick={() => selectPrediction(p)}
-              className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted transition-colors"
-            >
-              <MapPin size={13} className="text-sage mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm text-foreground leading-snug">
-                  {p.structured_formatting?.main_text ?? p.description}
-                </p>
-                {p.structured_formatting?.secondary_text && (
-                  <p className="text-xs text-muted-foreground leading-snug">
-                    {p.structured_formatting.secondary_text}
+          {predictions.slice(0, 5).map(s => {
+            const prediction = s.placePrediction;
+            return (
+              <button
+                key={prediction.placeId}
+                type="button"
+                onClick={() => selectPrediction(s)}
+                className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted transition-colors"
+              >
+                <MapPin size={13} className="text-sage mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm text-foreground leading-snug">
+                    {prediction.mainText?.text ?? prediction.text.text}
                   </p>
-                )}
-              </div>
-            </button>
-          ))}
+                  {prediction.secondaryText?.text && (
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      {prediction.secondaryText.text}
+                    </p>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
