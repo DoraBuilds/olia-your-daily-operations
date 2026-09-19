@@ -18,9 +18,9 @@ function readStoredCollapsed(): boolean {
 }
 
 /** Hand-drawn-looking underline mark for the active nav tab — two barely-curved
- *  strokes (the second ~80% the length of the first), not a straight bar or a
- *  wavy squiggle. `preserveAspectRatio="none"` stretches both, together, to fit
- *  any label width, so the 80% length ratio between them holds at any size. */
+ *  strokes (the second ~80% the length of the first, centered under it), not a
+ *  straight bar or a wavy squiggle. `preserveAspectRatio="none"` stretches both,
+ *  together, to fit any label width, so the proportions hold at any size. */
 function ActiveTabMark({ className }: { className?: string }) {
   return (
     <svg
@@ -34,7 +34,7 @@ function ActiveTabMark({ className }: { className?: string }) {
       className={cn("text-[hsl(var(--powder-blue))]", className)}
     >
       <path d="M2 5 Q50 2.5 98 5" />
-      <path d="M2 13 Q40 10.5 78 13" />
+      <path d="M12 13 Q50 10.5 88 13" />
     </svg>
   );
 }
