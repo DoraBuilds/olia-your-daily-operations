@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
+import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
@@ -360,6 +361,8 @@ export default function Infohub() {
 
   return (
     <Layout>
+      <ConceptScopeNotice />
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

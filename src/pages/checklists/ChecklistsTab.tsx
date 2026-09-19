@@ -9,6 +9,7 @@ import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useConceptFilter } from "@/contexts/ConceptFilterContext";
+import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { FolderBreadcrumb } from "./FolderBreadcrumb";
@@ -407,6 +408,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   return (
     <>
+      <ConceptScopeNotice />
+
       {/* Location dropdown */}
       <div className="relative">
         <button onClick={() => setShowLocationDrop(v => !v)}

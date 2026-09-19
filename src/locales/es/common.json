@@ -16,6 +16,7 @@
   },
   "conceptFilter": {
     "label": "Concepto",
-    "allConcepts": "Todos los conceptos"
+    "allConcepts": "Todos los conceptos",
+    "scopeNotice": "Mostrando datos de {{name}}. Para ver otro concepto, usa el desplegable de Concepto en la barra lateral."
   }
 }

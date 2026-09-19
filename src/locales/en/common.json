@@ -16,6 +16,7 @@
   },
   "conceptFilter": {
     "label": "Concept",
-    "allConcepts": "All concepts"
+    "allConcepts": "All concepts",
+    "scopeNotice": "Showing data for {{name}}. To see another concept, use the Concept dropdown in the sidebar."
   }
 }
