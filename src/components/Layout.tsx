@@ -7,6 +7,7 @@ import { SidebarNav } from "./SidebarNav";
 import {
   hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
 } from "@/lib/kiosk-admin-session";
+import { clearKioskStaffSession } from "@/lib/kiosk-staff-session";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -45,6 +46,11 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
   const handleBackToKiosk = () => {
     clearKioskAdminSession();
+    // Also drop the grid's own identify-PIN grant (kiosk-staff-session.ts) —
+    // otherwise /kiosk remounts straight onto the already-identified grid
+    // instead of the locked PIN screen, making this look like it didn't
+    // actually lock the device (#796).
+    clearKioskStaffSession();
     navigate("/kiosk");
   };
 
@@ -62,6 +68,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       if (inactivityTimer) clearTimeout(inactivityTimer);
       inactivityTimer = setTimeout(() => {
         clearKioskAdminSession();
+        clearKioskStaffSession();
         navigate("/kiosk");
       }, 90000);
     };
