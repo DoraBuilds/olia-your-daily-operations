@@ -363,6 +363,7 @@
       "searchPlaceholder": "Search locations or address",
       "noMatch": "No locations match your search.",
       "appearEverywhere": "This checklist will appear at every location.",
+      "appearInConcept": "This checklist will appear at every location in {{name}}.",
       "chooseOneOrMore": "Choose one or more locations.",
       "selectedOne": "Selected: {{name}}",
       "selectedCount": "{{count}} locations selected",

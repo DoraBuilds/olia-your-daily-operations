@@ -11,13 +11,16 @@ import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
-const conceptFilterState: { scopedLocationIds: string[] | null } = { scopedLocationIds: null };
+const conceptFilterState: { scopedLocationIds: string[] | null; selectedConceptId: string } = {
+  scopedLocationIds: null,
+  selectedConceptId: "all",
+};
 
 vi.mock("@/contexts/ConceptFilterContext", () => ({
   ALL_CONCEPTS: "all",
   useConceptFilter: () => ({
     concepts: [],
-    selectedConceptId: "all",
+    selectedConceptId: conceptFilterState.selectedConceptId,
     setSelectedConceptId: () => {},
     scopedLocationIds: conceptFilterState.scopedLocationIds,
   }),
@@ -87,8 +90,8 @@ vi.mock("@/pages/checklists/ItemContextMenu", () => ({ ItemContextMenu: () => nu
 vi.mock("@/hooks/useLocations", () => ({
   useLocations: () => ({
     data: [
-      { id: "loc-1", name: "Main Branch" },
-      { id: "loc-2", name: "Terrace" },
+      { id: "loc-1", name: "Main Branch", concept_id: "concept-1" },
+      { id: "loc-2", name: "Terrace", concept_id: "concept-2" },
     ],
     isLoading: false,
   }),
@@ -120,9 +123,14 @@ vi.mock("@/hooks/useChecklists", () => {
     created_at: "2026-01-02", updated_at: "2026-01-02",
   }, {
     id: "cl-3", title: "Org Wide Checklist", folder_id: null,
-    location_id: null, location_ids: null, schedule: null, sections: [],
+    location_id: null, location_ids: null, concept_id: null, schedule: null, sections: [],
     is_published: true,
     created_at: "2026-01-03", updated_at: "2026-01-03",
+  }, {
+    id: "cl-4", title: "Concept 1 Wide Checklist", folder_id: null,
+    location_id: null, location_ids: null, concept_id: "concept-1", schedule: null, sections: [],
+    is_published: true,
+    created_at: "2026-01-04", updated_at: "2026-01-04",
   }];
   return {
     useFolders: () => ({ data: FOLDERS, isLoading: false }),
@@ -148,6 +156,7 @@ describe("ChecklistsTab concept scoping", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     conceptFilterState.scopedLocationIds = null;
+    conceptFilterState.selectedConceptId = "all";
   });
 
   it("lists every checklist and location when no concept is selected", () => {
@@ -176,5 +185,19 @@ describe("ChecklistsTab concept scoping", () => {
     conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ChecklistsTab />, { wrapper });
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
+  });
+
+  it("shows a concept-scoped 'all locations' checklist under its own concept", () => {
+    conceptFilterState.scopedLocationIds = ["loc-1"];
+    conceptFilterState.selectedConceptId = "concept-1";
+    render(<ChecklistsTab />, { wrapper });
+    expect(screen.getByText("Concept 1 Wide Checklist")).toBeInTheDocument();
+  });
+
+  it("hides a concept-scoped 'all locations' checklist under a different concept", () => {
+    conceptFilterState.scopedLocationIds = ["loc-2"];
+    conceptFilterState.selectedConceptId = "concept-2";
+    render(<ChecklistsTab />, { wrapper });
+    expect(screen.queryByText("Concept 1 Wide Checklist")).not.toBeInTheDocument();
   });
 });

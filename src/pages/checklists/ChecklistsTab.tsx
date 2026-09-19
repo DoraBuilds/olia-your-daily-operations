@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -23,28 +23,34 @@ const ChecklistBuilderModal = lazy(() => import("./ChecklistBuilderModal").then(
 const ChecklistPreviewModal = lazy(() => import("./ChecklistPreviewModal").then(m => ({ default: m.ChecklistPreviewModal })));
 
 function checklistAppliesToLocation(
-  checklist: { location_id: string | null; location_ids?: string[] | null },
+  checklist: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null },
   locationId: string,
+  locationConceptId?: string | null,
 ) {
   const assignedIds = checklist.location_ids?.length
     ? checklist.location_ids
     : (checklist.location_id ? [checklist.location_id] : null);
 
-  if (!assignedIds || assignedIds.length === 0) return true;
-  return assignedIds.includes(locationId);
+  if (assignedIds && assignedIds.length > 0) return assignedIds.includes(locationId);
+  if (checklist.concept_id) return checklist.concept_id === locationConceptId;
+  return true;
 }
 
 function checklistInScope(
-  checklist: { location_id: string | null; location_ids?: string[] | null },
+  checklist: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null },
   scopedLocationIds: string[] | null,
+  selectedConceptId: string | null,
 ) {
   if (scopedLocationIds === null) return true;
   const assignedIds = checklist.location_ids?.length
     ? checklist.location_ids
     : (checklist.location_id ? [checklist.location_id] : null);
 
-  if (!assignedIds || assignedIds.length === 0) return true;
-  return assignedIds.some(id => scopedLocationIds.includes(id));
+  if (assignedIds && assignedIds.length > 0) return assignedIds.some(id => scopedLocationIds.includes(id));
+  // No explicit locations: either true org-wide (concept_id null, always in
+  // scope) or scoped to one concept (in scope only under that same concept).
+  if (checklist.concept_id) return checklist.concept_id === selectedConceptId;
+  return true;
 }
 
 export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
@@ -52,7 +58,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
   const { data: allDbLocations = [] } = useLocations();
-  const { scopedLocationIds } = useConceptFilter();
+  const { scopedLocationIds, selectedConceptId } = useConceptFilter();
   const dbLocations = scopedLocationIds === null
     ? allDbLocations
     : allDbLocations.filter(l => scopedLocationIds.includes(l.id));
@@ -60,9 +66,20 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const locationOptions = [allLocationsLabel, ...dbLocations.map(l => l.name)];
 
   // DB data
-  const { data: dbFolders = [] } = useFolders();
+  const { data: allDbFolders = [] } = useFolders();
+  // Same scoping as checklists below: a location-specific folder from
+  // another concept shouldn't appear once a concept filter narrows the view.
+  // Memoized: an effect below keys off this array's identity to sync
+  // folderOrder, so a fresh reference on every render (from a bare .filter())
+  // would re-trigger that effect every render and loop forever.
+  const dbFolders = useMemo(
+    () => allDbFolders.filter(f =>
+      f.location_id === null || scopedLocationIds === null || scopedLocationIds.includes(f.location_id),
+    ),
+    [allDbFolders, scopedLocationIds],
+  );
   const { data: allDbChecklists = [] } = useChecklists();
-  const dbChecklists = allDbChecklists.filter(c => checklistInScope(c, scopedLocationIds));
+  const dbChecklists = allDbChecklists.filter(c => checklistInScope(c, scopedLocationIds, selectedConceptId));
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
   const reorderFoldersMut = useReorderFolders();
@@ -87,6 +104,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     location_id: c.location_id,
     location_ids: c.location_ids ?? (c.location_id ? [c.location_id] : null),
     department_ids: c.department_ids ?? null,
+    concept_id: c.concept_id ?? null,
     start_date: c.start_date ?? null,
     createdAt: c.created_at,
     sections: c.sections as SectionDef[],
@@ -156,6 +174,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [prefillSections, setPrefillSections] = useState<SectionDef[] | undefined>(undefined);
   const [prefillLocationIds, setPrefillLocationIds] = useState<string[] | null | undefined>(undefined);
   const [prefillDepartmentIds, setPrefillDepartmentIds] = useState<string[] | null | undefined>(undefined);
+  const [prefillConceptId, setPrefillConceptId] = useState<string | null | undefined>(undefined);
   const [dragFolderId, setDragFolderId] = useState<string | null>(null);
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [isBuilderDirty, setIsBuilderDirty] = useState(false);
@@ -172,8 +191,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       if (selectedLocation === allLocationsLabel) return true;
       if (!selectedLocationObj) return true;
       return checklistAppliesToLocation(
-        { location_id: c.location_id, location_ids: c.location_ids },
+        { location_id: c.location_id, location_ids: c.location_ids, concept_id: c.concept_id },
         selectedLocationObj.id,
+        selectedLocationObj.concept_id,
       );
     });
 
@@ -196,6 +216,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     setPrefillSections(undefined);
     setPrefillLocationIds(undefined);
     setPrefillDepartmentIds(undefined);
+    setPrefillConceptId(undefined);
     setEditingChecklistId(null);
     setIsBuilderDirty(false);
     onBuilderTitleChange?.(null);
@@ -269,6 +290,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         setPrefillSections(cl.sections);
         setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
         setPrefillDepartmentIds(cl.department_ids ?? null);
+        setPrefillConceptId(cl.concept_id ?? null);
         setShowBuilder(true);
         onBuilderTitleChange?.(cl.title);
       }
@@ -308,6 +330,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             location_id: item.location_id ?? null,
             location_ids: item.location_ids ?? null,
             department_ids: item.department_ids ?? null,
+            concept_id: item.concept_id ?? null,
             start_date: item.start_date ?? null,
             sections: item.sections ?? [],
             schedule: item.schedule ?? null,
@@ -331,6 +354,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             location_id: updates.location_id !== undefined ? updates.location_id : orig.location_id,
             location_ids: updates.location_ids !== undefined ? updates.location_ids : orig.location_ids,
             department_ids: updates.department_ids !== undefined ? updates.department_ids : orig.department_ids,
+            concept_id: updates.concept_id !== undefined ? updates.concept_id : orig.concept_id,
             start_date: updates.start_date !== undefined ? updates.start_date : orig.start_date,
             time_of_day: "anytime",
             due_time: updates.due_time !== undefined ? updates.due_time : orig.due_time,
@@ -344,6 +368,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialSections={prefillSections}
         initialLocationIds={prefillLocationIds}
         initialDepartmentIds={prefillDepartmentIds}
+        initialConceptId={prefillConceptId}
         initialSchedule={editingChecklist?.schedule ?? null}
         initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}

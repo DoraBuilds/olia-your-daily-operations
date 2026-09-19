@@ -20,6 +20,8 @@ export interface ChecklistItem {
   location_id: string | null;
   location_ids?: string[] | null;
   department_ids?: string[] | null;
+  /** Set only when location_id/location_ids are both null — scopes an "all locations" checklist to one concept instead of the whole org. */
+  concept_id?: string | null;
   start_date: string | null;
   schedule: any;
   sections: any[];
@@ -105,7 +107,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at")
+        .select("id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at")
         .order("title");
       if (error) throw error;
       return ((data ?? []) as ChecklistItem[]).filter(
@@ -128,6 +130,7 @@ export function useSaveChecklist() {
         p_location_id:      checklist.location_id ?? null,
         p_location_ids:     checklist.location_ids ?? null,
         p_department_ids:   checklist.department_ids ?? null,
+        p_concept_id:       checklist.concept_id ?? null,
         p_start_date:       checklist.start_date ?? null,
         p_schedule:         checklist.schedule ?? null,
         p_sections:         checklist.sections ?? [],
