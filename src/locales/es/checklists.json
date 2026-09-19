@@ -363,6 +363,7 @@
       "searchPlaceholder": "Buscar ubicaciones o dirección",
       "noMatch": "Ninguna ubicación coincide con tu búsqueda.",
       "appearEverywhere": "Esta lista aparecerá en todas las ubicaciones.",
+      "appearInConcept": "Esta lista aparecerá en todas las ubicaciones de {{name}}.",
       "chooseOneOrMore": "Elige una o más ubicaciones.",
       "selectedOne": "Seleccionada: {{name}}",
       "selectedCount": "{{count}} ubicaciones seleccionadas",

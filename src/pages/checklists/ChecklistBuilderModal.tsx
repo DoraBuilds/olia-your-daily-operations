@@ -18,6 +18,7 @@ import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
+import { ALL_CONCEPTS, useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import { LogicRulesEditor } from "./LogicRulesEditor";
 import type {
@@ -67,6 +68,8 @@ interface ChecklistBuilderModalProps {
   initialDescription?: string;
   initialLocationIds?: string[] | null;
   initialDepartmentIds?: string[] | null;
+  /** The concept this checklist is scoped to when it applies to "all locations" (null = true org-wide). Ignored when initialLocationIds is set. */
+  initialConceptId?: string | null;
   initialSchedule?: string | null;
   initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
@@ -83,7 +86,7 @@ interface ChecklistBuilderModalProps {
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
-  initialDepartmentIds, initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil,
+  initialDepartmentIds, initialConceptId, initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil,
   initialIsPublished, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const { t } = useTranslation("checklists");
@@ -92,7 +95,16 @@ export function ChecklistBuilderModal({
     RESPONSE_TYPES.find(r => r.key === type) ? getResponseTypeLabel(type) : t("preview.multipleChoiceFallback");
   const createAlert = useCreateAlert();
   const { user, teamMember: authTeamMember } = useAuth();
-  const { data: dbLocations = [] } = useLocations();
+  const { data: allDbLocations = [] } = useLocations();
+  const { concepts, selectedConceptId, scopedLocationIds } = useConceptFilter();
+  // Picker display list: narrowed to the active concept, same pattern as
+  // ChecklistsTab/ReportingTab. Cross-concept locations a checklist already
+  // has selected (from before the filter was active) still resolve via
+  // allDbLocations below — they're just not shown/addable from this narrowed
+  // list, and are never silently dropped on save.
+  const dbLocations = scopedLocationIds === null
+    ? allDbLocations
+    : allDbLocations.filter(l => scopedLocationIds.includes(l.id));
   const { data: staffProfiles = [] } = useStaffProfiles();
   const { data: teamMembers = [] } = useTeamMembers();
   const imgInputRef = useRef<Record<string, HTMLInputElement | null>>({});
@@ -122,6 +134,16 @@ export function ChecklistBuilderModal({
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(
     initialLocationIds?.length ? initialLocationIds : [],
   );
+  // Which concept "all locations" is scoped to (null = true org-wide). For an
+  // existing "all locations" checklist, preserve its own saved scope rather
+  // than silently re-scoping it to whatever concept the sidebar happens to be
+  // filtered to right now. For a brand-new checklist, default to the concept
+  // currently active in the sidebar.
+  const [allLocationsConceptId, setAllLocationsConceptId] = useState<string | null>(() => {
+    if (initialLocationIds && initialLocationIds.length > 0) return null;
+    if (editId) return initialConceptId ?? null;
+    return selectedConceptId === ALL_CONCEPTS ? null : selectedConceptId;
+  });
   const [locationSearch, setLocationSearch] = useState("");
   const [departmentMode, setDepartmentMode] = useState<"all" | "specific">(
     initialDepartmentIds && initialDepartmentIds.length > 0 ? "specific" : "all",
@@ -157,10 +179,22 @@ export function ChecklistBuilderModal({
     visibilityUntil: visibilityWindowEnabled ? visibilityUntil : null,
     locationMode,
     selectedLocationIds: locationMode === "specific" ? [...selectedLocationIds].sort() : [],
+    allLocationsConceptId: locationMode === "all" ? allLocationsConceptId : null,
     departmentMode,
     selectedDepartmentIds: departmentMode === "specific" ? [...selectedDepartmentIds].sort() : [],
     isPublished,
   });
+
+  // If the concept this "all locations" checklist is scoped to gets deleted
+  // while the builder is open, fall back to org-wide rather than pointing at
+  // a concept that no longer exists — same fallback pattern as ConceptFilterContext.
+  useEffect(() => {
+    if (!allLocationsConceptId) return;
+    if (concepts.length === 0) return;
+    if (!concepts.some(c => c.id === allLocationsConceptId)) {
+      setAllLocationsConceptId(null);
+    }
+  }, [concepts, allLocationsConceptId]);
 
   const hasContent = !!(
     title.trim() ||
@@ -228,7 +262,7 @@ export function ChecklistBuilderModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, sections, startDate, schedule, customRecurrence,
       visibilityWindowEnabled, visibilityFrom, visibilityUntil,
-      locationMode, selectedLocationIds, departmentMode, selectedDepartmentIds,
+      locationMode, selectedLocationIds, allLocationsConceptId, departmentMode, selectedDepartmentIds,
       savedId, onDirtyChange]);
 
   useEffect(() => {
@@ -321,7 +355,10 @@ export function ChecklistBuilderModal({
 
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
 
-  const selectedLocations = dbLocations.filter(loc => selectedLocationIds.includes(loc.id));
+  // Resolved against the full org list (not the concept-narrowed picker list)
+  // so a checklist edited under a concept filter still shows/keeps any
+  // out-of-concept locations it was already assigned to.
+  const selectedLocations = allDbLocations.filter(loc => selectedLocationIds.includes(loc.id));
   const filteredLocations = dbLocations.filter(loc => {
     const q = locationSearch.trim().toLowerCase();
     if (!q) return true;
@@ -357,10 +394,14 @@ export function ChecklistBuilderModal({
     return matchesSection && matchesQuery;
   });
 
-  // Staff available for person-type questions and notify triggers, scoped to selected locations
+  // Staff available for person-type questions and notify triggers, scoped to
+  // selected locations. "all" mode uses the (concept-narrowed) dbLocations,
+  // so under a concept filter this only offers staff from that concept.
   const availableStaff = staffProfiles.filter(s =>
     s.status !== "archived" &&
-    (locationMode === "all" || selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id))
+    (locationMode === "all"
+      ? dbLocations.some(l => l.id === s.location_id)
+      : (selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id)))
   );
 
   // Notification recipients — team members (admins) + staff profiles with emails.
@@ -438,7 +479,10 @@ export function ChecklistBuilderModal({
     // Existing saved checklists with person type render as multiple_choice in the runner.
     const sectionsWithPersonChoices: SectionDef[] = sections;
 
-    const allLocationIds = dbLocations.map(loc => loc.id);
+    // Validate against the full org list, not the concept-narrowed picker
+    // list, so a cross-concept selection made before a concept filter was
+    // active isn't silently dropped just because it's out of view now.
+    const allLocationIds = allDbLocations.map(loc => loc.id);
     const selectedIds = locationMode === "all" ? [] : selectedLocationIds.filter(id => allLocationIds.includes(id));
     if (locationMode === "specific" && selectedIds.length === 0) return;
     const isAllLocations = locationMode === "all";
@@ -458,6 +502,7 @@ export function ChecklistBuilderModal({
       visibility_until: visibilityWindowEnabled ? visibilityUntil : null,
       location_id: isAllLocations ? null : (selectedIds.length === 1 ? selectedIds[0] : null),
       location_ids: isAllLocations ? null : selectedIds,
+      concept_id: isAllLocations ? allLocationsConceptId : null,
       department_ids: departmentMode === "all" ? null : selectedDeptIds,
       is_published: isPublished,
     };
@@ -584,7 +629,15 @@ export function ChecklistBuilderModal({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setLocationMode("all")}
+                onClick={() => {
+                  // Only re-capture the active concept on an actual switch INTO
+                  // "all" mode — re-clicking while already in "all" mode must
+                  // not silently reset an existing/preserved concept scope.
+                  if (locationMode !== "all") {
+                    setAllLocationsConceptId(selectedConceptId === ALL_CONCEPTS ? null : selectedConceptId);
+                  }
+                  setLocationMode("all");
+                }}
                 className={cn(
                   "px-3 py-1.5 rounded-full border text-xs transition-colors",
                   locationMode === "all"
@@ -671,7 +724,11 @@ export function ChecklistBuilderModal({
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-muted-foreground">
                 {locationMode === "all"
-                  ? t("builder.locations.appearEverywhere")
+                  ? (allLocationsConceptId
+                      ? t("builder.locations.appearInConcept", {
+                          name: concepts.find(c => c.id === allLocationsConceptId)?.name ?? "",
+                        })
+                      : t("builder.locations.appearEverywhere"))
                   : selectedLocations.length === 0
                     ? t("builder.locations.chooseOneOrMore")
                     : selectedLocations.length === 1

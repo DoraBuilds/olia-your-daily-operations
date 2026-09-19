@@ -27,6 +27,7 @@ export interface ChecklistItem {
   location_id?: string | null;
   location_ids?: string[] | null;
   department_ids?: string[] | null;
+  concept_id?: string | null;
   start_date?: string | null;
   createdAt: string;
   sections?: SectionDef[];
