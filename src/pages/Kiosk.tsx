@@ -27,7 +27,7 @@ import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, 
 import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
-import { useLiveClock } from "./kiosk/hooks";
+import { useLiveClock, useInactivityTimer } from "./kiosk/hooks";
 import { collectNotifyAlerts } from "./kiosk/logic-rules";
 
 // Re-export ChecklistRunner for backward compatibility (tests import from @/pages/Kiosk)
@@ -470,6 +470,19 @@ export default function Kiosk() {
   // separate from the per-checklist PIN in PinEntryModal (attribution,
   // unchanged). null means "not identified yet", gated below the setup screen.
   const [staffIdentity, setStaffIdentity] = useState<KioskStaffSession | null>(() => readKioskStaffSession());
+
+  // The identify-PIN grant above has no expiry of its own beyond a generous
+  // 30min outer TTL (kiosk-staff-session.ts) — unlike the runner/library
+  // screens, nobody was making the grid itself bounce back to the PIN screen
+  // after a period of no interaction, so a kiosk left on the grid stayed
+  // "identified" indefinitely (#796). Mirrors the same 90s pattern already
+  // used by ChecklistRunner/KioskLibrary/PinEntryModal.
+  const handleStaffIdentityTimeout = () => {
+    clearKioskStaffSession();
+    setStaffIdentity(null);
+  };
+  const { secondsLeft: staffIdleSecondsLeft, cancelCountdown: cancelStaffIdleCountdown } =
+    useInactivityTimer(screen === "grid" && staffIdentity !== null, handleStaffIdentityTimeout);
 
   useEffect(() => {
     if (loading || !user?.id || !locationId || !locationsFetched || locationsErrored) return;
@@ -1145,6 +1158,14 @@ export default function Kiosk() {
         </div>
         <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">{t("grid.footerBrand")}</p>
       </div>
+
+      {/* Inactivity countdown — returns to the identify PIN screen (#796) */}
+      {staffIdleSecondsLeft !== null && (
+        <div className="fixed bottom-0 left-0 right-0 bg-foreground/90 text-background px-5 py-3 flex items-center justify-between z-[80]">
+          <p className="text-sm">{t("completion.returningIn", { count: staffIdleSecondsLeft })}</p>
+          <button onClick={cancelStaffIdleCountdown} className="text-sm font-semibold underline">{t("stayButton")}</button>
+        </div>
+      )}
 
       {/* PinEntryModal (Screen 2) */}
       {selectedChecklist && screen === "grid" && (

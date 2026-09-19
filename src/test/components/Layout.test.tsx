@@ -1,6 +1,7 @@
 import { screen, fireEvent, act } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
 import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { grantKioskStaffSession, readKioskStaffSession } from "@/lib/kiosk-staff-session";
 import { renderWithProviders } from "../test-utils";
 
 vi.mock("@/contexts/ConceptFilterContext", () => ({
@@ -150,6 +151,32 @@ describe("Layout", () => {
 
       expect(mockNavigate).toHaveBeenCalledWith("/kiosk");
       expect(hasActiveKioskAdminSession()).toBe(false);
+    });
+
+    // Regression guard (#796): a live kiosk-staff-session grant (the
+    // boot-time identify PIN, kiosk-staff-session.ts) survived both of
+    // these exits, so /kiosk remounted straight onto the already-identified
+    // grid instead of the locked PIN screen — making it look like the
+    // device never actually locked back down.
+    it("also revokes the identify-PIN grant when 'Back to Kiosk' is clicked", () => {
+      grantKioskStaffSession({ staffId: "s1", staffName: "Staff", organizationId: "org-1", departmentIds: [] });
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+
+      fireEvent.click(screen.getByText(/kiosk/i));
+
+      expect(readKioskStaffSession()).toBeNull();
+    });
+
+    it("also revokes the identify-PIN grant after 90s of inactivity", () => {
+      grantKioskStaffSession({ staffId: "s1", staffName: "Staff", organizationId: "org-1", departmentIds: [] });
+      vi.useFakeTimers();
+      renderWithProviders(<Layout title="T"><span /></Layout>);
+
+      act(() => {
+        vi.advanceTimersByTime(90000);
+      });
+
+      expect(readKioskStaffSession()).toBeNull();
     });
 
     it("resets the 90s timer on user activity instead of bouncing early", () => {
