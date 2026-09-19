@@ -17,23 +17,24 @@ function readStoredCollapsed(): boolean {
   }
 }
 
-/** Hand-drawn-looking underline mark for the active nav tab — a single wobbly
- *  stroke rather than a straight bar, echoing the same "doodle underline"
- *  technique used for teal accent marks on the landing page. `preserveAspectRatio="none"`
- *  stretches the one path to fit any label width. */
+/** Hand-drawn-looking underline mark for the active nav tab — two barely-curved
+ *  strokes (the second ~80% the length of the first), not a straight bar or a
+ *  wavy squiggle. `preserveAspectRatio="none"` stretches both, together, to fit
+ *  any label width, so the 80% length ratio between them holds at any size. */
 function ActiveTabMark({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 42 8"
+      viewBox="0 0 100 16"
       preserveAspectRatio="none"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.4"
+      strokeWidth="2.2"
       strokeLinecap="round"
-      className={cn("text-[hsl(var(--powder-blue))] -rotate-1", className)}
+      className={cn("text-[hsl(var(--powder-blue))]", className)}
     >
-      <path d="M1 5c6-4 10-4 14 1 5 4 9 4 13-1 5-4 9-4 13 1" />
+      <path d="M2 5 Q50 2.5 98 5" />
+      <path d="M2 13 Q40 10.5 78 13" />
     </svg>
   );
 }
@@ -142,12 +143,12 @@ export function SidebarNav() {
                       {/* Underline, not a filled pill — a filled active tab read as
                           the same control as the teal Concept dropdown right above it. */}
                       {active && (
-                        <ActiveTabMark className="absolute left-0 right-0 -bottom-2 h-2 w-full" />
+                        <ActiveTabMark className="absolute left-0 right-0 -bottom-3 h-3 w-full" />
                       )}
                     </span>
                   )}
                   {collapsed && active && (
-                    <ActiveTabMark className="absolute left-1/2 bottom-1 h-1.5 w-5 -translate-x-1/2" />
+                    <ActiveTabMark className="absolute left-1/2 bottom-1 h-2.5 w-5 -translate-x-1/2" />
                   )}
                 </NavLink>
                 {!collapsed && visibleChildren.length > 0 ? (
