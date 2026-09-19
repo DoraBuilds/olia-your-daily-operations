@@ -68,25 +68,28 @@ describe("SidebarNav", () => {
     expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
   });
 
-  it("marks Dashboard as active when on /dashboard", () => {
+  it("marks Dashboard as active when on /dashboard with a teal underline, not a filled pill", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
+    expect(dashLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
+    expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
+    expect(dashLink.querySelector('span[aria-hidden="true"]')).not.toBeNull();
   });
 
-  it("marks Admin as active when on an /admin/* route", () => {
+  it("marks Admin as active when on an /admin/* route with a teal underline, not a filled pill", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
     const adminLink = screen.getByRole("link", { name: "Admin" });
-    expect(adminLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
+    expect(adminLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
+    expect(adminLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
   });
 
-  it("drops the active glow shadow when collapsed, so the highlight stays a clean circle", () => {
+  it("shows a small teal underline mark under the icon (not a filled pill) when collapsed", () => {
     localStorage.setItem("olia_sidebar_collapsed", "1");
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
 
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).toContain("bg-[var(--nav-active-bg-soft)]");
-    expect(dashLink.className).not.toContain("shadow-nav-active-soft");
+    expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
+    expect(dashLink.querySelector('span[aria-hidden="true"]')).not.toBeNull();
 
     localStorage.removeItem("olia_sidebar_collapsed");
   });

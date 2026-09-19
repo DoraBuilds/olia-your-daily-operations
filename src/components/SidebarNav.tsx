@@ -105,20 +105,35 @@ export function SidebarNav() {
                   to={to}
                   title={collapsed ? label : undefined}
                   className={cn(
-                    "group flex items-center transition-all",
+                    "group relative flex items-center transition-colors",
                     collapsed
                       ? "h-11 w-11 justify-center rounded-2xl"
                       : "gap-3 rounded-2xl px-3 py-3 text-sm font-medium",
                     active
-                      ? cn(
-                          "bg-[var(--nav-active-bg-soft)] text-[hsl(var(--nav-active-icon))]",
-                          !collapsed && "shadow-nav-active-soft",
-                        )
+                      ? "text-[hsl(var(--powder-blue-deep))]"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
-                  {!collapsed && <span className="tracking-[0.02em]">{label}</span>}
+                  {!collapsed && (
+                    <span className="relative tracking-[0.02em]">
+                      {label}
+                      {/* Underline, not a filled pill — a filled active tab read as
+                          the same control as the teal Concept dropdown right above it. */}
+                      {active && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-0 right-0 -bottom-1.5 h-[3px] rounded-full bg-[hsl(var(--powder-blue))]"
+                        />
+                      )}
+                    </span>
+                  )}
+                  {collapsed && active && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-1/2 bottom-1.5 h-[3px] w-4 -translate-x-1/2 rounded-full bg-[hsl(var(--powder-blue))]"
+                    />
+                  )}
                 </NavLink>
                 {!collapsed && visibleChildren.length > 0 ? (
                   <div className="ml-5 border-l border-border/70 pl-4 space-y-1">
