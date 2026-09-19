@@ -14,6 +14,7 @@ import { useLocations } from "@/hooks/useLocations";
 import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
 import type { LogEntry } from "./types";
 import { LogDetailModal } from "./LogDetailModal";
@@ -360,6 +361,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   return (
     <>
+      <ConceptScopeNotice />
+
       {/* ── Top toolbar: period tabs + location filter + export ── */}
       <div className="space-y-2">
       {/* Period tabs */}

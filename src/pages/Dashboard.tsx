@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
+import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell, ClipboardCheck, Clock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -320,6 +321,8 @@ export default function Dashboard() {
           </button>
         }
       >
+        <ConceptScopeNotice />
+
         {/* ── Greeting Hero ── */}
         <section className="pt-1 pb-2">
         <div className="rounded-[24px] bg-gradient-to-b from-[hsl(var(--powder-blue-light))] to-transparent p-4">

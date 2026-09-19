@@ -71,19 +71,22 @@ export function SidebarNav() {
             <label htmlFor="sidebar-concept-filter" className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1 block">
               {t("conceptFilter.label")}
             </label>
+            {/* Sized and accented a step above the nav links below (text-sm) to
+                signal that this is the control governing everything under it,
+                not just another nav row. */}
             <div className="relative">
               <select
                 id="sidebar-concept-filter"
                 value={selectedConceptId}
                 onChange={(e) => setSelectedConceptId(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-border/60 bg-muted/60 px-3 py-2 pr-8 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full appearance-none rounded-xl border border-[hsl(var(--powder-blue))]/30 bg-[hsl(var(--powder-blue-light))] px-3 py-2.5 pr-8 text-[15px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value={ALL_CONCEPTS}>{t("conceptFilter.allConcepts")}</option>
                 {concepts.map((concept) => (
                   <option key={concept.id} value={concept.id}>{concept.name}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <ChevronDown size={15} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--powder-blue-deep))] pointer-events-none" />
             </div>
           </div>
         )}
