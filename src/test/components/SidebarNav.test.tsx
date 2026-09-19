@@ -73,7 +73,7 @@ describe("SidebarNav", () => {
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
     expect(dashLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
     expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
-    expect(dashLink.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+    expect(dashLink.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("marks Admin as active when on an /admin/* route with a teal underline, not a filled pill", () => {
@@ -89,7 +89,7 @@ describe("SidebarNav", () => {
 
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
     expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
-    expect(dashLink.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+    expect(dashLink.querySelector('[aria-hidden="true"]')).not.toBeNull();
 
     localStorage.removeItem("olia_sidebar_collapsed");
   });
