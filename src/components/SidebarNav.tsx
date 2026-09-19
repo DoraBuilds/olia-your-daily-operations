@@ -17,6 +17,27 @@ function readStoredCollapsed(): boolean {
   }
 }
 
+/** Hand-drawn-looking underline mark for the active nav tab — a single wobbly
+ *  stroke rather than a straight bar, echoing the same "doodle underline"
+ *  technique used for teal accent marks on the landing page. `preserveAspectRatio="none"`
+ *  stretches the one path to fit any label width. */
+function ActiveTabMark({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 42 8"
+      preserveAspectRatio="none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      className={cn("text-[hsl(var(--powder-blue))] -rotate-1", className)}
+    >
+      <path d="M1 5c6-4 10-4 14 1 5 4 9 4 13-1 5-4 9-4 13 1" />
+    </svg>
+  );
+}
+
 export function SidebarNav() {
   const location = useLocation();
   const { t } = useTranslation();
@@ -121,18 +142,12 @@ export function SidebarNav() {
                       {/* Underline, not a filled pill — a filled active tab read as
                           the same control as the teal Concept dropdown right above it. */}
                       {active && (
-                        <span
-                          aria-hidden="true"
-                          className="absolute left-0 right-0 -bottom-1.5 h-[3px] rounded-full bg-[hsl(var(--powder-blue))]"
-                        />
+                        <ActiveTabMark className="absolute left-0 right-0 -bottom-2 h-2 w-full" />
                       )}
                     </span>
                   )}
                   {collapsed && active && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-1/2 bottom-1.5 h-[3px] w-4 -translate-x-1/2 rounded-full bg-[hsl(var(--powder-blue))]"
-                    />
+                    <ActiveTabMark className="absolute left-1/2 bottom-1 h-1.5 w-5 -translate-x-1/2" />
                   )}
                 </NavLink>
                 {!collapsed && visibleChildren.length > 0 ? (
