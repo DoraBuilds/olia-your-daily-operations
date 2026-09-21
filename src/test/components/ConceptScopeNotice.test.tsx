@@ -20,7 +20,7 @@ describe("ConceptScopeNotice", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows the selected concept's name in bold/teal, bracketed and italic", () => {
+  it("shows the selected concept's name in bold/teal, parenthesized, italic and centered", () => {
     mockUseConceptFilter.mockReturnValue({
       concepts: [{ id: "concept-1", name: "Downtown Bistro" }],
       selectedConceptId: "concept-1",
@@ -29,7 +29,8 @@ describe("ConceptScopeNotice", () => {
 
     const notice = container.querySelector("p");
     expect(notice).toHaveClass("italic");
-    expect(notice?.textContent).toBe("[Viewing Downtown Bistro — change location in the sidebar]");
+    expect(notice).toHaveClass("text-center");
+    expect(notice?.textContent).toBe("(Viewing Downtown Bistro Concept - change location in the sidebar)");
 
     const name = screen.getByText("Downtown Bistro");
     expect(name.tagName).toBe("SPAN");

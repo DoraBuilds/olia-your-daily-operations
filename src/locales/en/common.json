@@ -17,6 +17,6 @@
   "conceptFilter": {
     "label": "Concept",
     "allConcepts": "All concepts",
-    "scopeNotice": "Viewing <bold>{{name}}</bold> — change location in the sidebar"
+    "scopeNotice": "Viewing <bold>{{name}}</bold> Concept - change location in the sidebar"
   }
 }
