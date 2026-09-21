@@ -45,6 +45,7 @@ export function clearKioskLocationSelectionForModal() {
   localStorage.removeItem("kiosk_token");
   localStorage.removeItem("kiosk_device_id");
   localStorage.removeItem("kiosk_device_token");
+  localStorage.removeItem("kiosk_device_location_id");
 }
 
 // ─── ensureKioskToken ─────────────────────────────────────────────────────────
@@ -72,15 +73,23 @@ export async function ensureKioskToken(locationId: string): Promise<string | nul
 
 // ─── ensureKioskDevice ────────────────────────────────────────────────────────
 // Registers this browser as a named kiosk device for the given location —
-// once. Every code path that clears kiosk_location_id also clears
-// kiosk_device_token in the same pass (see clearKioskLocationSelectionForModal
-// above, its twin in Kiosk.tsx, and KIOSK_DEVICE_STORAGE_KEYS in
-// kiosk-guard.ts), so "a token is already stored" reliably means "already
-// registered for the location currently pinned" — safe to call on every load.
-// Also backfills a device row for kiosks that were pinned before this
-// feature shipped, so they show up in Admin -> Kiosks without a relaunch.
+// once per location. Also backfills a device row for kiosks that were pinned
+// before this feature shipped, so they show up in Admin -> Kiosks without a
+// relaunch.
+//
+// Guarded on (token present AND it was issued for *this* locationId), not
+// just "a token is present" (#822): relaunching a kiosk to a different
+// location from Admin overwrites kiosk_location_id directly (see the
+// urlLocationId effect in Kiosk.tsx) without going through
+// clearKioskLocationSelection first, so an already-configured device that
+// gets repointed at a new location would otherwise keep reusing its old
+// device row — silently never registering a device for the new location,
+// while that stale row kept looking "Active now" because touchKioskDevice
+// doesn't know its token has effectively moved.
 export async function ensureKioskDevice(locationId: string, label?: string): Promise<void> {
-  if (localStorage.getItem("kiosk_device_token")) return;
+  const storedToken = localStorage.getItem("kiosk_device_token");
+  const storedLocationId = localStorage.getItem("kiosk_device_location_id");
+  if (storedToken && storedLocationId === locationId) return;
   try {
     const { data, error } = await supabase.rpc("register_kiosk_device", {
       p_location_id: locationId,
@@ -90,6 +99,7 @@ export async function ensureKioskDevice(locationId: string, label?: string): Pro
     if (!error && row) {
       localStorage.setItem("kiosk_device_id", row.device_id);
       localStorage.setItem("kiosk_device_token", row.device_token);
+      localStorage.setItem("kiosk_device_location_id", locationId);
     }
   } catch {
     // Non-fatal: this device just won't appear in the fleet list yet.
