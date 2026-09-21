@@ -627,8 +627,8 @@ export function AccountTab({
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="w-9 shrink-0" />
             <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.name")}</p>
-            <p className="w-20 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.role")}</p>
-            <div className="w-20 shrink-0" />
+            <p className="w-24 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.role")}</p>
+            <div className="w-32 shrink-0" />
           </div>
           {[...teamMembers].sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0).map(member => {
             const isExpanded = expandedMemberId === member.id;
@@ -657,54 +657,61 @@ export function AccountTab({
                       <p className="text-xs text-muted-foreground/60">{t("accountTab.kioskOnly")}</p>
                     ) : null}
                   </div>
-                  <span className={cn(
-                    "text-xs px-2 py-0.5 rounded-full font-medium",
-                    member.is_owner ? "bg-lavender-light text-lavender-deep" : "status-ok",
-                  )}>
-                    {member.is_owner ? t("roles.Owner") : (member.role || t("accountTab.noRoleSet"))}
-                  </span>
-                  {hasPendingInvite && (
+                  <div className="w-24 shrink-0">
+                    <span
+                      className={cn(
+                        "inline-block max-w-full truncate align-bottom text-xs px-2 py-0.5 rounded-full font-medium",
+                        member.is_owner ? "bg-lavender-light text-lavender-deep" : "status-ok",
+                      )}
+                      title={member.is_owner ? t("roles.Owner") : (member.role || t("accountTab.noRoleSet"))}
+                    >
+                      {member.is_owner ? t("roles.Owner") : (member.role || t("accountTab.noRoleSet"))}
+                    </span>
+                  </div>
+                  <div className="w-32 shrink-0 flex items-center justify-end gap-2">
+                    {hasPendingInvite && (
+                      <button
+                        onClick={() => {
+                          sendInvite.mutate(member.id, {
+                            onSuccess: () => toast.success(t("accountTab.toast.inviteResent", { email: member.email })),
+                            onError: () => toast.error(t("accountTab.toast.resendInviteFailed")),
+                          });
+                        }}
+                        disabled={sendInvite.isPending}
+                        aria-label={t("accountTab.resendInviteAria", { name: member.name })}
+                        title={t("accountTab.resendInvite")}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Send size={14} className="text-status-warn" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => {
-                        sendInvite.mutate(member.id, {
-                          onSuccess: () => toast.success(t("accountTab.toast.inviteResent", { email: member.email })),
-                          onError: () => toast.error(t("accountTab.toast.resendInviteFailed")),
-                        });
-                      }}
-                      disabled={sendInvite.isPending}
-                      aria-label={t("accountTab.resendInviteAria", { name: member.name })}
-                      title={t("accountTab.resendInvite")}
+                      onClick={() => onEditMember(member)}
+                      aria-label={t("accountTab.editAria", { name: member.name })}
                       className="p-1.5 rounded-lg hover:bg-muted transition-colors"
                     >
-                      <Send size={14} className="text-status-warn" />
+                      <Pencil size={14} className="text-muted-foreground" />
                     </button>
-                  )}
-                  <button
-                    onClick={() => onEditMember(member)}
-                    aria-label={t("accountTab.editAria", { name: member.name })}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <Pencil size={14} className="text-muted-foreground" />
-                  </button>
-                  {member.is_manager && (
-                    <button
-                      onClick={() => toggleExpand(member.id, member)}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      {isExpanded
-                        ? <ChevronUp size={14} className="text-muted-foreground" />
-                        : <ChevronDown size={14} className="text-muted-foreground" />}
-                    </button>
-                  )}
-                  {member.id !== authMemberId && (
-                    <button
-                      onClick={() => onDeleteMember(member)}
-                      aria-label={t("accountTab.deleteAria", { name: member.name })}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Trash2 size={14} className="text-status-error" />
-                    </button>
-                  )}
+                    {member.is_manager && (
+                      <button
+                        onClick={() => toggleExpand(member.id, member)}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        {isExpanded
+                          ? <ChevronUp size={14} className="text-muted-foreground" />
+                          : <ChevronDown size={14} className="text-muted-foreground" />}
+                      </button>
+                    )}
+                    {member.id !== authMemberId && (
+                      <button
+                        onClick={() => onDeleteMember(member)}
+                        aria-label={t("accountTab.deleteAria", { name: member.name })}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Trash2 size={14} className="text-status-error" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-2 bg-muted/30 space-y-3">
