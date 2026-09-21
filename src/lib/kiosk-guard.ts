@@ -29,6 +29,13 @@ export const KIOSK_DEVICE_STORAGE_KEYS = [
   // here so "Exit kiosk mode" fully un-registers the device too.
   "kiosk_device_id",
   "kiosk_device_token",
+  // Which location kiosk_device_token was issued for — lets ensureKioskDevice
+  // (PinEntryModal.tsx) tell "already registered for this location" apart
+  // from "registered for a location this device used to be pinned to before
+  // a relaunch," so a relaunch to a different location without an explicit
+  // Exit-kiosk step still registers a fresh device instead of silently
+  // reusing the old one (#822).
+  "kiosk_device_location_id",
 ] as const;
 
 export function clearKioskDeviceState(): void {

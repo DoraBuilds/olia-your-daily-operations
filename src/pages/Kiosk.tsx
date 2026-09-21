@@ -51,6 +51,7 @@ function clearKioskLocationSelection() {
   localStorage.removeItem("kiosk_token");
   localStorage.removeItem("kiosk_device_id");
   localStorage.removeItem("kiosk_device_token");
+  localStorage.removeItem("kiosk_device_location_id");
 }
 
 function clearKioskOwnership() {
