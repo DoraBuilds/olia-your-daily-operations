@@ -12,6 +12,7 @@ import { useKioskDevices, useRevokeKioskDevice, type KioskDevice } from "@/hooks
 import { toast } from "@/components/ui/sonner";
 import { ConfirmModal, type ConfirmState } from "./SharedUI";
 import { useState } from "react";
+import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 
 export interface KiosksTabProps {
   concepts: Concept[];
@@ -56,7 +57,18 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
       actionLabel: t("kiosksTab.deactivateConfirmCta"),
       onConfirm: () => {
         revokeMut.mutate(device.id, {
-          onSuccess: () => toast.success(t("kiosksTab.deactivated")),
+          onSuccess: () => {
+            toast.success(t("kiosksTab.deactivated"));
+            // You got into Admin -> Kiosks on some browser; if that browser
+            // happens to be the very device you just deactivated (you PIN'd
+            // in from the kiosk itself), its local "this browser is a
+            // kiosk" state would otherwise keep showing stale until its next
+            // heartbeat, up to 60s away (#824). Never touches the admin
+            // session itself, only the device/location bits.
+            if (localStorage.getItem("kiosk_device_id") === device.id) {
+              clearKioskDeviceState();
+            }
+          },
           onError: (err: Error) => toast.error(t("kiosksTab.deactivateFailed", { error: err.message })),
         });
         setConfirmModal(null);

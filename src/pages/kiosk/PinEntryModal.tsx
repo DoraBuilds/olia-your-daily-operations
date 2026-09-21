@@ -11,6 +11,12 @@ import { captureEvent } from "@/lib/posthog";
 import type { KioskChecklist } from "./types";
 import { useInactivityTimer } from "./hooks";
 
+// Re-exported so Kiosk.tsx's existing import site doesn't need to change —
+// the implementation itself lives in kiosk-guard.ts (pure logic, no UI) so
+// ConceptsTab.tsx (part of the Admin bundle) can use it too without pulling
+// in this file's PIN-modal components.
+export { touchKioskDevice } from "@/lib/kiosk-guard";
+
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
 
 export async function validateKioskAdminPin(pin: string, locationId: string) {
@@ -103,23 +109,6 @@ export async function ensureKioskDevice(locationId: string, label?: string): Pro
     }
   } catch {
     // Non-fatal: this device just won't appear in the fleet list yet.
-  }
-}
-
-// ─── touchKioskDevice ─────────────────────────────────────────────────────────
-// Heartbeat + remote-revocation check, called on an interval from Kiosk.tsx.
-// Returns false only when the device was deactivated from Admin -> Kiosks;
-// any other outcome (no device registered yet, or a network error) is
-// treated as "still fine to run" so a blip never locks out a working kiosk.
-export async function touchKioskDevice(): Promise<boolean> {
-  const token = localStorage.getItem("kiosk_device_token");
-  if (!token) return true;
-  try {
-    const { data, error } = await supabase.rpc("touch_kiosk_device", { p_device_token: token });
-    if (error) return true;
-    return data !== false;
-  } catch {
-    return true;
   }
 }
 
