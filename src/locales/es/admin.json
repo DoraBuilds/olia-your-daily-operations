@@ -36,7 +36,9 @@
     "conceptUpdated": "Concepto actualizado",
     "saveConceptFailed": "No se pudo guardar el concepto: {{error}}",
     "conceptDeleted": "Concepto eliminado",
-    "deleteConceptFailed": "No se pudo eliminar el concepto: {{error}}"
+    "deleteConceptFailed": "No se pudo eliminar el concepto: {{error}}",
+    "activateKioskFailed": "No se pudo activar el kiosco: {{error}}",
+    "linkCopied": "Enlace copiado"
   },
   "confirm": {
     "deleteLocationTitle": "Eliminar ubicación",
@@ -66,6 +68,13 @@
     "launchKioskDeviceLabel": "Nombra este dispositivo (opcional)",
     "launchKioskDeviceLabelPlaceholder": "p. ej. Recepción, Cocina…",
     "launchKioskCta": "Configurar kiosco",
+    "activateKioskTitle": "Activar un kiosco para esta ubicación",
+    "activateKioskMessage": "Esto registra un dispositivo kiosco para {{name}} sin cambiar nada en este navegador. Obtendrás un enlace para abrir en la tablet que realmente lo ejecutará, ahora o más tarde.",
+    "activateKioskCta": "Activar",
+    "activateKioskReadyTitle": "Kiosco activado",
+    "activateKioskReadyMessage": "Abre este enlace en la tablet que debe ejecutar el kiosco de {{name}}. Continuará justo donde se dejó, sin un paso de configuración aparte.",
+    "activateKioskDoneCta": "Listo",
+    "copyLink": "Copiar enlace",
     "typeToConfirm": "Escribe",
     "toConfirm": "para confirmar.",
     "placeholder": "Escribe DELETE"
@@ -116,7 +125,8 @@
     "edit": "Editar",
     "noAlertEmail": "Sin correo de alertas — toca Editar para agregar uno.",
     "mapTitle": "Mapa de la ubicación",
-    "kiosk": "Kiosco",
+    "activateKiosk": "Activar",
+    "runKiosk": "Iniciar kiosco",
     "kioskDeviceActive": "Este navegador está funcionando actualmente como el kiosco de {{name}}.",
     "kioskDeviceActiveFallbackName": "esta ubicación",
     "exitKiosk": "Salir del modo kiosco",

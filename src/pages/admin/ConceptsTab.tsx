@@ -42,14 +42,17 @@ export interface ConceptsTabProps {
   onAddLocation: () => void;
   onEditLocation: (loc: Location) => void;
   onDeleteLocation: (id: string) => void;
-  onLaunchKiosk: () => void;
+  /** This browser becomes the kiosk immediately (navigates to /kiosk). */
+  onRunKiosk: () => void;
+  /** Registers a kiosk device for the location without navigating anywhere — hands back a link to open later, on this browser or another. */
+  onActivateKiosk: () => void;
 }
 
 export function ConceptsTab({
   concepts, locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
-  onAddLocation, onEditLocation, onDeleteLocation, onLaunchKiosk,
+  onAddLocation, onEditLocation, onDeleteLocation, onRunKiosk, onActivateKiosk,
 }: ConceptsTabProps) {
   const { t } = useTranslation("admin");
 
@@ -385,13 +388,21 @@ export function ConceptsTab({
               </div>
             ) : null}
           </div>
-          <button
-            onClick={onLaunchKiosk}
-            className="w-full rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-row items-center justify-center gap-2 shadow-md px-2 py-3"
-          >
-            <span>{t("myLocationTab.kiosk")}</span>
-            <Tablet size={14} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onActivateKiosk}
+              className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase border border-sage text-sage hover:bg-sage/10 transition-colors flex flex-row items-center justify-center gap-2 px-2 py-3"
+            >
+              <span>{t("myLocationTab.activateKiosk")}</span>
+            </button>
+            <button
+              onClick={onRunKiosk}
+              className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-row items-center justify-center gap-2 shadow-md px-2 py-3"
+            >
+              <span>{t("myLocationTab.runKiosk")}</span>
+              <Tablet size={14} />
+            </button>
+          </div>
         </div>
       </div>
 

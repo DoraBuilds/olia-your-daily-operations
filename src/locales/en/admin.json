@@ -36,7 +36,9 @@
     "conceptUpdated": "Concept updated",
     "saveConceptFailed": "Failed to save concept: {{error}}",
     "conceptDeleted": "Concept deleted",
-    "deleteConceptFailed": "Failed to delete concept: {{error}}"
+    "deleteConceptFailed": "Failed to delete concept: {{error}}",
+    "activateKioskFailed": "Could not activate kiosk: {{error}}",
+    "linkCopied": "Link copied"
   },
   "confirm": {
     "deleteLocationTitle": "Delete location",
@@ -66,6 +68,13 @@
     "launchKioskDeviceLabel": "Name this device (optional)",
     "launchKioskDeviceLabelPlaceholder": "e.g. Host stand, Kitchen…",
     "launchKioskCta": "Set up kiosk",
+    "activateKioskTitle": "Activate a kiosk for this location",
+    "activateKioskMessage": "This registers a kiosk device for {{name}} without changing anything about this browser. You'll get a link to open on the tablet that should actually run it — now, or later.",
+    "activateKioskCta": "Activate",
+    "activateKioskReadyTitle": "Kiosk activated",
+    "activateKioskReadyMessage": "Open this link on the tablet that should run the kiosk for {{name}}. It'll pick up right where this stopped — no separate setup step.",
+    "activateKioskDoneCta": "Done",
+    "copyLink": "Copy link",
     "typeToConfirm": "Type",
     "toConfirm": "to confirm.",
     "placeholder": "Type DELETE"
@@ -116,7 +125,8 @@
     "edit": "Edit",
     "noAlertEmail": "No alert email — tap Edit to add one.",
     "mapTitle": "Location map",
-    "kiosk": "Kiosk",
+    "activateKiosk": "Activate",
+    "runKiosk": "Run kiosk",
     "kioskDeviceActive": "This browser is currently running as the kiosk for {{name}}.",
     "kioskDeviceActiveFallbackName": "this location",
     "exitKiosk": "Exit kiosk mode",

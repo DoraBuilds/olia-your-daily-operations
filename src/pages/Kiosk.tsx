@@ -278,6 +278,19 @@ export default function Kiosk() {
       localStorage.setItem("kiosk_owner_user_id", user.id);
       localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
 
+      // "Activate kiosk" (#826) pre-registers a device from Admin, without
+      // navigating anywhere, and hands out a link carrying that device's own
+      // id/token so opening it here adopts the already-created row instead
+      // of ensureKioskDevice (PinEntryModal.tsx's heartbeat effect) minting
+      // a second one for the same physical launch.
+      const urlDeviceId = searchParams.get("deviceId");
+      const urlDeviceToken = searchParams.get("deviceToken");
+      if (urlDeviceId && urlDeviceToken) {
+        localStorage.setItem("kiosk_device_id", urlDeviceId);
+        localStorage.setItem("kiosk_device_token", urlDeviceToken);
+        localStorage.setItem("kiosk_device_location_id", matchedUrlLocation.id);
+      }
+
       // Fetch and store the server-issued kiosk_token for the URL-param setup path (SEQ-009).
       void supabase
         .from("locations")

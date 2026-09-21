@@ -18,6 +18,7 @@ import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, 
 import { useChecklists } from "@/hooks/useChecklists";
 import { toast } from "@/components/ui/sonner";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
+import { supabase } from "@/lib/supabase";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 // Re-export parseGoogleOpeningHours so existing import paths keep working
@@ -28,6 +29,7 @@ import { NotificationsTab } from "./admin/NotificationsTab";
 import { KiosksTab } from "./admin/KiosksTab";
 import {
   ConfirmModal, LocationModal, TeamMemberModal, ConceptModal,
+  BottomSheet, ModalHeader,
   type ConfirmState,
 } from "./admin/SharedUI";
 
@@ -264,21 +266,38 @@ export default function Admin() {
     if (member) saveMemberMut.mutate({ ...member, permissions: perms });
   };
 
-  // Clicking "Kiosk" instantly and permanently turns *this* browser into
+  // Clicking "Run kiosk" instantly and permanently turns *this* browser into
   // the registered kiosk device for the location (see Kiosk.tsx's
   // urlLocationId effect) — with no way to tell that's what's about to
   // happen. A confirmation here is the only guard against someone
   // previewing kiosk mode from their own laptop/phone and getting it
   // silently locked into kiosk mode (#733).
   //
-  // The device-name input below (#818) feeds Admin -> Kiosks, where devices
-  // are told apart by this label rather than just the location name — a
+  // The device-name input (#818) feeds Admin -> Kiosks, where devices are
+  // told apart by this label rather than just the location name — a
   // location can have more than one kiosk (host stand, kitchen, etc). It's
   // an uncontrolled input read via a ref at confirm time rather than state,
   // so typing into it doesn't force a re-render of the modal's own message
-  // JSX (which was already captured by value in the state below).
+  // JSX (which was already captured by value in the state below). Both Run
+  // and Activate share the same ref/input shape.
   const kioskDeviceLabelRef = useRef("");
-  const launchKiosk = () => {
+  const deviceLabelInput = (
+    <div>
+      <label className="block mb-1 text-xs font-medium text-muted-foreground">
+        {t("confirm.launchKioskDeviceLabel")}
+      </label>
+      <input
+        autoFocus
+        type="text"
+        defaultValue=""
+        onChange={e => { kioskDeviceLabelRef.current = e.target.value; }}
+        placeholder={t("confirm.launchKioskDeviceLabelPlaceholder")}
+        className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+
+  const runKiosk = () => {
     const loc = locations.find(l => l.id === currentLocationId);
     kioskDeviceLabelRef.current = "";
     setConfirmModal({
@@ -286,27 +305,52 @@ export default function Admin() {
       message: t("confirm.launchKioskMessage", {
         name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
       }),
-      extra: (
-        <div>
-          <label className="block mb-1 text-xs font-medium text-muted-foreground">
-            {t("confirm.launchKioskDeviceLabel")}
-          </label>
-          <input
-            autoFocus
-            type="text"
-            defaultValue=""
-            onChange={e => { kioskDeviceLabelRef.current = e.target.value; }}
-            placeholder={t("confirm.launchKioskDeviceLabelPlaceholder")}
-            className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-        </div>
-      ),
+      extra: deviceLabelInput,
       actionLabel: t("confirm.launchKioskCta"),
       onConfirm: () => {
         const label = kioskDeviceLabelRef.current.trim();
         const suffix = label ? `&deviceLabel=${encodeURIComponent(label)}` : "";
         navigate(`/kiosk?locationId=${currentLocationId}${suffix}`);
         setConfirmModal(null);
+      },
+    });
+  };
+
+  // "Activate kiosk" (#826): registers a kiosk device for the location right
+  // now, without touching this browser's own kiosk state at all, then hands
+  // back a link (carrying that device's id/token) to open later — on the
+  // actual physical tablet, or right back here. Kiosk.tsx's urlLocationId
+  // effect adopts that id/token directly instead of minting a new device,
+  // so activating now and running the link later never creates duplicates.
+  const [activateKioskLink, setActivateKioskLink] = useState<{ url: string; locationName: string } | null>(null);
+  const activateKiosk = () => {
+    const loc = locations.find(l => l.id === currentLocationId);
+    kioskDeviceLabelRef.current = "";
+    setConfirmModal({
+      title: t("confirm.activateKioskTitle"),
+      message: t("confirm.activateKioskMessage", {
+        name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
+      }),
+      extra: deviceLabelInput,
+      actionLabel: t("confirm.activateKioskCta"),
+      onConfirm: () => {
+        const label = kioskDeviceLabelRef.current.trim();
+        const locationId = currentLocationId;
+        setConfirmModal(null);
+        void (async () => {
+          const { data, error } = await supabase.rpc("register_kiosk_device", {
+            p_location_id: locationId,
+            p_label: label,
+          });
+          const row = data?.[0];
+          if (error || !row) {
+            toast.error(t("toast.activateKioskFailed", { error: error?.message ?? "" }));
+            return;
+          }
+          const base = `${window.location.origin}${import.meta.env.BASE_URL}kiosk`.replace(/\/{2,}/g, "/");
+          const url = `${base}?locationId=${locationId}&deviceId=${row.device_id}&deviceToken=${row.device_token}`;
+          setActivateKioskLink({ url, locationName: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName") });
+        })();
       },
     });
   };
@@ -434,7 +478,8 @@ export default function Admin() {
                     onAddLocation={handleAddLocationClick}
                     onEditLocation={loc => setLocationModal(loc)}
                     onDeleteLocation={deleteLocation}
-                    onLaunchKiosk={launchKiosk}
+                    onRunKiosk={runKiosk}
+                    onActivateKiosk={activateKiosk}
                   />
                 )}
                 {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}
@@ -548,6 +593,39 @@ export default function Admin() {
 
       {confirmModal && (
         <ConfirmModal {...confirmModal} onClose={() => setConfirmModal(null)} />
+      )}
+
+      {activateKioskLink && (
+        <BottomSheet onClose={() => setActivateKioskLink(null)}>
+          <ModalHeader title={t("confirm.activateKioskReadyTitle")} onClose={() => setActivateKioskLink(null)} />
+          <p className="text-sm text-muted-foreground">
+            {t("confirm.activateKioskReadyMessage", { name: activateKioskLink.locationName })}
+          </p>
+          <div className="flex gap-2">
+            <input
+              readOnly
+              value={activateKioskLink.url}
+              onFocus={e => e.target.select()}
+              className="flex-1 min-w-0 border border-border rounded-xl px-3 py-2 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              onClick={() => {
+                void navigator.clipboard.writeText(activateKioskLink.url).then(
+                  () => toast.success(t("toast.linkCopied")),
+                );
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-sage text-primary-foreground hover:bg-sage-deep transition-colors shrink-0"
+            >
+              {t("confirm.copyLink")}
+            </button>
+          </div>
+          <button
+            onClick={() => setActivateKioskLink(null)}
+            className="w-full py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
+          >
+            {t("confirm.activateKioskDoneCta")}
+          </button>
+        </BottomSheet>
       )}
     </>
   );
