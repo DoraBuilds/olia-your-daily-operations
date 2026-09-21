@@ -12,14 +12,14 @@ export function ConceptScopeNotice() {
   if (!concept) return null;
 
   return (
-    <p className="text-xs italic text-muted-foreground">
-      [
+    <p className="text-xs italic text-muted-foreground text-center">
+      (
       <Trans
         i18nKey="conceptFilter.scopeNotice"
         values={{ name: concept.name }}
         components={{ bold: <span className="font-bold text-[hsl(var(--powder-blue-deep))]" /> }}
       />
-      ]
+      )
     </p>
   );
 }
