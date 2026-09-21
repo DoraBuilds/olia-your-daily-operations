@@ -27,7 +27,7 @@ describe("ConceptScopeNotice", () => {
     });
     render(<ConceptScopeNotice />);
     expect(screen.getByText(/Downtown Bistro/)).toBeInTheDocument();
-    expect(screen.getByText(/Concept dropdown in the sidebar/)).toBeInTheDocument();
+    expect(screen.getByText(/change location in the sidebar/)).toBeInTheDocument();
   });
 
   it("renders nothing if the selected concept id no longer matches a known concept", () => {
