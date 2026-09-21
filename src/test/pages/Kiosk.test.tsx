@@ -1927,6 +1927,27 @@ describe("Kiosk — URL param locationId", () => {
     await screen.findByTestId("kiosk-tab-due");
     expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
   });
+
+  // "Activate kiosk" (#826) hands out a link carrying a pre-registered
+  // device's own id/token — opening it should adopt that device directly
+  // rather than ensureKioskDevice minting a fresh one for the same launch.
+  it("adopts a deviceId/deviceToken pair from URL params instead of registering a new device", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+    localStorage.clear();
+    renderWithProviders(<Kiosk />, {
+      initialEntries: [
+        "/kiosk?locationId=00000000-0000-0000-0000-000000000011&deviceId=pre-d1&deviceToken=pre-t1",
+      ],
+    });
+    await screen.findByTestId("kiosk-tab-due");
+
+    await waitFor(() => expect(localStorage.getItem("kiosk_device_id")).toBe("pre-d1"));
+    expect(localStorage.getItem("kiosk_device_token")).toBe("pre-t1");
+    expect(localStorage.getItem("kiosk_device_location_id")).toBe("00000000-0000-0000-0000-000000000011");
+
+    const { supabase } = await import("@/lib/supabase");
+    expect(supabase.rpc).not.toHaveBeenCalledWith("register_kiosk_device", expect.anything());
+  });
 });
 
 describe("Kiosk — survives a transient locations-fetch error", () => {
