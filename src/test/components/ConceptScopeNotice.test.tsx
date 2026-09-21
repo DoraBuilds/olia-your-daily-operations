@@ -20,14 +20,20 @@ describe("ConceptScopeNotice", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows the selected concept's name and points to the sidebar dropdown", () => {
+  it("shows the selected concept's name in bold/teal, bracketed and italic", () => {
     mockUseConceptFilter.mockReturnValue({
       concepts: [{ id: "concept-1", name: "Downtown Bistro" }],
       selectedConceptId: "concept-1",
     });
-    render(<ConceptScopeNotice />);
-    expect(screen.getByText(/Downtown Bistro/)).toBeInTheDocument();
-    expect(screen.getByText(/change location in the sidebar/)).toBeInTheDocument();
+    const { container } = render(<ConceptScopeNotice />);
+
+    const notice = container.querySelector("p");
+    expect(notice).toHaveClass("italic");
+    expect(notice?.textContent).toBe("[Viewing Downtown Bistro — change location in the sidebar]");
+
+    const name = screen.getByText("Downtown Bistro");
+    expect(name.tagName).toBe("SPAN");
+    expect(name).toHaveClass("font-bold");
   });
 
   it("renders nothing if the selected concept id no longer matches a known concept", () => {
