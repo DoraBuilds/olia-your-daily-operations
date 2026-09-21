@@ -17,6 +17,6 @@
   "conceptFilter": {
     "label": "Concepto",
     "allConcepts": "Todos los conceptos",
-    "scopeNotice": "Viendo {{name}} — cambia de ubicación en la barra lateral"
+    "scopeNotice": "Viendo <bold>{{name}}</bold> — cambia de ubicación en la barra lateral"
   }
 }
