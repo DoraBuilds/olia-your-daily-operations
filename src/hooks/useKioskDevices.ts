@@ -29,6 +29,14 @@ export function useKioskDevices() {
       return (data ?? []) as KioskDevice[];
     },
     enabled: !!teamMember?.organization_id,
+    // The app-wide default staleTime is 5 minutes (query-client.ts), which is
+    // wrong for this query specifically: an owner's most common path is
+    // "launch a kiosk, then immediately flip to this tab to confirm it
+    // worked." Without staleTime: 0, a Kiosks tab visited even once earlier
+    // in the session (e.g. before any device existed) would keep serving
+    // that cached empty result for up to 5 minutes on remount, looking like
+    // the launch silently failed.
+    staleTime: 0,
     // Keeps "last seen" fresh while an owner has the Kiosks tab open,
     // without needing a realtime subscription for what's a low-stakes,
     // glanceable status.
