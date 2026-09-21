@@ -22,8 +22,11 @@ import {
   dbToKioskChecklist,
 } from "./kiosk/utils";
 import { KioskSetupScreen } from "./kiosk/KioskSetupScreen";
-import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken, ensureKioskDevice, touchKioskDevice } from "./kiosk/PinEntryModal";
 import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, type KioskStaffSession } from "@/lib/kiosk-staff-session";
+import { clearKioskDeviceState } from "@/lib/kiosk-guard";
+import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { toast } from "@/components/ui/sonner";
 import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
@@ -46,6 +49,8 @@ function clearKioskLocationSelection() {
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
   localStorage.removeItem("kiosk_token");
+  localStorage.removeItem("kiosk_device_id");
+  localStorage.removeItem("kiosk_device_token");
 }
 
 function clearKioskOwnership() {
@@ -620,6 +625,35 @@ export default function Kiosk() {
   useEffect(() => {
     if (!locationId) return;
     void ensureKioskToken(locationId);
+  }, [locationId]);
+
+  // Fleet registry (#818): registers this browser as a named device (once —
+  // see ensureKioskDevice) and, every 60s, checks in with the server. If an
+  // owner deactivated this specific device from Admin -> Kiosks, fall all the
+  // way back to the unconfigured/setup state, same as "Exit kiosk mode".
+  useEffect(() => {
+    if (!locationId) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      await ensureKioskDevice(locationId, searchParams.get("deviceLabel") ?? undefined);
+      const stillActive = await touchKioskDevice();
+      if (cancelled || stillActive) return;
+      clearKioskDeviceState();
+      clearKioskAdminSession();
+      setLocationId(null);
+      setLocationName("");
+      setScreen("grid");
+      setKioskChecklists([]);
+      toast.info(t("deviceDeactivatedNotice"));
+    };
+
+    void tick();
+    const intervalId = window.setInterval(() => void tick(), 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
   }, [locationId]);
 
   const handleSetup = async (id: string, name: string) => {

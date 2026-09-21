@@ -24,6 +24,11 @@ export const KIOSK_DEVICE_STORAGE_KEYS = [
   "kiosk_token",
   "kiosk_owner_user_id",
   "kiosk_owner_org_id",
+  // The fleet-registry identity (#818) — a separate device row per physical
+  // tablet, independent of the location-level kiosk_token above. Included
+  // here so "Exit kiosk mode" fully un-registers the device too.
+  "kiosk_device_id",
+  "kiosk_device_token",
 ] as const;
 
 export function clearKioskDeviceState(): void {

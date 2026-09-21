@@ -5,7 +5,8 @@
     "users": "Usuarios",
     "account": "Cuenta",
     "notifications": "Notificaciones",
-    "billing": "Facturación"
+    "billing": "Facturación",
+    "kiosks": "Kioscos"
   },
   "userLabelFallback": "Admin",
   "roles": {
@@ -61,7 +62,9 @@
     "removeMemberSuffix": "del equipo? Esto no se puede deshacer.",
     "remove": "Quitar",
     "launchKioskTitle": "Configurar este dispositivo como kiosco",
-    "launchKioskMessage": "Este navegador se convertirá en el kiosco de {{name}}: mostrará la pantalla de fichaje en lugar de la app normal, y solo podrás volver a Admin con un PIN. Puedes deshacerlo más tarde desde Admin → Ubicaciones.",
+    "launchKioskMessage": "Este navegador se convertirá en el kiosco de {{name}}: mostrará la pantalla de fichaje en lugar de la app normal, y solo podrás volver a Admin con un PIN. Puedes deshacerlo más tarde desde Admin → Ubicaciones, o de forma remota desde Admin → Kioscos.",
+    "launchKioskDeviceLabel": "Nombra este dispositivo (opcional)",
+    "launchKioskDeviceLabelPlaceholder": "p. ej. Recepción, Cocina…",
     "launchKioskCta": "Configurar kiosco",
     "typeToConfirm": "Escribe",
     "toConfirm": "para confirmar.",
@@ -380,5 +383,26 @@
       "deleting": "Eliminando…",
       "confirmAction": "Sí, eliminar mi cuenta"
     }
+  },
+  "kiosksTab": {
+    "loading": "Cargando…",
+    "heading": "Kioscos",
+    "subtitle": "Todas las tablets que funcionan como kiosco en tus conceptos.",
+    "emptyHeading": "Aún no hay kioscos",
+    "emptyBody": "Configura un kiosco desde la página de una ubicación en la pestaña Conceptos y aparecerá aquí.",
+    "activeNow": "Activo ahora",
+    "neverCheckedIn": "Nunca se ha conectado",
+    "lastSeenMinutes_one": "Visto hace {{count}} minuto",
+    "lastSeenMinutes_other": "Visto hace {{count}} minutos",
+    "lastSeenHours_one": "Visto hace {{count}} hora",
+    "lastSeenHours_other": "Visto hace {{count}} horas",
+    "lastSeenDays_one": "Visto hace {{count}} día",
+    "lastSeenDays_other": "Visto hace {{count}} días",
+    "deactivate": "Desactivar",
+    "deactivateConfirmTitle": "Desactivar este kiosco",
+    "deactivateConfirmMessage": "\"{{label}}\" en {{location}} dejará de funcionar en menos de un minuto y volverá a la pantalla de configuración. Tendrás que volver a configurarlo desde la página de la ubicación.",
+    "deactivateConfirmCta": "Desactivar",
+    "deactivated": "Kiosco desactivado",
+    "deactivateFailed": "No se pudo desactivar: {{error}}"
   }
 }

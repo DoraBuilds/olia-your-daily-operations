@@ -967,6 +967,17 @@ describe("Admin page", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/kiosk?locationId=l1");
     });
 
+    it("includes a typed device name as deviceLabel on the /kiosk navigation", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Kiosk" }));
+      await waitFor(() => expect(screen.getByPlaceholderText(/Host stand/)).toBeInTheDocument());
+      fireEvent.change(screen.getByPlaceholderText(/Host stand/), { target: { value: "Kitchen tablet" } });
+      fireEvent.click(screen.getByText("Set up kiosk"));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/kiosk?locationId=l1&deviceLabel=Kitchen%20tablet");
+    });
+
     it("does not navigate when the confirmation is cancelled", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByRole("button", { name: "Kiosk" })).toBeInTheDocument());

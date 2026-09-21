@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
@@ -25,6 +25,7 @@ export { parseGoogleOpeningHours } from "./admin/shared";
 import { ConceptsTab } from "./admin/ConceptsTab";
 import { AccountTab } from "./admin/AccountTab";
 import { NotificationsTab } from "./admin/NotificationsTab";
+import { KiosksTab } from "./admin/KiosksTab";
 import {
   ConfirmModal, LocationModal, TeamMemberModal, ConceptModal,
   type ConfirmState,
@@ -77,12 +78,13 @@ export default function Admin() {
   const { data: pendingInvites = [] } = useTeamMemberInvites();
 
   // UI state
-  const routeTab: "location" | "users" | "account" | "billing" | "notifications" =
+  const routeTab: "location" | "users" | "account" | "billing" | "notifications" | "kiosks" =
     location.pathname.startsWith("/admin/users") ? "users" :
     location.pathname.startsWith("/admin/account") ? "account" :
     location.pathname.startsWith("/admin/billing") ? "billing" :
-    location.pathname.startsWith("/admin/notifications") ? "notifications" : "location";
-  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing" | "notifications">(routeTab);
+    location.pathname.startsWith("/admin/notifications") ? "notifications" :
+    location.pathname.startsWith("/admin/kiosks") ? "kiosks" : "location";
+  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing" | "notifications" | "kiosks">(routeTab);
   const [currentConceptId, setCurrentConceptId] = useState("");
   const [currentLocationId, setCurrentLocationId] = useState("");
 
@@ -268,16 +270,46 @@ export default function Admin() {
   // happen. A confirmation here is the only guard against someone
   // previewing kiosk mode from their own laptop/phone and getting it
   // silently locked into kiosk mode (#733).
+  //
+  // The device-name input below (#818) feeds Admin -> Kiosks, where devices
+  // are told apart by this label rather than just the location name — a
+  // location can have more than one kiosk (host stand, kitchen, etc). It's
+  // an uncontrolled input read via a ref at confirm time rather than state,
+  // so typing into it doesn't force a re-render of the modal's own message
+  // JSX (which was already captured by value in the state below).
+  const kioskDeviceLabelRef = useRef("");
   const launchKiosk = () => {
     const loc = locations.find(l => l.id === currentLocationId);
+    kioskDeviceLabelRef.current = "";
     setConfirmModal({
       title: t("confirm.launchKioskTitle"),
-      message: t("confirm.launchKioskMessage", {
-        name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
-      }),
+      message: (
+        <div className="space-y-3">
+          <p>
+            {t("confirm.launchKioskMessage", {
+              name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
+            })}
+          </p>
+          <div>
+            <label className="block mb-1 text-xs font-medium text-muted-foreground">
+              {t("confirm.launchKioskDeviceLabel")}
+            </label>
+            <input
+              autoFocus
+              type="text"
+              defaultValue=""
+              onChange={e => { kioskDeviceLabelRef.current = e.target.value; }}
+              placeholder={t("confirm.launchKioskDeviceLabelPlaceholder")}
+              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+      ),
       actionLabel: t("confirm.launchKioskCta"),
       onConfirm: () => {
-        navigate(`/kiosk?locationId=${currentLocationId}`);
+        const label = kioskDeviceLabelRef.current.trim();
+        const suffix = label ? `&deviceLabel=${encodeURIComponent(label)}` : "";
+        navigate(`/kiosk?locationId=${currentLocationId}${suffix}`);
         setConfirmModal(null);
       },
     });
@@ -316,6 +348,7 @@ export default function Admin() {
       { key: "account" as const, label: t("tabs.account") },
       { key: "notifications" as const, label: t("tabs.notifications") },
       { key: "billing" as const, label: t("tabs.billing") },
+      { key: "kiosks" as const, label: t("tabs.kiosks") },
     ] : []),
   ];
 
@@ -412,6 +445,7 @@ export default function Admin() {
                 {activeTab === "account" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="account" />}
                 {activeTab === "notifications" && isOwner && <NotificationsTab />}
                 {activeTab === "billing" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="billing" />}
+                {activeTab === "kiosks" && isOwner && <KiosksTab concepts={concepts} locations={locations} />}
               </>
             );
           })()}
