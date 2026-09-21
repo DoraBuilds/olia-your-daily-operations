@@ -18,8 +18,9 @@ import {
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
-import { clearKioskDeviceState } from "@/lib/kiosk-guard";
+import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { supabase } from "@/lib/supabase";
 import { ConfirmModal, type ConfirmState } from "./SharedUI";
 
 export interface ConceptsTabProps {
@@ -64,6 +65,23 @@ export function ConceptsTab({
   );
   const [kioskDeviceName] = useState(() => localStorage.getItem("kiosk_location_name") ?? "");
   const [confirmingKioskExit, setConfirmingKioskExit] = useState(false);
+
+  // Self-heals a stale banner (#824): this browser may have been marked a
+  // kiosk device, then deactivated remotely from Admin -> Kiosks on a
+  // *different* browser in the meantime — nothing here would otherwise ever
+  // learn that. One check on mount is enough; Kiosk.tsx's own 60s heartbeat
+  // is what keeps an actual running kiosk's local state honest.
+  useEffect(() => {
+    if (!kioskDeviceActive) return;
+    let cancelled = false;
+    void touchKioskDevice().then(stillActive => {
+      if (cancelled || stillActive) return;
+      clearKioskDeviceState();
+      setKioskDeviceActive(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const currentConcept = concepts.find(c => c.id === currentConceptId) ?? concepts[0];
   const conceptLocations = locations.filter(l => l.concept_id === currentConcept?.id);
@@ -195,6 +213,16 @@ export function ConceptsTab({
               </button>
               <button
                 onClick={() => {
+                  // Best-effort: this device stops being treated as a kiosk
+                  // locally either way, but without this the fleet list in
+                  // Admin -> Kiosks would keep showing it as active/idle
+                  // forever after a manual exit (#824) -- the mirror image
+                  // of Deactivate-from-the-fleet-list not clearing the local
+                  // banner. Never block the local exit on the RPC outcome.
+                  const deviceId = localStorage.getItem("kiosk_device_id");
+                  if (deviceId) {
+                    void supabase.rpc("revoke_kiosk_device", { p_device_id: deviceId }).catch(() => {});
+                  }
                   clearKioskDeviceState();
                   clearKioskAdminSession();
                   setKioskDeviceActive(false);

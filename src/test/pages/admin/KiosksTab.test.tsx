@@ -20,6 +20,7 @@ const locations = [
 
 beforeEach(() => {
   mockRevokeMutate.mockReset();
+  localStorage.clear();
 });
 
 describe("KiosksTab", () => {
@@ -66,6 +67,55 @@ describe("KiosksTab", () => {
     const confirmButtons = screen.getAllByText("Deactivate");
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
     await waitFor(() => expect(mockRevokeMutate).toHaveBeenCalledWith("d1", expect.anything()));
+  });
+
+  // Regression (#824): deactivating a device from a browser that's
+  // currently running AS that device left the "this browser is a kiosk"
+  // banner (ConceptsTab) stuck showing stale, since revoke only ever
+  // touched the server. onSuccess must clear this browser's own local
+  // kiosk state when the device it just deactivated is its own.
+  it("clears this browser's own kiosk state when it deactivates the device it's currently running as", async () => {
+    localStorage.setItem("kiosk_device_id", "d1");
+    localStorage.setItem("kiosk_location_id", "l1");
+    mockUseKioskDevices.mockReturnValue({
+      data: [
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+      ],
+      isLoading: false,
+    });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    fireEvent.click(screen.getByText("Deactivate"));
+    const confirmButtons = screen.getAllByText("Deactivate");
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+    await waitFor(() => expect(mockRevokeMutate).toHaveBeenCalled());
+
+    const [, options] = mockRevokeMutate.mock.calls[0];
+    options.onSuccess();
+
+    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+    expect(localStorage.getItem("kiosk_device_id")).toBeNull();
+  });
+
+  it("leaves this browser's own kiosk state alone when deactivating a different device", async () => {
+    localStorage.setItem("kiosk_device_id", "some-other-device");
+    localStorage.setItem("kiosk_location_id", "l1");
+    mockUseKioskDevices.mockReturnValue({
+      data: [
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+      ],
+      isLoading: false,
+    });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    fireEvent.click(screen.getByText("Deactivate"));
+    const confirmButtons = screen.getAllByText("Deactivate");
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+    await waitFor(() => expect(mockRevokeMutate).toHaveBeenCalled());
+
+    const [, options] = mockRevokeMutate.mock.calls[0];
+    options.onSuccess();
+
+    expect(localStorage.getItem("kiosk_location_id")).toBe("l1");
+    expect(localStorage.getItem("kiosk_device_id")).toBe("some-other-device");
   });
 
   it("does not render a location group with zero devices", () => {

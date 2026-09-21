@@ -997,6 +997,9 @@ describe("Admin page", () => {
       localStorage.removeItem("kiosk_token");
       localStorage.removeItem("kiosk_owner_user_id");
       localStorage.removeItem("kiosk_owner_org_id");
+      localStorage.removeItem("kiosk_device_id");
+      localStorage.removeItem("kiosk_device_token");
+      localStorage.removeItem("kiosk_device_location_id");
       sessionStorage.clear();
     });
 
@@ -1064,6 +1067,48 @@ describe("Admin page", () => {
       expect(localStorage.getItem("kiosk_token")).toBeNull();
       await waitFor(() => expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument());
       expect(screen.getByText("Address")).toBeInTheDocument();
+    });
+
+    // Regression (#824): a manual local exit used to leave the device row
+    // active-looking forever in Admin -> Kiosks, since only the local
+    // storage keys were cleared and the server never heard about it.
+    it("revokes the fleet device server-side when the exit is confirmed", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      localStorage.setItem("kiosk_device_id", "d1");
+      const { supabase } = await import("@/lib/supabase");
+      (supabase.rpc as ReturnType<typeof vi.fn>).mockClear();
+
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Exit kiosk mode")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+      await waitFor(() => expect(screen.getByText("Stop treating this device as a kiosk?")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Exit kiosk mode"));
+
+      await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("revoke_kiosk_device", { p_device_id: "d1" }));
+    });
+
+    // Regression (#824): the banner used to have no way of learning that
+    // its own device had been deactivated from elsewhere (a different
+    // browser, or the fleet list) — it just kept showing "running as the
+    // kiosk" forever. One touch_kiosk_device check on mount should now
+    // clear it automatically.
+    it("clears the banner on mount when the server reports this device was deactivated", async () => {
+      localStorage.setItem("kiosk_location_id", "l1");
+      localStorage.setItem("kiosk_location_name", "Main Branch");
+      localStorage.setItem("kiosk_device_token", "revoked-token");
+      const { supabase } = await import("@/lib/supabase");
+      (supabase.rpc as ReturnType<typeof vi.fn>).mockImplementation((fn: string) =>
+        fn === "touch_kiosk_device"
+          ? Promise.resolve({ data: false, error: null })
+          : Promise.resolve({ data: { success: true }, error: null }),
+      );
+
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument());
+      expect(localStorage.getItem("kiosk_location_id")).toBeNull();
+
+      (supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { success: true }, error: null });
     });
 
     it("also revokes a live kiosk-PIN admin session when the exit is confirmed", async () => {
