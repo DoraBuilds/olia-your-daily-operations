@@ -5,7 +5,8 @@
     "users": "Users",
     "account": "Account",
     "notifications": "Notifications",
-    "billing": "Billing"
+    "billing": "Billing",
+    "kiosks": "Kiosks"
   },
   "userLabelFallback": "Admin",
   "roles": {
@@ -61,7 +62,9 @@
     "removeMemberSuffix": "from the team? This cannot be undone.",
     "remove": "Remove",
     "launchKioskTitle": "Set up this device as a kiosk",
-    "launchKioskMessage": "This browser will become the kiosk for {{name}} — it'll run the check-in screen instead of the regular app, and you'll only get back into Admin with a PIN. You can undo this later from Admin → Locations.",
+    "launchKioskMessage": "This browser will become the kiosk for {{name}} — it'll run the check-in screen instead of the regular app, and you'll only get back into Admin with a PIN. You can undo this later from Admin → Locations, or remotely from Admin → Kiosks.",
+    "launchKioskDeviceLabel": "Name this device (optional)",
+    "launchKioskDeviceLabelPlaceholder": "e.g. Host stand, Kitchen…",
     "launchKioskCta": "Set up kiosk",
     "typeToConfirm": "Type",
     "toConfirm": "to confirm.",
@@ -380,5 +383,26 @@
       "deleting": "Deleting…",
       "confirmAction": "Yes, delete my account"
     }
+  },
+  "kiosksTab": {
+    "loading": "Loading…",
+    "heading": "Kiosks",
+    "subtitle": "Every tablet currently running as a kiosk across your concepts.",
+    "emptyHeading": "No kiosks yet",
+    "emptyBody": "Launch a kiosk from a location's detail page in the Concepts tab and it'll show up here.",
+    "activeNow": "Active now",
+    "neverCheckedIn": "Never checked in",
+    "lastSeenMinutes_one": "Last seen {{count}} minute ago",
+    "lastSeenMinutes_other": "Last seen {{count}} minutes ago",
+    "lastSeenHours_one": "Last seen {{count}} hour ago",
+    "lastSeenHours_other": "Last seen {{count}} hours ago",
+    "lastSeenDays_one": "Last seen {{count}} day ago",
+    "lastSeenDays_other": "Last seen {{count}} days ago",
+    "deactivate": "Deactivate",
+    "deactivateConfirmTitle": "Deactivate this kiosk",
+    "deactivateConfirmMessage": "\"{{label}}\" at {{location}} will stop working within a minute and drop back to the setup screen. You'll need to launch it again from the location's page to bring it back.",
+    "deactivateConfirmCta": "Deactivate",
+    "deactivated": "Kiosk deactivated",
+    "deactivateFailed": "Failed to deactivate: {{error}}"
   }
 }

@@ -43,6 +43,8 @@ export function clearKioskLocationSelectionForModal() {
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
   localStorage.removeItem("kiosk_token");
+  localStorage.removeItem("kiosk_device_id");
+  localStorage.removeItem("kiosk_device_token");
 }
 
 // ─── ensureKioskToken ─────────────────────────────────────────────────────────
@@ -66,6 +68,49 @@ export async function ensureKioskToken(locationId: string): Promise<string | nul
     }
   } catch { /* non-fatal */ }
   return null;
+}
+
+// ─── ensureKioskDevice ────────────────────────────────────────────────────────
+// Registers this browser as a named kiosk device for the given location —
+// once. Every code path that clears kiosk_location_id also clears
+// kiosk_device_token in the same pass (see clearKioskLocationSelectionForModal
+// above, its twin in Kiosk.tsx, and KIOSK_DEVICE_STORAGE_KEYS in
+// kiosk-guard.ts), so "a token is already stored" reliably means "already
+// registered for the location currently pinned" — safe to call on every load.
+// Also backfills a device row for kiosks that were pinned before this
+// feature shipped, so they show up in Admin -> Kiosks without a relaunch.
+export async function ensureKioskDevice(locationId: string, label?: string): Promise<void> {
+  if (localStorage.getItem("kiosk_device_token")) return;
+  try {
+    const { data, error } = await supabase.rpc("register_kiosk_device", {
+      p_location_id: locationId,
+      p_label: label ?? "",
+    });
+    const row = data?.[0];
+    if (!error && row) {
+      localStorage.setItem("kiosk_device_id", row.device_id);
+      localStorage.setItem("kiosk_device_token", row.device_token);
+    }
+  } catch {
+    // Non-fatal: this device just won't appear in the fleet list yet.
+  }
+}
+
+// ─── touchKioskDevice ─────────────────────────────────────────────────────────
+// Heartbeat + remote-revocation check, called on an interval from Kiosk.tsx.
+// Returns false only when the device was deactivated from Admin -> Kiosks;
+// any other outcome (no device registered yet, or a network error) is
+// treated as "still fine to run" so a blip never locks out a working kiosk.
+export async function touchKioskDevice(): Promise<boolean> {
+  const token = localStorage.getItem("kiosk_device_token");
+  if (!token) return true;
+  try {
+    const { data, error } = await supabase.rpc("touch_kiosk_device", { p_device_token: token });
+    if (error) return true;
+    return data !== false;
+  } catch {
+    return true;
+  }
 }
 
 // ─── verifyKioskToken ─────────────────────────────────────────────────────────

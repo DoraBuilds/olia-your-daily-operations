@@ -1,5 +1,6 @@
 {
   "systemOnline": "Sistema en línea",
+  "deviceDeactivatedNotice": "Un administrador desactivó este dispositivo. Configúralo de nuevo desde Admin para continuar.",
   "cancel": "Cancelar",
   "close": "Cerrar",
   "stayButton": "Quedarme",

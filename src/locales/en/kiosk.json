@@ -1,5 +1,6 @@
 {
   "systemOnline": "System Online",
+  "deviceDeactivatedNotice": "This device was deactivated by an admin. Set it up again from Admin to continue.",
   "cancel": "Cancel",
   "close": "Close",
   "stayButton": "Stay",
