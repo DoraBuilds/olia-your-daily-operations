@@ -283,26 +283,22 @@ export default function Admin() {
     kioskDeviceLabelRef.current = "";
     setConfirmModal({
       title: t("confirm.launchKioskTitle"),
-      message: (
-        <div className="space-y-3">
-          <p>
-            {t("confirm.launchKioskMessage", {
-              name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
-            })}
-          </p>
-          <div>
-            <label className="block mb-1 text-xs font-medium text-muted-foreground">
-              {t("confirm.launchKioskDeviceLabel")}
-            </label>
-            <input
-              autoFocus
-              type="text"
-              defaultValue=""
-              onChange={e => { kioskDeviceLabelRef.current = e.target.value; }}
-              placeholder={t("confirm.launchKioskDeviceLabelPlaceholder")}
-              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
+      message: t("confirm.launchKioskMessage", {
+        name: loc?.name ?? t("myLocationTab.kioskDeviceActiveFallbackName"),
+      }),
+      extra: (
+        <div>
+          <label className="block mb-1 text-xs font-medium text-muted-foreground">
+            {t("confirm.launchKioskDeviceLabel")}
+          </label>
+          <input
+            autoFocus
+            type="text"
+            defaultValue=""
+            onChange={e => { kioskDeviceLabelRef.current = e.target.value; }}
+            placeholder={t("confirm.launchKioskDeviceLabelPlaceholder")}
+            className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
+          />
         </div>
       ),
       actionLabel: t("confirm.launchKioskCta"),
@@ -345,10 +341,10 @@ export default function Admin() {
     { key: "location" as const, label: t("tabs.locations") },
     ...(isOwner ? [
       { key: "users" as const, label: t("tabs.users") },
-      { key: "account" as const, label: t("tabs.account") },
-      { key: "notifications" as const, label: t("tabs.notifications") },
-      { key: "billing" as const, label: t("tabs.billing") },
       { key: "kiosks" as const, label: t("tabs.kiosks") },
+      { key: "notifications" as const, label: t("tabs.notifications") },
+      { key: "account" as const, label: t("tabs.account") },
+      { key: "billing" as const, label: t("tabs.billing") },
     ] : []),
   ];
 

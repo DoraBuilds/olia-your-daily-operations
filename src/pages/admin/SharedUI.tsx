@@ -94,10 +94,12 @@ export function SaveButton({ disabled, label }: { disabled: boolean; label: stri
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
 export function ConfirmModal({
-  title, message, actionLabel, onClose, onConfirm, requireDeleteText,
+  title, message, actionLabel, onClose, onConfirm, requireDeleteText, extra,
 }: {
   title: string; message: React.ReactNode; actionLabel: string;
   onClose: () => void; onConfirm: () => void; requireDeleteText?: boolean;
+  /** Block-level content (inputs, etc.) rendered below the message — never put block elements in `message` itself, which is wrapped in a <p>. */
+  extra?: React.ReactNode;
 }) {
   const { t } = useTranslation("admin");
   const [deleteText, setDeleteText] = useState("");
@@ -106,6 +108,7 @@ export function ConfirmModal({
     <BottomSheet onClose={onClose}>
       <ModalHeader title={title} onClose={onClose} />
       <p className="text-sm text-muted-foreground">{message}</p>
+      {extra}
       {requireDeleteText && (
         <div>
           <p className="text-xs text-muted-foreground">
@@ -559,4 +562,5 @@ export type ConfirmState = {
   actionLabel: string;
   onConfirm: () => void;
   requireDeleteText?: boolean;
+  extra?: React.ReactNode;
 } | null;
