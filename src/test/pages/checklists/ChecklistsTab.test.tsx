@@ -176,10 +176,9 @@ describe("ChecklistsTab", () => {
     });
   });
 
-  it("shows location filter dropdown", () => {
+  it("shows the Filters toggle next to search", () => {
     render(<ChecklistsTab />, { wrapper });
-    // Location dropdown is the filter control
-    expect(screen.getByText("All locations")).toBeInTheDocument();
+    expect(screen.getByTestId("checklists-filters-toggle")).toHaveTextContent("Filters");
   });
 
   it("shows a Draft badge for unpublished checklists but not published ones", async () => {
