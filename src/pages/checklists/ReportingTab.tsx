@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
-import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
+import { type MultiSelectOption } from "@/components/MultiSelectFilter";
+import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useActions } from "@/hooks/useActions";
@@ -480,6 +480,20 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     .filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0 || checklistSearch.trim().length > 0;
 
+  // Applied panel filters as removable chips (the date shows on the export row instead).
+  const departmentNames = useRef(new Map<string, string>());
+  availableDepartments.forEach(d => departmentNames.current.set(d.id, d.name));
+  const statusLabel: Record<StatusFilter, string> = {
+    all: "", completed: t("reporting.stats.completed"), unfinished: t("reporting.stats.unfinished"), unstarted: t("reporting.stats.unstarted"),
+  };
+  const filterChips: ActiveFilterChip[] = [
+    ...conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => setConceptIds(prev => prev.filter(x => x !== id)) })),
+    ...locationIds.map(id => ({ key: `l-${id}`, label: locationNameById.get(id) ?? id, onRemove: () => setLocationIds(prev => prev.filter(x => x !== id)) })),
+    ...departmentIds.map(id => ({ key: `d-${id}`, label: departmentNames.current.get(id) ?? id, onRemove: () => setDepartmentIds(prev => prev.filter(x => x !== id)) })),
+    ...userIds.map(id => ({ key: `u-${id}`, label: teamMembers.find(m => m.id === id)?.name ?? id, onRemove: () => setUserIds(prev => prev.filter(x => x !== id)) })),
+    ...(statusFilter === "all" ? [] : [{ key: "status", label: statusLabel[statusFilter], onRemove: () => setStatusFilter("all") }]),
+  ];
+
   const completedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score !== null).length, [filteredChecklistLogs]);
   const unfinishedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score === null).length, [filteredChecklistLogs]);
   const unstartedCount = unstartedChecklists.length;
@@ -545,10 +559,14 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     <>
       {/* ── Toolbar: checklist search + Filters toggle ── */}
       <div className="space-y-2">
-      <PopoverPrimitive.Root open={filtersOpen} onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}>
-      <PopoverPrimitive.Anchor asChild>
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
+      <FiltersPopover
+        testIdPrefix="reporting"
+        open={filtersOpen}
+        onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}
+        activeCount={activeFilterCount}
+        onClear={() => setDraft(DEFAULT_PANEL_FILTERS)}
+        onApply={applyFilters}
+        search={<>
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             data-testid="reporting-checklist-search"
@@ -563,43 +581,9 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
           <datalist id="reporting-checklist-options">
             {checklistOptions.map(name => <option key={name} value={name} />)}
           </datalist>
-        </div>
-        <PopoverPrimitive.Trigger asChild>
-        <button
-          type="button"
-          data-testid="reporting-filters-toggle"
-          className={cn(
-            "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
-            filtersOpen || activeFilterCount > 0
-              ? "bg-sage text-white border-sage"
-              : "border-border text-foreground hover:border-sage/40"
-          )}
-        >
-          <Plus size={14} className={cn("transition-transform", filtersOpen && "rotate-45")} />
-          {t("reporting.filters.button")}
-          {activeFilterCount > 0 && (
-            <span data-testid="reporting-filters-count" className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-        </PopoverPrimitive.Trigger>
-      </div>
-      </PopoverPrimitive.Anchor>
-
-      {/* Floats over the report instead of pushing it down; nested pickers
-          (multi-selects, calendar) portal above it at z-[60]. */}
-      <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Content
-        data-testid="reporting-filters-panel"
-        align="end"
-        sideOffset={8}
-        collisionPadding={16}
-        onOpenAutoFocus={e => e.preventDefault()}
-        className="z-50 w-[var(--radix-popover-trigger-width)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto bg-card border border-border rounded-[20px] p-4 space-y-3 shadow-xl outline-none"
+        </>}
       >
-        <div className="space-y-1">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.date")}</span>
+        <FilterField label={t("reporting.filters.date")} className="md:col-span-2">
           <div className="flex flex-wrap gap-1.5">
             {([
               { key: "today" as Period, label: t("reporting.period.today") },
@@ -649,118 +633,73 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               </PopoverContent>
             </Popover>
           </div>
-      </div>
-        <div className="grid gap-2 md:grid-cols-3">
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
-            <MultiSelectFilter
-              testId="reporting-concept-filter"
-              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
-              selected={draft.conceptIds}
-              onChange={ids => updateDraft({ conceptIds: ids })}
-              allLabel={t("reporting.filters.allConcepts")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allConcepts")}
-            />
+        </FilterField>
+        <FilterField label={t("reporting.filters.concept")}>
+          <FilterMultiSelect
+            testId="reporting-concept-filter"
+            icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+            options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+            selected={draft.conceptIds}
+            onChange={ids => updateDraft({ conceptIds: ids })}
+            allLabel={t("reporting.filters.allConcepts")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.location")}>
+          <FilterMultiSelect
+            testId="reporting-location-filter"
+            icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+            options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+            selected={draft.locationIds}
+            onChange={ids => updateDraft({ locationIds: ids })}
+            allLabel={t("reporting.filters.allLocations")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.department")}>
+          <FilterMultiSelect
+            testId="reporting-department-filter"
+            icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+            options={availableDepartments.map((d): MultiSelectOption => ({ id: d.id, label: d.name }))}
+            selected={draft.departmentIds}
+            onChange={ids => updateDraft({ departmentIds: ids })}
+            allLabel={t("reporting.filters.allDepartments")}
+            noOptionsLabel={t("reporting.filters.noDepartments")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.user")}>
+          <FilterMultiSelect
+            testId="reporting-user-filter"
+            icon={<User size={14} className="text-muted-foreground shrink-0" />}
+            options={[...teamMembers]
+              .sort((x, y) => x.name.localeCompare(y.name))
+              .map((m): MultiSelectOption => ({ id: m.id, label: m.name }))}
+            selected={draft.userIds}
+            onChange={ids => updateDraft({ userIds: ids })}
+            allLabel={t("reporting.filters.allUsers")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.status")}>
+          <div className="relative">
+            <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <select
+              data-testid="reporting-status-filter"
+              value={draft.status}
+              onChange={e => updateDraft({ status: e.target.value as StatusFilter })}
+              className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="all">{t("reporting.filters.allStatuses")}</option>
+              <option value="completed">{t("reporting.stats.completed")}</option>
+              <option value="unfinished">{t("reporting.stats.unfinished")}</option>
+              <option value="unstarted">{t("reporting.stats.unstarted")}</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
-            <MultiSelectFilter
-              testId="reporting-location-filter"
-              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
-              options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
-              selected={draft.locationIds}
-              onChange={ids => updateDraft({ locationIds: ids })}
-              allLabel={t("reporting.filters.allLocations")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allLocations")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
-            <MultiSelectFilter
-              testId="reporting-department-filter"
-              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
-              options={availableDepartments.map((d): MultiSelectOption => ({
-                id: d.id,
-                label: d.name,
-              }))}
-              selected={draft.departmentIds}
-              onChange={ids => updateDraft({ departmentIds: ids })}
-              allLabel={t("reporting.filters.allDepartments")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.noDepartments")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.user")}</span>
-            <MultiSelectFilter
-              testId="reporting-user-filter"
-              icon={<User size={14} className="text-muted-foreground shrink-0" />}
-              options={[...teamMembers]
-                .sort((x, y) => x.name.localeCompare(y.name))
-                .map((m): MultiSelectOption => ({ id: m.id, label: m.name }))}
-              selected={draft.userIds}
-              onChange={ids => updateDraft({ userIds: ids })}
-              allLabel={t("reporting.filters.allUsers")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allUsers")}
-            />
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
-            <div className="relative">
-              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <select
-                data-testid="reporting-status-filter"
-                value={draft.status}
-                onChange={e => updateDraft({ status: e.target.value as StatusFilter })}
-                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="all">{t("reporting.filters.allStatuses")}</option>
-                <option value="completed">{t("reporting.stats.completed")}</option>
-                <option value="unfinished">{t("reporting.stats.unfinished")}</option>
-                <option value="unstarted">{t("reporting.stats.unstarted")}</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </label>
-        </div>
-        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-          <button
-            data-testid="reporting-clear-filters"
-            type="button"
-            onClick={() => setDraft(DEFAULT_PANEL_FILTERS)}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            <X size={12} />
-            {t("reporting.filters.clear")}
-          </button>
-          <button
-            data-testid="reporting-apply-filters"
-            type="button"
-            onClick={applyFilters}
-            className="rounded-full bg-sage px-5 py-2 text-sm font-semibold text-white hover:bg-sage/90 transition-colors"
-          >
-            {t("reporting.filters.apply")}
-          </button>
-        </div>
-      </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-      </PopoverPrimitive.Root>
+        </FilterField>
+      </FiltersPopover>
+      <ActiveFilterChips
+        testIdPrefix="reporting"
+        chips={filterChips}
+        onClearAll={() => { setConceptIds([]); setLocationIds([]); setDepartmentIds([]); setUserIds([]); setStatusFilter("all"); }}
+      />
 
       {/* Period + result count, with export */}
       <div className="flex items-center justify-between gap-2">

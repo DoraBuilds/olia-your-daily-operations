@@ -442,3 +442,46 @@ describe("ReportingTab search + Filters toolbar", () => {
     expect(screen.getByTestId("reporting-concept-filter-trigger")).toHaveTextContent("All concepts");
   });
 });
+
+describe("ReportingTab applied-filter chips", () => {
+  beforeEach(() => {
+    queryState.locationsLoaded = true;
+    queryState.departmentsFetching = false;
+  });
+
+  it("shows no chips until filters are applied", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.queryByTestId("reporting-active-filters")).not.toBeInTheDocument();
+  });
+
+  it("shows a chip per applied filter and removing one drops only that filter", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectConceptA();
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    applyFilters();
+
+    const chips = screen.getByTestId("reporting-active-filters");
+    expect(chips).toHaveTextContent("Concept A");
+    expect(chips).toHaveTextContent("Completed");
+    expect(screen.getByTestId("reporting-filters-count")).toHaveTextContent("2");
+
+    fireEvent.click(screen.getByLabelText("Remove filter: Concept A"));
+    expect(screen.getByTestId("reporting-filters-count")).toHaveTextContent("1");
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+  });
+
+  it("Clear all removes the chips but keeps the selected date period", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByText("This Month"));
+    selectConceptA();
+    applyFilters();
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Month");
+
+    fireEvent.click(screen.getByTestId("reporting-clear-all-filters"));
+    expect(screen.queryByTestId("reporting-active-filters")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reporting-filters-count")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Month");
+  });
+});
