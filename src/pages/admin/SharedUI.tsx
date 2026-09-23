@@ -170,13 +170,9 @@ export function TeamMemberModal({
   const [showRevealedPin, setShowRevealedPin] = useState(false);
   const [revealLoading, setRevealLoading] = useState(false);
 
-  // Department rows are scoped per-location, but a manager can cover several
-  // locations (e.g. two sites sharing a department structure) — offer every
-  // department across all their assigned locations rather than hiding the
-  // picker once they have more than one (#776).
+  // Departments are company-wide (#838); offer every department that applies
+  // to at least one of the member's selected locations.
   const { data: assignedDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(locationIds);
-  const locationById = new Map(locations.map(l => [l.id, l.name]));
-  const multipleLocations = locationIds.length > 1;
 
   // Drop any stale picks once we know they no longer belong to any currently
   // selected location (e.g. that location was just deselected) — the toggle
@@ -300,7 +296,7 @@ export function TeamMemberModal({
                           : "border-border text-muted-foreground hover:border-sage/40",
                       )}
                     >
-                      {multipleLocations ? `${dep.name} — ${locationById.get(dep.location_id) ?? ""}` : dep.name}
+                      {dep.name}
                     </button>
                   ))}
                 </div>

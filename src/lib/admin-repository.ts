@@ -82,6 +82,26 @@ export interface Location {
   place_id?: string | null;
 }
 
+/** A company-wide department (#838). Where it applies is set by its assignments. */
+export interface Department {
+  id: string;
+  name: string;
+}
+
+/**
+ * Both null = every location in the company; concept_id with location_id null
+ * = every location in the concept. Both include locations added later.
+ */
+export interface DepartmentAssignment {
+  concept_id: string | null;
+  location_id: string | null;
+}
+
+export interface CompanyDepartment extends Department {
+  assignments: DepartmentAssignment[];
+}
+
+/** A department resolved to one location it applies to (the location_departments view). */
 export interface LocationDepartment {
   id: string;
   location_id: string;

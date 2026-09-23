@@ -365,12 +365,11 @@ export function ChecklistBuilderModal({
     return loc.name.toLowerCase().includes(q) || (loc.address || "").toLowerCase().includes(q);
   });
 
-  // Departments are scoped per-location: "all locations" mode offers every
-  // department across the org, "specific" mode narrows to the chosen ones.
+  // Offer the departments that apply to the targeted locations (#838):
+  // "all locations" mode offers every department assigned anywhere in scope,
+  // "specific" mode narrows to the chosen locations.
   const departmentLocationIds = locationMode === "all" ? dbLocations.map(loc => loc.id) : selectedLocationIds;
   const { data: availableDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(departmentLocationIds);
-  const locationNameById = new Map(dbLocations.map(loc => [loc.id, loc.name]));
-  const multipleDepartmentLocations = departmentLocationIds.length > 1;
   const selectedDepartments = availableDepartments.filter(dep => selectedDepartmentIds.includes(dep.id));
 
   // Drop stale picks once a department no longer belongs to the currently
@@ -814,7 +813,7 @@ export function ChecklistBuilderModal({
                         {selected ? <CheckSquare size={16} /> : <Square size={16} />}
                       </div>
                       <p className="text-sm font-medium truncate">
-                        {multipleDepartmentLocations ? `${dep.name} — ${locationNameById.get(dep.location_id) ?? ""}` : dep.name}
+                        {dep.name}
                       </p>
                     </button>
                   );
