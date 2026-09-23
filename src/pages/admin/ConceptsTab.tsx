@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Building2, UtensilsCrossed, MapPin, Mail, Pencil, Trash2, Plus,
-  ChevronDown, Tablet, MoreVertical, X, UserMinus,
+  ChevronDown, Tablet, MoreVertical, UserMinus, Layers, MinusCircle,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -242,10 +242,14 @@ export function ConceptsTab({
         onDeleteLocation={isOwner ? () => onDeleteLocation(currentLocation.id) : undefined}
       />
 
-      {/* Departments */}
-      <div className="card-surface p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="section-label">{t("conceptsTab.departments")}</p>
+      {/* Departments — listed like Team members below */}
+      <div className="card-surface p-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="section-label">
+            {departments.length > 0
+              ? t("conceptsTab.departmentsWithCount", { count: departments.length })
+              : t("conceptsTab.departments")}
+          </p>
           {isOwner && (
             <AddDepartmentMenu
               options={addableDepartments}
@@ -256,28 +260,40 @@ export function ConceptsTab({
           )}
         </div>
         {departments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
+          <p className="text-sm text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {departments.map(dep => (
-              <span key={dep.id} className="inline-flex items-center gap-1 rounded-full bg-muted pl-2.5 pr-1 py-1 text-xs text-foreground">
-                {dep.name}
-                {isOwner ? (
-                  <button
-                    onClick={() => confirmRemoveDepartment(dep.id)}
-                    aria-label={t("conceptsTab.removeDepartmentAria", { name: dep.name })}
-                    className="p-0.5 rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
-                  >
-                    <X size={12} />
-                  </button>
-                ) : <span className="w-1.5" />}
-              </span>
-            ))}
+          <div className="space-y-1">
+            {departments.map(dep => {
+              const staffHere = locationTeamMembers.filter(m => m.department_ids.includes(dep.id)).length;
+              return (
+                <div key={dep.id} className="flex items-center gap-2 py-0.5">
+                  <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-sage-deep shrink-0">
+                    <Layers size={13} />
+                  </div>
+                  <p className="text-sm text-foreground flex-1 min-w-0 truncate">{dep.name}</p>
+                  {staffHere > 0 && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {t("departmentsTab.staffCount", { count: staffHere })}
+                    </span>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={() => confirmRemoveDepartment(dep.id)}
+                      aria-label={t("conceptsTab.removeDepartmentAria", { name: dep.name })}
+                      title={t("conceptsTab.removeFromLocation")}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                    >
+                      <MinusCircle size={14} className="text-status-error" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Kiosks */}
+      {/* Devices (kiosks) */}
       <div className="card-surface overflow-hidden">
         <div className="flex items-center justify-between gap-2 flex-wrap p-4">
           <p className="section-label">

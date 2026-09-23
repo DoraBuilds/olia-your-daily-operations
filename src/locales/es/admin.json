@@ -7,7 +7,7 @@
     "account": "Cuenta",
     "notifications": "Notificaciones",
     "billing": "Facturación",
-    "kiosks": "Kioscos"
+    "kiosks": "Dispositivos"
   },
   "userLabelFallback": "Admin",
   "roles": {
@@ -180,16 +180,17 @@
     "removeDepartmentAria": "Quitar {{name}} de esta ubicación",
     "removeDepartmentTitle": "Quitar departamento de esta ubicación",
     "removeDepartmentMessage": "{{name}} dejará de aplicarse en {{location}}. Se mantiene en el resto de sitios donde está asignado.",
-    "kiosks": "Kioscos",
-    "kiosksWithCount": "Kioscos ({{count}})",
-    "noKiosks": "Aún no hay kioscos en esta ubicación.",
+    "kiosks": "Dispositivos",
+    "kiosksWithCount": "Dispositivos ({{count}})",
+    "noKiosks": "Aún no hay dispositivos en esta ubicación.",
     "addTeamMember": "Añadir",
     "removeFromLocation": "Quitar de la ubicación",
     "removeTeamMemberAria": "Quitar a {{name}} de {{location}}",
     "locationLabel": "Ubicación",
     "locationOptionsAria": "Opciones de ubicación",
     "editLocation": "Editar ubicación",
-    "noAddressYet": "Aún no hay dirección registrada."
+    "noAddressYet": "Aún no hay dirección registrada.",
+    "departmentsWithCount": "Departamentos ({{count}})"
   },
   "departmentsTab": {
     "add": "Añadir departamento",
@@ -438,9 +439,9 @@
   },
   "kiosksTab": {
     "loading": "Cargando…",
-    "heading": "Kioscos",
-    "emptyHeading": "Aún no hay kioscos",
-    "emptyBody": "Configura un kiosco desde la página de una ubicación en la pestaña Conceptos y aparecerá aquí.",
+    "heading": "Dispositivos",
+    "emptyHeading": "Aún no hay dispositivos",
+    "emptyBody": "Activa o inicia un kiosco desde una ubicación en la pestaña Conceptos y el dispositivo aparecerá aquí.",
     "activeNow": "Activo ahora",
     "neverCheckedIn": "Nunca se ha conectado",
     "lastSeenMinutes_one": "Visto hace {{count}} minuto",
@@ -450,7 +451,7 @@
     "lastSeenDays_one": "Visto hace {{count}} día",
     "lastSeenDays_other": "Visto hace {{count}} días",
     "deactivate": "Desactivar",
-    "deactivateConfirmTitle": "Desactivar este kiosco",
+    "deactivateConfirmTitle": "Desactivar este dispositivo",
     "deactivateConfirmMessage": "\"{{label}}\" en {{location}} dejará de funcionar en menos de un minuto y volverá a la pantalla de configuración. Tendrás que volver a configurarlo desde la página de la ubicación.",
     "deactivateConfirmCta": "Desactivar",
     "deactivated": "Kiosco desactivado",

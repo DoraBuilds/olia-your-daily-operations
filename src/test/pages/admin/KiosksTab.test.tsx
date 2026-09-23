@@ -27,7 +27,7 @@ describe("KiosksTab", () => {
   it("shows the empty state when there are no devices", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
-    expect(screen.getByText("No kiosks yet")).toBeInTheDocument();
+    expect(screen.getByText("No devices yet")).toBeInTheDocument();
   });
 
   it("groups devices under their concept and location", () => {
