@@ -7,6 +7,7 @@ import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useChecklists } from "@/hooks/useChecklists";
@@ -161,6 +162,23 @@ function isChecklistAssignedTo(
   return true;
 }
 
+type StatusFilter = "all" | "completed" | "unfinished" | "unstarted";
+
+/** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
+interface PanelFilters {
+  period: Period;
+  dateRange: DateRange | undefined;
+  conceptIds: string[];
+  locationIds: string[];
+  departmentIds: string[];
+  userIds: string[];
+  status: StatusFilter;
+}
+
+const DEFAULT_PANEL_FILTERS: PanelFilters = {
+  period: "today", dateRange: undefined, conceptIds: [], locationIds: [], departmentIds: [], userIds: [], status: "all",
+};
+
 export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
@@ -177,7 +195,11 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const [userIds, setUserIds] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [checklistSearch, setChecklistSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">(initialStatus ?? "all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus ?? "all");
+  // Staged edits inside the Filters popover — copied from the applied filters
+  // on open, committed on Apply, discarded if the popover is dismissed.
+  const [draft, setDraft] = useState<PanelFilters>(DEFAULT_PANEL_FILTERS);
+  const updateDraft = (patch: Partial<PanelFilters>) => setDraft(prev => ({ ...prev, ...patch }));
 
   useEffect(() => {
     const next = initialLocationId ? [initialLocationId] : [];
@@ -201,36 +223,54 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     [allLocations, conceptIds],
   );
 
-  // If the concept selection changes out from under a specific location pick,
-  // drop the locations that no longer apply rather than silently showing an
-  // empty report. Waits for locations to load so a deep-linked
-  // initialLocationId isn't dropped before the list arrives, and keeps the same
-  // array when nothing changed to avoid a re-render loop.
-  useEffect(() => {
-    if (!locationsLoaded) return;
-    setLocationIds(prev => {
-      const next = prev.filter(id => conceptScopedLocations.some(l => l.id === id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [locationsLoaded, conceptScopedLocations]);
-
-  // Departments are scoped per-location — union across whichever locations are
-  // currently in scope (the specific ones picked, or every concept-scoped one).
+  // The popover's pickers work off the draft: the location list narrows to the
+  // draft concept(s), and departments are the union across the draft's
+  // locations in scope (the specific ones picked, or every concept-scoped one).
+  const draftConceptScopedLocations = useMemo(
+    () => draft.conceptIds.length === 0 ? allLocations : allLocations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [allLocations, draft.conceptIds],
+  );
   const departmentLocationIds = useMemo(
-    () => (locationIds.length > 0 ? locationIds : conceptScopedLocations.map(l => l.id)),
-    [locationIds, conceptScopedLocations],
+    () => (draft.locationIds.length > 0 ? draft.locationIds : draftConceptScopedLocations.map(l => l.id)),
+    [draft.locationIds, draftConceptScopedLocations],
   );
   const { data: availableDepartments = [], isFetching: departmentsFetching } = useDepartmentsForLocations(departmentLocationIds);
+
+  // If a draft concept change removes a picked location, drop it rather than
+  // silently showing an empty report. Waits for locations to load, and keeps
+  // the same object when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    if (!locationsLoaded) return;
+    setDraft(prev => {
+      const next = prev.locationIds.filter(id => draftConceptScopedLocations.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [locationsLoaded, draftConceptScopedLocations]);
 
   // Same pruning for departments — skipped while the list is refetching for a
   // new location set, so existing picks aren't wiped mid-load.
   useEffect(() => {
     if (departmentsFetching) return;
-    setDepartmentIds(prev => {
-      const next = prev.filter(id => availableDepartments.some(d => d.id === id));
-      return next.length === prev.length ? prev : next;
+    setDraft(prev => {
+      const next = prev.departmentIds.filter(id => availableDepartments.some(d => d.id === id));
+      return next.length === prev.departmentIds.length ? prev : { ...prev, departmentIds: next };
     });
   }, [departmentsFetching, availableDepartments]);
+
+  const openFiltersPanel = () => {
+    setDraft({ period, dateRange, conceptIds, locationIds, departmentIds, userIds, status: statusFilter });
+    setFiltersOpen(true);
+  };
+  const applyFilters = () => {
+    setPeriod(draft.period);
+    setDateRange(draft.dateRange);
+    setConceptIds(draft.conceptIds);
+    setLocationIds(draft.locationIds);
+    setDepartmentIds(draft.departmentIds);
+    setUserIds(draft.userIds);
+    setStatusFilter(draft.status);
+    setFiltersOpen(false);
+  };
 
   // null = no restriction (every location / department); a narrower array
   // once a concept and/or specific locations/departments are picked.
@@ -409,9 +449,9 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
       : t("reporting.period.customRange");
 
   const pickerLabel =
-    dateRange?.from && dateRange?.to
-      ? `${format(dateRange.from, "d MMM")} – ${format(dateRange.to, "d MMM")}`
-      : dateRange?.from ? format(dateRange.from, "d MMM yyyy")
+    draft.dateRange?.from && draft.dateRange?.to
+      ? `${format(draft.dateRange.from, "d MMM")} – ${format(draft.dateRange.to, "d MMM")}`
+      : draft.dateRange?.from ? format(draft.dateRange.from, "d MMM yyyy")
       : t("reporting.period.custom");
 
   const reportRows = useMemo(
@@ -444,6 +484,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     <>
       {/* ── Toolbar: checklist search + Filters toggle ── */}
       <div className="space-y-2">
+      <PopoverPrimitive.Root open={filtersOpen} onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}>
+      <PopoverPrimitive.Anchor asChild>
       <div className="flex items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -461,12 +503,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             {checklistOptions.map(name => <option key={name} value={name} />)}
           </datalist>
         </div>
+        <PopoverPrimitive.Trigger asChild>
         <button
           type="button"
           data-testid="reporting-filters-toggle"
-          aria-expanded={filtersOpen}
-          aria-controls="reporting-filters-panel"
-          onClick={() => setFiltersOpen(o => !o)}
           className={cn(
             "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
             filtersOpen || activeFilterCount > 0
@@ -482,10 +522,21 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </span>
           )}
         </button>
+        </PopoverPrimitive.Trigger>
       </div>
+      </PopoverPrimitive.Anchor>
 
-      {filtersOpen && (
-      <div id="reporting-filters-panel" data-testid="reporting-filters-panel" className="bg-card border border-border rounded-[20px] p-4 space-y-3">
+      {/* Floats over the report instead of pushing it down; nested pickers
+          (multi-selects, calendar) portal above it at z-[60]. */}
+      <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        data-testid="reporting-filters-panel"
+        align="end"
+        sideOffset={8}
+        collisionPadding={16}
+        onOpenAutoFocus={e => e.preventDefault()}
+        className="z-50 w-[var(--radix-popover-trigger-width)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto bg-card border border-border rounded-[20px] p-4 space-y-3 shadow-xl outline-none"
+      >
         <div className="space-y-1">
           <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.date")}</span>
           <div className="flex flex-wrap gap-1.5">
@@ -495,10 +546,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               { key: "month" as Period, label: t("reporting.period.month") },
             ]).map(({ key, label }) => (
               <button key={key}
-                onClick={() => { setPeriod(key); setDateRange(undefined); setCalOpen(false); }}
+                onClick={() => { updateDraft({ period: key, dateRange: undefined }); setCalOpen(false); }}
                 className={cn(
                   "shrink-0 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-                  period === key
+                  draft.period === key
                     ? "bg-sage text-white border-sage"
                     : "border-border text-muted-foreground hover:border-sage/40"
                 )}
@@ -511,23 +562,22 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                 <button
                   className={cn(
                     "shrink-0 flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-                    period === "custom" && dateRange?.from
+                    draft.period === "custom" && draft.dateRange?.from
                       ? "bg-sage text-white border-sage"
                       : "border-border text-muted-foreground hover:border-sage/40"
                   )}
-                  onClick={() => setPeriod("custom")}
+                  onClick={() => updateDraft({ period: "custom" })}
                 >
                   <CalendarIcon size={12} />
-                  {period === "custom" && dateRange?.from ? pickerLabel : t("reporting.period.custom")}
+                  {draft.period === "custom" && draft.dateRange?.from ? pickerLabel : t("reporting.period.custom")}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 z-[60]" align="start">
                 <CalendarPicker
                   mode="range"
-                  selected={dateRange}
+                  selected={draft.dateRange}
                   onSelect={r => {
-                    setDateRange(r);
-                    if (r?.from) setPeriod("custom");
+                    updateDraft(r?.from ? { dateRange: r, period: "custom" } : { dateRange: r });
                     if (r?.from && r?.to) setCalOpen(false);
                   }}
                   numberOfMonths={1}
@@ -546,8 +596,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               testId="reporting-concept-filter"
               icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
               options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
-              selected={conceptIds}
-              onChange={setConceptIds}
+              selected={draft.conceptIds}
+              onChange={ids => updateDraft({ conceptIds: ids })}
               allLabel={t("reporting.filters.allConcepts")}
               renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
               searchPlaceholder={t("reporting.filters.searchPlaceholder")}
@@ -561,9 +611,9 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             <MultiSelectFilter
               testId="reporting-location-filter"
               icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
-              options={conceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
-              selected={locationIds}
-              onChange={setLocationIds}
+              options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+              selected={draft.locationIds}
+              onChange={ids => updateDraft({ locationIds: ids })}
               allLabel={t("reporting.filters.allLocations")}
               renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
               searchPlaceholder={t("reporting.filters.searchPlaceholder")}
@@ -582,8 +632,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                 label: d.name,
                 sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
               }))}
-              selected={departmentIds}
-              onChange={setDepartmentIds}
+              selected={draft.departmentIds}
+              onChange={ids => updateDraft({ departmentIds: ids })}
               allLabel={t("reporting.filters.allDepartments")}
               renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
               searchPlaceholder={t("reporting.filters.searchPlaceholder")}
@@ -600,8 +650,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               options={[...teamMembers]
                 .sort((x, y) => x.name.localeCompare(y.name))
                 .map((m): MultiSelectOption => ({ id: m.id, label: m.name }))}
-              selected={userIds}
-              onChange={setUserIds}
+              selected={draft.userIds}
+              onChange={ids => updateDraft({ userIds: ids })}
               allLabel={t("reporting.filters.allUsers")}
               renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
               searchPlaceholder={t("reporting.filters.searchPlaceholder")}
@@ -616,8 +666,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
               <select
                 data-testid="reporting-status-filter"
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+                value={draft.status}
+                onChange={e => updateDraft({ status: e.target.value as StatusFilter })}
                 className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="all">{t("reporting.filters.allStatuses")}</option>
@@ -629,28 +679,28 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           </label>
         </div>
-        {hasActiveFilters && (
-          <div className="flex justify-end">
-            <button
-              data-testid="reporting-clear-filters"
-              type="button"
-              onClick={() => {
-                setUserIds([]);
-                setChecklistSearch("");
-                setStatusFilter("all");
-                setConceptIds([]);
-                setLocationIds([]);
-                setDepartmentIds([]);
-              }}
-              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <X size={12} />
-              {t("reporting.filters.clear")}
-            </button>
-          </div>
-        )}
-      </div>
-      )}
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+          <button
+            data-testid="reporting-clear-filters"
+            type="button"
+            onClick={() => setDraft(DEFAULT_PANEL_FILTERS)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <X size={12} />
+            {t("reporting.filters.clear")}
+          </button>
+          <button
+            data-testid="reporting-apply-filters"
+            type="button"
+            onClick={applyFilters}
+            className="rounded-full bg-sage px-5 py-2 text-sm font-semibold text-white hover:bg-sage/90 transition-colors"
+          >
+            {t("reporting.filters.apply")}
+          </button>
+        </div>
+      </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
 
       {/* Period + result count, with export */}
       <div className="flex items-center justify-between gap-2">

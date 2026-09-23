@@ -194,6 +194,10 @@ function openFilters() {
   fireEvent.click(screen.getByTestId("reporting-filters-toggle"));
 }
 
+function applyFilters() {
+  fireEvent.click(screen.getByTestId("reporting-apply-filters"));
+}
+
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
@@ -513,10 +517,13 @@ describe("ReportingTab", () => {
   it("clears filters when the reset button is clicked", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "Inventory" } });
-    expect(screen.getByTestId("reporting-clear-filters")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-clear-filters"));
-    expect(screen.getByTestId("reporting-checklist-search")).toHaveValue("");
+    expect(screen.getByTestId("reporting-status-filter")).toHaveValue("all");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
   });
 
@@ -568,6 +575,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    applyFilters();
     expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
   });
 
@@ -676,6 +684,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByText("This Week"));
+    applyFilters();
     expect(screen.getByText(/— This Week/)).toBeInTheDocument();
   });
 
@@ -683,6 +692,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByText("This Month"));
+    applyFilters();
     expect(screen.getByText(/— This Month/)).toBeInTheDocument();
   });
 
@@ -697,6 +707,7 @@ describe("ReportingTab", () => {
     openFilters();
     const customBtn = screen.getByText("Custom");
     fireEvent.click(customBtn);
+    applyFilters();
     // After clicking Custom, the popover should open (calendar rendered)
     // The calendar shows "Custom range" as period label
     expect(screen.getByText(/— Custom range/)).toBeInTheDocument();
@@ -708,6 +719,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByText("Custom"));
+    applyFilters();
     expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("Custom range");
   });
 
@@ -737,6 +749,7 @@ describe("ReportingTab", () => {
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-location-filter-option-loc-1"));
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Main Branch");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
@@ -747,6 +760,7 @@ describe("ReportingTab", () => {
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-location-filter-option-all"));
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("All locations");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
   });
@@ -757,6 +771,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    applyFilters();
     expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
     expect(screen.getByText("PASS")).toBeInTheDocument();
   });
@@ -920,6 +935,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
     expect(screen.queryByText("PASS")).not.toBeInTheDocument();
     expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
@@ -929,6 +945,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("Safety Walk")).toBeInTheDocument();
   });
 
@@ -936,6 +953,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText(/Showing 1 unstarted checklist/)).toBeInTheDocument();
   });
 
@@ -949,6 +967,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("All checklists have been started this period.")).toBeInTheDocument();
   });
 });

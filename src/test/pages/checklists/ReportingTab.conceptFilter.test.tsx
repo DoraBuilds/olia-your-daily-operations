@@ -8,7 +8,8 @@
  *  - the department filter narrows logs by the completing checklist's departments
  *  - stale location/department picks are pruned, but not while their lists are still loading
  *  - the user filter matches checklists assigned to (or completed by) the picked people
- *  - the search + "Filters" toolbar opens/closes the panel and badges active filters
+ *  - the search + "Filters" toolbar opens/closes the popover and badges active filters
+ *  - popover edits are staged: only Apply commits them, dismissing discards them
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -180,6 +181,10 @@ function openFilters() {
   fireEvent.click(screen.getByTestId("reporting-filters-toggle"));
 }
 
+function applyFilters() {
+  fireEvent.click(screen.getByTestId("reporting-apply-filters"));
+}
+
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
@@ -221,6 +226,7 @@ describe("ReportingTab concept/location/department filters", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     selectConceptA();
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
@@ -230,6 +236,7 @@ describe("ReportingTab concept/location/department filters", () => {
     openFilters();
     selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
@@ -238,6 +245,7 @@ describe("ReportingTab concept/location/department filters", () => {
     openFilters();
     selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
   });
 
@@ -254,6 +262,7 @@ describe("ReportingTab concept/location/department filters", () => {
     openFilters();
     fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-department-filter-option-dept-kitchen"));
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
@@ -289,6 +298,7 @@ describe("ReportingTab concept/location/department filters", () => {
     queryState.departmentsFetching = false;
     rerender(<ReportingTab />);
     expect(screen.getByTestId("reporting-department-filter-trigger")).toHaveTextContent("Kitchen");
+    applyFilters();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
@@ -301,6 +311,7 @@ describe("ReportingTab concept/location/department filters", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     selectUser("tm-carla");
+    applyFilters();
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
   });
@@ -310,6 +321,7 @@ describe("ReportingTab concept/location/department filters", () => {
     openFilters();
     // Bob is only assigned to loc-1 but completed the loc-2 Closing Checklist.
     selectUser("sp2");
+    applyFilters();
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
   });
@@ -318,6 +330,7 @@ describe("ReportingTab concept/location/department filters", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     selectUser("tm-dave");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
@@ -327,6 +340,7 @@ describe("ReportingTab concept/location/department filters", () => {
     openFilters();
     selectUser("sp1");
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
   });
@@ -352,17 +366,51 @@ describe("ReportingTab search + Filters toolbar", () => {
     openFilters();
     selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
-    openFilters();
+    applyFilters();
+    expect(screen.queryByTestId("reporting-filters-panel")).not.toBeInTheDocument();
     expect(screen.getByTestId("reporting-filters-count")).toHaveTextContent("2");
   });
 
-  it("clear filters resets the user filter too", () => {
+  it("clear filters resets every panel filter (date included) once applied", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
+    fireEvent.click(screen.getByText("This Week"));
     fireEvent.click(screen.getByTestId("reporting-user-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-user-filter-option-tm-carla"));
+    applyFilters();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Week");
+
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-clear-filters"));
     expect(screen.getByTestId("reporting-user-filter-trigger")).toHaveTextContent("All users");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("Today");
+    expect(screen.queryByTestId("reporting-filters-count")).not.toBeInTheDocument();
+  });
+
+  it("doesn't change the report until Apply is clicked", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectConceptA();
+    // Staged only — the report behind the popover still shows every location.
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    applyFilters();
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
+  });
+
+  it("discards staged changes when the popover is dismissed without Apply", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectConceptA();
+    // Close via the Filters button (outside-click/Escape behave the same way).
+    fireEvent.click(screen.getByTestId("reporting-filters-toggle"));
+    expect(screen.queryByTestId("reporting-filters-panel")).not.toBeInTheDocument();
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.queryByTestId("reporting-filters-count")).not.toBeInTheDocument();
+    // Re-opening starts from the applied filters, not the discarded draft.
+    openFilters();
+    expect(screen.getByTestId("reporting-concept-filter-trigger")).toHaveTextContent("All concepts");
   });
 });
