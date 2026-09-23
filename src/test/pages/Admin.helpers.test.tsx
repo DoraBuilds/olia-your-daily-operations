@@ -16,16 +16,6 @@ import { renderWithProviders } from "../test-utils";
 const byFullText = (expected: string) => (_content: string, element: Element | null) =>
   element?.textContent === expected;
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 vi.mock("@/lib/runtime-config", () => ({
   runtimeConfig: { googleMapsApiKey: "test-key" },
   getRuntimeConfig: () => ({

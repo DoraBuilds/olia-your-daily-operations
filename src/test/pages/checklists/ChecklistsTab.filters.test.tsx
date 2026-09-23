@@ -1,9 +1,6 @@
 /**
- * Concept-scoping coverage for ChecklistsTab — verifies the sidebar's concept
- * dropdown (ConceptFilterContext.scopedLocationIds) narrows:
- *  - the Filters popover's concept/location options
- *  - which checklists are listed (org-wide/unassigned checklists always stay visible)
- * plus the Filters popover itself (concept/location/department/status, Apply/Clear).
+ * ChecklistsTab Filters popover — concept/location/department/status, staged
+ * Apply/Clear, folder-aware counts, and the applied-filter chips.
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -12,22 +9,11 @@ import { ReactNode } from "react";
 import { ChecklistsTab } from "@/pages/checklists/ChecklistsTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
-const conceptFilterState: { scopedLocationIds: string[] | null; selectedConceptId: string } = {
-  scopedLocationIds: null,
-  selectedConceptId: "all",
-};
-
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [
-      { id: "concept-1", name: "Concept One" },
-      { id: "concept-2", name: "Concept Two" },
-    ],
-    selectedConceptId: conceptFilterState.selectedConceptId,
-    setSelectedConceptId: () => {},
-    scopedLocationIds: conceptFilterState.scopedLocationIds,
-  }),
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({ data: [
+    { id: "concept-1", name: "Concept One" },
+    { id: "concept-2", name: "Concept Two" },
+  ] }),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -182,66 +168,41 @@ function applyFilters() {
   fireEvent.click(screen.getByTestId("checklists-apply-filters"));
 }
 
-describe("ChecklistsTab concept scoping", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    conceptFilterState.scopedLocationIds = null;
-    conceptFilterState.selectedConceptId = "all";
-  });
-
-  it("lists every checklist and location when no concept is selected", () => {
+describe("ChecklistsTab without a sidebar concept", () => {
+  it("lists every checklist regardless of concept until filtered", () => {
     render(<ChecklistsTab />, { wrapper });
     expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
     expect(screen.getByText("Terrace Only")).toBeInTheDocument();
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
-  });
-
-  it("narrows the Filters popover's concept and location options to the selected concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
-    conceptFilterState.selectedConceptId = "concept-1";
-    render(<ChecklistsTab />, { wrapper });
-    openFilters();
-    fireEvent.click(screen.getByTestId("checklists-location-filter-trigger"));
-    expect(screen.getByTestId("checklists-location-filter-option-loc-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("checklists-location-filter-option-loc-2")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("checklists-concept-filter-trigger"));
-    expect(screen.getByTestId("checklists-concept-filter-option-concept-1")).toBeInTheDocument();
-    expect(screen.queryByTestId("checklists-concept-filter-option-concept-2")).not.toBeInTheDocument();
-  });
-
-  it("hides checklists assigned to a location outside the selected concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
-    render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
-    expect(screen.queryByText("Terrace Only")).not.toBeInTheDocument();
-  });
-
-  it("keeps an org-wide (unassigned) checklist visible even when a concept is selected", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
-    render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
-  });
-
-  it("shows a concept-scoped 'all locations' checklist under its own concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
-    conceptFilterState.selectedConceptId = "concept-1";
-    render(<ChecklistsTab />, { wrapper });
     expect(screen.getByText("Concept 1 Wide Checklist")).toBeInTheDocument();
   });
 
-  it("hides a concept-scoped 'all locations' checklist under a different concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-2"];
-    conceptFilterState.selectedConceptId = "concept-2";
+  it("offers every concept and location in the Filters popover", () => {
     render(<ChecklistsTab />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByTestId("checklists-concept-filter-trigger"));
+    expect(screen.getByTestId("checklists-concept-filter-option-concept-1")).toBeInTheDocument();
+    expect(screen.getByTestId("checklists-concept-filter-option-concept-2")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("checklists-location-filter-trigger"));
+    expect(screen.getByTestId("checklists-location-filter-option-loc-1")).toBeInTheDocument();
+    expect(screen.getByTestId("checklists-location-filter-option-loc-2")).toBeInTheDocument();
+  });
+
+  it("filtering by another concept hides a concept-wide checklist of a different concept", () => {
+    render(<ChecklistsTab />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByTestId("checklists-concept-filter-trigger"));
+    fireEvent.click(screen.getByTestId("checklists-concept-filter-option-concept-2"));
+    applyFilters();
     expect(screen.queryByText("Concept 1 Wide Checklist")).not.toBeInTheDocument();
+    expect(screen.queryByText("Main Branch Only")).not.toBeInTheDocument();
+    expect(screen.getByText("Terrace Only")).toBeInTheDocument();
   });
 });
 
 describe("ChecklistsTab Filters popover", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    conceptFilterState.scopedLocationIds = null;
-    conceptFilterState.selectedConceptId = "all";
   });
 
   it("shows no badge or chips when no filters are applied", () => {

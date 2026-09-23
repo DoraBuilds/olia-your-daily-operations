@@ -4,16 +4,6 @@ import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSess
 import { grantKioskStaffSession, readKioskStaffSession } from "@/lib/kiosk-staff-session";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 // ─── Hoist mock vars ──────────────────────────────────────────────────────────
 // Layout itself no longer calls useAuth() (Log out moved to AccountTab.tsx —
 // see src/test/pages/admin/AccountTab.test.tsx), but SidebarNav (rendered

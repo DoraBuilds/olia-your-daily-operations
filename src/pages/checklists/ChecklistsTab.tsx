@@ -11,8 +11,7 @@ import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
-import { useConceptFilter } from "@/contexts/ConceptFilterContext";
-import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
+import { useConcepts } from "@/hooks/useConcepts";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { FolderBreadcrumb } from "./FolderBreadcrumb";
@@ -40,23 +39,6 @@ function checklistAppliesToLocation(
   return true;
 }
 
-function checklistInScope(
-  checklist: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null },
-  scopedLocationIds: string[] | null,
-  selectedConceptId: string | null,
-) {
-  if (scopedLocationIds === null) return true;
-  const assignedIds = checklist.location_ids?.length
-    ? checklist.location_ids
-    : (checklist.location_id ? [checklist.location_id] : null);
-
-  if (assignedIds && assignedIds.length > 0) return assignedIds.some(id => scopedLocationIds.includes(id));
-  // No explicit locations: either true org-wide (concept_id null, always in
-  // scope) or scoped to one concept (in scope only under that same concept).
-  if (checklist.concept_id) return checklist.concept_id === selectedConceptId;
-  return true;
-}
-
 type PublishStatus = "all" | "published" | "draft";
 
 /** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
@@ -74,29 +56,12 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
   const { data: allDbLocations = [] } = useLocations();
-  const { scopedLocationIds, selectedConceptId, concepts } = useConceptFilter();
-  const dbLocations = useMemo(
-    () => scopedLocationIds === null ? allDbLocations : allDbLocations.filter(l => scopedLocationIds.includes(l.id)),
-    [allDbLocations, scopedLocationIds],
-  );
-  // Under a header concept, the Filters popover only offers that concept.
-  const conceptOptions = scopedLocationIds === null ? concepts : concepts.filter(c => c.id === selectedConceptId);
+  const dbLocations = allDbLocations;
+  const { data: concepts = [] } = useConcepts();
 
   // DB data
-  const { data: allDbFolders = [] } = useFolders();
-  // Same scoping as checklists below: a location-specific folder from
-  // another concept shouldn't appear once a concept filter narrows the view.
-  // Memoized: an effect below keys off this array's identity to sync
-  // folderOrder, so a fresh reference on every render (from a bare .filter())
-  // would re-trigger that effect every render and loop forever.
-  const dbFolders = useMemo(
-    () => allDbFolders.filter(f =>
-      f.location_id === null || scopedLocationIds === null || scopedLocationIds.includes(f.location_id),
-    ),
-    [allDbFolders, scopedLocationIds],
-  );
-  const { data: allDbChecklists = [] } = useChecklists();
-  const dbChecklists = allDbChecklists.filter(c => checklistInScope(c, scopedLocationIds, selectedConceptId));
+  const { data: dbFolders = [] } = useFolders();
+  const { data: dbChecklists = [] } = useChecklists();
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
   const reorderFoldersMut = useReorderFolders();
@@ -160,17 +125,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [draft, setDraft] = useState<PanelFilters>(DEFAULT_PANEL_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const updateDraft = (patch: Partial<PanelFilters>) => setDraft(prev => ({ ...prev, ...patch }));
-
-  // If the header concept changes, drop applied picks that fall outside it
-  // rather than silently showing an empty list.
-  useEffect(() => {
-    setFilters(prev => {
-      const conceptIds = scopedLocationIds === null ? prev.conceptIds : prev.conceptIds.filter(id => id === selectedConceptId);
-      const locationIds = prev.locationIds.filter(id => dbLocations.some(l => l.id === id));
-      return conceptIds.length === prev.conceptIds.length && locationIds.length === prev.locationIds.length
-        ? prev : { ...prev, conceptIds, locationIds };
-    });
-  }, [scopedLocationIds, selectedConceptId, dbLocations]);
 
   // The popover's location list narrows to the draft concept(s); departments
   // are the union across the draft's locations in scope.
@@ -505,7 +459,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   return (
     <>
-      <ConceptScopeNotice />
 
       {/* Toolbar: search + Filters toggle + create */}
       <FiltersPopover
@@ -534,7 +487,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           <FilterMultiSelect
             testId="checklists-concept-filter"
             icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-            options={conceptOptions.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+            options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
             selected={draft.conceptIds}
             onChange={ids => updateDraft({ conceptIds: ids })}
             allLabel={t("reporting.filters.allConcepts")}

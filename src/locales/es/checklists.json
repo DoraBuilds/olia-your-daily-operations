@@ -385,6 +385,8 @@
       "noMatch": "Ninguna ubicación coincide con tu búsqueda.",
       "appearEverywhere": "Esta lista aparecerá en todas las ubicaciones.",
       "appearInConcept": "Esta lista aparecerá en todas las ubicaciones de {{name}}.",
+      "conceptQuestion": "¿Qué concepto?",
+      "everyConcept": "Todos los conceptos",
       "chooseOneOrMore": "Elige una o más ubicaciones.",
       "selectedOne": "Seleccionada: {{name}}",
       "selectedCount": "{{count}} ubicaciones seleccionadas",

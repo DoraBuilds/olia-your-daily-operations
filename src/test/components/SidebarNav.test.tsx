@@ -2,18 +2,12 @@ import { fireEvent, screen } from "@testing-library/react";
 import { SidebarNav } from "@/components/SidebarNav";
 import { renderWithProviders } from "../test-utils";
 
-const { mockUseAuth, mockUseConceptFilter } = vi.hoisted(() => ({
+const { mockUseAuth } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
-  mockUseConceptFilter: vi.fn(),
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: mockUseAuth,
-}));
-
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: mockUseConceptFilter,
 }));
 
 describe("SidebarNav", () => {
@@ -23,12 +17,6 @@ describe("SidebarNav", () => {
         id: "tm-1",
         role: "Owner",
       },
-    });
-    mockUseConceptFilter.mockReturnValue({
-      concepts: [],
-      selectedConceptId: "all",
-      setSelectedConceptId: vi.fn(),
-      scopedLocationIds: null,
     });
   });
 
@@ -114,54 +102,9 @@ describe("SidebarNav", () => {
     localStorage.removeItem("olia_sidebar_collapsed");
   });
 
-  it("shows no concept picker when there are no concepts yet", () => {
+  it("has no concept picker — each tab filters by concept itself", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     expect(screen.queryByText("Concept")).not.toBeInTheDocument();
-  });
-
-  it("shows a concept picker with 'All concepts' plus each concept once concepts exist", () => {
-    mockUseConceptFilter.mockReturnValue({
-      concepts: [
-        { id: "c1", organization_id: "org1", name: "The Crown Restaurant" },
-        { id: "c2", organization_id: "org1", name: "Second Brand" },
-      ],
-      selectedConceptId: "all",
-      setSelectedConceptId: vi.fn(),
-      scopedLocationIds: null,
-    });
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-
-    expect(screen.getByText("Concept")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "All concepts" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "The Crown Restaurant" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Second Brand" })).toBeInTheDocument();
-  });
-
-  it("calls setSelectedConceptId when a different concept is chosen", () => {
-    const setSelectedConceptId = vi.fn();
-    mockUseConceptFilter.mockReturnValue({
-      concepts: [{ id: "c1", organization_id: "org1", name: "The Crown Restaurant" }],
-      selectedConceptId: "all",
-      setSelectedConceptId,
-      scopedLocationIds: null,
-    });
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-
-    fireEvent.change(screen.getByLabelText("Concept"), { target: { value: "c1" } });
-    expect(setSelectedConceptId).toHaveBeenCalledWith("c1");
-  });
-
-  it("hides the concept picker when the sidebar is collapsed", () => {
-    mockUseConceptFilter.mockReturnValue({
-      concepts: [{ id: "c1", organization_id: "org1", name: "The Crown Restaurant" }],
-      selectedConceptId: "all",
-      setSelectedConceptId: vi.fn(),
-      scopedLocationIds: null,
-    });
-    localStorage.setItem("olia_sidebar_collapsed", "1");
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-
-    expect(screen.queryByText("Concept")).not.toBeInTheDocument();
-    localStorage.removeItem("olia_sidebar_collapsed");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });

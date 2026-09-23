@@ -385,6 +385,8 @@
       "noMatch": "No locations match your search.",
       "appearEverywhere": "This checklist will appear at every location.",
       "appearInConcept": "This checklist will appear at every location in {{name}}.",
+      "conceptQuestion": "Which concept?",
+      "everyConcept": "Every concept",
       "chooseOneOrMore": "Choose one or more locations.",
       "selectedOne": "Selected: {{name}}",
       "selectedCount": "{{count}} locations selected",

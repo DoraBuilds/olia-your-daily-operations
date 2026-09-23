@@ -2,16 +2,6 @@ import { screen } from "@testing-library/react";
 import Reporting from "@/pages/Reporting";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {

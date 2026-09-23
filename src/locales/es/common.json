@@ -14,11 +14,6 @@
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Contraer barra lateral"
   },
-  "conceptFilter": {
-    "label": "Concepto",
-    "allConcepts": "Todos los conceptos",
-    "scopeNotice": "Viendo <bold>{{name}}</bold> Concepto - cambia de ubicación en la barra lateral"
-  },
   "filters": {
     "button": "Filtros",
     "clear": "Borrar filtros",

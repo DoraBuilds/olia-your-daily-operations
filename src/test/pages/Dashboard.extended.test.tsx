@@ -18,16 +18,6 @@ import { screen, fireEvent, within } from "@testing-library/react";
 import Dashboard from "@/pages/Dashboard";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 // ── Re-usable mock state objects ──────────────────────────────────────────────
 const mockNavigate = vi.fn();
 

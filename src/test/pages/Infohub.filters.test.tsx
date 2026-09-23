@@ -8,14 +8,8 @@ import Infohub from "@/pages/Infohub";
 import { renderWithProviders } from "../test-utils";
 import { DEFAULT_INFOHUB_ACCESS } from "@/lib/infohub-access";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [{ id: "c1", name: "Bistro" }, { id: "c2", name: "Beach" }],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({ data: [{ id: "c1", name: "Bistro" }, { id: "c2", name: "Beach" }] }),
 }));
 
 vi.mock("react-router-dom", async () => {
