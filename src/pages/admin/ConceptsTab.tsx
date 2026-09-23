@@ -19,8 +19,7 @@ import {
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
-import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
-import { supabase } from "@/lib/supabase";
+import { useKioskDevices } from "@/hooks/useKioskDevices";
 import { ConfirmModal, type ConfirmState } from "./SharedUI";
 
 export interface ConceptsTabProps {
@@ -63,27 +62,25 @@ export function ConceptsTab({
   // — so those stay Owner-only here too, not newly opened up to managers.
   const canEditLocation = !permissions || permissions.edit_location_details;
 
-  const [kioskDeviceActive, setKioskDeviceActive] = useState(
-    () => Boolean(localStorage.getItem("kiosk_location_id")),
-  );
-  const [kioskDeviceName] = useState(() => localStorage.getItem("kiosk_location_name") ?? "");
-  const [confirmingKioskExit, setConfirmingKioskExit] = useState(false);
+  // Locations with at least one active (non-revoked) kiosk device get a
+  // small green dot on their card — replaces the old "this browser is the
+  // kiosk" banner, which was per-browser and noisy.
+  const { data: kioskDevices = [] } = useKioskDevices();
+  const locationsWithKiosk = new Set(kioskDevices.map(d => d.location_id));
 
-  // Self-heals a stale banner (#824): this browser may have been marked a
-  // kiosk device, then deactivated remotely from Admin -> Kiosks on a
-  // *different* browser in the meantime — nothing here would otherwise ever
-  // learn that. One check on mount is enough; Kiosk.tsx's own 60s heartbeat
-  // is what keeps an actual running kiosk's local state honest.
+  // Self-heals stale local kiosk state (#824): this browser may have been
+  // marked a kiosk device, then deactivated remotely from Admin -> Kiosks on
+  // a *different* browser in the meantime — without this, ProtectedRoute
+  // would keep locking it to /kiosk. One check on mount is enough; Kiosk.tsx's
+  // own 60s heartbeat is what keeps an actual running kiosk's local state honest.
   useEffect(() => {
-    if (!kioskDeviceActive) return;
+    if (!localStorage.getItem("kiosk_location_id")) return;
     let cancelled = false;
     void touchKioskDevice().then(stillActive => {
       if (cancelled || stillActive) return;
       clearKioskDeviceState();
-      setKioskDeviceActive(false);
     });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentConcept = concepts.find(c => c.id === currentConceptId) ?? concepts[0];
@@ -198,52 +195,6 @@ export function ConceptsTab({
 
   return (
     <div className="space-y-4">
-      {kioskDeviceActive && (
-        <div className="rounded-[18px] border border-status-warn/40 bg-status-warn/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
-            <Tablet size={15} className="text-status-warn shrink-0" />
-            <p className="text-xs text-status-warn font-medium">
-              {t("myLocationTab.kioskDeviceActive", {
-                name: kioskDeviceName || t("myLocationTab.kioskDeviceActiveFallbackName"),
-              })}
-            </p>
-          </div>
-          {confirmingKioskExit ? (
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-xs text-muted-foreground">{t("myLocationTab.exitKioskConfirm")}</span>
-              <button onClick={() => setConfirmingKioskExit(false)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
-                {t("sharedUI.cancel")}
-              </button>
-              <button
-                onClick={() => {
-                  // Best-effort: this device stops being treated as a kiosk
-                  // locally either way, but without this the fleet list in
-                  // Admin -> Kiosks would keep showing it as active/idle
-                  // forever after a manual exit (#824) -- the mirror image
-                  // of Deactivate-from-the-fleet-list not clearing the local
-                  // banner. Never block the local exit on the RPC outcome.
-                  const deviceId = localStorage.getItem("kiosk_device_id");
-                  if (deviceId) {
-                    void supabase.rpc("revoke_kiosk_device", { p_device_id: deviceId }).catch(() => {});
-                  }
-                  clearKioskDeviceState();
-                  clearKioskAdminSession();
-                  setKioskDeviceActive(false);
-                  setConfirmingKioskExit(false);
-                }}
-                className="text-xs font-semibold text-status-error hover:underline"
-              >
-                {t("myLocationTab.exitKioskConfirmCta")}
-              </button>
-            </div>
-          ) : (
-            <button onClick={() => setConfirmingKioskExit(true)} className="text-xs font-semibold text-status-warn hover:underline shrink-0">
-              {t("myLocationTab.exitKiosk")}
-            </button>
-          )}
-        </div>
-      )}
-
       {isOwner && (
         <ConceptPicker
           concepts={concepts}
@@ -269,10 +220,18 @@ export function ConceptsTab({
             )}
           >
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center",
+              "relative w-10 h-10 rounded-full flex items-center justify-center",
               currentLocation.id === loc.id ? "bg-sage text-primary-foreground" : "bg-muted text-muted-foreground",
             )}>
               <UtensilsCrossed size={18} />
+              {locationsWithKiosk.has(loc.id) && (
+                <span
+                  role="img"
+                  aria-label={t("conceptsTab.kioskActive")}
+                  title={t("conceptsTab.kioskActive")}
+                  className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-status-ok ring-2 ring-card"
+                />
+              )}
             </div>
             <p className="text-xs font-medium text-foreground truncate w-full">{loc.name}</p>
           </button>

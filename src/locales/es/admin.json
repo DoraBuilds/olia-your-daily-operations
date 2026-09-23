@@ -127,11 +127,7 @@
     "mapTitle": "Mapa de la ubicación",
     "activateKiosk": "Activar",
     "runKiosk": "Iniciar kiosco",
-    "kioskDeviceActive": "Este navegador está funcionando actualmente como el kiosco de {{name}}.",
     "kioskDeviceActiveFallbackName": "esta ubicación",
-    "exitKiosk": "Salir del modo kiosco",
-    "exitKioskConfirm": "¿Dejar de tratar este dispositivo como un kiosco?",
-    "exitKioskConfirmCta": "Salir del modo kiosco",
     "staffProfiles": "Perfiles de personal",
     "add": "Agregar",
     "searchStaff": "Buscar personal…",
@@ -176,7 +172,8 @@
     "noAddress": "Sin dirección registrada — toca Editar para agregar una.",
     "teamMembers": "Miembros del equipo",
     "teamMembersWithCount": "Miembros del equipo ({{count}})",
-    "noTeamMembers": "Aún no hay miembros del equipo asignados a este local."
+    "noTeamMembers": "Aún no hay miembros del equipo asignados a este local.",
+    "kioskActive": "Kiosco activo"
   },
   "perms": {
     "create_edit_checklists": "Crear y editar listas",
