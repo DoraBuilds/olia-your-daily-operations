@@ -26,6 +26,7 @@ export { parseGoogleOpeningHours } from "./admin/shared";
 import { ConceptsTab } from "./admin/ConceptsTab";
 import { AccountTab } from "./admin/AccountTab";
 import { NotificationsTab } from "./admin/NotificationsTab";
+import { DepartmentsTab } from "./admin/DepartmentsTab";
 import { KiosksTab } from "./admin/KiosksTab";
 import {
   ConfirmModal, LocationModal, TeamMemberModal, ConceptModal,
@@ -80,13 +81,14 @@ export default function Admin() {
   const { data: pendingInvites = [] } = useTeamMemberInvites();
 
   // UI state
-  const routeTab: "location" | "users" | "account" | "billing" | "notifications" | "kiosks" =
+  const routeTab: "location" | "departments" | "users" | "account" | "billing" | "notifications" | "kiosks" =
+    location.pathname.startsWith("/admin/departments") ? "departments" :
     location.pathname.startsWith("/admin/users") ? "users" :
     location.pathname.startsWith("/admin/account") ? "account" :
     location.pathname.startsWith("/admin/billing") ? "billing" :
     location.pathname.startsWith("/admin/notifications") ? "notifications" :
     location.pathname.startsWith("/admin/kiosks") ? "kiosks" : "location";
-  const [activeTab, setActiveTab] = useState<"location" | "users" | "account" | "billing" | "notifications" | "kiosks">(routeTab);
+  const [activeTab, setActiveTab] = useState<"location" | "departments" | "users" | "account" | "billing" | "notifications" | "kiosks">(routeTab);
   const [currentConceptId, setCurrentConceptId] = useState("");
   const [currentLocationId, setCurrentLocationId] = useState("");
 
@@ -125,7 +127,7 @@ export default function Admin() {
   const isOwner = !activeUser || activeUser.is_owner;
 
   useEffect(() => {
-    if (!isOwner && (routeTab === "account" || routeTab === "notifications")) {
+    if (!isOwner && (routeTab === "account" || routeTab === "notifications" || routeTab === "departments")) {
       navigate("/admin/location", { replace: true });
       return;
     }
@@ -384,6 +386,7 @@ export default function Admin() {
   const TABS = [
     { key: "location" as const, label: t("tabs.locations") },
     ...(isOwner ? [
+      { key: "departments" as const, label: t("tabs.departments") },
       { key: "users" as const, label: t("tabs.users") },
       { key: "kiosks" as const, label: t("tabs.kiosks") },
       { key: "notifications" as const, label: t("tabs.notifications") },
@@ -480,6 +483,15 @@ export default function Admin() {
                     onDeleteLocation={deleteLocation}
                     onRunKiosk={runKiosk}
                     onActivateKiosk={activateKiosk}
+                    onManageDepartments={isOwner ? () => navigate("/admin/departments") : undefined}
+                  />
+                )}
+                {activeTab === "departments" && isOwner && (
+                  <DepartmentsTab
+                    concepts={concepts}
+                    locations={allLocations}
+                    teamMembers={teamMembers}
+                    checklists={checklists}
                   />
                 )}
                 {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}

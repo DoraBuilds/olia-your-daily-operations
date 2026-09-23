@@ -212,7 +212,11 @@ vi.mock("@/hooks/useDepartments", () => ({
     { id: "d1", location_id: "l1", name: "Front of House" },
     { id: "d2", location_id: "l1", name: "Back of House" },
   ], isLoading: false }),
-  useSaveDepartment: () => ({ mutate: vi.fn() }),
+  useCompanyDepartments: () => ({ data: [
+    { id: "d1", name: "Front of House", assignments: [{ concept_id: "concept-1", location_id: null }] },
+    { id: "d2", name: "Back of House", assignments: [] },
+  ], isLoading: false }),
+  useSaveDepartment: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteDepartment: () => mockDeleteDepartment,
 }));
 
@@ -363,33 +367,30 @@ describe("Admin page", () => {
     });
   });
 
-  describe("Delete department confirmation", () => {
+  describe("Departments", () => {
     beforeEach(() => {
-      mockDeleteDepartment.mutate.mockClear();
+      mockNavigate.mockClear();
     });
 
-    it("does not delete immediately when the department delete button is clicked", async () => {
+    it("lists the location's departments read-only in Concepts, with a Manage link to the Departments tab", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      fireEvent.click(screen.getAllByTitle("Delete department")[0]);
-
-      expect(mockDeleteDepartment.mutate).not.toHaveBeenCalled();
-      await waitFor(() => expect(screen.getByText("Delete department", { selector: "h2" })).toBeInTheDocument());
+      expect(screen.queryByTitle("Delete department")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+      expect(mockNavigate).toHaveBeenCalledWith("/admin/departments");
     });
 
-    it("calls deleteDepartment.mutate only after typing DELETE and confirming", async () => {
+    it("shows a Departments tab right after Concepts for the Owner", () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      fireEvent.click(screen.getAllByTitle("Delete department")[0]);
-      await waitFor(() => screen.getByPlaceholderText(/Type DELETE/i));
+      const tabLabels = screen.getAllByRole("button").map(b => b.textContent);
+      const conceptsIdx = tabLabels.indexOf("Concepts");
+      expect(tabLabels[conceptsIdx + 1]).toBe("Departments");
+    });
 
-      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-      expect(mockDeleteDepartment.mutate).not.toHaveBeenCalled();
-
-      fireEvent.change(screen.getByPlaceholderText(/Type DELETE/i), { target: { value: "DELETE" } });
-      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-
-      expect(mockDeleteDepartment.mutate).toHaveBeenCalledWith({ id: "d1", location_id: "l1" });
+    it("renders the company department list on /admin/departments", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/departments"] });
+      await waitFor(() => expect(screen.getAllByTestId("department-row")).toHaveLength(2));
+      expect(screen.getByText("Not assigned")).toBeInTheDocument();
     });
   });
 

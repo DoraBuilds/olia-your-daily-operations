@@ -9,18 +9,17 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Building2, UtensilsCrossed, MapPin, Mail, Pencil, Trash2, Plus,
-  ChevronDown, Tablet, Check, X, MoreVertical,
+  ChevronDown, Tablet, MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  type Location, type Concept, type TeamMember, type LocationDepartment, type ManagerPermissions,
+  type Location, type Concept, type TeamMember, type ManagerPermissions,
   getInitials,
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
-import { useDepartments, useSaveDepartment, useDeleteDepartment } from "@/hooks/useDepartments";
+import { useDepartments } from "@/hooks/useDepartments";
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
-import { ConfirmModal, type ConfirmState } from "./SharedUI";
 
 export interface ConceptsTabProps {
   concepts: Concept[];
@@ -45,13 +44,15 @@ export interface ConceptsTabProps {
   onRunKiosk: () => void;
   /** Registers a kiosk device for the location without navigating anywhere — hands back a link to open later, on this browser or another. */
   onActivateKiosk: () => void;
+  /** Opens Admin → Departments. Omitted for managers, who can't manage departments. */
+  onManageDepartments?: () => void;
 }
 
 export function ConceptsTab({
   concepts, locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
-  onAddLocation, onEditLocation, onDeleteLocation, onRunKiosk, onActivateKiosk,
+  onAddLocation, onEditLocation, onDeleteLocation, onRunKiosk, onActivateKiosk, onManageDepartments,
 }: ConceptsTabProps) {
   const { t } = useTranslation("admin");
 
@@ -87,16 +88,9 @@ export function ConceptsTab({
   const conceptLocations = locations.filter(l => l.concept_id === currentConcept?.id);
   const currentLocation = conceptLocations.find(l => l.id === currentLocationId) ?? conceptLocations[0] ?? null;
 
-  const saveDepartment = useSaveDepartment();
-  const deleteDepartment = useDeleteDepartment();
+  // Departments are company-wide and managed in Admin → Departments (#838);
+  // here they're just listed for the selected location.
   const { data: departments = [] } = useDepartments(currentLocation?.id);
-  const [renamingDepartment, setRenamingDepartment] = useState<{ id: string; value: string } | null>(null);
-  const [newDepartmentName, setNewDepartmentName] = useState("");
-  const [showAddDepartment, setShowAddDepartment] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
-
-  const departmentInUse = (dep: LocationDepartment) =>
-    teamMembers.some(m => m.department_ids.includes(dep.id));
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
   if (concepts.length === 0) {
@@ -163,36 +157,6 @@ export function ConceptsTab({
   const locationTeamMembers = teamMembers.filter(m => m.location_ids.includes(currentLocation.id));
   const locationChecklists = checklists.filter(c => c.location_id === currentLocation.id);
 
-  const addDepartment = () => {
-    const trimmed = newDepartmentName.trim();
-    if (!trimmed || departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) return;
-    saveDepartment.mutate({ location_id: currentLocation.id, name: trimmed });
-    setNewDepartmentName("");
-    setShowAddDepartment(false);
-  };
-
-  const renameDepartment = (id: string, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || departments.some(d => d.id !== id && d.name.toLowerCase() === trimmed.toLowerCase())) return;
-    saveDepartment.mutate({ id, location_id: currentLocation.id, name: trimmed });
-    setRenamingDepartment(null);
-  };
-
-  const confirmDeleteDepartment = (dep: LocationDepartment) => {
-    setConfirmModal({
-      title: t("confirm.deleteDepartmentTitle"),
-      message: (
-        <>{t("confirm.deleteDepartmentPrefix")} <strong className="text-foreground">{dep.name}</strong>{t("confirm.deleteDepartmentSuffix")}</>
-      ),
-      actionLabel: t("confirm.delete"),
-      requireDeleteText: true,
-      onConfirm: () => {
-        deleteDepartment.mutate({ id: dep.id, location_id: currentLocation.id });
-        setConfirmModal(null);
-      },
-    });
-  };
-
   return (
     <div className="space-y-4">
       {isOwner && (
@@ -251,74 +215,25 @@ export function ConceptsTab({
 
       {/* Departments + Address/Kiosk */}
       <div className="flex gap-3 items-stretch flex-wrap sm:flex-nowrap">
-        {/* Departments */}
+        {/* Departments (read-only — managed in Admin → Departments) */}
         <div className="card-surface p-4 flex-1 min-w-[200px] space-y-3">
           <div className="flex items-center justify-between">
             <p className="section-label">{t("conceptsTab.departments")}</p>
-            {isOwner && (
-              <button onClick={() => setShowAddDepartment(true)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
-                <Plus size={12} /> {t("myLocationTab.add")}
+            {onManageDepartments && (
+              <button onClick={onManageDepartments} className="text-xs text-sage font-medium hover:underline">
+                {t("conceptsTab.manageDepartments")}
               </button>
             )}
           </div>
-          <div className="space-y-1">
-            {departments.length === 0 && !showAddDepartment && (
-              <p className="text-xs text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
-            )}
-            {departments.map(dep => {
-              const isRenaming = renamingDepartment?.id === dep.id;
-              const inUse = departmentInUse(dep);
-              return (
-                <div key={dep.id} className="flex items-center gap-2 py-1">
-                  {isRenaming ? (
-                    <>
-                      <input
-                        autoFocus type="text" value={renamingDepartment.value}
-                        onChange={e => setRenamingDepartment({ id: dep.id, value: e.target.value })}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); renameDepartment(dep.id, renamingDepartment.value); } }}
-                        className="flex-1 border border-border rounded-lg px-2 py-1 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                      />
-                      <button onClick={() => renameDepartment(dep.id, renamingDepartment.value)} className="p-1 rounded hover:bg-muted"><Check size={12} className="text-sage" /></button>
-                      <button onClick={() => setRenamingDepartment(null)} className="p-1 rounded hover:bg-muted"><X size={12} className="text-muted-foreground" /></button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="flex-1 text-sm text-foreground truncate">{dep.name}</p>
-                      {isOwner && (
-                        <>
-                          <button onClick={() => setRenamingDepartment({ id: dep.id, value: dep.name })} className="p-1 rounded hover:bg-muted"><Pencil size={12} className="text-muted-foreground" /></button>
-                          <button
-                            onClick={() => confirmDeleteDepartment(dep)}
-                            disabled={inUse}
-                            title={inUse ? t("accountTab.departmentInUse") : t("accountTab.deleteDepartment")}
-                            className={cn("p-1 rounded", inUse ? "opacity-30 cursor-not-allowed" : "hover:bg-muted")}
-                          >
-                            <Trash2 size={12} className="text-status-error" />
-                          </button>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-            {showAddDepartment && (
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  autoFocus type="text" value={newDepartmentName}
-                  onChange={e => setNewDepartmentName(e.target.value)}
-                  placeholder={t("accountTab.departmentNamePlaceholder")}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") { e.preventDefault(); addDepartment(); }
-                    if (e.key === "Escape") { setShowAddDepartment(false); setNewDepartmentName(""); }
-                  }}
-                  className="flex-1 border border-border rounded-lg px-2 py-1.5 text-xs bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button onClick={addDepartment} disabled={!newDepartmentName.trim()} className="p-1.5 rounded-lg bg-sage text-white disabled:opacity-40"><Check size={12} /></button>
-                <button onClick={() => { setShowAddDepartment(false); setNewDepartmentName(""); }} className="p-1.5 rounded-lg hover:bg-muted"><X size={12} className="text-muted-foreground" /></button>
-              </div>
-            )}
-          </div>
+          {departments.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {departments.map(dep => (
+                <span key={dep.id} className="rounded-full bg-muted px-2.5 py-1 text-xs text-foreground">{dep.name}</span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Address + Kiosk */}
@@ -416,10 +331,6 @@ export function ConceptsTab({
             <Trash2 size={12} /> {t("conceptsTab.deleteLocation")}
           </button>
         </div>
-      )}
-
-      {confirmModal && (
-        <ConfirmModal {...confirmModal} onClose={() => setConfirmModal(null)} />
       )}
     </div>
   );

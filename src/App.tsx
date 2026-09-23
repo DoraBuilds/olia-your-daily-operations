@@ -161,6 +161,7 @@ const router = createBrowserRouter(
         { path: "/maintenance", element: <Navigate to="/dashboard" replace /> },
         { path: "/admin", element: <Navigate to="/admin/location" replace /> },
         { path: "/admin/location", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        { path: "/admin/departments", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/notifications", element: <ProtectedRoute><Admin /></ProtectedRoute> },

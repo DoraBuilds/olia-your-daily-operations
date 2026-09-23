@@ -643,7 +643,6 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               options={availableDepartments.map((d): MultiSelectOption => ({
                 id: d.id,
                 label: d.name,
-                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
               }))}
               selected={draft.departmentIds}
               onChange={ids => updateDraft({ departmentIds: ids })}

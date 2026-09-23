@@ -5,9 +5,11 @@
 -- company-wide: one row per department on the organization, plus a
 -- department_assignments table saying where each one applies:
 --
---   concept_id set, location_id NULL  → every location in that concept,
+--   concept_id NULL, location_id NULL → every location in the company,
 --                                        including ones added later (live)
---   concept_id set, location_id set   → just that location
+--   concept_id set,  location_id NULL → every location in that concept,
+--                                        including ones added later (live)
+--   concept_id set,  location_id set  → just that location
 --
 -- A department with no assignments is allowed ("Not assigned") and
 -- applies nowhere. location_departments resolves the assignments into
@@ -54,13 +56,18 @@ CREATE POLICY "departments_update" ON public.departments FOR UPDATE
 CREATE TABLE public.department_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   department_id uuid NOT NULL REFERENCES public.departments(id) ON DELETE CASCADE,
-  concept_id uuid NOT NULL REFERENCES public.concepts(id) ON DELETE CASCADE,
+  concept_id uuid NULL REFERENCES public.concepts(id) ON DELETE CASCADE,
   location_id uuid NULL REFERENCES public.locations(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT department_assignments_location_needs_concept CHECK (location_id IS NULL OR concept_id IS NOT NULL)
 );
 
 CREATE UNIQUE INDEX department_assignments_unique
-  ON public.department_assignments (department_id, concept_id, COALESCE(location_id, '00000000-0000-0000-0000-000000000000'::uuid));
+  ON public.department_assignments (
+    department_id,
+    COALESCE(concept_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    COALESCE(location_id, '00000000-0000-0000-0000-000000000000'::uuid)
+  );
 CREATE INDEX department_assignments_concept_id_idx ON public.department_assignments (concept_id);
 CREATE INDEX department_assignments_location_id_idx ON public.department_assignments (location_id);
 
@@ -82,7 +89,10 @@ FROM public.department_assignments a
 JOIN public.departments d ON d.id = a.department_id
 JOIN public.locations l
   ON l.organization_id = d.organization_id
- AND (l.id = a.location_id OR (a.location_id IS NULL AND l.concept_id = a.concept_id));
+ AND (
+   l.id = a.location_id
+   OR (a.location_id IS NULL AND (a.concept_id IS NULL OR l.concept_id = a.concept_id))
+ );
 
 GRANT SELECT ON public.location_departments TO authenticated;
 
@@ -155,9 +165,10 @@ REVOKE ALL ON FUNCTION public.prune_department_links(uuid) FROM PUBLIC, anon, au
 
 -- ── 6. set_department_assignments ───────────────────────────────
 -- Replaces a department's assignments in one transaction, then prunes.
--- p_assignments: [{ "concept_id": uuid, "location_id": uuid | null }, ...]
--- A whole-concept entry makes location entries for that concept redundant,
--- so they're dropped.
+-- p_assignments: [{ "concept_id": uuid | null, "location_id": uuid | null }, ...]
+-- A company-wide entry (both null) makes every other entry redundant, and a
+-- whole-concept entry makes location entries for that concept redundant, so
+-- those are dropped.
 CREATE OR REPLACE FUNCTION public.set_department_assignments(p_department_id uuid, p_assignments jsonb)
 RETURNS void
 LANGUAGE plpgsql
@@ -180,12 +191,16 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM _requested r
-    WHERE r.concept_id IS NULL
-       OR NOT EXISTS (SELECT 1 FROM concepts co WHERE co.id = r.concept_id AND co.organization_id = v_org)
+    WHERE (r.concept_id IS NULL AND r.location_id IS NOT NULL)
+       OR (r.concept_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM concepts co WHERE co.id = r.concept_id AND co.organization_id = v_org))
        OR (r.location_id IS NOT NULL AND NOT EXISTS (
             SELECT 1 FROM locations l WHERE l.id = r.location_id AND l.concept_id = r.concept_id AND l.organization_id = v_org))
   ) THEN
     RAISE EXCEPTION 'Department assignments must reference this organization''s concepts and their locations.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM _requested WHERE concept_id IS NULL) THEN
+    DELETE FROM _requested WHERE concept_id IS NOT NULL;
   END IF;
 
   DELETE FROM _requested r
@@ -196,7 +211,7 @@ BEGIN
   WHERE a.department_id = p_department_id
     AND NOT EXISTS (
       SELECT 1 FROM _requested r
-      WHERE r.concept_id = a.concept_id AND r.location_id IS NOT DISTINCT FROM a.location_id
+      WHERE r.concept_id IS NOT DISTINCT FROM a.concept_id AND r.location_id IS NOT DISTINCT FROM a.location_id
     );
 
   INSERT INTO department_assignments (department_id, concept_id, location_id)
@@ -205,7 +220,7 @@ BEGIN
   WHERE NOT EXISTS (
     SELECT 1 FROM department_assignments a
     WHERE a.department_id = p_department_id
-      AND a.concept_id = r.concept_id AND a.location_id IS NOT DISTINCT FROM r.location_id
+      AND a.concept_id IS NOT DISTINCT FROM r.concept_id AND a.location_id IS NOT DISTINCT FROM r.location_id
   );
 
   DROP TABLE _requested;

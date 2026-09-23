@@ -105,14 +105,14 @@ describe("TeamMemberModal", () => {
       expect(screen.getByText("Department(s)")).toBeInTheDocument();
     });
 
-    it("lists departments from every selected location, labeled by location", async () => {
+    it("lists departments from every selected location, once each by name", async () => {
       renderModal({ locations });
       fireEvent.click(screen.getByText("Main Branch"));
       fireEvent.click(screen.getByText("City Centre"));
 
       await waitFor(() => {
-        expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument();
-        expect(screen.getByText("Front of House — City Centre")).toBeInTheDocument();
+        expect(screen.getByText("Kitchen")).toBeInTheDocument();
+        expect(screen.getByText("Front of House")).toBeInTheDocument();
       });
     });
 
@@ -129,9 +129,9 @@ describe("TeamMemberModal", () => {
       fireEvent.click(screen.getByText("Main Branch"));
       fireEvent.click(screen.getByText("City Centre"));
 
-      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
-      const kitchen = screen.getByText("Kitchen — Main Branch");
-      const foh = screen.getByText("Front of House — City Centre");
+      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
+      const kitchen = screen.getByText("Kitchen");
+      const foh = screen.getByText("Front of House");
 
       fireEvent.click(kitchen);
       fireEvent.click(foh);
@@ -159,15 +159,15 @@ describe("TeamMemberModal", () => {
       fireEvent.click(screen.getByText("Main Branch"));
       fireEvent.click(screen.getByText("City Centre"));
 
-      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
 
       fireEvent.click(screen.getByText("Select all"));
-      expect(screen.getByText("Kitchen — Main Branch").closest("button")).toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House — City Centre").closest("button")).toHaveClass("bg-sage");
+      expect(screen.getByText("Kitchen").closest("button")).toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House").closest("button")).toHaveClass("bg-sage");
 
       fireEvent.click(screen.getByText("Clear all"));
-      expect(screen.getByText("Kitchen — Main Branch").closest("button")).not.toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House — City Centre").closest("button")).not.toHaveClass("bg-sage");
+      expect(screen.getByText("Kitchen").closest("button")).not.toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House").closest("button")).not.toHaveClass("bg-sage");
     });
 
     it("pre-selects every department already assigned to the member being edited", async () => {
@@ -181,9 +181,9 @@ describe("TeamMemberModal", () => {
         } as Parameters<typeof TeamMemberModal>[0]["member"],
       });
 
-      await waitFor(() => expect(screen.getByText("Kitchen — Main Branch")).toBeInTheDocument());
-      expect(screen.getByText("Kitchen — Main Branch").closest("button")).toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House — City Centre").closest("button")).toHaveClass("bg-sage");
+      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
+      expect(screen.getByText("Kitchen").closest("button")).toHaveClass("bg-sage");
+      expect(screen.getByText("Front of House").closest("button")).toHaveClass("bg-sage");
     });
   });
 });
