@@ -25,7 +25,6 @@ import { supabase } from "@/lib/supabase";
 export { parseGoogleOpeningHours } from "./admin/shared";
 import { ConceptsTab } from "./admin/ConceptsTab";
 import { AccountTab } from "./admin/AccountTab";
-import { NotificationsTab } from "./admin/NotificationsTab";
 import { DepartmentsTab } from "./admin/DepartmentsTab";
 import { KiosksTab } from "./admin/KiosksTab";
 import {
@@ -46,7 +45,7 @@ export default function Admin() {
   // Read once at mount (not from the "?from=kiosk" query param, which the
   // tab-switcher below drops on every navigate) so the PIN-granted session —
   // and the userId/permission scoping derived from it — survives switching
-  // between Concepts / Users / Account / Billing / Notifications.
+  // between Concepts / Departments / Users / Account / Billing / Kiosks.
   // ProtectedRoute already guarantees a kiosk device can't reach this page
   // at all without a live grant, so there's no separate "invalid token"
   // redirect to handle here.
@@ -81,14 +80,13 @@ export default function Admin() {
   const { data: pendingInvites = [] } = useTeamMemberInvites();
 
   // UI state
-  const routeTab: "location" | "departments" | "users" | "account" | "billing" | "notifications" | "kiosks" =
+  const routeTab: "location" | "departments" | "users" | "account" | "billing" | "kiosks" =
     location.pathname.startsWith("/admin/departments") ? "departments" :
     location.pathname.startsWith("/admin/users") ? "users" :
     location.pathname.startsWith("/admin/account") ? "account" :
     location.pathname.startsWith("/admin/billing") ? "billing" :
-    location.pathname.startsWith("/admin/notifications") ? "notifications" :
     location.pathname.startsWith("/admin/kiosks") ? "kiosks" : "location";
-  const [activeTab, setActiveTab] = useState<"location" | "departments" | "users" | "account" | "billing" | "notifications" | "kiosks">(routeTab);
+  const [activeTab, setActiveTab] = useState<"location" | "departments" | "users" | "account" | "billing" | "kiosks">(routeTab);
   const [currentConceptId, setCurrentConceptId] = useState("");
   const [currentLocationId, setCurrentLocationId] = useState("");
 
@@ -127,7 +125,7 @@ export default function Admin() {
   const isOwner = !activeUser || activeUser.is_owner;
 
   useEffect(() => {
-    if (!isOwner && (routeTab === "account" || routeTab === "notifications" || routeTab === "departments")) {
+    if (!isOwner && (routeTab === "account" || routeTab === "departments")) {
       navigate("/admin/location", { replace: true });
       return;
     }
@@ -389,7 +387,6 @@ export default function Admin() {
       { key: "departments" as const, label: t("tabs.departments") },
       { key: "users" as const, label: t("tabs.users") },
       { key: "kiosks" as const, label: t("tabs.kiosks") },
-      { key: "notifications" as const, label: t("tabs.notifications") },
       { key: "account" as const, label: t("tabs.account") },
       { key: "billing" as const, label: t("tabs.billing") },
     ] : []),
@@ -496,7 +493,6 @@ export default function Admin() {
                 )}
                 {activeTab === "users" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="users" />}
                 {activeTab === "account" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="account" />}
-                {activeTab === "notifications" && isOwner && <NotificationsTab />}
                 {activeTab === "billing" && isOwner && accountTabProps && <AccountTab {...accountTabProps} section="billing" />}
                 {activeTab === "kiosks" && isOwner && <KiosksTab concepts={concepts} locations={locations} />}
               </>
