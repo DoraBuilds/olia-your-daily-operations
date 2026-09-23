@@ -240,11 +240,14 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
 
 // ─── DepartmentModal ──────────────────────────────────────────────────────────
 // Same Concept / Location dropdowns as the Reporting filters: empty = "All".
+// Also opened from a location's page in the Concepts tab, pre-assigned there.
 
-function DepartmentModal({
-  department, existingNames, concepts, locations, saving, onClose, onSave,
+export function DepartmentModal({
+  department, initialAssignments, existingNames, concepts, locations, saving, onClose, onSave,
 }: {
   department: CompanyDepartment | null;
+  /** Starting assignments for a new department. Omitted = All / All. */
+  initialAssignments?: DepartmentAssignment[];
   existingNames: string[];
   concepts: Concept[];
   locations: Location[];
@@ -255,7 +258,7 @@ function DepartmentModal({
   const { t } = useTranslation("admin");
   const { t: tc } = useTranslation("checklists");
   const [name, setName] = useState(department?.name ?? "");
-  const [selection, setSelection] = useState(() => assignmentsToSelection(department?.assignments ?? [], locations));
+  const [selection, setSelection] = useState(() => assignmentsToSelection(department?.assignments ?? initialAssignments ?? [], locations));
 
   const trimmed = name.trim();
   const duplicate = existingNames.includes(trimmed.toLowerCase());

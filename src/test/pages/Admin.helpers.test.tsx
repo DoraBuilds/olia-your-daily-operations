@@ -183,6 +183,7 @@ vi.mock("@/hooks/useConcepts", () => ({
 vi.mock("@/hooks/useDepartments", () => ({
   useDepartments: () => ({ data: [], isLoading: false }),
   useDepartmentsForLocations: () => ({ data: [], isLoading: false }),
+  useCompanyDepartments: () => ({ data: [], isLoading: false }),
   useSaveDepartment: () => ({ mutate: vi.fn() }),
   useDeleteDepartment: () => ({ mutate: vi.fn() }),
 }));
@@ -288,7 +289,7 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
   it("does not show trading_hours in the location detail card", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Address")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument();
     });
     const hoursEl = Array.from(document.querySelectorAll("p")).find(el =>
       el.textContent?.includes("09:00") || el.textContent?.includes("Mon:")
@@ -299,7 +300,7 @@ describe("Admin — location detail renders parsed JSON trading_hours", () => {
   it("does not crash for a location with plain-text trading_hours (fallback path)", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Address")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument();
     });
     expect(document.body).toBeDefined();
   });
@@ -368,7 +369,8 @@ describe("Admin — TeamMemberModal role field", () => {
 describe("Admin — ConfirmModal (delete location)", () => {
   it("clicking location delete button opens a confirm modal naming the location", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => {
       expect(screen.getByText(byFullText('This will permanently remove "Main Branch" and cannot be undone.'))).toBeInTheDocument();
@@ -377,7 +379,8 @@ describe("Admin — ConfirmModal (delete location)", () => {
 
   it("confirm modal Cancel button closes the modal", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
@@ -450,7 +453,7 @@ describe("Admin — formatHoursText (via location detail card)", () => {
     mockUseLocations.mockReturnValueOnce(closedLocationReturn);
 
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
 
     expect(screen.queryByText("Closed all week")).not.toBeInTheDocument();
   });

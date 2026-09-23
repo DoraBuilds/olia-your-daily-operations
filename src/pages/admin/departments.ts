@@ -99,3 +99,41 @@ export function assignmentsToSelection(
   )];
   return { conceptIds, locationIds };
 }
+
+/** Adds one location to a department's assignments (no-op if it's already covered). */
+export function addLocationToAssignments(
+  assignments: DepartmentAssignment[],
+  location: Pick<Location, "id" | "concept_id">,
+  locations: Pick<Location, "id" | "concept_id">[],
+): DepartmentAssignment[] {
+  if (!location.concept_id || resolveDepartmentLocationIds(assignments, locations).has(location.id)) return assignments;
+  return [...assignments, { concept_id: location.concept_id, location_id: location.id }];
+}
+
+/**
+ * Takes one location out of a department's assignments. A company-wide or
+ * whole-concept assignment covering it is split so everything else it covered
+ * stays covered, keeping as much of it live as possible: company-wide becomes
+ * every other concept (still live) plus the other locations in this one.
+ */
+export function removeLocationFromAssignments(
+  assignments: DepartmentAssignment[],
+  location: Pick<Location, "id" | "concept_id">,
+  locations: Pick<Location, "id" | "concept_id">[],
+  conceptIds: string[],
+): DepartmentAssignment[] {
+  const siblings = (): DepartmentAssignment[] => locations
+    .filter(l => l.concept_id === location.concept_id && l.id !== location.id)
+    .map(l => ({ concept_id: l.concept_id!, location_id: l.id }));
+
+  if (assignments.some(a => a.concept_id === null)) {
+    return [
+      ...conceptIds.filter(id => id !== location.concept_id).map(id => ({ concept_id: id, location_id: null })),
+      ...siblings(),
+    ];
+  }
+  const next = assignments.filter(a => a.location_id !== location.id);
+  if (!next.some(a => a.concept_id === location.concept_id && a.location_id === null)) return next;
+  // The whole-concept entry already covered any specific picks in this concept.
+  return [...next.filter(a => a.concept_id !== location.concept_id), ...siblings()];
+}

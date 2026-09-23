@@ -1,4 +1,5 @@
 import {
+  addLocationToAssignments, removeLocationFromAssignments,
   assignmentsToSelection, departmentUnassignImpact, resolveDepartmentLocationIds, selectionToAssignments,
 } from "@/pages/admin/departments";
 
@@ -94,5 +95,47 @@ describe("assignmentsToSelection", () => {
     );
     expect(sel.locationIds.sort()).toEqual(["a1", "a2", "b1"]);
     expect(sel.conceptIds.sort()).toEqual(["A", "B"]);
+  });
+});
+
+describe("addLocationToAssignments", () => {
+  it("adds a specific location assignment", () => {
+    expect(addLocationToAssignments([], locations[0], locations)).toEqual([{ concept_id: "A", location_id: "a1" }]);
+  });
+
+  it("is a no-op when the location is already covered", () => {
+    const whole = [{ concept_id: "A", location_id: null }];
+    expect(addLocationToAssignments(whole, locations[0], locations)).toBe(whole);
+  });
+});
+
+describe("removeLocationFromAssignments", () => {
+  it("drops a specific location assignment", () => {
+    const next = removeLocationFromAssignments(
+      [{ concept_id: "A", location_id: "a1" }, { concept_id: "B", location_id: "b1" }],
+      locations[0], locations, ["A", "B"],
+    );
+    expect(next).toEqual([{ concept_id: "B", location_id: "b1" }]);
+  });
+
+  it("splits a whole-concept assignment into the concept's other locations", () => {
+    const next = removeLocationFromAssignments(
+      [{ concept_id: "A", location_id: null }, { concept_id: "B", location_id: null }],
+      locations[0], locations, ["A", "B"],
+    );
+    expect(next).toEqual([{ concept_id: "B", location_id: null }, { concept_id: "A", location_id: "a2" }]);
+  });
+
+  it("keeps other concepts live when splitting a company-wide assignment", () => {
+    const next = removeLocationFromAssignments(
+      [{ concept_id: null, location_id: null }],
+      locations[0], locations, ["A", "B", "C"],
+    );
+    expect(next).toEqual([
+      { concept_id: "B", location_id: null },
+      { concept_id: "C", location_id: null },
+      { concept_id: "A", location_id: "a2" },
+    ]);
+    expect(resolveDepartmentLocationIds(next, locations)).toEqual(new Set(["a2", "b1"]));
   });
 });

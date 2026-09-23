@@ -174,8 +174,9 @@ const { mockSaveTeamMember } = vi.hoisted(() => ({
 const { mockUseTeamMemberInvites } = vi.hoisted(() => ({
   mockUseTeamMemberInvites: vi.fn(() => ({ data: [] as unknown[], isLoading: false })),
 }));
-const { mockDeleteDepartment } = vi.hoisted(() => ({
+const { mockDeleteDepartment, mockSaveDepartment } = vi.hoisted(() => ({
   mockDeleteDepartment: { mutate: vi.fn() },
+  mockSaveDepartment: { mutate: vi.fn(), isPending: false },
 }));
 mockUseLocations.mockReturnValue({
   data: mockLocations,
@@ -216,7 +217,7 @@ vi.mock("@/hooks/useDepartments", () => ({
     { id: "d1", name: "Front of House", assignments: [{ concept_id: "concept-1", location_id: null }] },
     { id: "d2", name: "Back of House", assignments: [] },
   ], isLoading: false }),
-  useSaveDepartment: () => ({ mutate: vi.fn(), isPending: false }),
+  useSaveDepartment: () => mockSaveDepartment,
   useDeleteDepartment: () => mockDeleteDepartment,
 }));
 
@@ -263,9 +264,9 @@ describe("Admin page", () => {
     expect(screen.getAllByText("Billing").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("Concepts tab is active by default and shows the current location's address", () => {
+  it("Concepts tab is active by default, with the location's options menu", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    expect(screen.getByText("Address")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument();
   });
 
   it("account route shows account content", () => {
@@ -274,16 +275,15 @@ describe("Admin page", () => {
     expect(screen.getByText("Owner details")).toBeInTheDocument();
   });
 
-  it("still shows the concept picker (and an Add concept affordance) with only one concept, so a second concept can always be added", async () => {
+  it("still shows the concept tiles (and an Add concept tile) with only one concept, so a second concept can always be added", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getAllByText("Main Branch").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole("button", { name: /The Crown Restaurant/, pressed: true })).toBeInTheDocument();
     });
-    expect(screen.getByText("Concept")).toBeInTheDocument();
     expect(screen.getByText("Add concept")).toBeInTheDocument();
   });
 
-  it("shows a concept picker with multiple concepts selectable", async () => {
+  it("shows a tile per concept, and clicking one selects it", async () => {
     // mockReturnValue (not Once): Admin's concept-default effect triggers a
     // second render, which would consume a "Once" value on the first render
     // and fall back to the single-concept default before the assertion runs.
@@ -293,20 +293,21 @@ describe("Admin page", () => {
     });
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Concept")).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Second Brand" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Second Brand/, pressed: false })).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: /Second Brand/ }));
+    expect(screen.getByRole("button", { name: /Second Brand/, pressed: true })).toBeInTheDocument();
     mockUseConcepts.mockReturnValue({ data: mockConcepts, isLoading: false });
   });
 
-  it("opens a concept options menu with Edit concept and Delete concept when the kebab next to Add concept is clicked", async () => {
+  it("opens a concept options menu with Edit concept and Delete concept from the selected concept's tile", async () => {
     mockUseConcepts.mockReturnValue({
       data: [...mockConcepts, { id: "concept-2", organization_id: "org1", name: "Second Brand" }],
       isLoading: false,
     });
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Concept")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Concept options" })).toBeInTheDocument();
     });
     expect(screen.queryByText("Edit concept")).not.toBeInTheDocument();
 
@@ -320,7 +321,7 @@ describe("Admin page", () => {
   it("hides Delete concept in the kebab menu when there's only one concept", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Concept")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Concept options" })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Concept options" }));
@@ -332,7 +333,7 @@ describe("Admin page", () => {
   it("location detail card is rendered when location is selected", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Address")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument();
     });
   });
 
@@ -385,12 +386,33 @@ describe("Admin page", () => {
       mockNavigate.mockClear();
     });
 
-    it("lists the location's departments read-only in Concepts, with a Manage link to the Departments tab", async () => {
+    it("lists the location's departments in Concepts, with a link to the Departments tab in the Add menu", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      expect(screen.queryByTitle("Delete department")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "Manage all departments" }));
       expect(mockNavigate).toHaveBeenCalledWith("/admin/departments");
+    });
+
+    it("removes a whole-concept department from just this location, keeping the concept's other locations", async () => {
+      mockSaveDepartment.mutate.mockClear();
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Remove Front of House from this location" }));
+      expect(screen.getByText("Remove department from this location")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+      expect(mockSaveDepartment.mutate).toHaveBeenCalledWith(
+        { id: "d1", name: "Front of House", assignments: [{ concept_id: "concept-1", location_id: "l2" }] },
+        expect.anything(),
+      );
+    });
+
+    it("opens the new-department form from the location's Add menu", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
+      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
+      fireEvent.click(screen.getByRole("button", { name: "New department" }));
+      expect(screen.getByText("New department", { selector: "h2, h3" })).toBeInTheDocument();
     });
 
     it("shows a Departments tab right after Concepts for the Owner", () => {
@@ -407,10 +429,10 @@ describe("Admin page", () => {
     });
   });
 
-  it("clicking a location card switches the current location", async () => {
+  it("picking a location in the dropdown switches the current location", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Main Branch")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("City Centre"));
+    await waitFor(() => expect(screen.getByRole("option", { name: "Main Branch" })).toBeInTheDocument());
+    fireEvent.change(screen.getByRole("combobox", { name: "Location" }), { target: { value: "l2" } });
     await waitFor(() => {
       // City Centre (l2) has Mike Manager assigned, not Sarah/Alice
       expect(screen.getByText("Mike Manager")).toBeInTheDocument();
@@ -575,17 +597,15 @@ describe("Admin page", () => {
     await waitFor(() => expect(screen.getByText("Add location")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Add location"));
     await waitFor(() => {
-      // "Address" also appears as the Concepts tab's location-detail section
-      // label underneath the modal, so there are two matches.
-      expect(screen.getAllByText("Address").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText("Address").length).toBeGreaterThanOrEqual(1);
     });
   });
 
   it("edit location form shows map preview and confirmation for stored place data", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
-    const editButtons = screen.getAllByText("Edit");
-    fireEvent.click(editButtons[0]);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
+    fireEvent.click(screen.getByText("Edit location"));
 
     await waitFor(() => {
       expect(screen.getByTitle("Location map preview")).toBeInTheDocument();
@@ -630,8 +650,9 @@ describe("Admin page", () => {
 
   it("clicking Edit on a location opens edit form", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
-    fireEvent.click(screen.getAllByText("Edit")[0]);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
+    fireEvent.click(screen.getByText("Edit location"));
     await waitFor(() => {
       expect(screen.getByText("Edit location")).toBeInTheDocument();
     });
@@ -639,7 +660,8 @@ describe("Admin page", () => {
 
   it("clicking delete on a location shows confirm modal with the location's name", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => {
       expect(screen.getByText(byFullText('This will permanently remove "Main Branch" and cannot be undone.'))).toBeInTheDocument();
@@ -648,7 +670,8 @@ describe("Admin page", () => {
 
   it("confirm modal has Cancel button", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Delete location")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
     fireEvent.click(screen.getByText("Delete location"));
     await waitFor(() => {
       expect(screen.getByText("Cancel")).toBeInTheDocument();
@@ -810,22 +833,72 @@ describe("Admin page", () => {
     });
   });
 
-  it("Concepts tab shows Assigned checklists section with checklist names for the current location", async () => {
+  it("shows the address only inside the location options menu", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => {
-      expect(screen.getByText(/Assigned checklists/i)).toBeInTheDocument();
-      expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Closing Checklist").length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    expect(screen.queryByText("123 Street")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
+    expect(screen.getByText("123 Street")).toBeInTheDocument();
+    expect(screen.getByText("main@test.com")).toBeInTheDocument();
+  });
+
+  it("Concepts tab no longer lists the location's assigned checklists", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
+    expect(screen.queryByText(/Assigned checklists/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+  });
+
+  describe("Location team members", () => {
+    it("opens the add-member form from the location's Team members section", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
+      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[1]);
+      expect(screen.getAllByText("Add team member").length).toBeGreaterThan(0);
+    });
+
+    it("removing a member whose only location is this one is the full Users-tab removal", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Remove Alice Smith from Main Branch" }));
+      expect(screen.getByText("Remove team member")).toBeInTheDocument();
+    });
+
+    it("removes a multi-location member from just this location", async () => {
+      mockTeam.push({
+        ...mockTeam[2], id: "tm9", name: "Bob Both", location_ids: ["l1", "l2"], department_ids: ["d1"],
+      });
+      mockSaveTeamMember.mutate.mockClear();
+      try {
+        renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+        await waitFor(() => expect(screen.getByText("Bob Both")).toBeInTheDocument());
+        fireEvent.click(screen.getByRole("button", { name: "Remove Bob Both from Main Branch" }));
+        expect(screen.getByText("Remove from location")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+        // d1 covers all of concept-1, so it still applies at City Centre.
+        expect(mockSaveTeamMember.mutate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "tm9", location_ids: ["l2"], department_ids: ["d1"] }),
+          expect.anything(),
+        );
+      } finally {
+        mockTeam.pop();
+      }
     });
   });
 
-  it("Concepts tab shows 'no checklists' message for a location with no assigned checklists", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("City Centre"));
-    await waitFor(() => {
-      expect(screen.getByText(/No checklists assigned/i)).toBeInTheDocument();
-    });
+  it("lists the location's kiosks with a Deactivate action", async () => {
+    mockKioskDevices = [
+      { id: "k1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-01" },
+    ];
+    try {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Host stand")).toBeInTheDocument());
+      expect(screen.getByText("Kiosks (1)")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+      expect(screen.getByText("Deactivate this kiosk")).toBeInTheDocument();
+    } finally {
+      mockKioskDevices = [];
+    }
   });
 
   it("location form does not show Opening hours section", async () => {
@@ -860,11 +933,12 @@ describe("Admin page", () => {
     });
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => {
-      expect(screen.getByText("Address")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument();
     });
-    const addressCard = screen.getByText("Address").closest(".card-surface");
-    expect(addressCard?.textContent).not.toContain("Mon:");
-    expect(addressCard?.textContent).not.toContain("09:00");
+    fireEvent.click(screen.getByRole("button", { name: "Location options" }));
+    const addressMenu = screen.getByText("Address").parentElement;
+    expect(addressMenu?.textContent).not.toContain("Mon:");
+    expect(addressMenu?.textContent).not.toContain("09:00");
   });
 
   it("Concepts tab shows onboarding empty state when the org has no concepts yet", async () => {
@@ -1048,25 +1122,20 @@ describe("Admin page", () => {
       localStorage.setItem("kiosk_location_id", "l1");
       localStorage.setItem("kiosk_location_name", "Main Branch");
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
       expect(screen.queryByText(/currently running as the kiosk/)).not.toBeInTheDocument();
       expect(screen.queryByText("Exit kiosk mode")).not.toBeInTheDocument();
     });
 
-    it("shows a green dot only on locations with an active kiosk device", async () => {
+    it("lists only the selected location's kiosks", async () => {
       mockKioskDevices = [
-        { id: "d1", organization_id: "org1", location_id: "l2", label: "", last_seen_at: null, revoked_at: null, created_at: "2026-09-01" },
+        { id: "d1", organization_id: "org1", location_id: "l2", label: "Bar tablet", last_seen_at: null, revoked_at: null, created_at: "2026-09-01" },
       ];
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getAllByLabelText("Kiosk active")).toHaveLength(1));
-      const dot = screen.getByLabelText("Kiosk active");
-      expect(dot.closest("button")).toHaveTextContent("City Centre");
-    });
-
-    it("shows no dot when there are no active kiosk devices", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("Address")).toBeInTheDocument());
-      expect(screen.queryByLabelText("Kiosk active")).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("No kiosks at this location yet.")).toBeInTheDocument());
+      expect(screen.queryByText("Bar tablet")).not.toBeInTheDocument();
+      fireEvent.change(screen.getByRole("combobox", { name: "Location" }), { target: { value: "l2" } });
+      await waitFor(() => expect(screen.getByText("Bar tablet")).toBeInTheDocument());
     });
 
     // Regression (#824): stale local kiosk state (device deactivated from

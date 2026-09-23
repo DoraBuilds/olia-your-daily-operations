@@ -39,7 +39,8 @@
     "conceptDeleted": "Concepto eliminado",
     "deleteConceptFailed": "No se pudo eliminar el concepto: {{error}}",
     "activateKioskFailed": "No se pudo activar el kiosco: {{error}}",
-    "linkCopied": "Enlace copiado"
+    "linkCopied": "Enlace copiado",
+    "removedFromLocation": "{{name}} quitado de {{location}}"
   },
   "confirm": {
     "deleteLocationTitle": "Eliminar ubicación",
@@ -78,7 +79,9 @@
     "copyLink": "Copiar enlace",
     "typeToConfirm": "Escribe",
     "toConfirm": "para confirmar.",
-    "placeholder": "Escribe DELETE"
+    "placeholder": "Escribe DELETE",
+    "removeFromLocationTitle": "Quitar de la ubicación",
+    "removeFromLocationMessage": "<bold>{{name}}</bold> dejará de estar en {{location}}. Mantiene el acceso a sus otras ubicaciones."
   },
   "locationLimit": {
     "title": "Agrega más ubicaciones con Growth",
@@ -145,9 +148,6 @@
     "days": "días",
     "save": "Guardar",
     "enterNumberAtLeastOne": "Ingresa un número ≥ 1",
-    "assignedChecklists": "Listas asignadas",
-    "assignedChecklistsWithCount": "Listas asignadas ({{count}})",
-    "noChecklistsAssigned": "Aún no hay listas asignadas a esta ubicación.",
     "neverUsed": "Nunca usado",
     "lastUsed": "Último uso: {{day}}, {{time}}"
   },
@@ -160,7 +160,6 @@
       "locationBody": "Los locales son donde trabaja tu equipo. Configura el primero para empezar a crear listas, gestionar personal y usar el kiosco.",
       "addLocationCta": "Agregar un local"
     },
-    "conceptLabel": "Concepto",
     "addConcept": "Agregar concepto",
     "conceptOptionsAria": "Opciones del concepto",
     "editConcept": "Editar concepto",
@@ -171,11 +170,26 @@
     "manageDepartments": "Gestionar",
     "noDepartments": "Aún no hay departamentos asignados a este local.",
     "address": "Dirección",
-    "noAddress": "Sin dirección registrada — toca Editar para agregar una.",
     "teamMembers": "Miembros del equipo",
     "teamMembersWithCount": "Miembros del equipo ({{count}})",
     "noTeamMembers": "Aún no hay miembros del equipo asignados a este local.",
-    "kioskActive": "Kiosco activo"
+    "kioskActive": "Kiosco activo",
+    "addDepartment": "Añadir",
+    "newDepartment": "Nuevo departamento",
+    "manageAllDepartments": "Gestionar todos los departamentos",
+    "removeDepartmentAria": "Quitar {{name}} de esta ubicación",
+    "removeDepartmentTitle": "Quitar departamento de esta ubicación",
+    "removeDepartmentMessage": "{{name}} dejará de aplicarse en {{location}}. Se mantiene en el resto de sitios donde está asignado.",
+    "kiosks": "Kioscos",
+    "kiosksWithCount": "Kioscos ({{count}})",
+    "noKiosks": "Aún no hay kioscos en esta ubicación.",
+    "addTeamMember": "Añadir",
+    "removeFromLocation": "Quitar de la ubicación",
+    "removeTeamMemberAria": "Quitar a {{name}} de {{location}}",
+    "locationLabel": "Ubicación",
+    "locationOptionsAria": "Opciones de ubicación",
+    "editLocation": "Editar ubicación",
+    "noAddressYet": "Aún no hay dirección registrada."
   },
   "departmentsTab": {
     "add": "Añadir departamento",
