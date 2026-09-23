@@ -842,6 +842,17 @@ describe("Admin page", () => {
     expect(screen.getByText("main@test.com")).toBeInTheDocument();
   });
 
+  it("lists the location's departments as rows with their staff count here", async () => {
+    mockTeam.push({ ...mockTeam[2], id: "tm9", name: "Bob FOH", department_ids: ["d1"] });
+    try {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Departments (2)")).toBeInTheDocument());
+      expect(screen.getByText("1 staff member")).toBeInTheDocument();
+    } finally {
+      mockTeam.pop();
+    }
+  });
+
   it("Concepts tab no longer lists the location's assigned checklists", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
@@ -893,9 +904,9 @@ describe("Admin page", () => {
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Host stand")).toBeInTheDocument());
-      expect(screen.getByText("Kiosks (1)")).toBeInTheDocument();
+      expect(screen.getByText("Devices (1)")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
-      expect(screen.getByText("Deactivate this kiosk")).toBeInTheDocument();
+      expect(screen.getByText("Deactivate this device")).toBeInTheDocument();
     } finally {
       mockKioskDevices = [];
     }
@@ -1132,7 +1143,7 @@ describe("Admin page", () => {
         { id: "d1", organization_id: "org1", location_id: "l2", label: "Bar tablet", last_seen_at: null, revoked_at: null, created_at: "2026-09-01" },
       ];
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("No kiosks at this location yet.")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByText("No devices at this location yet.")).toBeInTheDocument());
       expect(screen.queryByText("Bar tablet")).not.toBeInTheDocument();
       fireEvent.change(screen.getByRole("combobox", { name: "Location" }), { target: { value: "l2" } });
       await waitFor(() => expect(screen.getByText("Bar tablet")).toBeInTheDocument());

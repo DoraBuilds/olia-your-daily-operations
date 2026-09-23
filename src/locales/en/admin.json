@@ -7,7 +7,7 @@
     "account": "Account",
     "notifications": "Notifications",
     "billing": "Billing",
-    "kiosks": "Kiosks"
+    "kiosks": "Devices"
   },
   "userLabelFallback": "Admin",
   "roles": {
@@ -180,16 +180,17 @@
     "removeDepartmentAria": "Remove {{name}} from this location",
     "removeDepartmentTitle": "Remove department from this location",
     "removeDepartmentMessage": "{{name}} will no longer apply at {{location}}. It stays everywhere else it’s assigned.",
-    "kiosks": "Kiosks",
-    "kiosksWithCount": "Kiosks ({{count}})",
-    "noKiosks": "No kiosks at this location yet.",
+    "kiosks": "Devices",
+    "kiosksWithCount": "Devices ({{count}})",
+    "noKiosks": "No devices at this location yet.",
     "addTeamMember": "Add",
     "removeFromLocation": "Remove from location",
     "removeTeamMemberAria": "Remove {{name}} from {{location}}",
     "locationLabel": "Location",
     "locationOptionsAria": "Location options",
     "editLocation": "Edit location",
-    "noAddressYet": "No address on file yet."
+    "noAddressYet": "No address on file yet.",
+    "departmentsWithCount": "Departments ({{count}})"
   },
   "departmentsTab": {
     "add": "Add department",
@@ -438,9 +439,9 @@
   },
   "kiosksTab": {
     "loading": "Loading…",
-    "heading": "Kiosks",
-    "emptyHeading": "No kiosks yet",
-    "emptyBody": "Launch a kiosk from a location's detail page in the Concepts tab and it'll show up here.",
+    "heading": "Devices",
+    "emptyHeading": "No devices yet",
+    "emptyBody": "Activate or run a kiosk from a location in the Concepts tab and the device will show up here.",
     "activeNow": "Active now",
     "neverCheckedIn": "Never checked in",
     "lastSeenMinutes_one": "Last seen {{count}} minute ago",
@@ -450,7 +451,7 @@
     "lastSeenDays_one": "Last seen {{count}} day ago",
     "lastSeenDays_other": "Last seen {{count}} days ago",
     "deactivate": "Deactivate",
-    "deactivateConfirmTitle": "Deactivate this kiosk",
+    "deactivateConfirmTitle": "Deactivate this device",
     "deactivateConfirmMessage": "\"{{label}}\" at {{location}} will stop working within a minute and drop back to the setup screen. You'll need to launch it again from the location's page to bring it back.",
     "deactivateConfirmCta": "Deactivate",
     "deactivated": "Kiosk deactivated",
