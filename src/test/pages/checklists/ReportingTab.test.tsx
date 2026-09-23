@@ -160,6 +160,16 @@ vi.mock("@/hooks/useLocations", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useTeamMembers", () => ({
+  useTeamMembers: () => ({
+    data: [
+      { id: "sp2", name: "Bob", location_ids: ["loc-2"], department_ids: [] },
+      { id: "sp3", name: "Dana", location_ids: ["loc-1"], department_ids: [] },
+    ],
+    isLoading: false,
+  }),
+}));
+
 vi.mock("@/hooks/useConcepts", () => ({
   useConcepts: () => ({ data: [], isLoading: false }),
 }));
@@ -179,6 +189,14 @@ vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
   ReferenceLine: () => null,
 }));
+
+function openFilters() {
+  fireEvent.click(screen.getByTestId("reporting-filters-toggle"));
+}
+
+function applyFilters() {
+  fireEvent.click(screen.getByTestId("reporting-apply-filters"));
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -209,12 +227,14 @@ describe("ReportingTab", () => {
 
   it("renders without crashing", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // "Today" appears in both the period tab and the completion log sub-label
     expect(screen.getAllByText("Today").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows period tabs: Today, This Week, This Month", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getAllByText("Today").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("This Week")).toBeInTheDocument();
     expect(screen.getByText("This Month")).toBeInTheDocument();
@@ -222,26 +242,31 @@ describe("ReportingTab", () => {
 
   it("shows Custom date picker button", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
   it("shows Completed stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByTestId("stat-completed")).toBeInTheDocument();
   });
 
   it("shows Unfinished stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByTestId("stat-unfinished")).toBeInTheDocument();
   });
 
   it("shows Unstarted stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByTestId("stat-unstarted")).toBeInTheDocument();
   });
 
   it("shows correct completed count (2 logs with non-null scores)", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // MOCK_LOGS: scores 90, 65 (completed), null (unfinished) → 2 completed
     const completedCard = screen.getByTestId("stat-completed");
     expect(completedCard.querySelector(".text-2xl")).toHaveTextContent("2");
@@ -249,6 +274,7 @@ describe("ReportingTab", () => {
 
   it("shows correct unfinished count (1 log with null score)", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // MOCK_LOGS: Inventory Check has score null → 1 unfinished
     const unfinishedCard = screen.getByTestId("stat-unfinished");
     expect(unfinishedCard.querySelector(".text-2xl")).toHaveTextContent("1");
@@ -256,6 +282,7 @@ describe("ReportingTab", () => {
 
   it("shows correct unstarted count (checklists with no log in period)", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // MOCK_CHECKLISTS has c1 and c3; MOCK_LOGS has c1 and c2 logged → c3 (Safety Walk) is unstarted
     const unstartedCard = screen.getByTestId("stat-unstarted");
     expect(unstartedCard.querySelector(".text-2xl")).toHaveTextContent("1");
@@ -263,28 +290,33 @@ describe("ReportingTab", () => {
 
   it("shows Avg Score stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("Avg Score")).toBeInTheDocument();
   });
 
   it("shows correct avg score (90+65)/2 = 78%", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // "78%" appears in the stat card AND on chart dot labels — check at least one exists
     expect(screen.getAllByText("78%").length).toBeGreaterThan(0);
   });
 
   it("shows Open Actions stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("Open Actions")).toBeInTheDocument();
   });
 
   it("shows 1 open action in Open Actions stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const openActionsCard = screen.getByTestId("stat-open-actions");
     expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
   });
 
   it("renders an icon badge on every stat card", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     for (const testId of ["stat-completed", "stat-unfinished", "stat-unstarted", "stat-avg-score", "stat-open-actions"]) {
       const card = screen.getByTestId(testId);
       // the icon-badge wrapper is the w-7 h-7 square above the caption/number —
@@ -295,11 +327,13 @@ describe("ReportingTab", () => {
 
   it("shows Completion Log section", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("Completion Log")).toBeInTheDocument();
   });
 
   it("shows 'Opening Checklist' in the log", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // "Opening Checklist" appears in the Completion Log table
     const matches = screen.getAllByText("Opening Checklist");
     expect(matches.length).toBeGreaterThanOrEqual(1);
@@ -307,27 +341,32 @@ describe("ReportingTab", () => {
 
   it("shows 'Closing Checklist' in the log", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const matches = screen.getAllByText("Closing Checklist");
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows UNFINISHED badge for incomplete log entries", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
   });
 
   it("shows PASS badge for score 90", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("PASS")).toBeInTheDocument();
   });
 
   it("shows REVIEW badge for score 65", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("REVIEW")).toBeInTheDocument();
   });
 
   it("shows completed by names in log", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getAllByText(/Alice/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Bob/).length).toBeGreaterThan(0);
   });
@@ -336,21 +375,25 @@ describe("ReportingTab", () => {
     // Export section was moved from the bottom to the top toolbar (next to date filters).
     // The dedicated "Export" heading was removed; buttons are directly in the toolbar.
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("CSV")).toBeInTheDocument();
   });
 
   it("shows CSV export button", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("CSV")).toBeInTheDocument();
   });
 
   it("shows PDF export button", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("PDF")).toBeInTheDocument();
   });
 
   it("clicking PDF export calls exportReportingPdf", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("PDF"));
     expect(mockExportReportingPdf).toHaveBeenCalledTimes(1);
     const [rows, periodLabel, stats] = mockExportReportingPdf.mock.calls[0];
@@ -385,12 +428,14 @@ describe("ReportingTab", () => {
 
   it("clicking CSV export calls exportReportingCsv", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("CSV"));
     expect(mockExportReportingCsv).toHaveBeenCalled();
   });
 
   it("clicking a log row opens the log detail modal", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // Find the "Opening Checklist" text inside the completion log table buttons
     const allMatches = screen.getAllByText("Opening Checklist");
     // The one inside the log table row is wrapped in a <button>
@@ -404,6 +449,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal shows the checklist title", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -416,6 +462,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal shows completed by name", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -426,6 +473,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal shows score 90%", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -436,48 +484,52 @@ describe("ReportingTab", () => {
 
   it("switching to This Week period works", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("This Week"));
     expect(screen.getByText("Completion Log")).toBeInTheDocument();
   });
 
   it("switching to This Month period works", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("This Month"));
     expect(screen.getByText("Completion Log")).toBeInTheDocument();
   });
 
   it("does not show the By Checklist section", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.queryByText("By Checklist")).not.toBeInTheDocument();
   });
 
-  it("filters logs by checklist name, person, and status", () => {
+  it("filters logs by checklist name and status", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "Opening" } });
     expect(screen.getAllByText("Opening Checklist").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("Inventory Check")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "" } });
-    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "Bob" } });
-    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
-    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "all" } });
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unfinished" } });
     expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
   });
 
   it("clears filters when the reset button is clicked", () => {
     render(<ReportingTab />, { wrapper });
-    fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "Inventory" } });
-    expect(screen.getByTestId("reporting-clear-filters")).toBeInTheDocument();
+    openFilters();
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-clear-filters"));
-    expect(screen.getByTestId("reporting-checklist-search")).toHaveValue("");
+    expect(screen.getByTestId("reporting-status-filter")).toHaveValue("all");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
   });
 
   it("preselects a dashboard-provided location and filters the results", () => {
     render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    openFilters();
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("City Centre");
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
@@ -513,17 +565,17 @@ describe("ReportingTab", () => {
   it("shows 'No logs match your filters.' when no logs and active checklist filter", () => {
     mockUseChecklistLogs.mockReturnValue({ data: [], isLoading: false });
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "XYZ" } });
     expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
   });
 
-  it("shows 'No logs match your filters.' when no logs and active person filter", () => {
+  it("shows 'No logs match your filters.' when no logs and active status filter", () => {
     mockUseChecklistLogs.mockReturnValue({ data: [], isLoading: false });
     render(<ReportingTab />, { wrapper });
-    // Manually set person filter to something that won't match
-    fireEvent.change(screen.getByTestId("reporting-person-filter"), { target: { value: "all" } });
-    // status filter as active filter
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    applyFilters();
     expect(screen.getByText("No logs match your filters.")).toBeInTheDocument();
   });
 
@@ -560,6 +612,7 @@ describe("ReportingTab", () => {
       isLoading: false,
     });
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // "Review" appears in the stat card sub-label AND as a threshold label in the chart
     expect(screen.getAllByText("Review").length).toBeGreaterThan(0);
   });
@@ -591,6 +644,7 @@ describe("ReportingTab", () => {
 
   it("renders the Score Trend chart when there are scored logs", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByRole("img", { name: "Score trend chart" })).toBeInTheDocument();
   });
 
@@ -603,6 +657,7 @@ describe("ReportingTab", () => {
       isLoading: false,
     });
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByRole("img", { name: "Score trend chart" })).toBeInTheDocument();
   });
 
@@ -627,25 +682,32 @@ describe("ReportingTab", () => {
 
   it("period label shows 'This Week' in Completion Log header after switching", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("This Week"));
+    applyFilters();
     expect(screen.getByText(/— This Week/)).toBeInTheDocument();
   });
 
   it("period label shows 'This Month' in Completion Log header after switching", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("This Month"));
+    applyFilters();
     expect(screen.getByText(/— This Month/)).toBeInTheDocument();
   });
 
   it("period label shows 'Today' in Completion Log header by default", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText(/— Today/)).toBeInTheDocument();
   });
 
   it("clicking Custom button sets period to custom (opens popover)", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const customBtn = screen.getByText("Custom");
     fireEvent.click(customBtn);
+    applyFilters();
     // After clicking Custom, the popover should open (calendar rendered)
     // The calendar shows "Custom range" as period label
     expect(screen.getByText(/— Custom range/)).toBeInTheDocument();
@@ -655,8 +717,10 @@ describe("ReportingTab", () => {
 
   it("shows 'Custom range' period label when custom period and no date selected", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByText("Custom"));
-    expect(screen.getByText(/Custom range/)).toBeInTheDocument();
+    applyFilters();
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("Custom range");
   });
 
   // ── Export plan gating ──────────────────────────────────────────────
@@ -665,6 +729,7 @@ describe("ReportingTab", () => {
     // The global usePlan mock has can = () => true (exportCsv allowed).
     // Test that CSV button is present and enabled when allowed.
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText("CSV")).toBeInTheDocument();
     // With entries present, CSV button should not be disabled
     expect(screen.getByTestId("export-csv")).not.toBeDisabled();
@@ -672,6 +737,7 @@ describe("ReportingTab", () => {
 
   it("UpgradePrompt is not shown initially", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.queryByText("Upgrade to unlock")).not.toBeInTheDocument();
   });
 
@@ -679,18 +745,22 @@ describe("ReportingTab", () => {
 
   it("changing location filter to specific location updates displayed logs", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-location-filter-option-loc-1"));
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Main Branch");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
   it("changing location filter back to all shows all logs", () => {
     render(<ReportingTab initialLocationId="loc-1" />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-location-filter-option-all"));
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("All locations");
+    applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
   });
@@ -699,13 +769,16 @@ describe("ReportingTab", () => {
 
   it("status filter 'completed' hides unfinished logs", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    applyFilters();
     expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
     expect(screen.getByText("PASS")).toBeInTheDocument();
   });
 
   it("status filter 'all' shows all logs", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "all" } });
     expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
     expect(screen.getByText("PASS")).toBeInTheDocument();
@@ -715,6 +788,7 @@ describe("ReportingTab", () => {
 
   it("shows 'Showing N of N logs' in filter panel", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // The text "Showing 3 of 3 logs." is rendered as a single paragraph element
     expect(screen.getByText((content, element) =>
       element?.tagName === "P" && /Showing 3 of 3 logs/.test(content)
@@ -724,6 +798,7 @@ describe("ReportingTab", () => {
   it("shows 'log' (singular) when exactly 1 log total", () => {
     mockUseChecklistLogs.mockImplementation(() => ({ data: [MOCK_LOGS[0]], isLoading: false }));
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText((content, element) =>
       element?.tagName === "P" && /Showing 1 of 1 log\./.test(content)
     )).toBeInTheDocument();
@@ -733,6 +808,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal has a close (X) button", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -745,6 +821,7 @@ describe("ReportingTab", () => {
 
   it("closes log detail modal when backdrop is clicked", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -757,6 +834,7 @@ describe("ReportingTab", () => {
 
   it("calls exportLogDetailPdf when 'Export PDF' is clicked in log detail modal", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Opening Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     fireEvent.click(logRowBtn!);
@@ -767,6 +845,7 @@ describe("ReportingTab", () => {
 
   it("opens log detail for score=65 (REVIEW) entry", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Closing Checklist");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     expect(logRowBtn).toBeTruthy();
@@ -780,6 +859,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal for null-score entry shows '—' instead of score", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const allMatches = screen.getAllByText("Inventory Check");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
     expect(logRowBtn).toBeTruthy();
@@ -794,6 +874,7 @@ describe("ReportingTab", () => {
 
   it("log detail modal shows 'No answer detail recorded' for entry with empty answers", async () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // Inventory Check (l3) has empty answers array
     const allMatches = screen.getAllByText("Inventory Check");
     const logRowBtn = allMatches.find(el => el.closest("button"))?.closest("button");
@@ -826,6 +907,7 @@ describe("ReportingTab", () => {
   it("shows '0 of 0 logs' when no data", () => {
     mockUseChecklistLogs.mockImplementation(() => ({ data: [], isLoading: false }));
     render(<ReportingTab />, { wrapper });
+    openFilters();
     expect(screen.getByText((content, element) =>
       element?.tagName === "P" && /Showing 0 of 0 logs/.test(content)
     )).toBeInTheDocument();
@@ -835,6 +917,7 @@ describe("ReportingTab", () => {
 
   it("Open Actions stat card is rendered with correct count", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     const openActionsCard = screen.getByTestId("stat-open-actions");
     expect(openActionsCard?.querySelector(".text-2xl")).toHaveTextContent("1");
   });
@@ -843,13 +926,16 @@ describe("ReportingTab", () => {
 
   it("shows UNSTARTED badge in completion log when status filter is 'all'", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     // Safety Walk (c3) has no log in MOCK_LOGS — should show as UNSTARTED
     expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
   });
 
   it("status filter 'unstarted' shows only unstarted checklists", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
     expect(screen.queryByText("PASS")).not.toBeInTheDocument();
     expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
@@ -857,13 +943,17 @@ describe("ReportingTab", () => {
 
   it("status filter 'unstarted' shows the unstarted checklist name", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("Safety Walk")).toBeInTheDocument();
   });
 
   it("status filter 'unstarted' shows 'Showing N unstarted checklists' count", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText(/Showing 1 unstarted checklist/)).toBeInTheDocument();
   });
 
@@ -875,7 +965,9 @@ describe("ReportingTab", () => {
     ];
     mockUseChecklistLogs.mockImplementation(() => ({ data: allStartedLogs, isLoading: false }));
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    applyFilters();
     expect(screen.getByText("All checklists have been started this period.")).toBeInTheDocument();
   });
 });

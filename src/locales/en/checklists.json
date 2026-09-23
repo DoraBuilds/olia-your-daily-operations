@@ -115,8 +115,12 @@
       "noChange": "No change"
     },
     "filters": {
-      "heading": "Filters",
+      "button": "Filters",
+      "date": "Date",
+      "user": "User",
+      "allUsers": "All users",
       "clear": "Clear filters",
+      "apply": "Apply",
       "concept": "Concept",
       "allConcepts": "All concepts",
       "location": "Location",
@@ -130,8 +134,6 @@
       "selectedCount_other": "{{count}} selected",
       "checklistName": "Checklist name",
       "checklistNamePlaceholder": "Type a checklist name",
-      "person": "Person",
-      "allPeople": "All people",
       "status": "Status",
       "allStatuses": "All statuses",
       "showingUnstarted_one": "Showing {{count}} unstarted checklist.",

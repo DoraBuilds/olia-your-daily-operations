@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, Plus, ChevronDown, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useChecklists } from "@/hooks/useChecklists";
@@ -14,6 +15,7 @@ import { useActions } from "@/hooks/useActions";
 import { useLocations } from "@/hooks/useLocations";
 import { useConcepts } from "@/hooks/useConcepts";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
@@ -134,6 +136,49 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
   );
 }
 
+/**
+ * Checklists aren't assigned to individual people — they're scoped to
+ * locations/concept and departments. A checklist counts as "assigned" to a
+ * team member when its scope overlaps theirs; a member with no locations or
+ * no departments set covers all of them.
+ */
+function isChecklistAssignedTo(
+  c: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null; department_ids?: string[] | null },
+  m: { location_ids?: string[] | null; department_ids?: string[] | null },
+  conceptByLocationId: Map<string, string | null>,
+): boolean {
+  const memberLocs = m.location_ids ?? [];
+  if (memberLocs.length > 0) {
+    const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : []);
+    if (locIds.length > 0) {
+      if (!locIds.some(id => memberLocs.includes(id))) return false;
+    } else if (c.concept_id) {
+      if (!memberLocs.some(id => conceptByLocationId.get(id) === c.concept_id)) return false;
+    }
+  }
+  const memberDepts = m.department_ids ?? [];
+  const checklistDepts = c.department_ids ?? [];
+  if (memberDepts.length > 0 && checklistDepts.length > 0 && !checklistDepts.some(id => memberDepts.includes(id))) return false;
+  return true;
+}
+
+type StatusFilter = "all" | "completed" | "unfinished" | "unstarted";
+
+/** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
+interface PanelFilters {
+  period: Period;
+  dateRange: DateRange | undefined;
+  conceptIds: string[];
+  locationIds: string[];
+  departmentIds: string[];
+  userIds: string[];
+  status: StatusFilter;
+}
+
+const DEFAULT_PANEL_FILTERS: PanelFilters = {
+  period: "today", dateRange: undefined, conceptIds: [], locationIds: [], departmentIds: [], userIds: [], status: "all",
+};
+
 export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
@@ -147,9 +192,14 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const [conceptIds, setConceptIds] = useState<string[]>([]);
   const [locationIds, setLocationIds] = useState<string[]>(initialLocationId ? [initialLocationId] : []);
   const [departmentIds, setDepartmentIds] = useState<string[]>([]);
-  const [personFilter, setPersonFilter] = useState<string>("all");
+  const [userIds, setUserIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [checklistSearch, setChecklistSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">(initialStatus ?? "all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus ?? "all");
+  // Staged edits inside the Filters popover — copied from the applied filters
+  // on open, committed on Apply, discarded if the popover is dismissed.
+  const [draft, setDraft] = useState<PanelFilters>(DEFAULT_PANEL_FILTERS);
+  const updateDraft = (patch: Partial<PanelFilters>) => setDraft(prev => ({ ...prev, ...patch }));
 
   useEffect(() => {
     const next = initialLocationId ? [initialLocationId] : [];
@@ -173,36 +223,54 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     [allLocations, conceptIds],
   );
 
-  // If the concept selection changes out from under a specific location pick,
-  // drop the locations that no longer apply rather than silently showing an
-  // empty report. Waits for locations to load so a deep-linked
-  // initialLocationId isn't dropped before the list arrives, and keeps the same
-  // array when nothing changed to avoid a re-render loop.
-  useEffect(() => {
-    if (!locationsLoaded) return;
-    setLocationIds(prev => {
-      const next = prev.filter(id => conceptScopedLocations.some(l => l.id === id));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [locationsLoaded, conceptScopedLocations]);
-
-  // Departments are scoped per-location — union across whichever locations are
-  // currently in scope (the specific ones picked, or every concept-scoped one).
+  // The popover's pickers work off the draft: the location list narrows to the
+  // draft concept(s), and departments are the union across the draft's
+  // locations in scope (the specific ones picked, or every concept-scoped one).
+  const draftConceptScopedLocations = useMemo(
+    () => draft.conceptIds.length === 0 ? allLocations : allLocations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [allLocations, draft.conceptIds],
+  );
   const departmentLocationIds = useMemo(
-    () => (locationIds.length > 0 ? locationIds : conceptScopedLocations.map(l => l.id)),
-    [locationIds, conceptScopedLocations],
+    () => (draft.locationIds.length > 0 ? draft.locationIds : draftConceptScopedLocations.map(l => l.id)),
+    [draft.locationIds, draftConceptScopedLocations],
   );
   const { data: availableDepartments = [], isFetching: departmentsFetching } = useDepartmentsForLocations(departmentLocationIds);
+
+  // If a draft concept change removes a picked location, drop it rather than
+  // silently showing an empty report. Waits for locations to load, and keeps
+  // the same object when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    if (!locationsLoaded) return;
+    setDraft(prev => {
+      const next = prev.locationIds.filter(id => draftConceptScopedLocations.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [locationsLoaded, draftConceptScopedLocations]);
 
   // Same pruning for departments — skipped while the list is refetching for a
   // new location set, so existing picks aren't wiped mid-load.
   useEffect(() => {
     if (departmentsFetching) return;
-    setDepartmentIds(prev => {
-      const next = prev.filter(id => availableDepartments.some(d => d.id === id));
-      return next.length === prev.length ? prev : next;
+    setDraft(prev => {
+      const next = prev.departmentIds.filter(id => availableDepartments.some(d => d.id === id));
+      return next.length === prev.departmentIds.length ? prev : { ...prev, departmentIds: next };
     });
   }, [departmentsFetching, availableDepartments]);
+
+  const openFiltersPanel = () => {
+    setDraft({ period, dateRange, conceptIds, locationIds, departmentIds, userIds, status: statusFilter });
+    setFiltersOpen(true);
+  };
+  const applyFilters = () => {
+    setPeriod(draft.period);
+    setDateRange(draft.dateRange);
+    setConceptIds(draft.conceptIds);
+    setLocationIds(draft.locationIds);
+    setDepartmentIds(draft.departmentIds);
+    setUserIds(draft.userIds);
+    setStatusFilter(draft.status);
+    setFiltersOpen(false);
+  };
 
   // null = no restriction (every location / department); a narrower array
   // once a concept and/or specific locations/departments are picked.
@@ -235,6 +303,15 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   const { data: rawLogs = [], isLoading } = useChecklistLogs(filters);
   const { data: allDbChecklists = [] } = useChecklists();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const selectedMembers = useMemo(
+    () => (userIds.length === 0 ? null : teamMembers.filter(m => userIds.includes(m.id))),
+    [teamMembers, userIds],
+  );
+  const conceptByLocationId = useMemo(
+    () => new Map(allLocations.map(l => [l.id, l.concept_id ?? null])),
+    [allLocations],
+  );
   const checklistById = useMemo(() => new Map(allDbChecklists.map(c => [c.id, c])), [allDbChecklists]);
 
   const allChecklists = useMemo(
@@ -247,9 +324,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
         const deptIds = c.department_ids ?? [];
         if (deptIds.length > 0 && !deptIds.some(id => effectiveDepartmentIds.includes(id))) return false;
       }
+      if (selectedMembers && !selectedMembers.some(m => isChecklistAssignedTo(c, m, conceptByLocationId))) return false;
       return true;
     }),
-    [allDbChecklists, effectiveLocationIds, effectiveDepartmentIds],
+    [allDbChecklists, effectiveLocationIds, effectiveDepartmentIds, selectedMembers, conceptByLocationId],
   );
 
   const logs = useMemo(
@@ -267,16 +345,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const { data: rawActions = [] } = useActions();
   const scopedChecklistIds = useMemo(() => new Set(allChecklists.map(c => c.id)), [allChecklists]);
   const actions = useMemo(
-    () => (effectiveLocationIds === null && effectiveDepartmentIds === null)
+    () => (effectiveLocationIds === null && effectiveDepartmentIds === null && selectedMembers === null)
       ? rawActions
       : rawActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
-    [rawActions, effectiveLocationIds, effectiveDepartmentIds, scopedChecklistIds],
+    [rawActions, effectiveLocationIds, effectiveDepartmentIds, selectedMembers, scopedChecklistIds],
   );
   const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
-  const peopleOptions = useMemo(
-    () => Array.from(new Set(logs.map(log => log.completed_by).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [logs]
-  );
   const checklistOptions = useMemo(
     () => Array.from(new Set(logs.map(log => log.checklist_title).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [logs]
@@ -300,13 +374,18 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     if (statusFilter === "unstarted") return [];
     const checklistQuery = checklistSearch.trim().toLowerCase();
     return logs.filter(log => {
-      if (personFilter !== "all" && log.completed_by !== personFilter) return false;
+      if (selectedMembers && !selectedMembers.some(m =>
+        log.staff_profile_id === m.id
+        || log.completed_by === m.name
+        || (log.checklist_id !== null && checklistById.has(log.checklist_id)
+            && isChecklistAssignedTo(checklistById.get(log.checklist_id), m, conceptByLocationId))
+      )) return false;
       if (statusFilter === "completed" && log.score == null) return false;
       if (statusFilter === "unfinished" && log.score != null) return false;
       if (checklistQuery && !log.checklist_title.toLowerCase().startsWith(checklistQuery)) return false;
       return true;
     });
-  }, [logs, personFilter, checklistSearch, statusFilter]);
+  }, [logs, selectedMembers, checklistById, conceptByLocationId, checklistSearch, statusFilter]);
 
   const openActionsCount = useMemo(() => actions.filter(a => a.status === "open").length, [actions]);
 
@@ -334,8 +413,11 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     }));
   }, [filteredChecklistLogs]);
 
-  const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0
-    || conceptIds.length > 0 || locationIds.length > 0 || departmentIds.length > 0;
+  // Panel filters only — the search box and the date are shown in the toolbar
+  // itself, so they don't count toward the "Filters" badge.
+  const activeFilterCount = [conceptIds.length > 0, locationIds.length > 0, departmentIds.length > 0, userIds.length > 0, statusFilter !== "all"]
+    .filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0 || checklistSearch.trim().length > 0;
 
   const completedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score !== null).length, [filteredChecklistLogs]);
   const unfinishedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score === null).length, [filteredChecklistLogs]);
@@ -367,9 +449,9 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
       : t("reporting.period.customRange");
 
   const pickerLabel =
-    dateRange?.from && dateRange?.to
-      ? `${format(dateRange.from, "d MMM")} – ${format(dateRange.to, "d MMM")}`
-      : dateRange?.from ? format(dateRange.from, "d MMM yyyy")
+    draft.dateRange?.from && draft.dateRange?.to
+      ? `${format(draft.dateRange.from, "d MMM")} – ${format(draft.dateRange.to, "d MMM")}`
+      : draft.dateRange?.from ? format(draft.dateRange.from, "d MMM yyyy")
       : t("reporting.period.custom");
 
   const reportRows = useMemo(
@@ -400,80 +482,255 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   return (
     <>
-      {/* ── Top toolbar: period tabs + export ── */}
+      {/* ── Toolbar: checklist search + Filters toggle ── */}
       <div className="space-y-2">
-      {/* Period tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-        {([
-          { key: "today" as Period, label: t("reporting.period.today") },
-          { key: "week" as Period, label: t("reporting.period.week") },
-          { key: "month" as Period, label: t("reporting.period.month") },
-        ]).map(({ key, label }) => (
-          <button key={key}
-            onClick={() => { setPeriod(key); setDateRange(undefined); setCalOpen(false); }}
-            className={cn(
-              "shrink-0 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-              period === key
-                ? "bg-sage text-white border-sage"
-                : "border-border text-muted-foreground hover:border-sage/40"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-        <Popover open={calOpen} onOpenChange={setCalOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                "shrink-0 flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-                period === "custom" && dateRange?.from
-                  ? "bg-sage text-white border-sage"
-                  : "border-border text-muted-foreground hover:border-sage/40"
-              )}
-              onClick={() => setPeriod("custom")}
-            >
-              <CalendarIcon size={12} />
-              {period === "custom" && dateRange?.from ? pickerLabel : t("reporting.period.custom")}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-[60]" align="start">
-            <CalendarPicker
-              mode="range"
-              selected={dateRange}
-              onSelect={r => {
-                setDateRange(r);
-                if (r?.from) setPeriod("custom");
-                if (r?.from && r?.to) setCalOpen(false);
-              }}
-              numberOfMonths={1}
-              disabled={{ after: new Date() }}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+      <PopoverPrimitive.Root open={filtersOpen} onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}>
+      <PopoverPrimitive.Anchor asChild>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            data-testid="reporting-checklist-search"
+            type="search"
+            value={checklistSearch}
+            onChange={e => setChecklistSearch(e.target.value)}
+            placeholder={t("reporting.filters.checklistNamePlaceholder")}
+            aria-label={t("reporting.filters.checklistName")}
+            className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            list="reporting-checklist-options"
+          />
+          <datalist id="reporting-checklist-options">
+            {checklistOptions.map(name => <option key={name} value={name} />)}
+          </datalist>
+        </div>
+        <PopoverPrimitive.Trigger asChild>
+        <button
+          type="button"
+          data-testid="reporting-filters-toggle"
+          className={cn(
+            "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
+            filtersOpen || activeFilterCount > 0
+              ? "bg-sage text-white border-sage"
+              : "border-border text-foreground hover:border-sage/40"
+          )}
+        >
+          <Plus size={14} className={cn("transition-transform", filtersOpen && "rotate-45")} />
+          {t("reporting.filters.button")}
+          {activeFilterCount > 0 && (
+            <span data-testid="reporting-filters-count" className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        </PopoverPrimitive.Trigger>
       </div>
+      </PopoverPrimitive.Anchor>
 
-      {/* Export buttons */}
-      <div className="flex items-center justify-end gap-2">
-        <button
-          data-testid="export-csv"
-          onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
-          disabled={!logEntries.length}
-          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
-        >
-          <Download size={12} /> {t("reporting.csv")}
-        </button>
-        <button
-          data-testid="export-pdf"
-          onClick={handleExportPdf}
-          disabled={!logEntries.length}
-          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
-        >
-          <FileText size={12} /> {t("reporting.pdf")}
-        </button>
+      {/* Floats over the report instead of pushing it down; nested pickers
+          (multi-selects, calendar) portal above it at z-[60]. */}
+      <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        data-testid="reporting-filters-panel"
+        align="end"
+        sideOffset={8}
+        collisionPadding={16}
+        onOpenAutoFocus={e => e.preventDefault()}
+        className="z-50 w-[var(--radix-popover-trigger-width)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto bg-card border border-border rounded-[20px] p-4 space-y-3 shadow-xl outline-none"
+      >
+        <div className="space-y-1">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.date")}</span>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { key: "today" as Period, label: t("reporting.period.today") },
+              { key: "week" as Period, label: t("reporting.period.week") },
+              { key: "month" as Period, label: t("reporting.period.month") },
+            ]).map(({ key, label }) => (
+              <button key={key}
+                onClick={() => { updateDraft({ period: key, dateRange: undefined }); setCalOpen(false); }}
+                className={cn(
+                  "shrink-0 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
+                  draft.period === key
+                    ? "bg-sage text-white border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            <Popover open={calOpen} onOpenChange={setCalOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
+                    draft.period === "custom" && draft.dateRange?.from
+                      ? "bg-sage text-white border-sage"
+                      : "border-border text-muted-foreground hover:border-sage/40"
+                  )}
+                  onClick={() => updateDraft({ period: "custom" })}
+                >
+                  <CalendarIcon size={12} />
+                  {draft.period === "custom" && draft.dateRange?.from ? pickerLabel : t("reporting.period.custom")}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[60]" align="start">
+                <CalendarPicker
+                  mode="range"
+                  selected={draft.dateRange}
+                  onSelect={r => {
+                    updateDraft(r?.from ? { dateRange: r, period: "custom" } : { dateRange: r });
+                    if (r?.from && r?.to) setCalOpen(false);
+                  }}
+                  numberOfMonths={1}
+                  disabled={{ after: new Date() }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
       </div>
-      </div>{/* end top toolbar */}
+        <div className="grid gap-2 md:grid-cols-3">
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
+            <MultiSelectFilter
+              testId="reporting-concept-filter"
+              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+              selected={draft.conceptIds}
+              onChange={ids => updateDraft({ conceptIds: ids })}
+              allLabel={t("reporting.filters.allConcepts")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allConcepts")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
+            <MultiSelectFilter
+              testId="reporting-location-filter"
+              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+              options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+              selected={draft.locationIds}
+              onChange={ids => updateDraft({ locationIds: ids })}
+              allLabel={t("reporting.filters.allLocations")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allLocations")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
+            <MultiSelectFilter
+              testId="reporting-department-filter"
+              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+              options={availableDepartments.map((d): MultiSelectOption => ({
+                id: d.id,
+                label: d.name,
+                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
+              }))}
+              selected={draft.departmentIds}
+              onChange={ids => updateDraft({ departmentIds: ids })}
+              allLabel={t("reporting.filters.allDepartments")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.noDepartments")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.user")}</span>
+            <MultiSelectFilter
+              testId="reporting-user-filter"
+              icon={<User size={14} className="text-muted-foreground shrink-0" />}
+              options={[...teamMembers]
+                .sort((x, y) => x.name.localeCompare(y.name))
+                .map((m): MultiSelectOption => ({ id: m.id, label: m.name }))}
+              selected={draft.userIds}
+              onChange={ids => updateDraft({ userIds: ids })}
+              allLabel={t("reporting.filters.allUsers")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allUsers")}
+            />
+          </div>
+
+          <label className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
+            <div className="relative">
+              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                data-testid="reporting-status-filter"
+                value={draft.status}
+                onChange={e => updateDraft({ status: e.target.value as StatusFilter })}
+                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">{t("reporting.filters.allStatuses")}</option>
+                <option value="completed">{t("reporting.stats.completed")}</option>
+                <option value="unfinished">{t("reporting.stats.unfinished")}</option>
+                <option value="unstarted">{t("reporting.stats.unstarted")}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+          <button
+            data-testid="reporting-clear-filters"
+            type="button"
+            onClick={() => setDraft(DEFAULT_PANEL_FILTERS)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <X size={12} />
+            {t("reporting.filters.clear")}
+          </button>
+          <button
+            data-testid="reporting-apply-filters"
+            type="button"
+            onClick={applyFilters}
+            className="rounded-full bg-sage px-5 py-2 text-sm font-semibold text-white hover:bg-sage/90 transition-colors"
+          >
+            {t("reporting.filters.apply")}
+          </button>
+        </div>
+      </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+
+      {/* Period + result count, with export */}
+      <div className="flex items-center justify-between gap-2">
+        <p data-testid="reporting-result-summary" className="min-w-0 truncate text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{periodLabel}</span>{" · "}
+          {statusFilter === "unstarted"
+            ? t("reporting.filters.showingUnstarted", { count: unstartedCount })
+            : t("reporting.filters.showingLogs", { count: logs.length, shown: logEntries.length, total: logs.length })
+          }
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            data-testid="export-csv"
+            onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
+            disabled={!logEntries.length}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
+          >
+            <Download size={12} /> {t("reporting.csv")}
+          </button>
+          <button
+            data-testid="export-pdf"
+            onClick={handleExportPdf}
+            disabled={!logEntries.length}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
+          >
+            <FileText size={12} /> {t("reporting.pdf")}
+          </button>
+        </div>
+      </div>
+      </div>{/* end toolbar */}
 
       {/* Stat cards — row 1: completion breakdown */}
       <div className="grid grid-cols-3 gap-2">
@@ -579,142 +836,6 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           )}
         </div>
-      </div>
-
-      {/* Filter panel */}
-      <div className="bg-card border border-border rounded-[20px] p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="section-label">{t("reporting.filters.heading")}</p>
-          {hasActiveFilters && (
-            <button
-              data-testid="reporting-clear-filters"
-              type="button"
-              onClick={() => {
-                setPersonFilter("all");
-                setChecklistSearch("");
-                setStatusFilter("all");
-                setConceptIds([]);
-                setLocationIds([]);
-                setDepartmentIds([]);
-              }}
-              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <X size={12} />
-              {t("reporting.filters.clear")}
-            </button>
-          )}
-        </div>
-        <div className="grid gap-2 md:grid-cols-3">
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
-            <MultiSelectFilter
-              testId="reporting-concept-filter"
-              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
-              selected={conceptIds}
-              onChange={setConceptIds}
-              allLabel={t("reporting.filters.allConcepts")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allConcepts")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
-            <MultiSelectFilter
-              testId="reporting-location-filter"
-              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
-              options={conceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
-              selected={locationIds}
-              onChange={setLocationIds}
-              allLabel={t("reporting.filters.allLocations")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allLocations")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
-            <MultiSelectFilter
-              testId="reporting-department-filter"
-              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
-              options={availableDepartments.map((d): MultiSelectOption => ({
-                id: d.id,
-                label: d.name,
-                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
-              }))}
-              selected={departmentIds}
-              onChange={setDepartmentIds}
-              allLabel={t("reporting.filters.allDepartments")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.noDepartments")}
-            />
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.checklistName")}</span>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                data-testid="reporting-checklist-search"
-                type="text"
-                value={checklistSearch}
-                onChange={e => setChecklistSearch(e.target.value)}
-                placeholder={t("reporting.filters.checklistNamePlaceholder")}
-                className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                list="reporting-checklist-options"
-              />
-            </div>
-            <datalist id="reporting-checklist-options">
-              {checklistOptions.map(name => <option key={name} value={name} />)}
-            </datalist>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.person")}</span>
-            <div className="relative">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <select
-                data-testid="reporting-person-filter"
-                value={personFilter}
-                onChange={e => setPersonFilter(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="all">{t("reporting.filters.allPeople")}</option>
-                {peopleOptions.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
-            <select
-              data-testid="reporting-status-filter"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="all">{t("reporting.filters.allStatuses")}</option>
-              <option value="completed">{t("reporting.stats.completed")}</option>
-              <option value="unfinished">{t("reporting.stats.unfinished")}</option>
-              <option value="unstarted">{t("reporting.stats.unstarted")}</option>
-            </select>
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {statusFilter === "unstarted"
-            ? t("reporting.filters.showingUnstarted", { count: unstartedCount })
-            : t("reporting.filters.showingLogs", { count: logs.length, shown: logEntries.length, total: logs.length })
-          }
-        </p>
       </div>
 
       {/* Score Trend — Advanced reporting, gated to Growth+ */}
