@@ -96,10 +96,7 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="font-display text-lg text-foreground">{t("kiosksTab.heading")}</h2>
-        <p className="text-xs text-muted-foreground">{t("kiosksTab.subtitle")}</p>
-      </div>
+      <h2 className="font-display text-lg text-foreground">{t("kiosksTab.heading")}</h2>
 
       {groups.map(({ concept, locationGroups }) => (
         <div key={concept.id} className="space-y-3">
