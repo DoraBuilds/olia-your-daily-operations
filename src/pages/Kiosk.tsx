@@ -13,7 +13,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import i18n, { resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
-import type { KioskChecklist, KioskScreen } from "./kiosk/types";
+import type { AnswerAttribution, KioskChecklist, KioskScreen } from "./kiosk/types";
 import {
   getKioskVisibilityState,
   isKioskDue,
@@ -175,7 +175,7 @@ export default function Kiosk() {
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   // Maps checklist id → { answers, contributors, logId, editToken } so re-edits pre-fill, attribute all staff, and update in place
-  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; contributors: string[]; logId: string | null; editToken: string | null }>>(new Map());
+  const [completedSubmissions, setCompletedSubmissions] = useState<Map<string, { answers: Record<string, any>; attribution: AnswerAttribution; contributors: string[]; logId: string | null; editToken: string | null }>>(new Map());
   const [insertError, setInsertError] = useState<string | null>(null);
   // Four-tab kiosk view: due | overdue | upcoming | done
   const [kioskTab, setKioskTab] = useState<"due" | "overdue" | "upcoming" | "done">("due");
@@ -723,7 +723,7 @@ export default function Kiosk() {
     setScreen("library");
   };
 
-  const handleComplete = async (answers: Record<string, any>, startedAt?: Date) => {
+  const handleComplete = async (answers: Record<string, any>, startedAt?: Date, attribution: AnswerAttribution = {}) => {
     const now = new Date();
     setInsertError(null);
     setCompletedAt(now);
@@ -740,6 +740,9 @@ export default function Kiosk() {
         contributors = [...prev.contributors.filter(n => n !== selectedStaffName), selectedStaffName];
         existingLogId = prev.logId;
       }
+      // A saved draft can be picked up by someone else — credit everyone who answered.
+      const answerers = Object.values(attribution).sort((a, b) => a.at.localeCompare(b.at)).map(a => a.by);
+      contributors = [...new Set([...answerers.filter(n => !contributors.includes(n)), ...contributors])];
       setCompletedIds(prevIds => {
         const next = new Set([...prevIds, id]);
         if (locationId) {
@@ -768,6 +771,8 @@ export default function Kiosk() {
         answer: String(answers[q.id] ?? ""),
         hasPhoto: q.type === "media" ? Boolean(answers[q.id]) : undefined,
         comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
+        answeredBy: attribution[q.id]?.by,
+        answeredAt: attribution[q.id]?.at,
       }));
       const completedBy = contributors.join(", ");
 
@@ -829,7 +834,7 @@ export default function Kiosk() {
       // Store final submission state for potential future re-edits
       if (selectedChecklist) {
         const id = selectedChecklist.id;
-        setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, contributors, logId: returnedLogId, editToken: returnedEditToken }]]));
+        setCompletedSubmissions(prevMap => new Map([...prevMap, [id, { answers, attribution, contributors, logId: returnedLogId, editToken: returnedEditToken }]]));
       }
 
       // Evaluate checklist logic rules and send notify-trigger emails.
@@ -878,6 +883,7 @@ export default function Kiosk() {
         onComplete={handleComplete}
         onCancel={handleDone}
         initialAnswers={completedSubmissions.get(selectedChecklist.id)?.answers}
+        initialAttribution={completedSubmissions.get(selectedChecklist.id)?.attribution}
         organizationId={selectedOrgId || teamMember?.organization_id}
         locationId={locationId ?? undefined}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {

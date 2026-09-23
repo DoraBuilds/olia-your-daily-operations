@@ -7,6 +7,7 @@ import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
@@ -176,13 +177,60 @@ interface PanelFilters {
 }
 
 const DEFAULT_PANEL_FILTERS: PanelFilters = {
-  period: "today", dateRange: undefined, conceptIds: [], locationIds: [], departmentIds: [], userIds: [], status: "all",
+  period: "week", dateRange: undefined, conceptIds: [], locationIds: [], departmentIds: [], userIds: [], status: "all",
 };
+
+/** Kiosk logs store every staff member who worked on a checklist as a
+ *  comma-separated `completed_by` ("Maria López, Jordi Puig"). */
+function splitContributors(completedBy: string): string[] {
+  return completedBy.split(",").map(n => n.trim()).filter(Boolean);
+}
+
+function initials(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+function contributorsSummary(names: string[]) {
+  if (names.length === 0) return "—";
+  return names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`;
+}
+
+/** Completion Log cell: stacked initials + "First Name +N", full list on hover. */
+function ContributorsCell({ completedBy }: { completedBy: string }) {
+  const names = splitContributors(completedBy);
+  if (names.length === 0) return <span className="text-sm text-muted-foreground">—</span>;
+  const content = (
+    <span className="flex items-center gap-2 min-w-0">
+      <span className="flex -space-x-1.5 shrink-0">
+        {names.slice(0, 3).map(n => (
+          <span key={n} className="w-6 h-6 rounded-full bg-card ring-2 ring-card">
+            <span className="w-full h-full rounded-full bg-foreground/10 text-foreground text-[10px] font-semibold flex items-center justify-center">
+              {initials(n)}
+            </span>
+          </span>
+        ))}
+      </span>
+      <span className="text-sm text-foreground truncate">{contributorsSummary(names)}</span>
+    </span>
+  );
+  if (names.length === 1) return content;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          {names.map(n => <p key={n}>{n}</p>)}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
-  const [period, setPeriod] = useState<Period>("today");
+  const [period, setPeriod] = useState<Period>("week");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [calOpen, setCalOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
@@ -916,8 +964,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-20 text-right">{t("reporting.log.statusColumn")}</p>
-              <div className="w-4" />
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:block w-44">{t("reporting.log.completedByColumn")}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:block w-32">{t("reporting.log.completedAtColumn")}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-28 text-right">{t("reporting.log.statusColumn")}</p>
+              <div className="w-[13px]" />
             </div>
             {logEntries.map(log => {
               const badge = scoreBadge(log.score);
@@ -927,14 +977,16 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{log.checklist}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{log.completedBy} · {log.date}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">{contributorsSummary(splitContributors(log.completedBy))} · {log.date}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="hidden sm:block w-44 min-w-0"><ContributorsCell completedBy={log.completedBy} /></div>
+                  <p className="hidden sm:block w-32 text-sm text-muted-foreground tabular-nums">{log.date}</p>
+                  <div className="w-28 flex justify-end shrink-0">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold tracking-wide", badge.cls)}>
                       {badge.label}
                     </span>
-                    <ChevronRight size={13} className="text-muted-foreground" />
                   </div>
+                  <ChevronRight size={13} className="text-muted-foreground shrink-0" />
                 </button>
               );
             })}
@@ -943,12 +995,14 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
               <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t("reporting.log.noActivity")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">{t("reporting.log.noActivity")}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <p className="hidden sm:block w-44 text-sm text-muted-foreground">—</p>
+                <p className="hidden sm:block w-32 text-sm text-muted-foreground">—</p>
+                <div className="w-28 flex justify-end shrink-0">
                   <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">{t("reporting.log.badgeUnstarted")}</span>
-                  <div className="w-[13px]" />
                 </div>
+                <div className="w-[13px] shrink-0" />
               </div>
             ))}
           </div>

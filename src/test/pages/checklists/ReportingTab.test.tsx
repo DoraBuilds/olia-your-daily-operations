@@ -236,7 +236,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     expect(screen.getAllByText("Today").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("This Week")).toBeInTheDocument();
+    expect(screen.getAllByText("This Week").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("This Month")).toBeInTheDocument();
   });
 
@@ -422,7 +422,7 @@ describe("ReportingTab", () => {
       expect(row.startedAt).toMatch(/9 Mar 2024/);
       expect(row.finishedAt).toMatch(/9 Mar 2024/);
     }
-    expect(periodLabel).toBe("Today");
+    expect(periodLabel).toBe("This Week");
     expect(stats).toMatchObject({ completed: 3, avg: 78, open: 1 }); // completed = total logEntries count for PDF export
   });
 
@@ -482,10 +482,10 @@ describe("ReportingTab", () => {
     });
   });
 
-  it("switching to This Week period works", () => {
+  it("switching to Today period works", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    fireEvent.click(screen.getByText("This Week"));
+    fireEvent.click(screen.getByText("Today"));
     expect(screen.getByText("Completion Log")).toBeInTheDocument();
   });
 
@@ -680,12 +680,12 @@ describe("ReportingTab", () => {
 
   // ── Period switching ────────────────────────────────────────────────
 
-  it("period label shows 'This Week' in Completion Log header after switching", () => {
+  it("period label shows 'Today' in Completion Log header after switching", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    fireEvent.click(screen.getByText("This Week"));
+    fireEvent.click(screen.getByText("Today"));
     applyFilters();
-    expect(screen.getByText(/— This Week/)).toBeInTheDocument();
+    expect(screen.getByText(/— Today/)).toBeInTheDocument();
   });
 
   it("period label shows 'This Month' in Completion Log header after switching", () => {
@@ -696,10 +696,10 @@ describe("ReportingTab", () => {
     expect(screen.getByText(/— This Month/)).toBeInTheDocument();
   });
 
-  it("period label shows 'Today' in Completion Log header by default", () => {
+  it("period label shows 'This Week' in Completion Log header by default", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    expect(screen.getByText(/— Today/)).toBeInTheDocument();
+    expect(screen.getByText(/— This Week/)).toBeInTheDocument();
   });
 
   it("clicking Custom button sets period to custom (opens popover)", () => {
@@ -969,6 +969,19 @@ describe("ReportingTab", () => {
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     applyFilters();
     expect(screen.getByText("All checklists have been started this period.")).toBeInTheDocument();
+  });
+  it("shows every contributor of a multi-person log: first name +N, all names in the detail modal", () => {
+    const sharedLogs = [
+      { id: "s1", checklist_id: "c1", checklist_title: "Shared Opening", completed_by: "Maria López, Jordi Puig, Ana Ruiz", staff_profile_id: null, score: 100, type: "opening", answers: [], created_at: "2024-03-09T10:00:00Z", started_at: "2024-03-09T09:00:00Z", location_id: "loc-1" },
+    ];
+    mockUseChecklistLogs.mockImplementation(() => ({ data: sharedLogs, isLoading: false }));
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getAllByText("Maria López +2").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("ML")).toBeInTheDocument();
+    expect(screen.getByText("JP")).toBeInTheDocument();
+    expect(screen.getByText("AR")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Shared Opening"));
+    expect(screen.getByText(/Maria López, Jordi Puig, Ana Ruiz/)).toBeInTheDocument();
   });
 });
 

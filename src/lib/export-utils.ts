@@ -6,6 +6,8 @@
  * Used by ReportingTab (PDF + CSV) and LogDetailModal (PDF).
  */
 
+import { INSTRUCTION_ACKNOWLEDGED } from "@/pages/kiosk/utils";
+
 // ─── Brand colours (RGB) ─────────────────────────────────────────────────────
 // Primary: near-black #0B0F0C  · Background: white #FFFFFF
 const SAGE: [number, number, number] = [11, 15, 12];     // near-black #0B0F0C
@@ -252,6 +254,8 @@ export interface LogDetailData {
     answer?: string;
     hasPhoto?: boolean;
     comment?: string;
+    answeredBy?: string;
+    answeredAt?: string;  // ISO
   }>;
 }
 
@@ -302,10 +306,12 @@ export async function exportLogDetailPdf(log: LogDetailData) {
 
   // ── Answers table — columns: Task | Answer (Required column removed per spec) ──
   const answers = log.answers ?? [];
+  // Logs from before per-question attribution have no answeredBy — keep the 2-column table for those.
+  const hasAttribution = answers.some(ans => ans.answeredBy);
   const tableBody = answers.map(ans => {
     let response = "—";
     if (ans.type === "checkbox") {
-      response = ans.answer === "true" || ans.answer === "yes" ? "✓  Completed" : "✗  Not completed";
+      response = ans.answer === "true" || ans.answer === "yes" ? "Completed" : "Not completed";
     } else if ((ans.type === "numeric" || ans.type === "number") && ans.answer) {
       response = ans.answer;
     } else if (ans.type === "photo" || ans.type === "media") {
@@ -316,17 +322,24 @@ export async function exportLogDetailPdf(log: LogDetailData) {
       const isBase64 = typeof ans.answer === "string" && ans.answer.startsWith("data:image");
       const isStoragePath = typeof ans.answer === "string" && !isBase64 && !ans.answer.startsWith("http") && ans.answer.length > 0;
       const hasPhoto = ans.hasPhoto || isBase64 || isStoragePath;
-      response = hasPhoto ? "📷 Photo attached" : "No photo";
+      response = hasPhoto ? "Photo attached" : "No photo";
+    } else if (ans.type === "instruction" && ans.answer === INSTRUCTION_ACKNOWLEDGED) {
+      response = "Acknowledged";
     } else if (ans.answer) {
       response = String(ans.answer);
     }
     const full = ans.comment ? `${response}\n↳ ${ans.comment}` : response;
-    return [ans.label, full];
+    if (!hasAttribution) return [ans.label, full];
+    const at = ans.answeredAt ? new Date(ans.answeredAt) : null;
+    const time = at && !Number.isNaN(at.getTime())
+      ? at.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+      : "";
+    return [ans.label, full, ans.answeredBy ? [ans.answeredBy, time].filter(Boolean).join("\n") : "—"];
   });
 
   autoTable(doc, {
     startY: y,
-    head: [["Task", "Answer"]],
+    head: [hasAttribution ? ["Task", "Answer", "Answered by"] : ["Task", "Answer"]],
     body: tableBody,
     theme: "grid",
     headStyles: {
@@ -340,6 +353,7 @@ export async function exportLogDetailPdf(log: LogDetailData) {
     columnStyles: {
       0: { cellWidth: 70 },
       1: { cellWidth: "auto" },
+      ...(hasAttribution ? { 2: { cellWidth: 38, textColor: GRAY } } : {}),
     },
     didParseCell: (data: any) => {
       if (data.section === "body" && data.column.index === 1) {
@@ -348,6 +362,7 @@ export async function exportLogDetailPdf(log: LogDetailData) {
         const answered =
           ans.answer === "true" || ans.answer === "yes" ||
           ((ans.type === "numeric" || ans.type === "number") && !!ans.answer) ||
+          (ans.type === "instruction" && ans.answer === INSTRUCTION_ACKNOWLEDGED) ||
           ans.hasPhoto;
         if (ans.required && !answered) {
           data.cell.styles.textColor = ERR;

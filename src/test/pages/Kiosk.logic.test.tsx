@@ -440,6 +440,47 @@ describe("Kiosk — ChecklistRunner required-question validation", () => {
   });
 });
 
+// ─── Per-question attribution ─────────────────────────────────────────────────
+
+describe("Kiosk — ChecklistRunner per-question attribution", () => {
+  it("records who answered each question and when", async () => {
+    const onComplete = vi.fn();
+    renderRunner(makeChecklist([
+      { id: "q-text", text: "Notes", type: "text", required: true },
+    ]), { onComplete });
+    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "all good" } });
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    const attribution = onComplete.mock.calls[0][2];
+    expect(attribution["q-text"].by).toBe("Test Staff");
+    expect(Number.isNaN(Date.parse(attribution["q-text"].at))).toBe(false);
+  });
+
+  it("keeps the earlier person on questions a second person didn't touch when re-editing", async () => {
+    const onComplete = vi.fn();
+    renderWithProviders(
+      <ChecklistRunner
+        checklist={makeChecklist([
+          { id: "q-a", text: "First", type: "text", required: false },
+          { id: "q-b", text: "Second", type: "text", required: false },
+        ])}
+        staffName="Jordi"
+        onComplete={onComplete}
+        onCancel={vi.fn()}
+        initialAnswers={{ "q-a": "done by maria" }}
+        initialAttribution={{ "q-a": { by: "Maria", at: "2026-09-23T08:00:00.000Z" } }}
+      />
+    );
+    fireEvent.change(screen.getAllByPlaceholderText("Type your answer here…").at(-1)!, { target: { value: "done by jordi" } });
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+    await waitFor(() => expect(onComplete).toHaveBeenCalled());
+    const attribution = onComplete.mock.calls[0][2];
+    expect(attribution["q-a"]).toEqual({ by: "Maria", at: "2026-09-23T08:00:00.000Z" });
+    expect(attribution["q-b"].by).toBe("Jordi");
+  });
+});
+
 // ─── Cancel confirm modal ─────────────────────────────────────────────────────
 
 describe("Kiosk — ChecklistRunner cancel confirm", () => {

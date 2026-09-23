@@ -1,7 +1,7 @@
 // ─── Kiosk Utility Functions ──────────────────────────────────────────────────
 
 import type { LogicComparator, LogicRule, QuestionDef } from "@/pages/checklists/types";
-import type { KioskChecklist, KioskDraftSnapshot, Question, QuestionType, TimeOfDay } from "./types";
+import type { AnswerAttribution, KioskChecklist, KioskDraftSnapshot, Question, QuestionType, TimeOfDay } from "./types";
 
 // "signature" and "person" are excluded (removed from builder); they fall back to "text".
 export const SUPPORTED_QUESTION_TYPES: QuestionType[] = [
@@ -169,6 +169,9 @@ export function loadKioskDraftSnapshot(draftKey: string, questions: Question[]):
       if ("answers" in parsed && parsed.answers && typeof parsed.answers === "object" && !Array.isArray(parsed.answers)) {
         return {
           answers: { ...defaults, ...(parsed.answers as Record<string, any>) },
+          attribution: parsed.attribution && typeof parsed.attribution === "object" && !Array.isArray(parsed.attribution)
+            ? parsed.attribution as AnswerAttribution
+            : undefined,
           currentQuestionId: typeof parsed.currentQuestionId === "string" && parsed.currentQuestionId
             ? parsed.currentQuestionId
             : undefined,
