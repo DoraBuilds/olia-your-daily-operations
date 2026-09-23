@@ -115,7 +115,10 @@
       "noChange": "Sin cambios"
     },
     "filters": {
-      "heading": "Filtros",
+      "button": "Filtros",
+      "date": "Fecha",
+      "user": "Usuario",
+      "allUsers": "Todos los usuarios",
       "clear": "Borrar filtros",
       "concept": "Concepto",
       "allConcepts": "Todos los conceptos",
@@ -130,8 +133,6 @@
       "selectedCount_other": "{{count}} seleccionados",
       "checklistName": "Nombre de la lista",
       "checklistNamePlaceholder": "Escribe el nombre de una lista",
-      "person": "Persona",
-      "allPeople": "Todas las personas",
       "status": "Estado",
       "allStatuses": "Todos los estados",
       "showingUnstarted_one": "Mostrando {{count}} lista sin empezar.",

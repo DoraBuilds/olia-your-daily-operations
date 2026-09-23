@@ -7,6 +7,8 @@
  *  - an org-wide (unassigned) unstarted checklist stays visible when scoped
  *  - the department filter narrows logs by the completing checklist's departments
  *  - stale location/department picks are pruned, but not while their lists are still loading
+ *  - the user filter matches checklists assigned to (or completed by) the picked people
+ *  - the search + "Filters" toolbar opens/closes the panel and badges active filters
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -116,6 +118,20 @@ vi.mock("@/hooks/useLocations", () => ({
     : { data: undefined, isLoading: true, isSuccess: false },
 }));
 
+// Alice (loc-1) and Bob (loc-2) completed the two logs; Carla (loc-2, Bar)
+// and Dave (any location, Kitchen) haven't completed anything.
+vi.mock("@/hooks/useTeamMembers", () => ({
+  useTeamMembers: () => ({
+    data: [
+      { id: "sp1", name: "Alice", location_ids: ["loc-1"], department_ids: [] },
+      { id: "sp2", name: "Bob", location_ids: ["loc-1"], department_ids: [] },
+      { id: "tm-carla", name: "Carla", location_ids: ["loc-2"], department_ids: ["dept-bar"] },
+      { id: "tm-dave", name: "Dave", location_ids: [], department_ids: ["dept-kitchen"] },
+    ],
+    isLoading: false,
+  }),
+}));
+
 vi.mock("@/hooks/useConcepts", () => ({
   useConcepts: () => ({
     data: [
@@ -160,6 +176,10 @@ vi.mock("recharts", () => ({
   ReferenceLine: () => null,
 }));
 
+function openFilters() {
+  fireEvent.click(screen.getByTestId("reporting-filters-toggle"));
+}
+
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return (
@@ -182,6 +202,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("lists every location in the picker when no concept is selected", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     expect(screen.getByTestId("reporting-location-filter-option-loc-1")).toBeInTheDocument();
     expect(screen.getByTestId("reporting-location-filter-option-loc-2")).toBeInTheDocument();
@@ -189,6 +210,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("narrows the location picker's options to the selected concept's locations", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     selectConceptA();
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     expect(screen.getByTestId("reporting-location-filter-option-loc-1")).toBeInTheDocument();
@@ -197,6 +219,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("excludes logs from locations outside the selected concept", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     selectConceptA();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
@@ -204,6 +227,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("excludes an unstarted checklist from a location outside the selected concept", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
@@ -211,6 +235,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("keeps an org-wide (unassigned) unstarted checklist visible even when a concept is selected", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
@@ -218,6 +243,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("narrows the department picker's options to the union of departments across scoped locations", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
     expect(screen.getByTestId("reporting-department-filter-option-dept-kitchen")).toBeInTheDocument();
     expect(screen.getByTestId("reporting-department-filter-option-dept-bar")).toBeInTheDocument();
@@ -225,6 +251,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("excludes logs whose checklist doesn't belong to the selected department", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-department-filter-option-dept-kitchen"));
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
@@ -233,6 +260,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("drops a picked location once a concept that excludes it is selected", () => {
     render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-location-filter-option-loc-2"));
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Terrace");
@@ -243,6 +271,7 @@ describe("ReportingTab concept/location/department filters", () => {
   it("keeps a deep-linked initialLocationId while locations are still loading", () => {
     queryState.locationsLoaded = false;
     const { rerender } = render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    openFilters();
     queryState.locationsLoaded = true;
     rerender(<ReportingTab initialLocationId="loc-2" />);
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Terrace");
@@ -252,6 +281,7 @@ describe("ReportingTab concept/location/department filters", () => {
 
   it("keeps a department pick while the department list refetches", () => {
     const { rerender } = render(<ReportingTab />, { wrapper });
+    openFilters();
     fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-department-filter-option-dept-kitchen"));
     queryState.departmentsFetching = true;
@@ -260,5 +290,79 @@ describe("ReportingTab concept/location/department filters", () => {
     rerender(<ReportingTab />);
     expect(screen.getByTestId("reporting-department-filter-trigger")).toHaveTextContent("Kitchen");
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
+  });
+
+  function selectUser(id: string) {
+    fireEvent.click(screen.getByTestId("reporting-user-filter-trigger"));
+    fireEvent.click(screen.getByTestId(`reporting-user-filter-option-${id}`));
+  }
+
+  it("user filter shows checklists assigned to the user via their location", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectUser("tm-carla");
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+  });
+
+  it("user filter keeps a log the user completed even outside their assigned locations", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    // Bob is only assigned to loc-1 but completed the loc-2 Closing Checklist.
+    selectUser("sp2");
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+  });
+
+  it("user filter matches on departments when the user has no location restriction", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectUser("tm-dave");
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
+  });
+
+  it("user filter narrows unstarted checklists to ones assigned to the user, keeping org-wide ones", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    selectUser("sp1");
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
+    expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
+  });
+});
+
+describe("ReportingTab search + Filters toolbar", () => {
+  it("keeps the filter panel closed until the Filters button is clicked", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.getByTestId("reporting-checklist-search")).toBeInTheDocument();
+    expect(screen.queryByTestId("reporting-filters-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("reporting-filters-toggle")).toHaveAttribute("aria-expanded", "false");
+    openFilters();
+    expect(screen.getByTestId("reporting-filters-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("reporting-filters-toggle")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("This Week")).toBeInTheDocument();
+    openFilters();
+    expect(screen.queryByTestId("reporting-filters-panel")).not.toBeInTheDocument();
+  });
+
+  it("shows how many panel filters are active on the Filters button, even when closed", () => {
+    render(<ReportingTab />, { wrapper });
+    expect(screen.queryByTestId("reporting-filters-count")).not.toBeInTheDocument();
+    openFilters();
+    selectConceptA();
+    fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
+    openFilters();
+    expect(screen.getByTestId("reporting-filters-count")).toHaveTextContent("2");
+  });
+
+  it("clear filters resets the user filter too", () => {
+    render(<ReportingTab />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByTestId("reporting-user-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-user-filter-option-tm-carla"));
+    fireEvent.click(screen.getByTestId("reporting-clear-filters"));
+    expect(screen.getByTestId("reporting-user-filter-trigger")).toHaveTextContent("All users");
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
   });
 });

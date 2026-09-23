@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, Plus, ChevronDown, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { useActions } from "@/hooks/useActions";
 import { useLocations } from "@/hooks/useLocations";
 import { useConcepts } from "@/hooks/useConcepts";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
@@ -134,6 +135,32 @@ function ScoreTrendChart({ data }: { data: { date: string; avg: number }[] }) {
   );
 }
 
+/**
+ * Checklists aren't assigned to individual people — they're scoped to
+ * locations/concept and departments. A checklist counts as "assigned" to a
+ * team member when its scope overlaps theirs; a member with no locations or
+ * no departments set covers all of them.
+ */
+function isChecklistAssignedTo(
+  c: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null; department_ids?: string[] | null },
+  m: { location_ids?: string[] | null; department_ids?: string[] | null },
+  conceptByLocationId: Map<string, string | null>,
+): boolean {
+  const memberLocs = m.location_ids ?? [];
+  if (memberLocs.length > 0) {
+    const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : []);
+    if (locIds.length > 0) {
+      if (!locIds.some(id => memberLocs.includes(id))) return false;
+    } else if (c.concept_id) {
+      if (!memberLocs.some(id => conceptByLocationId.get(id) === c.concept_id)) return false;
+    }
+  }
+  const memberDepts = m.department_ids ?? [];
+  const checklistDepts = c.department_ids ?? [];
+  if (memberDepts.length > 0 && checklistDepts.length > 0 && !checklistDepts.some(id => memberDepts.includes(id))) return false;
+  return true;
+}
+
 export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
@@ -147,7 +174,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const [conceptIds, setConceptIds] = useState<string[]>([]);
   const [locationIds, setLocationIds] = useState<string[]>(initialLocationId ? [initialLocationId] : []);
   const [departmentIds, setDepartmentIds] = useState<string[]>([]);
-  const [personFilter, setPersonFilter] = useState<string>("all");
+  const [userIds, setUserIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [checklistSearch, setChecklistSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">(initialStatus ?? "all");
 
@@ -235,6 +263,15 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   const { data: rawLogs = [], isLoading } = useChecklistLogs(filters);
   const { data: allDbChecklists = [] } = useChecklists();
+  const { data: teamMembers = [] } = useTeamMembers();
+  const selectedMembers = useMemo(
+    () => (userIds.length === 0 ? null : teamMembers.filter(m => userIds.includes(m.id))),
+    [teamMembers, userIds],
+  );
+  const conceptByLocationId = useMemo(
+    () => new Map(allLocations.map(l => [l.id, l.concept_id ?? null])),
+    [allLocations],
+  );
   const checklistById = useMemo(() => new Map(allDbChecklists.map(c => [c.id, c])), [allDbChecklists]);
 
   const allChecklists = useMemo(
@@ -247,9 +284,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
         const deptIds = c.department_ids ?? [];
         if (deptIds.length > 0 && !deptIds.some(id => effectiveDepartmentIds.includes(id))) return false;
       }
+      if (selectedMembers && !selectedMembers.some(m => isChecklistAssignedTo(c, m, conceptByLocationId))) return false;
       return true;
     }),
-    [allDbChecklists, effectiveLocationIds, effectiveDepartmentIds],
+    [allDbChecklists, effectiveLocationIds, effectiveDepartmentIds, selectedMembers, conceptByLocationId],
   );
 
   const logs = useMemo(
@@ -267,16 +305,12 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const { data: rawActions = [] } = useActions();
   const scopedChecklistIds = useMemo(() => new Set(allChecklists.map(c => c.id)), [allChecklists]);
   const actions = useMemo(
-    () => (effectiveLocationIds === null && effectiveDepartmentIds === null)
+    () => (effectiveLocationIds === null && effectiveDepartmentIds === null && selectedMembers === null)
       ? rawActions
       : rawActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
-    [rawActions, effectiveLocationIds, effectiveDepartmentIds, scopedChecklistIds],
+    [rawActions, effectiveLocationIds, effectiveDepartmentIds, selectedMembers, scopedChecklistIds],
   );
   const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
-  const peopleOptions = useMemo(
-    () => Array.from(new Set(logs.map(log => log.completed_by).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [logs]
-  );
   const checklistOptions = useMemo(
     () => Array.from(new Set(logs.map(log => log.checklist_title).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [logs]
@@ -300,13 +334,18 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     if (statusFilter === "unstarted") return [];
     const checklistQuery = checklistSearch.trim().toLowerCase();
     return logs.filter(log => {
-      if (personFilter !== "all" && log.completed_by !== personFilter) return false;
+      if (selectedMembers && !selectedMembers.some(m =>
+        log.staff_profile_id === m.id
+        || log.completed_by === m.name
+        || (log.checklist_id !== null && checklistById.has(log.checklist_id)
+            && isChecklistAssignedTo(checklistById.get(log.checklist_id), m, conceptByLocationId))
+      )) return false;
       if (statusFilter === "completed" && log.score == null) return false;
       if (statusFilter === "unfinished" && log.score != null) return false;
       if (checklistQuery && !log.checklist_title.toLowerCase().startsWith(checklistQuery)) return false;
       return true;
     });
-  }, [logs, personFilter, checklistSearch, statusFilter]);
+  }, [logs, selectedMembers, checklistById, conceptByLocationId, checklistSearch, statusFilter]);
 
   const openActionsCount = useMemo(() => actions.filter(a => a.status === "open").length, [actions]);
 
@@ -334,8 +373,11 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     }));
   }, [filteredChecklistLogs]);
 
-  const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0
-    || conceptIds.length > 0 || locationIds.length > 0 || departmentIds.length > 0;
+  // Panel filters only — the search box and the date are shown in the toolbar
+  // itself, so they don't count toward the "Filters" badge.
+  const activeFilterCount = [conceptIds.length > 0, locationIds.length > 0, departmentIds.length > 0, userIds.length > 0, statusFilter !== "all"]
+    .filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0 || checklistSearch.trim().length > 0;
 
   const completedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score !== null).length, [filteredChecklistLogs]);
   const unfinishedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score === null).length, [filteredChecklistLogs]);
@@ -400,80 +442,245 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   return (
     <>
-      {/* ── Top toolbar: period tabs + export ── */}
+      {/* ── Toolbar: checklist search + Filters toggle ── */}
       <div className="space-y-2">
-      {/* Period tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
-        {([
-          { key: "today" as Period, label: t("reporting.period.today") },
-          { key: "week" as Period, label: t("reporting.period.week") },
-          { key: "month" as Period, label: t("reporting.period.month") },
-        ]).map(({ key, label }) => (
-          <button key={key}
-            onClick={() => { setPeriod(key); setDateRange(undefined); setCalOpen(false); }}
-            className={cn(
-              "shrink-0 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-              period === key
-                ? "bg-sage text-white border-sage"
-                : "border-border text-muted-foreground hover:border-sage/40"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-        <Popover open={calOpen} onOpenChange={setCalOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                "shrink-0 flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
-                period === "custom" && dateRange?.from
-                  ? "bg-sage text-white border-sage"
-                  : "border-border text-muted-foreground hover:border-sage/40"
-              )}
-              onClick={() => setPeriod("custom")}
-            >
-              <CalendarIcon size={12} />
-              {period === "custom" && dateRange?.from ? pickerLabel : t("reporting.period.custom")}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-[60]" align="start">
-            <CalendarPicker
-              mode="range"
-              selected={dateRange}
-              onSelect={r => {
-                setDateRange(r);
-                if (r?.from) setPeriod("custom");
-                if (r?.from && r?.to) setCalOpen(false);
-              }}
-              numberOfMonths={1}
-              disabled={{ after: new Date() }}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            data-testid="reporting-checklist-search"
+            type="search"
+            value={checklistSearch}
+            onChange={e => setChecklistSearch(e.target.value)}
+            placeholder={t("reporting.filters.checklistNamePlaceholder")}
+            aria-label={t("reporting.filters.checklistName")}
+            className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            list="reporting-checklist-options"
+          />
+          <datalist id="reporting-checklist-options">
+            {checklistOptions.map(name => <option key={name} value={name} />)}
+          </datalist>
+        </div>
+        <button
+          type="button"
+          data-testid="reporting-filters-toggle"
+          aria-expanded={filtersOpen}
+          aria-controls="reporting-filters-panel"
+          onClick={() => setFiltersOpen(o => !o)}
+          className={cn(
+            "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
+            filtersOpen || activeFilterCount > 0
+              ? "bg-sage text-white border-sage"
+              : "border-border text-foreground hover:border-sage/40"
+          )}
+        >
+          <Plus size={14} className={cn("transition-transform", filtersOpen && "rotate-45")} />
+          {t("reporting.filters.button")}
+          {activeFilterCount > 0 && (
+            <span data-testid="reporting-filters-count" className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Export buttons */}
-      <div className="flex items-center justify-end gap-2">
-        <button
-          data-testid="export-csv"
-          onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
-          disabled={!logEntries.length}
-          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
-        >
-          <Download size={12} /> {t("reporting.csv")}
-        </button>
-        <button
-          data-testid="export-pdf"
-          onClick={handleExportPdf}
-          disabled={!logEntries.length}
-          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
-        >
-          <FileText size={12} /> {t("reporting.pdf")}
-        </button>
+      {filtersOpen && (
+      <div id="reporting-filters-panel" data-testid="reporting-filters-panel" className="bg-card border border-border rounded-[20px] p-4 space-y-3">
+        <div className="space-y-1">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.date")}</span>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { key: "today" as Period, label: t("reporting.period.today") },
+              { key: "week" as Period, label: t("reporting.period.week") },
+              { key: "month" as Period, label: t("reporting.period.month") },
+            ]).map(({ key, label }) => (
+              <button key={key}
+                onClick={() => { setPeriod(key); setDateRange(undefined); setCalOpen(false); }}
+                className={cn(
+                  "shrink-0 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
+                  period === key
+                    ? "bg-sage text-white border-sage"
+                    : "border-border text-muted-foreground hover:border-sage/40"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            <Popover open={calOpen} onOpenChange={setCalOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 text-xs px-4 py-2 rounded-full border font-semibold transition-colors",
+                    period === "custom" && dateRange?.from
+                      ? "bg-sage text-white border-sage"
+                      : "border-border text-muted-foreground hover:border-sage/40"
+                  )}
+                  onClick={() => setPeriod("custom")}
+                >
+                  <CalendarIcon size={12} />
+                  {period === "custom" && dateRange?.from ? pickerLabel : t("reporting.period.custom")}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[60]" align="start">
+                <CalendarPicker
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={r => {
+                    setDateRange(r);
+                    if (r?.from) setPeriod("custom");
+                    if (r?.from && r?.to) setCalOpen(false);
+                  }}
+                  numberOfMonths={1}
+                  disabled={{ after: new Date() }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
       </div>
-      </div>{/* end top toolbar */}
+        <div className="grid gap-2 md:grid-cols-3">
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
+            <MultiSelectFilter
+              testId="reporting-concept-filter"
+              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+              selected={conceptIds}
+              onChange={setConceptIds}
+              allLabel={t("reporting.filters.allConcepts")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allConcepts")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
+            <MultiSelectFilter
+              testId="reporting-location-filter"
+              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+              options={conceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+              selected={locationIds}
+              onChange={setLocationIds}
+              allLabel={t("reporting.filters.allLocations")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allLocations")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
+            <MultiSelectFilter
+              testId="reporting-department-filter"
+              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+              options={availableDepartments.map((d): MultiSelectOption => ({
+                id: d.id,
+                label: d.name,
+                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
+              }))}
+              selected={departmentIds}
+              onChange={setDepartmentIds}
+              allLabel={t("reporting.filters.allDepartments")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.noDepartments")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.user")}</span>
+            <MultiSelectFilter
+              testId="reporting-user-filter"
+              icon={<User size={14} className="text-muted-foreground shrink-0" />}
+              options={[...teamMembers]
+                .sort((x, y) => x.name.localeCompare(y.name))
+                .map((m): MultiSelectOption => ({ id: m.id, label: m.name }))}
+              selected={userIds}
+              onChange={setUserIds}
+              allLabel={t("reporting.filters.allUsers")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allUsers")}
+            />
+          </div>
+
+          <label className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
+            <div className="relative">
+              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                data-testid="reporting-status-filter"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">{t("reporting.filters.allStatuses")}</option>
+                <option value="completed">{t("reporting.stats.completed")}</option>
+                <option value="unfinished">{t("reporting.stats.unfinished")}</option>
+                <option value="unstarted">{t("reporting.stats.unstarted")}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </label>
+        </div>
+        {hasActiveFilters && (
+          <div className="flex justify-end">
+            <button
+              data-testid="reporting-clear-filters"
+              type="button"
+              onClick={() => {
+                setUserIds([]);
+                setChecklistSearch("");
+                setStatusFilter("all");
+                setConceptIds([]);
+                setLocationIds([]);
+                setDepartmentIds([]);
+              }}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <X size={12} />
+              {t("reporting.filters.clear")}
+            </button>
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* Period + result count, with export */}
+      <div className="flex items-center justify-between gap-2">
+        <p data-testid="reporting-result-summary" className="min-w-0 truncate text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{periodLabel}</span>{" · "}
+          {statusFilter === "unstarted"
+            ? t("reporting.filters.showingUnstarted", { count: unstartedCount })
+            : t("reporting.filters.showingLogs", { count: logs.length, shown: logEntries.length, total: logs.length })
+          }
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            data-testid="export-csv"
+            onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
+            disabled={!logEntries.length}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-muted-foreground px-3 py-2 rounded-full border border-border hover:border-sage/40 transition-colors disabled:opacity-40"
+          >
+            <Download size={12} /> {t("reporting.csv")}
+          </button>
+          <button
+            data-testid="export-pdf"
+            onClick={handleExportPdf}
+            disabled={!logEntries.length}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-sage px-3 py-2 rounded-full border border-sage/40 hover:bg-sage-light transition-colors disabled:opacity-40"
+          >
+            <FileText size={12} /> {t("reporting.pdf")}
+          </button>
+        </div>
+      </div>
+      </div>{/* end toolbar */}
 
       {/* Stat cards — row 1: completion breakdown */}
       <div className="grid grid-cols-3 gap-2">
@@ -579,142 +786,6 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
             </div>
           )}
         </div>
-      </div>
-
-      {/* Filter panel */}
-      <div className="bg-card border border-border rounded-[20px] p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="section-label">{t("reporting.filters.heading")}</p>
-          {hasActiveFilters && (
-            <button
-              data-testid="reporting-clear-filters"
-              type="button"
-              onClick={() => {
-                setPersonFilter("all");
-                setChecklistSearch("");
-                setStatusFilter("all");
-                setConceptIds([]);
-                setLocationIds([]);
-                setDepartmentIds([]);
-              }}
-              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <X size={12} />
-              {t("reporting.filters.clear")}
-            </button>
-          )}
-        </div>
-        <div className="grid gap-2 md:grid-cols-3">
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
-            <MultiSelectFilter
-              testId="reporting-concept-filter"
-              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
-              selected={conceptIds}
-              onChange={setConceptIds}
-              allLabel={t("reporting.filters.allConcepts")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allConcepts")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
-            <MultiSelectFilter
-              testId="reporting-location-filter"
-              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
-              options={conceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
-              selected={locationIds}
-              onChange={setLocationIds}
-              allLabel={t("reporting.filters.allLocations")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allLocations")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
-            <MultiSelectFilter
-              testId="reporting-department-filter"
-              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
-              options={availableDepartments.map((d): MultiSelectOption => ({
-                id: d.id,
-                label: d.name,
-                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
-              }))}
-              selected={departmentIds}
-              onChange={setDepartmentIds}
-              allLabel={t("reporting.filters.allDepartments")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.noDepartments")}
-            />
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.checklistName")}</span>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                data-testid="reporting-checklist-search"
-                type="text"
-                value={checklistSearch}
-                onChange={e => setChecklistSearch(e.target.value)}
-                placeholder={t("reporting.filters.checklistNamePlaceholder")}
-                className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                list="reporting-checklist-options"
-              />
-            </div>
-            <datalist id="reporting-checklist-options">
-              {checklistOptions.map(name => <option key={name} value={name} />)}
-            </datalist>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.person")}</span>
-            <div className="relative">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <select
-                data-testid="reporting-person-filter"
-                value={personFilter}
-                onChange={e => setPersonFilter(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="all">{t("reporting.filters.allPeople")}</option>
-                {peopleOptions.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
-            </div>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
-            <select
-              data-testid="reporting-status-filter"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="all">{t("reporting.filters.allStatuses")}</option>
-              <option value="completed">{t("reporting.stats.completed")}</option>
-              <option value="unfinished">{t("reporting.stats.unfinished")}</option>
-              <option value="unstarted">{t("reporting.stats.unstarted")}</option>
-            </select>
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {statusFilter === "unstarted"
-            ? t("reporting.filters.showingUnstarted", { count: unstartedCount })
-            : t("reporting.filters.showingLogs", { count: logs.length, shown: logEntries.length, total: logs.length })
-          }
-        </p>
       </div>
 
       {/* Score Trend — Advanced reporting, gated to Growth+ */}
