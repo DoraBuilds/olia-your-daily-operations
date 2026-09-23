@@ -1,20 +1,21 @@
 import { useState, useMemo, useEffect } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, ChevronDown, Search, User, X, CheckCircle2, Clock, Circle, AlertTriangle } from "lucide-react";
+import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useChecklists } from "@/hooks/useChecklists";
 import { useActions } from "@/hooks/useActions";
 import { useLocations } from "@/hooks/useLocations";
-import { useConceptFilter } from "@/contexts/ConceptFilterContext";
+import { useConcepts } from "@/hooks/useConcepts";
+import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { usePlan } from "@/hooks/usePlan";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
-import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { exportReportingPdf, exportReportingCsv } from "@/lib/export-utils";
 import type { LogEntry } from "./types";
 import { LogDetailModal } from "./LogDetailModal";
@@ -142,93 +143,134 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [showCsvUpgrade, setShowCsvUpgrade] = useState(false);
   const [showReportingUpgrade, setShowReportingUpgrade] = useState(false);
-  // Location filter — "all" means no filter; any UUID string = filter to that location
-  const [locationFilter, setLocationFilter] = useState<string>(initialLocationId ?? "all");
+  // Scope filters — empty array means "all"
+  const [conceptIds, setConceptIds] = useState<string[]>([]);
+  const [locationIds, setLocationIds] = useState<string[]>(initialLocationId ? [initialLocationId] : []);
+  const [departmentIds, setDepartmentIds] = useState<string[]>([]);
   const [personFilter, setPersonFilter] = useState<string>("all");
   const [checklistSearch, setChecklistSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "unfinished" | "unstarted">(initialStatus ?? "all");
 
   useEffect(() => {
-    setLocationFilter(initialLocationId ?? "all");
+    const next = initialLocationId ? [initialLocationId] : [];
+    setLocationIds(prev => (prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next));
   }, [initialLocationId]);
 
   useEffect(() => {
     if (initialStatus) setStatusFilter(initialStatus);
   }, [initialStatus]);
 
-  const { scopedLocationIds } = useConceptFilter();
-  const { data: allLocations = [] } = useLocations();
-  // Narrow the location dropdown to the selected concept's locations, mirroring
-  // ChecklistsTab's in-page location filter.
-  const locations = useMemo(
-    () => scopedLocationIds === null ? allLocations : allLocations.filter(l => scopedLocationIds.includes(l.id)),
-    [allLocations, scopedLocationIds],
-  );
+  const { data: concepts = [] } = useConcepts();
+  const { data: allLocations = [], isSuccess: locationsLoaded } = useLocations();
   const locationNameById = useMemo(
     () => new Map(allLocations.map(location => [location.id, location.name])),
     [allLocations]
   );
 
-  // If the concept changes out from under a location-specific filter, fall
-  // back to "all" rather than silently showing an empty report.
-  useEffect(() => {
-    if (locationFilter === "all") return;
-    if (!locations.some(l => l.id === locationFilter)) {
-      setLocationFilter("all");
-    }
-  }, [locations, locationFilter]);
+  // Narrow the location picker's options to the selected concept(s).
+  const conceptScopedLocations = useMemo(
+    () => conceptIds.length === 0 ? allLocations : allLocations.filter(l => l.concept_id && conceptIds.includes(l.concept_id)),
+    [allLocations, conceptIds],
+  );
 
-  // Build date + location filters
+  // If the concept selection changes out from under a specific location pick,
+  // drop the locations that no longer apply rather than silently showing an
+  // empty report. Waits for locations to load so a deep-linked
+  // initialLocationId isn't dropped before the list arrives, and keeps the same
+  // array when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    if (!locationsLoaded) return;
+    setLocationIds(prev => {
+      const next = prev.filter(id => conceptScopedLocations.some(l => l.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [locationsLoaded, conceptScopedLocations]);
+
+  // Departments are scoped per-location — union across whichever locations are
+  // currently in scope (the specific ones picked, or every concept-scoped one).
+  const departmentLocationIds = useMemo(
+    () => (locationIds.length > 0 ? locationIds : conceptScopedLocations.map(l => l.id)),
+    [locationIds, conceptScopedLocations],
+  );
+  const { data: availableDepartments = [], isFetching: departmentsFetching } = useDepartmentsForLocations(departmentLocationIds);
+
+  // Same pruning for departments — skipped while the list is refetching for a
+  // new location set, so existing picks aren't wiped mid-load.
+  useEffect(() => {
+    if (departmentsFetching) return;
+    setDepartmentIds(prev => {
+      const next = prev.filter(id => availableDepartments.some(d => d.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [departmentsFetching, availableDepartments]);
+
+  // null = no restriction (every location / department); a narrower array
+  // once a concept and/or specific locations/departments are picked.
+  const effectiveLocationIds = useMemo<string[] | null>(() => {
+    if (conceptIds.length === 0 && locationIds.length === 0) return null;
+    return locationIds.length > 0 ? locationIds : conceptScopedLocations.map(l => l.id);
+  }, [conceptIds, locationIds, conceptScopedLocations]);
+  const effectiveDepartmentIds = departmentIds.length > 0 ? departmentIds : null;
+
+  // Build date filters — location/department/concept scoping happens client-side below.
   const filters = useMemo(() => {
     const today = new Date();
-    const loc = locationFilter !== "all" ? { location_id: locationFilter } : {};
     if (period === "today") {
-      return { from: format(startOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
+      return { from: format(startOfDay(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfDay(today), "yyyy-MM-dd'T'HH:mm:ss") };
     }
     if (period === "week") {
-      return { from: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
+      return { from: format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd'T'HH:mm:ss") };
     }
     if (period === "month") {
-      return { from: format(startOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"), ...loc };
+      return { from: format(startOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss"), to: format(endOfMonth(today), "yyyy-MM-dd'T'HH:mm:ss") };
     }
     if (dateRange?.from) {
       return {
         from: format(startOfDay(dateRange.from), "yyyy-MM-dd'T'HH:mm:ss"),
         to: dateRange.to ? format(endOfDay(dateRange.to), "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-        location_id: locationFilter !== "all" ? locationFilter : undefined,
       };
     }
-    return { location_id: locationFilter !== "all" ? locationFilter : undefined };
-  }, [period, dateRange, locationFilter]);
+    return {};
+  }, [period, dateRange]);
 
   const { data: rawLogs = [], isLoading } = useChecklistLogs(filters);
-  // useChecklistLogs only supports filtering to a single location server-side,
-  // so when "All concepts' locations" is the effective scope (locationFilter
-  // is "all" but a concept is selected), narrow the fetched logs client-side.
-  const logs = useMemo(
-    () => (locationFilter !== "all" || scopedLocationIds === null)
-      ? rawLogs
-      : rawLogs.filter(l => l.location_id === null || scopedLocationIds.includes(l.location_id)),
-    [rawLogs, locationFilter, scopedLocationIds],
-  );
   const { data: allDbChecklists = [] } = useChecklists();
+  const checklistById = useMemo(() => new Map(allDbChecklists.map(c => [c.id, c])), [allDbChecklists]);
+
   const allChecklists = useMemo(
-    () => (locationFilter !== "all" || scopedLocationIds === null)
-      ? allDbChecklists
-      : allDbChecklists.filter(c => {
-          const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : null);
-          if (!locIds || locIds.length === 0) return true;
-          return locIds.some(id => scopedLocationIds.includes(id));
-        }),
-    [allDbChecklists, locationFilter, scopedLocationIds],
+    () => allDbChecklists.filter(c => {
+      if (effectiveLocationIds) {
+        const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : null);
+        if (locIds && locIds.length > 0 && !locIds.some(id => effectiveLocationIds.includes(id))) return false;
+      }
+      if (effectiveDepartmentIds) {
+        const deptIds = c.department_ids ?? [];
+        if (deptIds.length > 0 && !deptIds.some(id => effectiveDepartmentIds.includes(id))) return false;
+      }
+      return true;
+    }),
+    [allDbChecklists, effectiveLocationIds, effectiveDepartmentIds],
   );
+
+  const logs = useMemo(
+    () => rawLogs.filter(l => {
+      if (effectiveLocationIds && l.location_id !== null && !effectiveLocationIds.includes(l.location_id)) return false;
+      if (effectiveDepartmentIds && l.checklist_id !== null) {
+        const deptIds = checklistById.get(l.checklist_id)?.department_ids ?? [];
+        if (deptIds.length > 0 && !deptIds.some(id => effectiveDepartmentIds.includes(id))) return false;
+      }
+      return true;
+    }),
+    [rawLogs, effectiveLocationIds, effectiveDepartmentIds, checklistById],
+  );
+
   const { data: rawActions = [] } = useActions();
   const scopedChecklistIds = useMemo(() => new Set(allChecklists.map(c => c.id)), [allChecklists]);
   const actions = useMemo(
-    () => (locationFilter !== "all" || scopedLocationIds === null)
+    () => (effectiveLocationIds === null && effectiveDepartmentIds === null)
       ? rawActions
       : rawActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
-    [rawActions, locationFilter, scopedLocationIds, scopedChecklistIds],
+    [rawActions, effectiveLocationIds, effectiveDepartmentIds, scopedChecklistIds],
   );
   const logById = useMemo(() => new Map(logs.map(log => [log.id, log])), [logs]);
   const peopleOptions = useMemo(
@@ -249,14 +291,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     return allChecklists.filter(c => {
       if (loggedIds.has(c.id)) return false;
       if (c.start_date && new Date(c.start_date) > periodEnd) return false;
-      if (locationFilter !== "all") {
-        const locIds = c.location_ids ?? (c.location_id ? [c.location_id] : null);
-        if (locIds && !locIds.includes(locationFilter)) return false;
-      }
       if (checklistQuery && !c.title.toLowerCase().startsWith(checklistQuery)) return false;
       return true;
     });
-  }, [allChecklists, logs, locationFilter, filters, isLoading, checklistSearch]);
+  }, [allChecklists, logs, filters, isLoading, checklistSearch]);
 
   const filteredChecklistLogs = useMemo(() => {
     if (statusFilter === "unstarted") return [];
@@ -296,7 +334,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     }));
   }, [filteredChecklistLogs]);
 
-  const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0;
+  const hasActiveFilters = personFilter !== "all" || statusFilter !== "all" || checklistSearch.trim().length > 0
+    || conceptIds.length > 0 || locationIds.length > 0 || departmentIds.length > 0;
 
   const completedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score !== null).length, [filteredChecklistLogs]);
   const unfinishedCount = useMemo(() => filteredChecklistLogs.filter(l => l.score === null).length, [filteredChecklistLogs]);
@@ -361,9 +400,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
 
   return (
     <>
-      <ConceptScopeNotice />
-
-      {/* ── Top toolbar: period tabs + location filter + export ── */}
+      {/* ── Top toolbar: period tabs + export ── */}
       <div className="space-y-2">
       {/* Period tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide">
@@ -417,24 +454,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
         </Popover>
       </div>
 
-      {/* Location filter + export — same row */}
-      <div className="flex items-center gap-2">
-        {/* Location dropdown */}
-        <div className="relative flex-1 min-w-0">
-          <select
-            data-testid="location-filter"
-            value={locationFilter}
-            onChange={e => setLocationFilter(e.target.value)}
-            className="w-full text-xs bg-card border border-border rounded-full px-3 py-2 pr-7 text-foreground font-medium appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-sage/40"
-          >
-            <option value="all">{t("locations.all")}</option>
-            {locations.map(l => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-          <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        </div>
-        {/* Export buttons */}
+      {/* Export buttons */}
+      <div className="flex items-center justify-end gap-2">
         <button
           data-testid="export-csv"
           onClick={() => can("exportCsv") ? handleExportCsv() : setShowCsvUpgrade(true)}
@@ -572,6 +593,9 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                 setPersonFilter("all");
                 setChecklistSearch("");
                 setStatusFilter("all");
+                setConceptIds([]);
+                setLocationIds([]);
+                setDepartmentIds([]);
               }}
               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
@@ -581,6 +605,58 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
           )}
         </div>
         <div className="grid gap-2 md:grid-cols-3">
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
+            <MultiSelectFilter
+              testId="reporting-concept-filter"
+              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+              options={concepts.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+              selected={conceptIds}
+              onChange={setConceptIds}
+              allLabel={t("reporting.filters.allConcepts")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allConcepts")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
+            <MultiSelectFilter
+              testId="reporting-location-filter"
+              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+              options={conceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+              selected={locationIds}
+              onChange={setLocationIds}
+              allLabel={t("reporting.filters.allLocations")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allLocations")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
+            <MultiSelectFilter
+              testId="reporting-department-filter"
+              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+              options={availableDepartments.map((d): MultiSelectOption => ({
+                id: d.id,
+                label: d.name,
+                sublabel: departmentLocationIds.length > 1 ? locationNameById.get(d.location_id) : undefined,
+              }))}
+              selected={departmentIds}
+              onChange={setDepartmentIds}
+              allLabel={t("reporting.filters.allDepartments")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.noDepartments")}
+            />
+          </div>
+
           <label className="space-y-1">
             <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.checklistName")}</span>
             <div className="relative">

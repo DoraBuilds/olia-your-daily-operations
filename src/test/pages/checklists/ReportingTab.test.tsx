@@ -5,16 +5,6 @@ import { ReactNode } from "react";
 import { ReportingTab } from "@/pages/checklists/ReportingTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
@@ -61,12 +51,9 @@ vi.mock("@/contexts/AuthContext", () => ({
 const mockExportReportingPdf = vi.fn();
 const mockExportReportingCsv = vi.fn();
 const mockExportLogDetailPdf = vi.fn();
-const mockUseChecklistLogs = vi.fn((filters?: any) => ({
-  data: filters?.location_id
-    ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
-    : MOCK_LOGS,
-  isLoading: false,
-}));
+// ReportingTab now scopes by location/department client-side, so the mocked
+// hook always returns the full set regardless of the (date-only) filters passed in.
+const mockUseChecklistLogs = vi.fn(() => ({ data: MOCK_LOGS, isLoading: false }));
 const mockUseChecklists = vi.fn(() => ({ data: MOCK_CHECKLISTS, isLoading: false }));
 
 vi.mock("@/lib/export-utils", () => ({
@@ -166,11 +153,19 @@ vi.mock("@/hooks/useActions", () => ({
 vi.mock("@/hooks/useLocations", () => ({
   useLocations: () => ({
     data: [
-      { id: "loc-1", name: "Main Branch" },
-      { id: "loc-2", name: "City Centre" },
+      { id: "loc-1", name: "Main Branch", concept_id: null },
+      { id: "loc-2", name: "City Centre", concept_id: null },
     ],
     isLoading: false,
   }),
+}));
+
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({ data: [], isLoading: false }),
+}));
+
+vi.mock("@/hooks/useDepartments", () => ({
+  useDepartmentsForLocations: () => ({ data: [], isLoading: false }),
 }));
 
 // Mock Recharts to avoid SVG rendering issues in jsdom
@@ -208,12 +203,7 @@ describe("ReportingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Restore default implementations after any mockReturnValueOnce usage
-    mockUseChecklistLogs.mockImplementation((filters?: any) => ({
-      data: filters?.location_id
-        ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
-        : MOCK_LOGS,
-      isLoading: false,
-    }));
+    mockUseChecklistLogs.mockImplementation(() => ({ data: MOCK_LOGS, isLoading: false }));
     mockUseChecklists.mockImplementation(() => ({ data: MOCK_CHECKLISTS, isLoading: false }));
   });
 
@@ -486,10 +476,9 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
   });
 
-  it("preselects a dashboard-provided location and filters the query", () => {
+  it("preselects a dashboard-provided location and filters the results", () => {
     render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
-    expect(screen.getByTestId("location-filter")).toHaveValue("loc-2");
-    expect(mockUseChecklistLogs).toHaveBeenCalledWith(expect.objectContaining({ location_id: "loc-2" }));
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("City Centre");
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
   });
@@ -690,16 +679,20 @@ describe("ReportingTab", () => {
 
   it("changing location filter to specific location updates displayed logs", () => {
     render(<ReportingTab />, { wrapper });
-    const locationSelect = screen.getByTestId("location-filter");
-    fireEvent.change(locationSelect, { target: { value: "loc-1" } });
-    expect(locationSelect).toHaveValue("loc-1");
+    fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-location-filter-option-loc-1"));
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Main Branch");
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
   it("changing location filter back to all shows all logs", () => {
     render(<ReportingTab initialLocationId="loc-1" />, { wrapper });
-    const locationSelect = screen.getByTestId("location-filter");
-    fireEvent.change(locationSelect, { target: { value: "all" } });
-    expect(locationSelect).toHaveValue("all");
+    fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-location-filter-option-all"));
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("All locations");
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
   });
 
   // ── Status filter branches ─────────────────────────────────────────
