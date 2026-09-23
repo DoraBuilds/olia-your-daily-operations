@@ -853,6 +853,25 @@ describe("Admin page", () => {
     }
   });
 
+  it("collapses and re-expands a location section, remembering it for next time", async () => {
+    try {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
+      const header = screen.getByRole("button", { name: /Departments \(2\)/ });
+      expect(header).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(header);
+      expect(screen.queryByText("Front of House")).not.toBeInTheDocument();
+      expect(header).toHaveAttribute("aria-expanded", "false");
+      // Other sections are unaffected.
+      expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+      expect(JSON.parse(localStorage.getItem("olia_concepts_collapsed_sections") ?? "[]")).toEqual(["departments"]);
+      fireEvent.click(header);
+      expect(screen.getByText("Front of House")).toBeInTheDocument();
+    } finally {
+      localStorage.removeItem("olia_concepts_collapsed_sections");
+    }
+  });
+
   it("Concepts tab no longer lists the location's assigned checklists", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     await waitFor(() => expect(screen.getByRole("button", { name: "Location options" })).toBeInTheDocument());
