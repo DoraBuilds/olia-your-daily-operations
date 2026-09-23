@@ -29,7 +29,17 @@ import {
   MoreVertical,
   GripVertical,
   FileText,
+  Building2,
+  MapPin,
+  UserRound,
+  User,
+  Tag,
+  Files,
+  CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
+import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
+import { accessMatchesFilters, activeInfohubFilterCount, DEFAULT_INFOHUB_FILTERS, reachableFolderIds, type AccessFilterContext, type DocKind, type InfohubFilters, type Progress } from "./infohub/infohub-filters";
 import { cn } from "@/lib/utils";
 import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
@@ -55,7 +65,7 @@ export default function Infohub() {
   const location = useLocation();
   const navigate = useNavigate();
   const { teamMember } = useAuth();
-  const { scopedLocationIds } = useConceptFilter();
+  const { scopedLocationIds, selectedConceptId, concepts } = useConceptFilter();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: locations = [] } = useLocations();
   const {
@@ -79,6 +89,13 @@ export default function Infohub() {
   const [showCreateDoc, setShowCreateDoc] = useState(false);
   const [showUploadDoc, setShowUploadDoc] = useState(false);
   const [filePreview, setFilePreview] = useState<{ signedUrl: string; fileType: string; title: string } | null>(null);
+  // Library and Training keep separate applied filters; the popover edits a
+  // staged draft of the current tab's, committed on Apply.
+  const [libFilters, setLibFilters] = useState<InfohubFilters>(DEFAULT_INFOHUB_FILTERS);
+  const [trainFilters, setTrainFilters] = useState<InfohubFilters>(DEFAULT_INFOHUB_FILTERS);
+  const [draft, setDraft] = useState<InfohubFilters>(DEFAULT_INFOHUB_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const updateDraft = (patch: Partial<InfohubFilters>) => setDraft(prev => ({ ...prev, ...patch }));
 
   // Data state
   const libFolders = infohubData.libraryFolders;
@@ -129,6 +146,65 @@ export default function Infohub() {
   );
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
+  // ─── Filters ───
+  const scopedLocations = useMemo(
+    () => scopedLocationIds === null ? locations : locations.filter(l => scopedLocationIds.includes(l.id)),
+    [locations, scopedLocationIds],
+  );
+  // Under a header concept, the popover only offers that concept.
+  const conceptOptions = scopedLocationIds === null ? concepts : concepts.filter(c => c.id === selectedConceptId);
+  const draftLocationOptions = useMemo(
+    () => draft.conceptIds.length === 0 ? scopedLocations : scopedLocations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [scopedLocations, draft.conceptIds],
+  );
+  // Drop draft locations a concept change put out of scope.
+  useEffect(() => {
+    setDraft(prev => {
+      const next = prev.locationIds.filter(id => draftLocationOptions.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [draftLocationOptions]);
+
+  const accessContext = (f: InfohubFilters): AccessFilterContext => ({
+    locationIds: f.locationIds.length > 0
+      ? f.locationIds
+      : f.conceptIds.length > 0 ? scopedLocations.filter(l => l.concept_id && f.conceptIds.includes(l.concept_id)).map(l => l.id) : null,
+    roles: f.roles,
+    members: teamMembers.filter(m => f.memberIds.includes(m.id)),
+  });
+  const isLibFiltering = activeInfohubFilterCount(libFilters) > 0;
+  const isTrainFiltering = activeInfohubFilterCount(trainFilters) > 0;
+  const currentFilters = subTab === "library" ? libFilters : trainFilters;
+  const setCurrentFilters = subTab === "library" ? setLibFilters : setTrainFilters;
+
+  const isVisibleToMe = (access: InfohubAccessControl) =>
+    canAccessInfohubContent(access, currentPrincipal) && inConceptScope(access, scopedLocationIds);
+
+  // Docs that are visible to the viewer AND match the tab's filters, including
+  // their folder path. Folder counts and folder contents are built from these,
+  // so counts shrink as filters narrow and a folder only lists what matches.
+  const filteredLibDocs = useMemo(() => {
+    const ctx = accessContext(libFilters);
+    const reachable = reachableFolderIds(libFolders, access => accessMatchesFilters(access, ctx));
+    return libDocs.filter(doc =>
+      isVisibleToMe(doc.access)
+      && reachable.has(doc.folderId)
+      && accessMatchesFilters(doc.access, ctx)
+      && (libFilters.tags.length === 0 || doc.tags.some(tag => libFilters.tags.includes(tag)))
+      && (libFilters.kind === "all" || (libFilters.kind === "file") === Boolean(doc.filePath))
+    );
+  }, [libDocs, libFolders, libFilters, teamMembers, scopedLocations, currentPrincipal, scopedLocationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  const filteredTrainDocs = useMemo(() => {
+    const ctx = accessContext(trainFilters);
+    const reachable = reachableFolderIds(trainFolders, access => accessMatchesFilters(access, ctx));
+    return trainDocs.filter(doc =>
+      isVisibleToMe(doc.access)
+      && reachable.has(doc.folderId)
+      && accessMatchesFilters(doc.access, ctx)
+      && (trainFilters.progress === "all" || (trainFilters.progress === "completed") === doc.completed)
+    );
+  }, [trainDocs, trainFolders, trainFilters, teamMembers, scopedLocations, currentPrincipal, scopedLocationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sorted folder lists
   const visibleLibFolders = useMemo(() =>
     sortFolders(libFolders.filter((folder) => {
@@ -138,24 +214,20 @@ export default function Infohub() {
     [libFolders, currentLibFolder, normalizedSearch]
   );
   const accessibleLibFolders = useMemo(() =>
-    visibleLibFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal) && inConceptScope(folder.access, scopedLocationIds)),
-    [visibleLibFolders, currentPrincipal, scopedLocationIds]
+    visibleLibFolders.filter(folder => isVisibleToMe(folder.access)),
+    [visibleLibFolders, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const docsInCurrentFolder = useMemo(() =>
+  const accessibleDocsInCurrentFolder = useMemo(() =>
     (normalizedSearch
-      ? libDocs.filter((doc) =>
+      ? filteredLibDocs.filter((doc) =>
           doc.title.toLowerCase().includes(normalizedSearch)
           || doc.summary.toLowerCase().includes(normalizedSearch)
         )
       : currentLibFolder
-        ? libDocs.filter(d => d.folderId === currentLibFolder)
+        ? filteredLibDocs.filter(d => d.folderId === currentLibFolder)
         : []
     ).sort((a, b) => a.title.localeCompare(b.title)),
-    [libDocs, currentLibFolder, normalizedSearch]
-  );
-  const accessibleDocsInCurrentFolder = useMemo(() =>
-    docsInCurrentFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
-    [docsInCurrentFolder, currentPrincipal, scopedLocationIds]
+    [filteredLibDocs, currentLibFolder, normalizedSearch]
   );
   const visibleTrainFolders = useMemo(() =>
     sortFolders(trainFolders.filter((folder) => {
@@ -165,29 +237,59 @@ export default function Infohub() {
     [trainFolders, currentTrainFolder, normalizedSearch]
   );
   const accessibleTrainFolders = useMemo(() =>
-    visibleTrainFolders.filter(folder => canAccessInfohubContent(folder.access, currentPrincipal) && inConceptScope(folder.access, scopedLocationIds)),
-    [visibleTrainFolders, currentPrincipal, scopedLocationIds]
-  );
-  const docsInCurrentTrainFolder = useMemo(() =>
-    normalizedSearch
-      ? trainDocs.filter(d => d.title.toLowerCase().includes(normalizedSearch))
-      : currentTrainFolder
-        ? trainDocs.filter(d => d.folderId === currentTrainFolder)
-        : [],
-    [trainDocs, currentTrainFolder, normalizedSearch]
+    visibleTrainFolders.filter(folder => isVisibleToMe(folder.access)),
+    [visibleTrainFolders, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const accessibleDocsInCurrentTrainFolder = useMemo(() =>
-    docsInCurrentTrainFolder.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
-    [docsInCurrentTrainFolder, currentPrincipal, scopedLocationIds]
+    normalizedSearch
+      ? filteredTrainDocs.filter(d => d.title.toLowerCase().includes(normalizedSearch))
+      : currentTrainFolder
+        ? filteredTrainDocs.filter(d => d.folderId === currentTrainFolder)
+        : [],
+    [filteredTrainDocs, currentTrainFolder, normalizedSearch]
   );
   const visibleLibDocs = useMemo(() =>
-    libDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
-    [libDocs, currentPrincipal, scopedLocationIds]
+    libDocs.filter(doc => isVisibleToMe(doc.access)),
+    [libDocs, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const visibleTrainDocs = useMemo(() =>
-    trainDocs.filter(doc => canAccessInfohubContent(doc.access, currentPrincipal) && inConceptScope(doc.access, scopedLocationIds)),
-    [trainDocs, currentPrincipal, scopedLocationIds]
+    trainDocs.filter(doc => isVisibleToMe(doc.access)),
+    [trainDocs, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const tagOptions = useMemo(
+    () => Array.from(new Set(visibleLibDocs.flatMap(doc => doc.tags))).sort((a, b) => a.localeCompare(b)),
+    [visibleLibDocs],
+  );
+
+  const openFiltersPanel = () => {
+    setDraft(currentFilters);
+    setFiltersOpen(true);
+  };
+  const applyFilters = () => {
+    setCurrentFilters(draft);
+    setFiltersOpen(false);
+  };
+
+  // The current tab's applied filters as removable chips — shown at every folder level.
+  const removeFrom = (key: "conceptIds" | "locationIds" | "roles" | "memberIds" | "tags", value: string) =>
+    setCurrentFilters(prev => ({ ...prev, [key]: prev[key].filter(x => x !== value) }));
+  const filterChips: ActiveFilterChip[] = [
+    ...currentFilters.conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => removeFrom("conceptIds", id) })),
+    ...currentFilters.locationIds.map(id => ({ key: `l-${id}`, label: locations.find(l => l.id === id)?.name ?? id, onRemove: () => removeFrom("locationIds", id) })),
+    ...currentFilters.roles.map(role => ({ key: `r-${role}`, label: role, onRemove: () => removeFrom("roles", role) })),
+    ...currentFilters.memberIds.map(id => ({ key: `m-${id}`, label: teamMembers.find(m => m.id === id)?.name ?? id, onRemove: () => removeFrom("memberIds", id) })),
+    ...currentFilters.tags.map(tag => ({ key: `t-${tag}`, label: `#${tag}`, onRemove: () => removeFrom("tags", tag) })),
+    ...(currentFilters.kind === "all" ? [] : [{
+      key: "kind",
+      label: currentFilters.kind === "file" ? t("filters.typeFile") : t("filters.typeWritten"),
+      onRemove: () => setCurrentFilters(prev => ({ ...prev, kind: "all" as const })),
+    }]),
+    ...(currentFilters.progress === "all" ? [] : [{
+      key: "progress",
+      label: currentFilters.progress === "completed" ? t("filters.completed") : t("filters.notCompleted"),
+      onRemove: () => setCurrentFilters(prev => ({ ...prev, progress: "all" as const })),
+    }]),
+  ];
 
   // Drag reorder
   const libDrag = useDragReorder(visibleLibFolders, (reordered) => {
@@ -363,25 +465,122 @@ export default function Infohub() {
     <Layout>
       <ConceptScopeNotice />
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      <FiltersPopover
+        testIdPrefix="infohub"
+        open={filtersOpen}
+        onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}
+        activeCount={activeInfohubFilterCount(currentFilters)}
+        onClear={() => setDraft(DEFAULT_INFOHUB_FILTERS)}
+        onApply={applyFilters}
+        search={<>
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={subTab === "library" ? t("searchLibraryPlaceholder") : t("searchTrainingPlaceholder")}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
-        </div>
-        <button
-          onClick={() => setShowPlusMenu(true)}
-          aria-label={t("addContent")}
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-sage text-primary-foreground transition-colors hover:bg-sage-deep shrink-0"
-        >
-          <Plus size={18} />
-        </button>
-      </div>
+        </>}
+        trailing={
+          <button
+            onClick={() => setShowPlusMenu(true)}
+            aria-label={t("addContent")}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-primary-foreground transition-colors hover:bg-sage-deep shrink-0"
+          >
+            <Plus size={18} />
+          </button>
+        }
+      >
+        <FilterField label={t("filters.concept")}>
+          <FilterMultiSelect
+            testId="infohub-concept-filter"
+            icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+            options={conceptOptions.map(c => ({ id: c.id, label: c.name }))}
+            selected={draft.conceptIds}
+            onChange={ids => updateDraft({ conceptIds: ids })}
+            allLabel={t("filters.allConcepts")}
+          />
+        </FilterField>
+        <FilterField label={t("filters.location")}>
+          <FilterMultiSelect
+            testId="infohub-location-filter"
+            icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+            options={draftLocationOptions.map(l => ({ id: l.id, label: l.name }))}
+            selected={draft.locationIds}
+            onChange={ids => updateDraft({ locationIds: ids })}
+            allLabel={t("filters.allLocations")}
+          />
+        </FilterField>
+        <FilterField label={t("filters.role")}>
+          <FilterMultiSelect
+            testId="infohub-role-filter"
+            icon={<UserRound size={14} className="text-muted-foreground shrink-0" />}
+            options={roleOptions.map(role => ({ id: role, label: role }))}
+            selected={draft.roles}
+            onChange={roles => updateDraft({ roles })}
+            allLabel={t("filters.allRoles")}
+          />
+        </FilterField>
+        <FilterField label={t("filters.member")}>
+          <FilterMultiSelect
+            testId="infohub-member-filter"
+            icon={<User size={14} className="text-muted-foreground shrink-0" />}
+            options={[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).map(m => ({ id: m.id, label: m.name }))}
+            selected={draft.memberIds}
+            onChange={ids => updateDraft({ memberIds: ids })}
+            allLabel={t("filters.allMembers")}
+          />
+        </FilterField>
+        {subTab === "library" ? (
+          <>
+            <FilterField label={t("filters.tags")}>
+              <FilterMultiSelect
+                testId="infohub-tag-filter"
+                icon={<Tag size={14} className="text-muted-foreground shrink-0" />}
+                options={tagOptions.map(tag => ({ id: tag, label: tag }))}
+                selected={draft.tags}
+                onChange={tags => updateDraft({ tags })}
+                allLabel={t("filters.allTags")}
+                noOptionsLabel={t("filters.noTags")}
+              />
+            </FilterField>
+            <FilterField label={t("filters.type")}>
+              <div className="relative">
+                <Files size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <select
+                  data-testid="infohub-type-filter"
+                  value={draft.kind}
+                  onChange={e => updateDraft({ kind: e.target.value as DocKind })}
+                  className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="all">{t("filters.allTypes")}</option>
+                  <option value="written">{t("filters.typeWritten")}</option>
+                  <option value="file">{t("filters.typeFile")}</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
+            </FilterField>
+          </>
+        ) : (
+          <FilterField label={t("filters.progress")}>
+            <div className="relative">
+              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                data-testid="infohub-progress-filter"
+                value={draft.progress}
+                onChange={e => updateDraft({ progress: e.target.value as Progress })}
+                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">{t("filters.allProgress")}</option>
+                <option value="completed">{t("filters.completed")}</option>
+                <option value="incomplete">{t("filters.notCompleted")}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </FilterField>
+        )}
+      </FiltersPopover>
 
       {/* Sub-tab toggle */}
       <div className="flex gap-1 bg-muted rounded-xl p-1">
@@ -405,6 +604,8 @@ export default function Infohub() {
           </button>
         ))}
       </div>
+
+      <ActiveFilterChips testIdPrefix="infohub" chips={filterChips} onClearAll={() => setCurrentFilters(DEFAULT_INFOHUB_FILTERS)} />
 
       {/* ─── Library Tab ─── */}
       {subTab === "library" && (
@@ -444,7 +645,7 @@ export default function Infohub() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {t("docCount", { count: countDocsInFolder(folder.id, libFolders, libDocs) })}
+                          {t("docCount", { count: countDocsInFolder(folder.id, libFolders, filteredLibDocs) })}
                           {libFolders.filter(f => f.parentId === folder.id).length > 0 &&
                             ` · ${t("subfolderCount", { count: libFolders.filter(f => f.parentId === folder.id).length })}`
                           }
@@ -530,7 +731,7 @@ export default function Infohub() {
                 <Plus size={18} className="text-sage-deep" />
               </div>
               <p className="text-sm text-muted-foreground">
-                {normalizedSearch
+                {normalizedSearch || isLibFiltering
                   ? t("emptyState.noMatchLibrary")
                   : currentLibFolder ? t("emptyState.folderEmpty") : t("emptyState.noFolders")}
               </p>
@@ -608,7 +809,7 @@ export default function Infohub() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{t("moduleCount", { count: countTrainingDocsInFolder(folder.id, trainFolders, trainDocs) })}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("moduleCount", { count: countTrainingDocsInFolder(folder.id, trainFolders, filteredTrainDocs) })}</p>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === folder.id ? null : folder.id); }}
@@ -691,7 +892,7 @@ export default function Infohub() {
                 <Plus size={18} className="text-lavender-deep" />
               </div>
               <p className="text-sm text-muted-foreground">
-                {normalizedSearch ? t("emptyState.noMatchTraining") : t("emptyState.folderEmpty")}
+                {normalizedSearch || isTrainFiltering ? t("emptyState.noMatchTraining") : t("emptyState.folderEmpty")}
               </p>
               <p className="text-xs text-muted-foreground mt-1">{t("emptyState.tapToCreate")}</p>
             </button>

@@ -3,9 +3,9 @@ import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2, Building2, MapPin, Layers, CheckCircle2 } from "lucide-react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
-import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
+import { type MultiSelectOption } from "@/components/MultiSelectFilter";
+import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
@@ -27,7 +27,7 @@ const ChecklistBuilderModal = lazy(() => import("./ChecklistBuilderModal").then(
 const ChecklistPreviewModal = lazy(() => import("./ChecklistPreviewModal").then(m => ({ default: m.ChecklistPreviewModal })));
 
 function checklistAppliesToLocation(
-  checklist: { location_id: string | null; location_ids?: string[] | null; concept_id?: string | null },
+  checklist: { location_id?: string | null; location_ids?: string[] | null; concept_id?: string | null },
   locationId: string,
   locationConceptId?: string | null,
 ) {
@@ -246,11 +246,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [previewChecklist, setPreviewChecklist] = useState<ChecklistItem | null>(null);
   const editingChecklist = editingChecklistId ? dbChecklists.find(c => c.id === editingChecklistId) : null;
   const normalizedSearch = search.trim().toLowerCase();
-  // Search or any active filter lists matching checklists across every
-  // folder; folders themselves only show up as search matches.
-  const isFiltering = activeFilterCount > 0;
   const visibleFolders = [...folders]
-    .filter(f => normalizedSearch ? f.name.toLowerCase().includes(normalizedSearch) : !isFiltering && f.parentId === currentFolder)
+    .filter(f => normalizedSearch ? f.name.toLowerCase().includes(normalizedSearch) : f.parentId === currentFolder)
     .sort((a, b) => folderOrder.indexOf(a.id) - folderOrder.indexOf(b.id));
   const matchesScope = (c: ChecklistItem) => {
     if (filters.locationIds.length > 0) {
@@ -262,22 +259,43 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     }
     return true;
   };
-  const visibleChecklists = checklists
-    .filter(c => {
-      if (normalizedSearch) return c.title.toLowerCase().includes(normalizedSearch);
-      return isFiltering || c.folderId === currentFolder;
-    })
-    .filter(c => {
-      if (!matchesScope(c)) return false;
-      if (filters.departmentIds.length > 0 && c.department_ids?.length
-        && !c.department_ids.some(id => filters.departmentIds.includes(id))) return false;
-      if (filters.status === "published" && !c.is_published) return false;
-      if (filters.status === "draft" && c.is_published) return false;
-      return true;
-    });
+  const matchesFilters = (c: ChecklistItem) => {
+    if (!matchesScope(c)) return false;
+    if (filters.departmentIds.length > 0 && c.department_ids?.length
+      && !c.department_ids.some(id => filters.departmentIds.includes(id))) return false;
+    if (filters.status === "published" && !c.is_published) return false;
+    if (filters.status === "draft" && c.is_published) return false;
+    return true;
+  };
+  // Filters keep the folder structure: folders stay put, their counts only
+  // include matching checklists, and inside a folder only matches are listed.
+  const filteredChecklists = checklists.filter(matchesFilters);
+  const filteredCountByFolder = new Map<string, number>();
+  for (const c of filteredChecklists) {
+    if (c.folderId) filteredCountByFolder.set(c.folderId, (filteredCountByFolder.get(c.folderId) ?? 0) + 1);
+  }
+  const visibleChecklists = filteredChecklists
+    .filter(c => normalizedSearch ? c.title.toLowerCase().includes(normalizedSearch) : c.folderId === currentFolder);
 
+  const isFiltering = activeFilterCount > 0;
   const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch && !isFiltering;
   const noResults = !isEmpty && visibleFolders.length === 0 && visibleChecklists.length === 0;
+
+  // Applied filters as removable chips, shown at every folder level.
+  const departmentNames = useRef(new Map<string, string>());
+  availableDepartments.forEach(d => departmentNames.current.set(d.id, d.name));
+  const removeFrom = (key: "conceptIds" | "locationIds" | "departmentIds", id: string) =>
+    setFilters(prev => ({ ...prev, [key]: prev[key].filter(x => x !== id) }));
+  const filterChips: ActiveFilterChip[] = [
+    ...filters.conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => removeFrom("conceptIds", id) })),
+    ...filters.locationIds.map(id => ({ key: `l-${id}`, label: dbLocations.find(l => l.id === id)?.name ?? id, onRemove: () => removeFrom("locationIds", id) })),
+    ...filters.departmentIds.map(id => ({ key: `d-${id}`, label: departmentNames.current.get(id) ?? id, onRemove: () => removeFrom("departmentIds", id) })),
+    ...(filters.status === "all" ? [] : [{
+      key: "status",
+      label: filters.status === "published" ? t("filters.statusPublished") : t("filters.statusDraft"),
+      onRemove: () => setFilters(prev => ({ ...prev, status: "all" as const })),
+    }]),
+  ];
 
   // Mirror isBuilderDirty into a ref so useBlocker and the location-key effect
   // always read the *current* value synchronously — no render cycle needed.
@@ -490,144 +508,77 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       <ConceptScopeNotice />
 
       {/* Toolbar: search + Filters toggle + create */}
-      <PopoverPrimitive.Root open={filtersOpen} onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}>
-      <PopoverPrimitive.Anchor asChild>
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 min-w-0">
+      <FiltersPopover
+        testIdPrefix="checklists"
+        open={filtersOpen}
+        onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}
+        activeCount={activeFilterCount}
+        onClear={() => setDraft(DEFAULT_PANEL_FILTERS)}
+        onApply={applyFilters}
+        search={<>
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input type="text" placeholder={t("search.placeholder")} value={search} onChange={e => setSearch(e.target.value)}
             className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
-        </div>
-        <PopoverPrimitive.Trigger asChild>
-        <button
-          type="button"
-          data-testid="checklists-filters-toggle"
-          className={cn(
-            "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
-            filtersOpen || activeFilterCount > 0
-              ? "bg-sage text-white border-sage"
-              : "border-border text-foreground hover:border-sage/40"
-          )}
-        >
-          <Plus size={14} className={cn("transition-transform", filtersOpen && "rotate-45")} />
-          {t("reporting.filters.button")}
-          {activeFilterCount > 0 && (
-            <span data-testid="checklists-filters-count" className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
-        </PopoverPrimitive.Trigger>
-        <button
-          data-testid="checklists-create-btn"
-          onClick={() => setShowCreateMenu(true)}
-          aria-label={t("shell.newChecklist")}
-          className="w-10 h-10 rounded-full bg-sage text-primary-foreground flex items-center justify-center hover:bg-sage-deep transition-colors shrink-0">
-          <Plus size={18} />
-        </button>
-      </div>
-      </PopoverPrimitive.Anchor>
-
-      {/* Floats over the list instead of pushing it down; nested pickers
-          portal above it at z-[60]. */}
-      <PopoverPrimitive.Portal>
-      <PopoverPrimitive.Content
-        data-testid="checklists-filters-panel"
-        align="end"
-        sideOffset={8}
-        collisionPadding={16}
-        onOpenAutoFocus={e => e.preventDefault()}
-        className="z-50 w-[var(--radix-popover-trigger-width)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto bg-card border border-border rounded-[20px] p-4 space-y-3 shadow-xl outline-none"
+        </>}
+        trailing={
+          <button
+            data-testid="checklists-create-btn"
+            onClick={() => setShowCreateMenu(true)}
+            aria-label={t("shell.newChecklist")}
+            className="w-10 h-10 rounded-full bg-sage text-primary-foreground flex items-center justify-center hover:bg-sage-deep transition-colors shrink-0">
+            <Plus size={18} />
+          </button>
+        }
       >
-        <div className="grid gap-2 md:grid-cols-2">
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
-            <MultiSelectFilter
-              testId="checklists-concept-filter"
-              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-              options={conceptOptions.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
-              selected={draft.conceptIds}
-              onChange={ids => updateDraft({ conceptIds: ids })}
-              allLabel={t("reporting.filters.allConcepts")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allConcepts")}
-            />
+        <FilterField label={t("reporting.filters.concept")}>
+          <FilterMultiSelect
+            testId="checklists-concept-filter"
+            icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+            options={conceptOptions.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+            selected={draft.conceptIds}
+            onChange={ids => updateDraft({ conceptIds: ids })}
+            allLabel={t("reporting.filters.allConcepts")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.location")}>
+          <FilterMultiSelect
+            testId="checklists-location-filter"
+            icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+            options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+            selected={draft.locationIds}
+            onChange={ids => updateDraft({ locationIds: ids })}
+            allLabel={t("reporting.filters.allLocations")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.department")}>
+          <FilterMultiSelect
+            testId="checklists-department-filter"
+            icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+            options={availableDepartments.map((d): MultiSelectOption => ({ id: d.id, label: d.name }))}
+            selected={draft.departmentIds}
+            onChange={ids => updateDraft({ departmentIds: ids })}
+            allLabel={t("reporting.filters.allDepartments")}
+            noOptionsLabel={t("reporting.filters.noDepartments")}
+          />
+        </FilterField>
+        <FilterField label={t("reporting.filters.status")}>
+          <div className="relative">
+            <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <select
+              data-testid="checklists-status-filter"
+              value={draft.status}
+              onChange={e => updateDraft({ status: e.target.value as PublishStatus })}
+              className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="all">{t("reporting.filters.allStatuses")}</option>
+              <option value="published">{t("filters.statusPublished")}</option>
+              <option value="draft">{t("filters.statusDraft")}</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
-            <MultiSelectFilter
-              testId="checklists-location-filter"
-              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
-              options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
-              selected={draft.locationIds}
-              onChange={ids => updateDraft({ locationIds: ids })}
-              allLabel={t("reporting.filters.allLocations")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.allLocations")}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
-            <MultiSelectFilter
-              testId="checklists-department-filter"
-              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
-              options={availableDepartments.map((d): MultiSelectOption => ({ id: d.id, label: d.name }))}
-              selected={draft.departmentIds}
-              onChange={ids => updateDraft({ departmentIds: ids })}
-              allLabel={t("reporting.filters.allDepartments")}
-              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
-              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
-              noMatchLabel={t("reporting.filters.noMatch")}
-              noOptionsLabel={t("reporting.filters.noDepartments")}
-            />
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
-            <div className="relative">
-              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <select
-                data-testid="checklists-status-filter"
-                value={draft.status}
-                onChange={e => updateDraft({ status: e.target.value as PublishStatus })}
-                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="all">{t("reporting.filters.allStatuses")}</option>
-                <option value="published">{t("filters.statusPublished")}</option>
-                <option value="draft">{t("filters.statusDraft")}</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </label>
-        </div>
-        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-          <button
-            data-testid="checklists-clear-filters"
-            type="button"
-            onClick={() => setDraft(DEFAULT_PANEL_FILTERS)}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-          >
-            <X size={12} />
-            {t("reporting.filters.clear")}
-          </button>
-          <button
-            data-testid="checklists-apply-filters"
-            type="button"
-            onClick={applyFilters}
-            className="rounded-full bg-sage px-5 py-2 text-sm font-semibold text-white hover:bg-sage/90 transition-colors"
-          >
-            {t("reporting.filters.apply")}
-          </button>
-        </div>
-      </PopoverPrimitive.Content>
-      </PopoverPrimitive.Portal>
-      </PopoverPrimitive.Root>
+        </FilterField>
+      </FiltersPopover>
+      <ActiveFilterChips testIdPrefix="checklists" chips={filterChips} onClearAll={() => setFilters(DEFAULT_PANEL_FILTERS)} />
 
       {/* Breadcrumb */}
       <FolderBreadcrumb folders={folders} currentId={currentFolder} onNavigate={setCurrentFolder} />
@@ -676,7 +627,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{folder.name}</p>
-                  <p className="text-xs text-muted-foreground">{t("folder.itemCount", { count: folder.itemCount })}</p>
+                  <p className="text-xs text-muted-foreground">{t("folder.itemCount", { count: isFiltering ? (filteredCountByFolder.get(folder.id) ?? 0) : folder.itemCount })}</p>
                 </div>
               </button>
               <button onClick={e => { e.stopPropagation(); setContextMenu({ id: folder.id, type: "folder" }); }}

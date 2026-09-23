@@ -18,5 +18,16 @@
     "label": "Concept",
     "allConcepts": "All concepts",
     "scopeNotice": "Viewing <bold>{{name}}</bold> Concept - change location in the sidebar"
+  },
+  "filters": {
+    "button": "Filters",
+    "clear": "Clear filters",
+    "clearAll": "Clear all",
+    "apply": "Apply",
+    "remove": "Remove filter: {{label}}",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "searchPlaceholder": "Search…",
+    "noMatch": "No matches"
   }
 }

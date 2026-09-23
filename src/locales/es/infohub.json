@@ -20,7 +20,8 @@
   "docCount_other": "{{count}} documentos",
   "subfolderCount_one": "{{count}} subcarpeta",
   "subfolderCount_other": "{{count}} subcarpetas",
-  "moduleCount": "{{count}} módulos",
+  "moduleCount_one": "{{count}} módulo",
+  "moduleCount_other": "{{count}} módulos",
   "durationSteps": "{{duration}} · {{count}} pasos",
   "done": "Hecho",
   "openAiTools": "Abrir herramientas de IA para {{title}}",
@@ -161,5 +162,26 @@
     "moduleComplete": "Módulo completado.",
     "moduleCompleteNotice": "Bien hecho. Este módulo se ha marcado como completado.",
     "markIncomplete": "Marcar como incompleto"
+  },
+  "filters": {
+    "concept": "Concepto",
+    "allConcepts": "Todos los conceptos",
+    "location": "Ubicación",
+    "allLocations": "Todas las ubicaciones",
+    "role": "Rol",
+    "allRoles": "Todos los roles",
+    "member": "Miembro del equipo",
+    "allMembers": "Todo el equipo",
+    "tags": "Etiquetas",
+    "allTags": "Todas las etiquetas",
+    "noTags": "Aún no hay etiquetas",
+    "type": "Tipo",
+    "allTypes": "Todos los tipos",
+    "typeWritten": "Documentos escritos",
+    "typeFile": "Archivos subidos",
+    "progress": "Progreso",
+    "allProgress": "Todos los módulos",
+    "completed": "Completados",
+    "notCompleted": "Sin completar"
   }
 }
