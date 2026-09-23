@@ -41,22 +41,21 @@ vi.mock("@/hooks/useLocations", () => ({
   }),
 }));
 
-const conceptFilterState: { scopedLocationIds: string[] | null; selectedConceptId: string } = {
-  scopedLocationIds: null,
-  selectedConceptId: "all",
-};
-
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [
-      { id: "concept-1", organization_id: "org-1", name: "Main Concept", created_at: "" },
-      { id: "concept-2", organization_id: "org-1", name: "Second Concept", created_at: "" },
-    ],
-    selectedConceptId: conceptFilterState.selectedConceptId,
-    setSelectedConceptId: () => {},
-    scopedLocationIds: conceptFilterState.scopedLocationIds,
+vi.mock("@/hooks/useDepartments", () => ({
+  useDepartmentsForLocations: (locationIds: string[]) => ({
+    data: [
+      { id: "dept-kitchen", location_id: "loc-1", name: "Kitchen" },
+      { id: "dept-bar", location_id: "loc-3", name: "Bar" },
+    ].filter(d => locationIds.includes(d.location_id)),
+    isLoading: false,
   }),
+}));
+
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({ data: [
+    { id: "concept-1", name: "Lyon Bistro" },
+    { id: "concept-2", name: "Riverside Group" },
+  ] }),
 }));
 
 describe("ChecklistBuilderModal - new checklist", () => {
@@ -66,8 +65,6 @@ describe("ChecklistBuilderModal - new checklist", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    conceptFilterState.scopedLocationIds = null;
-    conceptFilterState.selectedConceptId = "all";
   });
 
   it("renders without crashing", () => {
@@ -385,14 +382,23 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toBeInTheDocument();
   });
 
-  it("searches locations and saves a specific multi-location selection", () => {
+  it("shows Concept, Locations and Departments dropdowns together under 'Applies to'", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    const panel = screen.getByTestId("builder-applies-to");
+    expect(panel).toContainElement(screen.getByTestId("builder-concept-select"));
+    expect(panel).toContainElement(screen.getByTestId("builder-location-filter-trigger"));
+    expect(panel).toContainElement(screen.getByTestId("builder-department-filter-trigger"));
+    expect(screen.getByText("Applies to")).toBeInTheDocument();
+    expect(screen.getByTestId("builder-applies-to-summary")).toHaveTextContent("Appears at every location, for every department.");
+  });
+
+  it("saves a specific multi-location selection", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
-    fireEvent.change(screen.getByPlaceholderText("Search locations or address"), {
-      target: { value: "terrace" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Terrace/i }));
+    fireEvent.click(screen.getByTestId("builder-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-option-loc-2"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-option-loc-3"));
+    expect(screen.getByTestId("builder-applies-to-summary")).toHaveTextContent("Appears at 2 locations");
 
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Location Checklist" },
@@ -401,45 +407,48 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
       title: "Location Checklist",
-      location_id: "loc-2",
-      location_ids: ["loc-2"],
+      location_id: null,
+      location_ids: ["loc-2", "loc-3"],
+      concept_id: null,
     }));
   });
 
-  it("keeps a specific selection even when every location is picked manually", () => {
+  it("narrows the Locations dropdown to the chosen concept and drops picks outside it", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
-    fireEvent.click(screen.getByText("Select all"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-option-loc-2"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-option-loc-3"));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+    fireEvent.change(screen.getByTestId("builder-concept-select"), { target: { value: "concept-1" } });
+    fireEvent.click(screen.getByTestId("builder-location-filter-trigger"));
+    expect(screen.getByTestId("builder-location-filter-option-loc-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("builder-location-filter-option-loc-3")).not.toBeInTheDocument();
+    expect(screen.getByTestId("builder-applies-to-summary")).toHaveTextContent("Appears at Terrace");
+  });
+
+  it("defaults a new checklist to all concepts", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+    expect(screen.getByTestId("builder-concept-select")).toHaveValue("");
 
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
-      target: { value: "All Locations Checklist" },
+      target: { value: "Everywhere Checklist" },
     });
     fireEvent.click(screen.getByTestId("checklist-save-button"));
 
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
-      title: "All Locations Checklist",
-      location_id: null,
-      location_ids: ["loc-1", "loc-2", "loc-3"],
+      title: "Everywhere Checklist",
+      location_ids: null,
+      concept_id: null,
     }));
   });
 
-  it("narrows the specific-locations picker to the active concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1", "loc-2"];
-    conceptFilterState.selectedConceptId = "concept-1";
+  it("saves every location of the chosen concept when no locations are picked", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Select specific locations" }));
-    expect(screen.getByText("Main Branch")).toBeInTheDocument();
-    expect(screen.getByText("Terrace")).toBeInTheDocument();
-    expect(screen.queryByText("Riverside")).not.toBeInTheDocument();
-  });
-
-  it("saves 'all locations' scoped to the active concept, not the whole org", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1", "loc-2"];
-    conceptFilterState.selectedConceptId = "concept-1";
-    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-
+    fireEvent.change(screen.getByTestId("builder-concept-select"), { target: { value: "concept-1" } });
+    expect(screen.getByTestId("builder-applies-to-summary")).toHaveTextContent("Appears at every location in Lyon Bistro, for every department.");
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
       target: { value: "Concept Wide Checklist" },
     });
@@ -450,6 +459,23 @@ describe("ChecklistBuilderModal - new checklist", () => {
       location_id: null,
       location_ids: null,
       concept_id: "concept-1",
+    }));
+  });
+
+  it("saves picked departments from the Departments dropdown", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByTestId("builder-department-filter-trigger"));
+    fireEvent.click(screen.getByTestId("builder-department-filter-option-dept-kitchen"));
+    expect(screen.getByTestId("builder-applies-to-summary")).toHaveTextContent("for Kitchen.");
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Kitchen Checklist" },
+    });
+    fireEvent.click(screen.getByTestId("checklist-save-button"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Kitchen Checklist",
+      department_ids: ["dept-kitchen"],
     }));
   });
 
@@ -651,8 +677,6 @@ describe("ChecklistBuilderModal - edit mode", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    conceptFilterState.scopedLocationIds = null;
-    conceptFilterState.selectedConceptId = "all";
   });
 
   it("pre-fills the title input when editId is provided", () => {
@@ -793,7 +817,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     expect(screen.getByText(/Apr/i)).toBeInTheDocument();
   });
 
-  it("pre-fills and saves a specific location selection in edit mode", () => {
+  it("pre-fills and saves a specific location selection in edit mode, showing its concept", () => {
     renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
@@ -805,7 +829,8 @@ describe("ChecklistBuilderModal - edit mode", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Select specific locations" })).toHaveClass("bg-sage");
+    expect(screen.getByTestId("builder-location-filter-trigger")).toHaveTextContent("Terrace");
+    expect(screen.getByTestId("builder-concept-select")).toHaveValue("concept-1");
     fireEvent.click(screen.getByTestId("checklist-save-button"));
 
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({
@@ -814,9 +839,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     }));
   });
 
-  it("preserves an existing checklist's own concept scope even when a different concept is active in the sidebar", () => {
-    conceptFilterState.scopedLocationIds = ["loc-3"];
-    conceptFilterState.selectedConceptId = "concept-2";
+  it("preserves an existing checklist's own concept scope", () => {
     renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
@@ -837,9 +860,7 @@ describe("ChecklistBuilderModal - edit mode", () => {
     }));
   });
 
-  it("re-scopes to the sidebar's active concept when explicitly re-toggling to 'all locations'", () => {
-    conceptFilterState.scopedLocationIds = ["loc-3"];
-    conceptFilterState.selectedConceptId = "concept-2";
+  it("clearing a location checklist's locations makes it apply to every location of its concept", () => {
     renderWithClient(
       <ChecklistBuilderModal
         onClose={onClose}
@@ -851,7 +872,9 @@ describe("ChecklistBuilderModal - edit mode", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "All locations" }));
+    fireEvent.click(screen.getByTestId("builder-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("builder-location-filter-option-all"));
+    fireEvent.change(screen.getByTestId("builder-concept-select"), { target: { value: "concept-2" } });
     fireEvent.click(screen.getByTestId("checklist-save-button"));
 
     expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({

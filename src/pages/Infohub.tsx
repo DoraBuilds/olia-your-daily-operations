@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
-import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { useAuth } from "@/contexts/AuthContext";
-import { useConceptFilter } from "@/contexts/ConceptFilterContext";
+import { useConcepts } from "@/hooks/useConcepts";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
 import { supabase } from "@/lib/supabase";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
@@ -50,22 +49,12 @@ import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentVi
 
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
-// Content restricted by role/team-member (not location) isn't tied to any
-// concept, so it stays visible regardless of the sidebar's concept scope —
-// only content explicitly restricted to specific locations gets narrowed.
-function inConceptScope(access: InfohubAccessControl, scopedLocationIds: string[] | null): boolean {
-  if (scopedLocationIds === null) return true;
-  if (access.accessScope === "org") return true;
-  if (access.allowedLocationIds.length === 0) return true;
-  return access.allowedLocationIds.some(id => scopedLocationIds.includes(id));
-}
-
 export default function Infohub() {
   const { t } = useTranslation("infohub");
   const location = useLocation();
   const navigate = useNavigate();
   const { teamMember } = useAuth();
-  const { scopedLocationIds, selectedConceptId, concepts } = useConceptFilter();
+  const { data: concepts = [] } = useConcepts();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: locations = [] } = useLocations();
   const {
@@ -147,15 +136,9 @@ export default function Infohub() {
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
   // ─── Filters ───
-  const scopedLocations = useMemo(
-    () => scopedLocationIds === null ? locations : locations.filter(l => scopedLocationIds.includes(l.id)),
-    [locations, scopedLocationIds],
-  );
-  // Under a header concept, the popover only offers that concept.
-  const conceptOptions = scopedLocationIds === null ? concepts : concepts.filter(c => c.id === selectedConceptId);
   const draftLocationOptions = useMemo(
-    () => draft.conceptIds.length === 0 ? scopedLocations : scopedLocations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
-    [scopedLocations, draft.conceptIds],
+    () => draft.conceptIds.length === 0 ? locations : locations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [locations, draft.conceptIds],
   );
   // Drop draft locations a concept change put out of scope.
   useEffect(() => {
@@ -168,7 +151,7 @@ export default function Infohub() {
   const accessContext = (f: InfohubFilters): AccessFilterContext => ({
     locationIds: f.locationIds.length > 0
       ? f.locationIds
-      : f.conceptIds.length > 0 ? scopedLocations.filter(l => l.concept_id && f.conceptIds.includes(l.concept_id)).map(l => l.id) : null,
+      : f.conceptIds.length > 0 ? locations.filter(l => l.concept_id && f.conceptIds.includes(l.concept_id)).map(l => l.id) : null,
     roles: f.roles,
     members: teamMembers.filter(m => f.memberIds.includes(m.id)),
   });
@@ -178,7 +161,7 @@ export default function Infohub() {
   const setCurrentFilters = subTab === "library" ? setLibFilters : setTrainFilters;
 
   const isVisibleToMe = (access: InfohubAccessControl) =>
-    canAccessInfohubContent(access, currentPrincipal) && inConceptScope(access, scopedLocationIds);
+    canAccessInfohubContent(access, currentPrincipal);
 
   // Docs that are visible to the viewer AND match the tab's filters, including
   // their folder path. Folder counts and folder contents are built from these,
@@ -193,7 +176,7 @@ export default function Infohub() {
       && (libFilters.tags.length === 0 || doc.tags.some(tag => libFilters.tags.includes(tag)))
       && (libFilters.kind === "all" || (libFilters.kind === "file") === Boolean(doc.filePath))
     );
-  }, [libDocs, libFolders, libFilters, teamMembers, scopedLocations, currentPrincipal, scopedLocationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [libDocs, libFolders, libFilters, teamMembers, locations, currentPrincipal]); // eslint-disable-line react-hooks/exhaustive-deps
   const filteredTrainDocs = useMemo(() => {
     const ctx = accessContext(trainFilters);
     const reachable = reachableFolderIds(trainFolders, access => accessMatchesFilters(access, ctx));
@@ -203,7 +186,7 @@ export default function Infohub() {
       && accessMatchesFilters(doc.access, ctx)
       && (trainFilters.progress === "all" || (trainFilters.progress === "completed") === doc.completed)
     );
-  }, [trainDocs, trainFolders, trainFilters, teamMembers, scopedLocations, currentPrincipal, scopedLocationIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trainDocs, trainFolders, trainFilters, teamMembers, locations, currentPrincipal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sorted folder lists
   const visibleLibFolders = useMemo(() =>
@@ -215,7 +198,7 @@ export default function Infohub() {
   );
   const accessibleLibFolders = useMemo(() =>
     visibleLibFolders.filter(folder => isVisibleToMe(folder.access)),
-    [visibleLibFolders, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
+    [visibleLibFolders, currentPrincipal] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const accessibleDocsInCurrentFolder = useMemo(() =>
     (normalizedSearch
@@ -238,7 +221,7 @@ export default function Infohub() {
   );
   const accessibleTrainFolders = useMemo(() =>
     visibleTrainFolders.filter(folder => isVisibleToMe(folder.access)),
-    [visibleTrainFolders, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
+    [visibleTrainFolders, currentPrincipal] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const accessibleDocsInCurrentTrainFolder = useMemo(() =>
     normalizedSearch
@@ -250,11 +233,11 @@ export default function Infohub() {
   );
   const visibleLibDocs = useMemo(() =>
     libDocs.filter(doc => isVisibleToMe(doc.access)),
-    [libDocs, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
+    [libDocs, currentPrincipal] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const visibleTrainDocs = useMemo(() =>
     trainDocs.filter(doc => isVisibleToMe(doc.access)),
-    [trainDocs, currentPrincipal, scopedLocationIds] // eslint-disable-line react-hooks/exhaustive-deps
+    [trainDocs, currentPrincipal] // eslint-disable-line react-hooks/exhaustive-deps
   );
   const tagOptions = useMemo(
     () => Array.from(new Set(visibleLibDocs.flatMap(doc => doc.tags))).sort((a, b) => a.localeCompare(b)),
@@ -463,7 +446,6 @@ export default function Infohub() {
 
   return (
     <Layout>
-      <ConceptScopeNotice />
 
       <FiltersPopover
         testIdPrefix="infohub"
@@ -496,7 +478,7 @@ export default function Infohub() {
           <FilterMultiSelect
             testId="infohub-concept-filter"
             icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
-            options={conceptOptions.map(c => ({ id: c.id, label: c.name }))}
+            options={concepts.map(c => ({ id: c.id, label: c.name }))}
             selected={draft.conceptIds}
             onChange={ids => updateDraft({ conceptIds: ids })}
             allLabel={t("filters.allConcepts")}

@@ -3,16 +3,6 @@ import Billing from "@/pages/Billing";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-}));
-
 const { mockInvoke } = vi.hoisted(() => ({
   mockInvoke: vi.fn().mockResolvedValue({ data: null, error: null }),
 }));

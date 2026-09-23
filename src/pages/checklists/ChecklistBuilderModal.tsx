@@ -3,9 +3,11 @@ import { toast } from "@/components/ui/sonner";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search, Square, CheckSquare,
+  Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search,
   AlertTriangle, Upload, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
+  Building2, MapPin, Layers,
 } from "lucide-react";
+import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -18,7 +20,7 @@ import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
-import { ALL_CONCEPTS, useConceptFilter } from "@/contexts/ConceptFilterContext";
+import { useConcepts } from "@/hooks/useConcepts";
 import { createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import { LogicRulesEditor } from "./LogicRulesEditor";
 import type {
@@ -96,15 +98,8 @@ export function ChecklistBuilderModal({
   const createAlert = useCreateAlert();
   const { user, teamMember: authTeamMember } = useAuth();
   const { data: allDbLocations = [] } = useLocations();
-  const { concepts, selectedConceptId, scopedLocationIds } = useConceptFilter();
-  // Picker display list: narrowed to the active concept, same pattern as
-  // ChecklistsTab/ReportingTab. Cross-concept locations a checklist already
-  // has selected (from before the filter was active) still resolve via
-  // allDbLocations below — they're just not shown/addable from this narrowed
-  // list, and are never silently dropped on save.
-  const dbLocations = scopedLocationIds === null
-    ? allDbLocations
-    : allDbLocations.filter(l => scopedLocationIds.includes(l.id));
+  const { data: concepts = [] } = useConcepts();
+  const dbLocations = allDbLocations;
   const { data: staffProfiles = [] } = useStaffProfiles();
   const { data: teamMembers = [] } = useTeamMembers();
   const imgInputRef = useRef<Record<string, HTMLInputElement | null>>({});
@@ -128,29 +123,32 @@ export function ChecklistBuilderModal({
     interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13,
   });
   const [showCustomRecurrence, setShowCustomRecurrence] = useState(false);
-  const [locationMode, setLocationMode] = useState<"all" | "specific">(
-    initialLocationIds && initialLocationIds.length > 0 ? "specific" : "all",
-  );
+  // "Applies to": a concept (or every concept), then locations within it, then
+  // departments. No locations picked = every location of that concept (saved
+  // as concept_id); picked locations are saved as location_ids. Same for departments.
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(
     initialLocationIds?.length ? initialLocationIds : [],
   );
-  // Which concept "all locations" is scoped to (null = true org-wide). For an
-  // existing "all locations" checklist, preserve its own saved scope rather
-  // than silently re-scoping it to whatever concept the sidebar happens to be
-  // filtered to right now. For a brand-new checklist, default to the concept
-  // currently active in the sidebar.
   const [allLocationsConceptId, setAllLocationsConceptId] = useState<string | null>(() => {
     if (initialLocationIds && initialLocationIds.length > 0) return null;
-    if (editId) return initialConceptId ?? null;
-    return selectedConceptId === ALL_CONCEPTS ? null : selectedConceptId;
+    return initialConceptId ?? null;
   });
-  const [locationSearch, setLocationSearch] = useState("");
-  const [departmentMode, setDepartmentMode] = useState<"all" | "specific">(
-    initialDepartmentIds && initialDepartmentIds.length > 0 ? "specific" : "all",
-  );
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>(
     initialDepartmentIds?.length ? initialDepartmentIds : [],
   );
+  const locationMode: "all" | "specific" = selectedLocationIds.length > 0 ? "specific" : "all";
+  const departmentMode: "all" | "specific" = selectedDepartmentIds.length > 0 ? "specific" : "all";
+
+  // An existing checklist saved with specific locations shows their concept
+  // in the Concept picker when they all share one (once locations load).
+  const conceptPresetFromLocations = useRef(false);
+  useEffect(() => {
+    if (conceptPresetFromLocations.current || allDbLocations.length === 0) return;
+    conceptPresetFromLocations.current = true;
+    if (selectedLocationIds.length === 0) return;
+    const conceptIds = new Set(allDbLocations.filter(l => selectedLocationIds.includes(l.id)).map(l => l.concept_id ?? null));
+    if (conceptIds.size === 1) setAllLocationsConceptId([...conceptIds][0]);
+  }, [allDbLocations, selectedLocationIds]);
   const [sections, setSections] = useState<SectionDef[]>(
     draft?.sections ?? initialSections ?? [{
       id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
@@ -187,7 +185,7 @@ export function ChecklistBuilderModal({
 
   // If the concept this "all locations" checklist is scoped to gets deleted
   // while the builder is open, fall back to org-wide rather than pointing at
-  // a concept that no longer exists — same fallback pattern as ConceptFilterContext.
+  // a concept that no longer exists.
   useEffect(() => {
     if (!allLocationsConceptId) return;
     if (concepts.length === 0) return;
@@ -359,16 +357,19 @@ export function ChecklistBuilderModal({
   // so a checklist edited under a concept filter still shows/keeps any
   // out-of-concept locations it was already assigned to.
   const selectedLocations = allDbLocations.filter(loc => selectedLocationIds.includes(loc.id));
-  const filteredLocations = dbLocations.filter(loc => {
-    const q = locationSearch.trim().toLowerCase();
-    if (!q) return true;
-    return loc.name.toLowerCase().includes(q) || (loc.address || "").toLowerCase().includes(q);
-  });
 
   // Offer the departments that apply to the targeted locations (#838):
   // "all locations" mode offers every department assigned anywhere in scope,
   // "specific" mode narrows to the chosen locations.
-  const departmentLocationIds = locationMode === "all" ? dbLocations.map(loc => loc.id) : selectedLocationIds;
+  // The chosen concept's locations (or every location) — the Locations picker's
+  // options, and what "all locations" covers.
+  const allModeLocations = allLocationsConceptId ? dbLocations.filter(loc => loc.concept_id === allLocationsConceptId) : dbLocations;
+  const changeConcept = (conceptId: string | null) => {
+    setAllLocationsConceptId(conceptId);
+    // Drop picked locations that aren't in the new concept.
+    if (conceptId) setSelectedLocationIds(prev => prev.filter(id => dbLocations.some(l => l.id === id && l.concept_id === conceptId)));
+  };
+  const departmentLocationIds = locationMode === "all" ? allModeLocations.map(loc => loc.id) : selectedLocationIds;
   const { data: availableDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(departmentLocationIds);
   const selectedDepartments = availableDepartments.filter(dep => selectedDepartmentIds.includes(dep.id));
 
@@ -394,12 +395,11 @@ export function ChecklistBuilderModal({
   });
 
   // Staff available for person-type questions and notify triggers, scoped to
-  // selected locations. "all" mode uses the (concept-narrowed) dbLocations,
-  // so under a concept filter this only offers staff from that concept.
+  // selected locations. "all" mode uses the chosen concept's locations (or every location).
   const availableStaff = staffProfiles.filter(s =>
     s.status !== "archived" &&
     (locationMode === "all"
-      ? dbLocations.some(l => l.id === s.location_id)
+      ? allModeLocations.some(l => l.id === s.location_id)
       : (selectedLocationIds.length === 0 || selectedLocationIds.includes(s.location_id)))
   );
 
@@ -478,9 +478,6 @@ export function ChecklistBuilderModal({
     // Existing saved checklists with person type render as multiple_choice in the runner.
     const sectionsWithPersonChoices: SectionDef[] = sections;
 
-    // Validate against the full org list, not the concept-narrowed picker
-    // list, so a cross-concept selection made before a concept filter was
-    // active isn't silently dropped just because it's out of view now.
     const allLocationIds = allDbLocations.map(loc => loc.id);
     const selectedIds = locationMode === "all" ? [] : selectedLocationIds.filter(id => allLocationIds.includes(id));
     if (locationMode === "specific" && selectedIds.length === 0) return;
@@ -621,224 +618,60 @@ export function ChecklistBuilderModal({
           />
         </div>
 
-        {/* Locations */}
+        {/* Applies to: concept → locations → departments */}
         <div className="space-y-3">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.locations.heading")}</label>
-          <div className="rounded-2xl border border-border bg-muted/40 p-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  // Only re-capture the active concept on an actual switch INTO
-                  // "all" mode — re-clicking while already in "all" mode must
-                  // not silently reset an existing/preserved concept scope.
-                  if (locationMode !== "all") {
-                    setAllLocationsConceptId(selectedConceptId === ALL_CONCEPTS ? null : selectedConceptId);
-                  }
-                  setLocationMode("all");
-                }}
-                className={cn(
-                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                  locationMode === "all"
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {t("locations.all")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocationMode("specific")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                  locationMode === "specific"
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {t("builder.locations.selectSpecific")}
-              </button>
-              {locationMode === "specific" && dbLocations.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedLocationIds(dbLocations.map(loc => loc.id))}
-                  className="ml-auto text-xs text-sage hover:text-sage-deep transition-colors"
-                >
-                  {t("builder.locations.selectAll")}
-                </button>
-              )}
-            </div>
-
-            {locationMode === "specific" && (
-              <>
+          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.appliesTo.heading")}</label>
+          <div data-testid="builder-applies-to" className="rounded-[20px] border border-border bg-card p-4 space-y-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <FilterField label={t("builder.appliesTo.concept")}>
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={locationSearch}
-                    onChange={e => setLocationSearch(e.target.value)}
-                    placeholder={t("builder.locations.searchPlaceholder")}
-                    className="w-full border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
+                  <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <select
+                    data-testid="builder-concept-select"
+                    value={allLocationsConceptId ?? ""}
+                    onChange={e => changeConcept(e.target.value || null)}
+                    className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="">{t("builder.appliesTo.allConcepts")}</option>
+                    {concepts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {filteredLocations.length === 0 ? (
-                    <p className="px-3 py-2 text-sm text-muted-foreground">
-                      {t("builder.locations.noMatch")}
-                    </p>
-                  ) : filteredLocations.map(loc => {
-                    const selected = selectedLocationIds.includes(loc.id);
-                    return (
-                      <button
-                        key={loc.id}
-                        type="button"
-                        onClick={() => setSelectedLocationIds(prev => (
-                          prev.includes(loc.id)
-                            ? prev.filter(id => id !== loc.id)
-                            : [...prev, loc.id]
-                        ))}
-                        className={cn(
-                          "w-full flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
-                          selected
-                            ? "bg-sage-light border-sage/40 text-sage-deep"
-                            : "bg-background border-border hover:border-sage/40",
-                        )}
-                      >
-                        <div className="mt-0.5 shrink-0">
-                          {selected ? <CheckSquare size={16} /> : <Square size={16} />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{loc.name}</p>
-                          {loc.address && (
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{loc.address}</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {locationMode === "all"
-                  ? (allLocationsConceptId
-                      ? t("builder.locations.appearInConcept", {
-                          name: concepts.find(c => c.id === allLocationsConceptId)?.name ?? "",
-                        })
-                      : t("builder.locations.appearEverywhere"))
-                  : selectedLocations.length === 0
-                    ? t("builder.locations.chooseOneOrMore")
-                    : selectedLocations.length === 1
-                      ? t("builder.locations.selectedOne", { name: selectedLocations[0].name })
-                      : t("builder.locations.selectedCount", { count: selectedLocations.length })}
-              </p>
-              {locationMode === "specific" && selectedLocations.length > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
-                  {selectedLocations.length === 1
-                    ? t("builder.locations.specificSelectedOne")
-                    : t("builder.locations.specificSelectedCount", { count: selectedLocations.length })}
-                </span>
-              )}
+              </FilterField>
+              <FilterField label={t("builder.appliesTo.locations")}>
+                <FilterMultiSelect
+                  testId="builder-location-filter"
+                  icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+                  options={allModeLocations.map(loc => ({ id: loc.id, label: loc.name, sublabel: loc.address || undefined }))}
+                  selected={selectedLocationIds}
+                  onChange={setSelectedLocationIds}
+                  allLabel={t("locations.all")}
+                />
+              </FilterField>
+              <FilterField label={t("builder.appliesTo.departments")}>
+                <FilterMultiSelect
+                  testId="builder-department-filter"
+                  icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+                  options={availableDepartments.map(dep => ({ id: dep.id, label: dep.name }))}
+                  selected={selectedDepartmentIds}
+                  onChange={setSelectedDepartmentIds}
+                  allLabel={t("builder.departments.all")}
+                  noOptionsLabel={departmentsLoading ? t("builder.departments.loading") : t("builder.departments.noneAvailable")}
+                />
+              </FilterField>
             </div>
-          </div>
-        </div>
-
-        {/* Departments */}
-        <div className="space-y-3">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.departments.heading")}</label>
-          <div className="rounded-2xl border border-border bg-muted/40 p-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setDepartmentMode("all")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                  departmentMode === "all"
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {t("builder.departments.all")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDepartmentMode("specific")}
-                className={cn(
-                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                  departmentMode === "specific"
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {t("builder.departments.selectSpecific")}
-              </button>
-              {departmentMode === "specific" && availableDepartments.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedDepartmentIds(availableDepartments.map(dep => dep.id))}
-                  className="ml-auto text-xs text-sage hover:text-sage-deep transition-colors"
-                >
-                  {t("builder.departments.selectAll")}
-                </button>
-              )}
-            </div>
-
-            {departmentMode === "specific" && (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {departmentsLoading ? (
-                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("builder.departments.loading")}</p>
-                ) : availableDepartments.length === 0 ? (
-                  <p className="px-3 py-2 text-sm text-muted-foreground">{t("builder.departments.noneAvailable")}</p>
-                ) : availableDepartments.map(dep => {
-                  const selected = selectedDepartmentIds.includes(dep.id);
-                  return (
-                    <button
-                      key={dep.id}
-                      type="button"
-                      onClick={() => setSelectedDepartmentIds(prev => (
-                        prev.includes(dep.id)
-                          ? prev.filter(id => id !== dep.id)
-                          : [...prev, dep.id]
-                      ))}
-                      className={cn(
-                        "w-full flex items-start gap-3 rounded-xl border px-3 py-3 text-left transition-colors",
-                        selected
-                          ? "bg-sage-light border-sage/40 text-sage-deep"
-                          : "bg-background border-border hover:border-sage/40",
-                      )}
-                    >
-                      <div className="mt-0.5 shrink-0">
-                        {selected ? <CheckSquare size={16} /> : <Square size={16} />}
-                      </div>
-                      <p className="text-sm font-medium truncate">
-                        {dep.name}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {departmentMode === "all"
-                  ? t("builder.departments.appearEverywhere")
-                  : selectedDepartments.length === 0
-                    ? t("builder.departments.chooseOneOrMore")
-                    : selectedDepartments.length === 1
-                      ? t("builder.departments.selectedOne", { name: selectedDepartments[0].name })
-                      : t("builder.departments.selectedCount", { count: selectedDepartments.length })}
-              </p>
-              {departmentMode === "specific" && selectedDepartments.length > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">
-                  {selectedDepartments.length === 1
-                    ? t("builder.departments.specificSelectedOne")
-                    : t("builder.departments.specificSelectedCount", { count: selectedDepartments.length })}
-                </span>
-              )}
-            </div>
+            <p data-testid="builder-applies-to-summary" className="text-xs text-muted-foreground">
+              {t("builder.appliesTo.summary", {
+                where: locationMode === "specific"
+                  ? (selectedLocations.length === 1 ? selectedLocations[0].name : t("builder.appliesTo.locationCount", { count: selectedLocations.length }))
+                  : allLocationsConceptId
+                    ? t("builder.appliesTo.everyLocationIn", { name: concepts.find(c => c.id === allLocationsConceptId)?.name ?? "" })
+                    : t("builder.appliesTo.everyLocation"),
+                who: departmentMode === "specific"
+                  ? (selectedDepartments.length === 1 ? selectedDepartments[0].name : t("builder.appliesTo.departmentCount", { count: selectedDepartments.length }))
+                  : t("builder.appliesTo.everyDepartment"),
+              })}
+            </p>
           </div>
         </div>
 
@@ -1560,9 +1393,6 @@ export function ChecklistBuilderModal({
       <div className="px-5 pb-6 pt-4 border-t border-border">
         {requiredError && (
           <p className="text-xs text-status-error mb-2 text-center">{requiredError}</p>
-        )}
-        {locationMode === "specific" && selectedLocationIds.length === 0 && (
-          <p className="text-xs text-status-error mb-2 text-center">{t("builder.locations.selectAtLeastOne")}</p>
         )}
         {locationMode === "specific" && selectedLocationIds.length > 0 && (
           <p className="text-xs text-muted-foreground mb-2 text-center">

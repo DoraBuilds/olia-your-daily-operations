@@ -371,6 +371,21 @@
     }
   },
   "builder": {
+    "appliesTo": {
+      "heading": "Applies to",
+      "concept": "Concept",
+      "allConcepts": "All concepts",
+      "locations": "Locations",
+      "departments": "Departments",
+      "summary": "Appears at {{where}}, for {{who}}.",
+      "everyLocation": "every location",
+      "everyLocationIn": "every location in {{name}}",
+      "locationCount_one": "{{count}} location",
+      "locationCount_other": "{{count}} locations",
+      "everyDepartment": "every department",
+      "departmentCount_one": "{{count}} department",
+      "departmentCount_other": "{{count}} departments"
+    },
     "exit": "Exit",
     "kioskVisibility": {
       "heading": "Kiosk visibility",
@@ -378,35 +393,13 @@
       "liveDesc": "Live — visible on the kiosk now."
     },
     "locations": {
-      "heading": "Locations",
-      "selectSpecific": "Select specific locations",
-      "selectAll": "Select all",
-      "searchPlaceholder": "Search locations or address",
-      "noMatch": "No locations match your search.",
-      "appearEverywhere": "This checklist will appear at every location.",
-      "appearInConcept": "This checklist will appear at every location in {{name}}.",
-      "chooseOneOrMore": "Choose one or more locations.",
-      "selectedOne": "Selected: {{name}}",
-      "selectedCount": "{{count}} locations selected",
-      "specificSelectedOne": "Specific location selected",
-      "specificSelectedCount": "{{count}} specific locations selected",
       "oneSpecificSelectedFooter": "One specific location is selected.",
-      "specificSelectedCountFooter": "{{count}} specific locations are selected.",
-      "selectAtLeastOne": "Select at least one location or switch back to all locations."
+      "specificSelectedCountFooter": "{{count}} specific locations are selected."
     },
     "departments": {
-      "heading": "Departments",
       "all": "All departments",
-      "selectSpecific": "Select specific departments",
-      "selectAll": "Select all",
       "loading": "Loading departments…",
-      "noneAvailable": "No departments set up yet for the selected location(s).",
-      "appearEverywhere": "This checklist will appear for every department.",
-      "chooseOneOrMore": "Choose one or more departments.",
-      "selectedOne": "Selected: {{name}}",
-      "selectedCount": "{{count}} departments selected",
-      "specificSelectedOne": "Specific department selected",
-      "specificSelectedCount": "{{count}} specific departments selected"
+      "noneAvailable": "No departments set up yet for the selected location(s)."
     },
     "title": {
       "label": "Title",

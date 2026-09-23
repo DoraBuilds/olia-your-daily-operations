@@ -14,11 +14,6 @@
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar"
   },
-  "conceptFilter": {
-    "label": "Concept",
-    "allConcepts": "All concepts",
-    "scopeNotice": "Viewing <bold>{{name}}</bold> Concept - change location in the sidebar"
-  },
   "filters": {
     "button": "Filters",
     "clear": "Clear filters",

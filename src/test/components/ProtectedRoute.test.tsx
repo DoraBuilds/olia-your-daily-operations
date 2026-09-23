@@ -4,17 +4,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { grantKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { renderWithProviders } from "../test-utils";
 
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: null,
-  }),
-  ConceptFilterProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {

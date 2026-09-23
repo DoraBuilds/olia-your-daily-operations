@@ -371,6 +371,21 @@
     }
   },
   "builder": {
+    "appliesTo": {
+      "heading": "Se aplica a",
+      "concept": "Concepto",
+      "allConcepts": "Todos los conceptos",
+      "locations": "Ubicaciones",
+      "departments": "Departamentos",
+      "summary": "Aparece en {{where}}, para {{who}}.",
+      "everyLocation": "todas las ubicaciones",
+      "everyLocationIn": "todas las ubicaciones de {{name}}",
+      "locationCount_one": "{{count}} ubicación",
+      "locationCount_other": "{{count}} ubicaciones",
+      "everyDepartment": "todos los departamentos",
+      "departmentCount_one": "{{count}} departamento",
+      "departmentCount_other": "{{count}} departamentos"
+    },
     "exit": "Salir",
     "kioskVisibility": {
       "heading": "Visibilidad en el kiosco",
@@ -378,35 +393,13 @@
       "liveDesc": "Activo — visible en el kiosco ahora."
     },
     "locations": {
-      "heading": "Ubicaciones",
-      "selectSpecific": "Seleccionar ubicaciones específicas",
-      "selectAll": "Seleccionar todas",
-      "searchPlaceholder": "Buscar ubicaciones o dirección",
-      "noMatch": "Ninguna ubicación coincide con tu búsqueda.",
-      "appearEverywhere": "Esta lista aparecerá en todas las ubicaciones.",
-      "appearInConcept": "Esta lista aparecerá en todas las ubicaciones de {{name}}.",
-      "chooseOneOrMore": "Elige una o más ubicaciones.",
-      "selectedOne": "Seleccionada: {{name}}",
-      "selectedCount": "{{count}} ubicaciones seleccionadas",
-      "specificSelectedOne": "Ubicación específica seleccionada",
-      "specificSelectedCount": "{{count}} ubicaciones específicas seleccionadas",
       "oneSpecificSelectedFooter": "Se ha seleccionado una ubicación específica.",
-      "specificSelectedCountFooter": "Se han seleccionado {{count}} ubicaciones específicas.",
-      "selectAtLeastOne": "Selecciona al menos una ubicación o vuelve a todas las ubicaciones."
+      "specificSelectedCountFooter": "Se han seleccionado {{count}} ubicaciones específicas."
     },
     "departments": {
-      "heading": "Departamentos",
       "all": "Todos los departamentos",
-      "selectSpecific": "Seleccionar departamentos específicos",
-      "selectAll": "Seleccionar todos",
       "loading": "Cargando departamentos…",
-      "noneAvailable": "Aún no hay departamentos para la(s) ubicación(es) seleccionada(s).",
-      "appearEverywhere": "Esta lista aparecerá para todos los departamentos.",
-      "chooseOneOrMore": "Elige uno o más departamentos.",
-      "selectedOne": "Seleccionado: {{name}}",
-      "selectedCount": "{{count}} departamentos seleccionados",
-      "specificSelectedOne": "Departamento específico seleccionado",
-      "specificSelectedCount": "{{count}} departamentos específicos seleccionados"
+      "noneAvailable": "Aún no hay departamentos para la(s) ubicación(es) seleccionada(s)."
     },
     "title": {
       "label": "Título",

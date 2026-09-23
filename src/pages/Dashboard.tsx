@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { Layout } from "@/components/Layout";
-import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell, ClipboardCheck, Clock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { useAlerts } from "@/hooks/useAlerts";
 import { useChecklistLogs } from "@/hooks/useChecklistLogs";
 import { useActions } from "@/hooks/useActions";
@@ -38,20 +36,6 @@ function checklistAppliesToLocation(
   if (!assignedIds || assignedIds.length === 0) return true;
   return assignedIds.includes(locationId);
 }
-
-function checklistInScope(
-  checklist: { location_id: string | null; location_ids?: string[] | null },
-  scopedLocationIds: string[] | null,
-) {
-  if (scopedLocationIds === null) return true;
-  const assignedIds = checklist.location_ids?.length
-    ? checklist.location_ids
-    : (checklist.location_id ? [checklist.location_id] : null);
-
-  if (!assignedIds || assignedIds.length === 0) return true;
-  return assignedIds.some(id => scopedLocationIds.includes(id));
-}
-
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -182,37 +166,12 @@ export default function Dashboard() {
   const { teamMember } = useAuth();
   const currentUser = teamMember?.name ?? "";
 
-  // ── Concept scope ──
-  const { scopedLocationIds } = useConceptFilter();
-
-  // ── Data hooks ──
+  // ── Data hooks ── the Dashboard is always the all-locations overview.
   const { data: allAlerts = [] }    = useAlerts();
-  const { data: allLogs      = [] } = useChecklistLogs();
-  const { data: allActions   = [] } = useActions();
-  const { data: allChecklists = [] } = useChecklists();
-  const { data: allLocations = [] } = useLocations();
-
-  const locations = useMemo(
-    () => scopedLocationIds === null ? allLocations : allLocations.filter(l => scopedLocationIds.includes(l.id)),
-    [allLocations, scopedLocationIds],
-  );
-  const checklists = useMemo(
-    () => allChecklists.filter(c => checklistInScope(c, scopedLocationIds)),
-    [allChecklists, scopedLocationIds],
-  );
-  const logs = useMemo(
-    () => scopedLocationIds === null
-      ? allLogs
-      : allLogs.filter(l => l.location_id === null || scopedLocationIds.includes(l.location_id)),
-    [allLogs, scopedLocationIds],
-  );
-  const scopedChecklistIds = useMemo(() => new Set(checklists.map(c => c.id)), [checklists]);
-  const actions = useMemo(
-    () => scopedLocationIds === null
-      ? allActions
-      : allActions.filter(a => a.checklist_id === null || scopedChecklistIds.has(a.checklist_id)),
-    [allActions, scopedLocationIds, scopedChecklistIds],
-  );
+  const { data: logs      = [] }    = useChecklistLogs();
+  const { data: actions   = [] }    = useActions();
+  const { data: checklists = [] }   = useChecklists();
+  const { data: locations = [] }    = useLocations();
 
   // ── Date helpers ──
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -321,8 +280,6 @@ export default function Dashboard() {
           </button>
         }
       >
-        <ConceptScopeNotice />
-
         {/* ── Greeting Hero ── */}
         <section className="pt-1 pb-2">
         <div className="rounded-[24px] bg-gradient-to-b from-[hsl(var(--powder-blue-light))] to-transparent p-4">
