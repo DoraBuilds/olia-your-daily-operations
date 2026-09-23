@@ -20,7 +20,8 @@
   "docCount_other": "{{count}} documents",
   "subfolderCount_one": "{{count}} subfolder",
   "subfolderCount_other": "{{count}} subfolders",
-  "moduleCount": "{{count}} modules",
+  "moduleCount_one": "{{count}} module",
+  "moduleCount_other": "{{count}} modules",
   "durationSteps": "{{duration}} · {{count}} steps",
   "done": "Done",
   "openAiTools": "Open AI tools for {{title}}",
@@ -161,5 +162,26 @@
     "moduleComplete": "Module complete.",
     "moduleCompleteNotice": "Well done. This module has been marked as completed.",
     "markIncomplete": "Mark as incomplete"
+  },
+  "filters": {
+    "concept": "Concept",
+    "allConcepts": "All concepts",
+    "location": "Location",
+    "allLocations": "All locations",
+    "role": "Role",
+    "allRoles": "All roles",
+    "member": "Team member",
+    "allMembers": "All team members",
+    "tags": "Tags",
+    "allTags": "All tags",
+    "noTags": "No tags yet",
+    "type": "Type",
+    "allTypes": "All types",
+    "typeWritten": "Written docs",
+    "typeFile": "Uploaded files",
+    "progress": "Progress",
+    "allProgress": "All modules",
+    "completed": "Completed",
+    "notCompleted": "Not completed"
   }
 }

@@ -244,14 +244,15 @@ describe("ChecklistsTab Filters popover", () => {
     conceptFilterState.selectedConceptId = "all";
   });
 
-  it("keeps the folder view and no badge when no filters are applied", () => {
+  it("shows no badge or chips when no filters are applied", () => {
     render(<ChecklistsTab />, { wrapper });
     expect(screen.getByText("Bar Folder")).toBeInTheDocument();
-    expect(screen.queryByText("Kitchen Close In Folder")).not.toBeInTheDocument();
+    expect(screen.getByText("1 item")).toBeInTheDocument();
     expect(screen.queryByTestId("checklists-filters-count")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("checklists-active-filters")).not.toBeInTheDocument();
   });
 
-  it("filters by concept across folders, keeping org-wide checklists", () => {
+  it("filters by concept, keeping folders and org-wide checklists", () => {
     render(<ChecklistsTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByTestId("checklists-concept-filter-trigger"));
@@ -261,13 +262,16 @@ describe("ChecklistsTab Filters popover", () => {
     expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
     expect(screen.getByText("Concept 1 Wide Checklist")).toBeInTheDocument();
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
-    expect(screen.getByText("Kitchen Close In Folder")).toBeInTheDocument();
     expect(screen.queryByText("Terrace Only")).not.toBeInTheDocument();
-    expect(screen.queryByText("Bar Folder")).not.toBeInTheDocument();
+    // Folder stays in place with its filtered count; its contents aren't pulled up to the root.
+    expect(screen.getByText("Bar Folder")).toBeInTheDocument();
+    expect(screen.getByText("1 item")).toBeInTheDocument();
+    expect(screen.queryByText("Kitchen Close In Folder")).not.toBeInTheDocument();
     expect(screen.getByTestId("checklists-filters-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("checklists-active-filters")).toHaveTextContent("Concept One");
   });
 
-  it("filters by location", () => {
+  it("shrinks folder counts to 0 and shows only matches inside a folder, with the filters still shown", () => {
     render(<ChecklistsTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByTestId("checklists-location-filter-trigger"));
@@ -277,19 +281,26 @@ describe("ChecklistsTab Filters popover", () => {
     expect(screen.getByText("Terrace Only")).toBeInTheDocument();
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Main Branch Only")).not.toBeInTheDocument();
-    expect(screen.queryByText("Concept 1 Wide Checklist")).not.toBeInTheDocument();
+    expect(screen.getByText("0 items")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Bar Folder"));
+    expect(screen.queryByText("Kitchen Close In Folder")).not.toBeInTheDocument();
+    expect(screen.getByTestId("checklists-no-results")).toBeInTheDocument();
+    expect(screen.getByTestId("checklists-active-filters")).toHaveTextContent("Terrace");
   });
 
-  it("filters by department, keeping checklists with no departments set", () => {
+  it("filters by department inside a folder, keeping checklists with no departments set", () => {
     render(<ChecklistsTab />, { wrapper });
     openFilters();
     fireEvent.click(screen.getByTestId("checklists-department-filter-trigger"));
     fireEvent.click(screen.getByTestId("checklists-department-filter-option-dept-kitchen"));
     applyFilters();
 
-    expect(screen.getByText("Kitchen Close In Folder")).toBeInTheDocument();
     expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
     expect(screen.queryByText("Terrace Only")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Bar Folder"));
+    expect(screen.getByText("Kitchen Close In Folder")).toBeInTheDocument();
+    expect(screen.getByTestId("checklists-active-filters")).toHaveTextContent("Kitchen");
   });
 
   it("filters by published / draft status", () => {
@@ -299,11 +310,30 @@ describe("ChecklistsTab Filters popover", () => {
     applyFilters();
     expect(screen.getByText("Terrace Only")).toBeInTheDocument();
     expect(screen.queryByText("Main Branch Only")).not.toBeInTheDocument();
+    expect(screen.getByTestId("checklists-active-filters")).toHaveTextContent("Draft");
 
     openFilters();
     fireEvent.change(screen.getByTestId("checklists-status-filter"), { target: { value: "published" } });
     applyFilters();
     expect(screen.queryByText("Terrace Only")).not.toBeInTheDocument();
+    expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
+  });
+
+  it("removing a chip drops just that filter", () => {
+    render(<ChecklistsTab />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByTestId("checklists-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("checklists-location-filter-option-loc-2"));
+    fireEvent.change(screen.getByTestId("checklists-status-filter"), { target: { value: "draft" } });
+    applyFilters();
+    expect(screen.getByTestId("checklists-filters-count")).toHaveTextContent("2");
+
+    fireEvent.click(screen.getByLabelText("Remove filter: Draft"));
+    expect(screen.getByTestId("checklists-filters-count")).toHaveTextContent("1");
+    expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("checklists-clear-all-filters"));
+    expect(screen.queryByTestId("checklists-active-filters")).not.toBeInTheDocument();
     expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
   });
 
@@ -317,28 +347,17 @@ describe("ChecklistsTab Filters popover", () => {
     expect(screen.queryByTestId("checklists-filters-count")).not.toBeInTheDocument();
   });
 
-  it("Clear filters resets the draft, restoring the folder view on Apply", () => {
+  it("Clear filters resets the draft", () => {
     render(<ChecklistsTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("checklists-status-filter"), { target: { value: "draft" } });
     applyFilters();
-    expect(screen.queryByText("Bar Folder")).not.toBeInTheDocument();
+    expect(screen.queryByText("Main Branch Only")).not.toBeInTheDocument();
 
     openFilters();
     fireEvent.click(screen.getByTestId("checklists-clear-filters"));
     applyFilters();
-    expect(screen.getByText("Bar Folder")).toBeInTheDocument();
     expect(screen.getByText("Main Branch Only")).toBeInTheDocument();
-  });
-
-  it("shows a no-results message when nothing matches", () => {
-    render(<ChecklistsTab />, { wrapper });
-    openFilters();
-    fireEvent.click(screen.getByTestId("checklists-location-filter-trigger"));
-    fireEvent.click(screen.getByTestId("checklists-location-filter-option-loc-1"));
-    fireEvent.change(screen.getByTestId("checklists-status-filter"), { target: { value: "draft" } });
-    applyFilters();
-
-    expect(screen.getByTestId("checklists-no-results")).toHaveTextContent("No checklists match your filters.");
+    expect(screen.getByText("1 item")).toBeInTheDocument();
   });
 });

@@ -18,5 +18,16 @@
     "label": "Concepto",
     "allConcepts": "Todos los conceptos",
     "scopeNotice": "Viendo <bold>{{name}}</bold> Concepto - cambia de ubicación en la barra lateral"
+  },
+  "filters": {
+    "button": "Filtros",
+    "clear": "Borrar filtros",
+    "clearAll": "Borrar todo",
+    "apply": "Aplicar",
+    "remove": "Quitar filtro: {{label}}",
+    "selectedCount_one": "{{count}} seleccionado",
+    "selectedCount_other": "{{count}} seleccionados",
+    "searchPlaceholder": "Buscar…",
+    "noMatch": "Sin resultados"
   }
 }
