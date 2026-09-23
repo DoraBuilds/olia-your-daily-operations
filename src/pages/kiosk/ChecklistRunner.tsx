@@ -4,7 +4,7 @@ import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 import { sanitizeImageUrl } from "@/lib/sanitize";
-import type { KioskChecklist, Question } from "./types";
+import type { AnswerAttribution, KioskChecklist, Question } from "./types";
 import {
   INSTRUCTION_ACKNOWLEDGED,
   UNANSWERED_SENTINEL,
@@ -21,11 +21,11 @@ import { QuestionInput } from "./QuestionInputs";
 // Answers are persisted to localStorage so progress survives interruptions.
 export function ChecklistRunner({
   checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
-  organizationId, locationId, initialAnswers,
+  organizationId, locationId, initialAnswers, initialAttribution,
 }: {
   checklist: KioskChecklist;
   staffName: string;
-  onComplete: (answers: Record<string, any>, startedAt: Date) => void;
+  onComplete: (answers: Record<string, any>, startedAt: Date, attribution: AnswerAttribution) => void;
   onCancel: () => void;
   onQuestionAnswerChange?: (question: Question, value: any) => void;
   /** Organization ID — used to scope photo uploads to the correct storage path */
@@ -34,15 +34,23 @@ export function ChecklistRunner({
   locationId?: string;
   /** Pre-filled answers when re-editing a completed checklist */
   initialAnswers?: Record<string, any>;
+  /** Who answered what on the earlier submission(s) — carried over on re-edit */
+  initialAttribution?: AnswerAttribution;
 }) {
   const { t } = useTranslation("kiosk");
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
   const [initialDraft] = useState(() => {
     const draft = loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions);
-    if (initialAnswers) return { ...draft, answers: initialAnswers, hasSavedDraft: false };
+    if (initialAnswers) return { ...draft, answers: initialAnswers, attribution: initialAttribution, hasSavedDraft: false };
     return draft;
   });
   const draftRef = useRef(initialDraft);
+  // Per-question "answered by / at" so Reporting can show who did what on a
+  // checklist several staff worked on. A ref: it never drives rendering.
+  const attributionRef = useRef<AnswerAttribution>({ ...(initialDraft.attribution ?? {}) });
+  const attribute = (questionId: string) => {
+    attributionRef.current = { ...attributionRef.current, [questionId]: { by: staffName, at: new Date().toISOString() } };
+  };
 
   const [answers, setAnswers] = useState<Record<string, any>>(() => initialDraft.answers);
 
@@ -87,7 +95,7 @@ export function ChecklistRunner({
   const persistDraft = useCallback((nextAnswers: Record<string, any>, nextCurrentQuestionId: string) => {
     draftRef.current = { answers: nextAnswers, currentQuestionId: nextCurrentQuestionId, hasSavedDraft: true };
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, currentQuestionId: nextCurrentQuestionId }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, currentQuestionId: nextCurrentQuestionId, attribution: attributionRef.current }));
     } catch { /* ignore */ }
   }, []);
 
@@ -137,7 +145,13 @@ export function ChecklistRunner({
       return;
     }
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-    onComplete(answers, startedAtRef.current);
+    // Pre-filled defaults nobody touched are attributed to whoever submits.
+    const attribution = { ...attributionRef.current };
+    const completedAt = new Date().toISOString();
+    for (const [questionId, value] of Object.entries(answers)) {
+      if (!attribution[questionId] && !isBlankAnswer(value)) attribution[questionId] = { by: staffName, at: completedAt };
+    }
+    onComplete(answers, startedAtRef.current, attribution);
   };
 
   return (
@@ -271,6 +285,7 @@ export function ChecklistRunner({
                         locationId={locationId}
                         onChange={v => {
                           const nextAnswers = { ...answers, [q.id]: v };
+                          attribute(q.id);
                           setAnswers(nextAnswers);
                           persistDraft(nextAnswers, currentQuestionId);
                           onQuestionAnswerChange?.(q, v);
@@ -291,12 +306,14 @@ export function ChecklistRunner({
                           onClick={() => {
                             if (isInstruction) {
                               const nextAnswers = { ...answers, [q.id]: INSTRUCTION_ACKNOWLEDGED };
+                              attribute(q.id);
                               setAnswers(nextAnswers);
                               if (isLastQ) { persistDraft(nextAnswers, q.id); } else { advanceQuestion(nextAnswers); }
                               return;
                             }
                             if (hasBlankUnansweredTrigger && isBlankAnswer(answers[q.id])) {
                               const nextAnswers = { ...answers, [q.id]: UNANSWERED_SENTINEL };
+                              attribute(q.id);
                               setAnswers(nextAnswers);
                               advanceQuestion(nextAnswers);
                               return;

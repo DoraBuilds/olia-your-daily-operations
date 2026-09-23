@@ -1,9 +1,11 @@
 import { createPortal } from "react-dom";
+import { format, isSameDay } from "date-fns";
 import { useTranslation } from "react-i18next";
-import { X, Camera, Check, MessageSquare, FileText, Hash, Type, Calendar, GitBranch, Info } from "lucide-react";
+import { X, Camera, Check, MessageSquare, FileText, Hash, Type, Calendar, GitBranch, Info, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportLogDetailPdf } from "@/lib/export-utils";
 import type { LogEntry } from "./types";
+import { INSTRUCTION_ACKNOWLEDGED } from "@/pages/kiosk/utils";
 
 /** Normalise the question type stored in the DB to a consistent rendering key.
  *  The kiosk writes the builder's ResponseType values ("number", "text", etc.).
@@ -25,6 +27,24 @@ function isAnswered(type: string, ans: any): boolean {
   if (type === "photo") return !!ans.hasPhoto;
   // text / multiple_choice / datetime / person / signature
   return !!ans.answer && ans.answer !== "" && ans.answer !== "undefined";
+}
+
+/** "08:42", or "22 Sep, 23:58" when it wasn't answered on the day the log was submitted. */
+function answeredTime(answeredAt: string, finishedAt: string | undefined) {
+  const d = new Date(answeredAt);
+  if (Number.isNaN(d.getTime())) return "";
+  return finishedAt && isSameDay(d, new Date(finishedAt)) ? format(d, "HH:mm") : format(d, "d MMM, HH:mm");
+}
+
+function AnsweredBy({ name, at, finishedAt, className }: { name: string; at?: string; finishedAt?: string; className?: string }) {
+  const time = at ? answeredTime(at, finishedAt) : "";
+  return (
+    <p data-testid="answered-by" className={cn("items-center gap-1 text-xs text-muted-foreground", className)}>
+      <User size={11} className="shrink-0" />
+      <span className="truncate">{name}</span>
+      {time && <span className="tabular-nums shrink-0">· {time}</span>}
+    </p>
+  );
 }
 
 export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () => void }) {
@@ -159,7 +179,9 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                         : <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noAnswerEntered")}</p>
                     )}
                     {type === "instruction" && ans.answer && ans.answer !== "" && ans.answer !== "undefined" && (
-                      <p className="mt-1 text-xs text-muted-foreground">{ans.answer}</p>
+                      ans.answer === INSTRUCTION_ACKNOWLEDGED
+                        ? <p className="mt-1 text-xs text-status-ok font-medium">{t("logDetail.acknowledged")}</p>
+                        : <p className="mt-1 text-xs text-muted-foreground">{ans.answer}</p>
                     )}
 
                     {ans.comment && (
@@ -168,7 +190,13 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                         <p className="text-xs text-muted-foreground">{ans.comment}</p>
                       </div>
                     )}
+                    {ans.answeredBy && (
+                      <AnsweredBy name={ans.answeredBy} at={ans.answeredAt} finishedAt={log.finishedAt} className="flex sm:hidden mt-1.5" />
+                    )}
                   </div>
+                  {ans.answeredBy && (
+                    <AnsweredBy name={ans.answeredBy} at={ans.answeredAt} finishedAt={log.finishedAt} className="hidden sm:flex shrink-0 max-w-[40%] pt-0.5" />
+                  )}
                 </div>
               </div>
             );

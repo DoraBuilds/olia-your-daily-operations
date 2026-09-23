@@ -383,7 +383,7 @@ describe("ReportingTab search + Filters toolbar", () => {
     openFilters();
     expect(screen.getByTestId("reporting-filters-panel")).toBeInTheDocument();
     expect(screen.getByTestId("reporting-filters-toggle")).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("This Week")).toBeInTheDocument();
+    expect(screen.getByText("Today")).toBeInTheDocument();
     openFilters();
     expect(screen.queryByTestId("reporting-filters-panel")).not.toBeInTheDocument();
   });
@@ -402,19 +402,19 @@ describe("ReportingTab search + Filters toolbar", () => {
   it("clear filters resets every panel filter (date included) once applied", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    fireEvent.click(screen.getByText("This Week"));
+    fireEvent.click(screen.getByText("Today"));
     fireEvent.click(screen.getByTestId("reporting-user-filter-trigger"));
     fireEvent.click(screen.getByTestId("reporting-user-filter-option-tm-carla"));
     applyFilters();
     expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
-    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Week");
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("Today");
 
     openFilters();
     fireEvent.click(screen.getByTestId("reporting-clear-filters"));
     expect(screen.getByTestId("reporting-user-filter-trigger")).toHaveTextContent("All users");
     applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
-    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("Today");
+    expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Week");
     expect(screen.queryByTestId("reporting-filters-count")).not.toBeInTheDocument();
   });
 

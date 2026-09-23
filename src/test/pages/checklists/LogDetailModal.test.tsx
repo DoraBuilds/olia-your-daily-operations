@@ -152,4 +152,25 @@ describe("LogDetailModal", () => {
     render(<LogDetailModal log={lowScoreLog} onClose={onClose} />);
     expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
   });
+  it("shows an acknowledged instruction as 'Acknowledged', not the raw sentinel", () => {
+    const log: LogEntry = {
+      ...mockLog,
+      answers: [{ label: "Wash your hands", type: "instruction" as any, required: false, answer: "__instruction_acknowledged__" }],
+    };
+    render(<LogDetailModal log={log} onClose={vi.fn()} />);
+    expect(screen.getByText("Acknowledged")).toBeInTheDocument();
+    expect(screen.queryByText("__instruction_acknowledged__")).not.toBeInTheDocument();
+  });
+  it("shows who answered each question and at what time", () => {
+    const at = new Date(2026, 8, 23, 8, 42).toISOString();
+    const log: LogEntry = {
+      ...mockLog,
+      finishedAt: new Date(2026, 8, 23, 9, 0).toISOString(),
+      answers: [{ label: "Fridge temp", type: "number" as any, required: true, answer: "4", answeredBy: "Jordi Puig", answeredAt: at }],
+    };
+    render(<LogDetailModal log={log} onClose={vi.fn()} />);
+    const rows = screen.getAllByTestId("answered-by");
+    expect(rows[0]).toHaveTextContent("Jordi Puig");
+    expect(rows[0]).toHaveTextContent("08:42");
+  });
 });

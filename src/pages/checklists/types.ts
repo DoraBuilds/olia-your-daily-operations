@@ -176,4 +176,6 @@ export interface LogEntry {
 export interface LogAnswer {
   label: string; type: TaskType; required: boolean;
   answer?: string; hasPhoto?: boolean; comment?: string;
+  answeredBy?: string;  // staff name — kiosk logs after per-question attribution shipped
+  answeredAt?: string;  // ISO timestamp
 }

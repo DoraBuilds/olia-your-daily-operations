@@ -40,8 +40,12 @@ export interface KioskChecklist {
 
 export type KioskScreen = "grid" | "runner" | "completion" | "library";
 
+/** Who answered each question, and when (ISO) — keyed by question id. */
+export type AnswerAttribution = Record<string, { by: string; at: string }>;
+
 export type KioskDraftSnapshot = {
   answers: Record<string, any>;
+  attribution?: AnswerAttribution;
   currentQIdx?: number;
   currentQuestionId?: string;
   hasSavedDraft: boolean;
