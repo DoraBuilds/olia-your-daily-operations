@@ -24,6 +24,7 @@ import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, getPermLabel } from "./shared";
 import { ConfirmModal } from "./SharedUI";
+import { NotificationsTab } from "./NotificationsTab";
 
 export interface AccountTabProps {
   locations: Location[];
@@ -571,6 +572,14 @@ export function AccountTab({
           </div>
         </div>
       </section>}
+
+      {/* Notifications — daily checklist digest (was its own Admin tab, #838) */}
+      {show("account") && (
+        <section className="space-y-2">
+          <p className="section-label">{t("tabs.notifications")}</p>
+          <NotificationsTab />
+        </section>
+      )}
 
       {/* Session — Log out lives here now (the header's logout icon is gone
           app-wide). Only owners ever see this tab, and only owners have a

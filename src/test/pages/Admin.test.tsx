@@ -367,6 +367,19 @@ describe("Admin page", () => {
     });
   });
 
+  describe("Notifications in Account", () => {
+    it("no longer has a Notifications tab", () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      const tabLabels = screen.getAllByRole("button").map(b => b.textContent);
+      expect(tabLabels).not.toContain("Notifications");
+    });
+
+    it("shows the Notifications section inside the Account tab", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+      await waitFor(() => expect(screen.getByText("Notifications", { selector: "p" })).toBeInTheDocument());
+    });
+  });
+
   describe("Departments", () => {
     beforeEach(() => {
       mockNavigate.mockClear();

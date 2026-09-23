@@ -164,7 +164,8 @@ const router = createBrowserRouter(
         { path: "/admin/departments", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/users", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/account", element: <ProtectedRoute><Admin /></ProtectedRoute> },
-        { path: "/admin/notifications", element: <ProtectedRoute><Admin /></ProtectedRoute> },
+        // Notifications moved into Account (#838); keep old links working.
+        { path: "/admin/notifications", element: <Navigate to="/admin/account" replace /> },
         { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/kiosks", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
