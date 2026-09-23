@@ -178,8 +178,6 @@
     "kioskActive": "Kiosco activo"
   },
   "departmentsTab": {
-    "heading": "Departamentos",
-    "subtitle": "Crea cada departamento una sola vez y elige a qué conceptos o locales se aplica.",
     "add": "Añadir departamento",
     "loading": "Cargando departamentos…",
     "emptyHeading": "Añade tu primer departamento",

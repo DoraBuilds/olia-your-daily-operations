@@ -121,20 +121,14 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
     checklists: checklists.filter(c => (c.department_ids ?? []).includes(dep.id)).length,
   });
 
-  const header = (
-    <div className="flex items-start justify-between gap-3">
-      <div className="space-y-1">
-        <h2 className="font-display text-lg text-foreground">{t("departmentsTab.heading")}</h2>
-        <p className="text-xs text-muted-foreground">{t("departmentsTab.subtitle")}</p>
-      </div>
-      {departments.length > 0 && (
-        <button
-          onClick={() => setModal("new")}
-          className="flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-xl bg-sage text-primary-foreground text-xs font-semibold hover:bg-sage-deep transition-colors"
-        >
-          <Plus size={14} /> {t("departmentsTab.add")}
-        </button>
-      )}
+  const header = departments.length > 0 && (
+    <div className="flex justify-end">
+      <button
+        onClick={() => setModal("new")}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sage text-primary-foreground text-xs font-semibold hover:bg-sage-deep transition-colors"
+      >
+        <Plus size={14} /> {t("departmentsTab.add")}
+      </button>
     </div>
   );
 
