@@ -61,6 +61,7 @@ describe("DepartmentsTab", () => {
     expect(within(kitchen).getByText("Trattoria · All locations")).toBeInTheDocument();
     expect(within(kitchen).getByText("Sushi Bar · Mall")).toBeInTheDocument();
     expect(within(bar).getByText("Not assigned")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Departments" })).not.toBeInTheDocument();
   });
 
   it("defaults a new department to All concepts / All locations (company-wide)", () => {

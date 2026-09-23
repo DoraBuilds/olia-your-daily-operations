@@ -178,8 +178,6 @@
     "kioskActive": "Kiosk active"
   },
   "departmentsTab": {
-    "heading": "Departments",
-    "subtitle": "Create each department once, then choose which concepts or locations it applies to.",
     "add": "Add department",
     "loading": "Loading departments…",
     "emptyHeading": "Add your first department",
