@@ -108,6 +108,7 @@ export function ConceptsTab({
   const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
   const confirmDeactivateKiosk = useConfirmDeactivateKiosk(setConfirmModal);
+  const [collapsed, toggleSection] = useCollapsedSections();
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
   if (concepts.length === 0) {
@@ -243,64 +244,61 @@ export function ConceptsTab({
       />
 
       {/* Departments — listed like Team members below */}
-      <div className="card-surface p-4">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="section-label">
-            {departments.length > 0
-              ? t("conceptsTab.departmentsWithCount", { count: departments.length })
-              : t("conceptsTab.departments")}
-          </p>
-          {isOwner && (
-            <AddDepartmentMenu
-              options={addableDepartments}
-              onPick={addDepartment}
-              onCreate={() => setDepartmentModalOpen(true)}
-              onManage={onManageDepartments}
-            />
+      <SectionCard
+        title={departments.length > 0 ? t("conceptsTab.departmentsWithCount", { count: departments.length }) : t("conceptsTab.departments")}
+        open={!collapsed.has("departments")}
+        onToggle={() => toggleSection("departments")}
+        actions={isOwner && (
+          <AddDepartmentMenu
+            options={addableDepartments}
+            onPick={addDepartment}
+            onCreate={() => setDepartmentModalOpen(true)}
+            onManage={onManageDepartments}
+          />
+        )}
+      >
+        <div className="px-4 pb-4">
+          {departments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
+          ) : (
+            <div className="space-y-1">
+              {departments.map(dep => {
+                const staffHere = locationTeamMembers.filter(m => m.department_ids.includes(dep.id)).length;
+                return (
+                  <div key={dep.id} className="flex items-center gap-2 py-0.5">
+                    <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-sage-deep shrink-0">
+                      <Layers size={13} />
+                    </div>
+                    <p className="text-sm text-foreground flex-1 min-w-0 truncate">{dep.name}</p>
+                    {staffHere > 0 && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {t("departmentsTab.staffCount", { count: staffHere })}
+                      </span>
+                    )}
+                    {isOwner && (
+                      <button
+                        onClick={() => confirmRemoveDepartment(dep.id)}
+                        aria-label={t("conceptsTab.removeDepartmentAria", { name: dep.name })}
+                        title={t("conceptsTab.removeFromLocation")}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                      >
+                        <MinusCircle size={14} className="text-status-error" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-        {departments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
-        ) : (
-          <div className="space-y-1">
-            {departments.map(dep => {
-              const staffHere = locationTeamMembers.filter(m => m.department_ids.includes(dep.id)).length;
-              return (
-                <div key={dep.id} className="flex items-center gap-2 py-0.5">
-                  <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-sage-deep shrink-0">
-                    <Layers size={13} />
-                  </div>
-                  <p className="text-sm text-foreground flex-1 min-w-0 truncate">{dep.name}</p>
-                  {staffHere > 0 && (
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {t("departmentsTab.staffCount", { count: staffHere })}
-                    </span>
-                  )}
-                  {isOwner && (
-                    <button
-                      onClick={() => confirmRemoveDepartment(dep.id)}
-                      aria-label={t("conceptsTab.removeDepartmentAria", { name: dep.name })}
-                      title={t("conceptsTab.removeFromLocation")}
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
-                    >
-                      <MinusCircle size={14} className="text-status-error" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      </SectionCard>
 
       {/* Devices (kiosks) */}
-      <div className="card-surface overflow-hidden">
-        <div className="flex items-center justify-between gap-2 flex-wrap p-4">
-          <p className="section-label">
-            {locationKiosks.length > 0
-              ? t("conceptsTab.kiosksWithCount", { count: locationKiosks.length })
-              : t("conceptsTab.kiosks")}
-          </p>
+      <SectionCard
+        title={locationKiosks.length > 0 ? t("conceptsTab.kiosksWithCount", { count: locationKiosks.length }) : t("conceptsTab.kiosks")}
+        open={!collapsed.has("devices")}
+        onToggle={() => toggleSection("devices")}
+        actions={(
           <div className="flex gap-2">
             <button
               onClick={onActivateKiosk}
@@ -316,7 +314,8 @@ export function ConceptsTab({
               <Tablet size={13} />
             </button>
           </div>
-        </div>
+        )}
+      >
         {locationKiosks.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted-foreground">{t("conceptsTab.noKiosks")}</p>
         ) : (
@@ -330,64 +329,63 @@ export function ConceptsTab({
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Team members */}
-      <div className="card-surface p-4">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="section-label">
-            {locationTeamMembers.length > 0
-              ? t("conceptsTab.teamMembersWithCount", { count: locationTeamMembers.length })
-              : t("conceptsTab.teamMembers")}
-          </p>
-          {isOwner && onAddTeamMember && (
-            <button
-              onClick={() => onAddTeamMember(currentLocation.id)}
-              className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-            >
-              <Plus size={12} /> {t("conceptsTab.addTeamMember")}
-            </button>
+      <SectionCard
+        title={locationTeamMembers.length > 0 ? t("conceptsTab.teamMembersWithCount", { count: locationTeamMembers.length }) : t("conceptsTab.teamMembers")}
+        open={!collapsed.has("team")}
+        onToggle={() => toggleSection("team")}
+        actions={isOwner && onAddTeamMember && (
+          <button
+            onClick={() => onAddTeamMember(currentLocation.id)}
+            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
+          >
+            <Plus size={12} /> {t("conceptsTab.addTeamMember")}
+          </button>
+        )}
+      >
+        <div className="px-4 pb-4">
+          {locationTeamMembers.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("conceptsTab.noTeamMembers")}</p>
+          ) : (
+            <div className="space-y-1">
+              {locationTeamMembers.map(m => (
+                <div key={m.id} className="flex items-center gap-2 py-0.5">
+                  <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-[10px] font-semibold text-sage-deep shrink-0">
+                    {getInitials(m.name)}
+                  </div>
+                  <p className="text-sm text-foreground flex-1 min-w-0 truncate">{m.name}</p>
+                  {(m.is_owner || m.role) && (
+                    <span className="text-xs text-muted-foreground shrink-0 truncate max-w-[40%]">
+                      {m.is_owner ? t("roles.Owner") : m.role}
+                    </span>
+                  )}
+                  {isOwner && onEditTeamMember && (
+                    <button
+                      onClick={() => onEditTeamMember(m)}
+                      aria-label={t("accountTab.editAria", { name: m.name })}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                    >
+                      <Pencil size={14} className="text-muted-foreground" />
+                    </button>
+                  )}
+                  {isOwner && onRemoveTeamMember && (
+                    <button
+                      onClick={() => onRemoveTeamMember(m, currentLocation.id)}
+                      aria-label={t("conceptsTab.removeTeamMemberAria", { name: m.name, location: currentLocation.name })}
+                      title={t("conceptsTab.removeFromLocation")}
+                      className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                    >
+                      <UserMinus size={14} className="text-status-error" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        {locationTeamMembers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("conceptsTab.noTeamMembers")}</p>
-        ) : (
-          <div className="space-y-1">
-            {locationTeamMembers.map(m => (
-              <div key={m.id} className="flex items-center gap-2 py-0.5">
-                <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-[10px] font-semibold text-sage-deep shrink-0">
-                  {getInitials(m.name)}
-                </div>
-                <p className="text-sm text-foreground flex-1 min-w-0 truncate">{m.name}</p>
-                {(m.is_owner || m.role) && (
-                  <span className="text-xs text-muted-foreground shrink-0 truncate max-w-[40%]">
-                    {m.is_owner ? t("roles.Owner") : m.role}
-                  </span>
-                )}
-                {isOwner && onEditTeamMember && (
-                  <button
-                    onClick={() => onEditTeamMember(m)}
-                    aria-label={t("accountTab.editAria", { name: m.name })}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
-                  >
-                    <Pencil size={14} className="text-muted-foreground" />
-                  </button>
-                )}
-                {isOwner && onRemoveTeamMember && (
-                  <button
-                    onClick={() => onRemoveTeamMember(m, currentLocation.id)}
-                    aria-label={t("conceptsTab.removeTeamMemberAria", { name: m.name, location: currentLocation.name })}
-                    title={t("conceptsTab.removeFromLocation")}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
-                  >
-                    <UserMinus size={14} className="text-status-error" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      </SectionCard>
 
       {departmentModalOpen && (
         <DepartmentModal
@@ -428,6 +426,54 @@ function useMenu() {
 
 const menuPanelCls = "absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[200px] py-1 animate-fade-in";
 const menuItemCls = "w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors";
+
+// ─── SectionCard ──────────────────────────────────────────────────────────────
+// Collapsible card for the location's Departments / Devices / Team members.
+// Which ones are collapsed is remembered per browser.
+
+const COLLAPSED_KEY = "olia_concepts_collapsed_sections";
+
+function useCollapsedSections(): [Set<string>, (key: string) => void] {
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "[]"));
+    } catch {
+      return new Set();
+    }
+  });
+  const toggle = (key: string) => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next])); } catch { /* storage unavailable */ }
+      return next;
+    });
+  };
+  return [collapsed, toggle];
+}
+
+function SectionCard({
+  title, open, onToggle, actions, children,
+}: {
+  title: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="card-surface overflow-hidden">
+      <div className="flex items-center justify-between gap-2 flex-wrap p-4">
+        <button onClick={onToggle} aria-expanded={open} className="flex items-center gap-1.5 text-left min-w-0">
+          <ChevronDown size={15} className={cn("text-muted-foreground shrink-0 transition-transform", !open && "-rotate-90")} />
+          <span className="section-label">{title}</span>
+        </button>
+        {actions}
+      </div>
+      {open && children}
+    </div>
+  );
+}
 
 // ─── ConceptTiles ─────────────────────────────────────────────────────────────
 // Small rounded tiles with the name underneath; the selected one carries the
