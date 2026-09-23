@@ -49,6 +49,14 @@ export function grantKioskAdminSession(userId: string, locationId: string, ttlMs
 export function readKioskAdminSession(): KioskAdminSession | null {
   const raw = sessionStorage.getItem(KIOSK_ADMIN_SESSION_KEY);
   if (!raw) return null;
+  // A grant only means anything on a browser that's still a kiosk device.
+  // If the device was deactivated/un-registered after the PIN was entered,
+  // a leftover grant would otherwise keep Layout's 90s idle timer running
+  // and bounce a normal admin back to /kiosk (#832).
+  if (!localStorage.getItem("kiosk_location_id")) {
+    sessionStorage.removeItem(KIOSK_ADMIN_SESSION_KEY);
+    return null;
+  }
   try {
     const session = JSON.parse(raw) as Partial<KioskAdminSession>;
     if (!session.userId || !session.locationId || !session.expiresAt || Date.now() >= session.expiresAt) {
