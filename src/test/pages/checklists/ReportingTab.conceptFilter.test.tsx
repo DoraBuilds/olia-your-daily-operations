@@ -1,28 +1,19 @@
 /**
- * Concept-scoping coverage for ReportingTab — verifies the sidebar's concept
- * dropdown (ConceptFilterContext.scopedLocationIds) narrows:
- *  - the in-page location filter dropdown's options
- *  - completion-log entries, when "All locations" is selected within a narrowed concept
- *  - unstarted checklists, while an org-wide (unassigned) checklist stays visible
+ * Concept/location/department scoping coverage for ReportingTab's own filter
+ * panel (MultiSelectFilter) — these filters are local to Reporting and no
+ * longer depend on the sidebar's global concept switcher. Verifies:
+ *  - the concept filter narrows the location picker's options
+ *  - selecting a concept narrows completion-log entries and unstarted checklists
+ *  - an org-wide (unassigned) unstarted checklist stays visible when scoped
+ *  - the department filter narrows logs by the completing checklist's departments
+ *  - stale location/department picks are pruned, but not while their lists are still loading
  */
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { ReportingTab } from "@/pages/checklists/ReportingTab";
 import { routerFutureFlags } from "@/lib/router-future-flags";
-
-const conceptFilterState: { scopedLocationIds: string[] | null } = { scopedLocationIds: null };
-
-vi.mock("@/contexts/ConceptFilterContext", () => ({
-  ALL_CONCEPTS: "all",
-  useConceptFilter: () => ({
-    concepts: [],
-    selectedConceptId: "all",
-    setSelectedConceptId: () => {},
-    scopedLocationIds: conceptFilterState.scopedLocationIds,
-  }),
-}));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -64,9 +55,6 @@ vi.mock("@/lib/export-utils", () => ({
   exportLogDetailPdf: vi.fn(),
 }));
 
-// The mock only honours a single server-side location_id filter — the
-// component's own client-side scoping (under test here) is what should
-// additionally narrow results when locationFilter is "all" but a concept is selected.
 const MOCK_LOGS = [
   {
     id: "l1", checklist_id: "c1", checklist_title: "Opening Checklist",
@@ -82,25 +70,18 @@ const MOCK_LOGS = [
   },
 ];
 
-const mockUseChecklistLogs = vi.fn((filters?: any) => ({
-  data: filters?.location_id
-    ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
-    : MOCK_LOGS,
-  isLoading: false,
-}));
-
 vi.mock("@/hooks/useChecklistLogs", () => ({
-  useChecklistLogs: (filters?: any) => mockUseChecklistLogs(filters),
+  useChecklistLogs: () => ({ data: MOCK_LOGS, isLoading: false }),
   useCreateChecklistLog: () => ({ mutate: vi.fn() }),
 }));
 
-// c1 (loc-1) has a log → completed, not unstarted.
-// c2 (loc-2) has no log → unstarted, should disappear once scoped to loc-1.
-// c3 (no location) has no log → unstarted, should stay visible even when scoped.
+// c1 (loc-1, dept-kitchen) has a log → completed, not unstarted.
+// c2 (loc-2, dept-bar) has no log → unstarted, should disappear once scoped to Concept A / loc-1.
+// c3 (no location, no department) has no log → unstarted, should stay visible even when scoped.
 const MOCK_CHECKLISTS = [
-  { id: "c1", title: "Opening Checklist", location_id: "loc-1", location_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "morning", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
-  { id: "c2", title: "Closing Checklist", location_id: "loc-2", location_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "evening", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
-  { id: "c3", title: "Org Wide Checklist", location_id: null, location_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "anytime", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: "c1", title: "Opening Checklist", location_id: "loc-1", location_ids: null, department_ids: ["dept-kitchen"], start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "morning", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: "c2", title: "Closing Checklist", location_id: "loc-2", location_ids: null, department_ids: ["dept-bar"], start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "evening", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+  { id: "c3", title: "Org Wide Checklist", location_id: null, location_ids: null, department_ids: null, start_date: null, schedule: "daily", folder_id: null, organization_id: "org1", sections: [], time_of_day: "anytime", due_time: null, visibility_from: null, visibility_until: null, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
 ];
 
 vi.mock("@/hooks/useChecklists", () => ({
@@ -119,14 +100,43 @@ vi.mock("@/hooks/useActions", () => ({
   useUpdateAction: () => ({ mutate: vi.fn() }),
 }));
 
+// Mutable so tests can simulate the locations / departments queries still loading.
+const queryState = { locationsLoaded: true, departmentsFetching: false };
+
 vi.mock("@/hooks/useLocations", () => ({
-  useLocations: () => ({
+  useLocations: () => queryState.locationsLoaded
+    ? {
+        data: [
+          { id: "loc-1", name: "Main Branch", concept_id: "concept-a" },
+          { id: "loc-2", name: "Terrace", concept_id: "concept-b" },
+        ],
+        isLoading: false,
+        isSuccess: true,
+      }
+    : { data: undefined, isLoading: true, isSuccess: false },
+}));
+
+vi.mock("@/hooks/useConcepts", () => ({
+  useConcepts: () => ({
     data: [
-      { id: "loc-1", name: "Main Branch" },
-      { id: "loc-2", name: "Terrace" },
+      { id: "concept-a", name: "Concept A" },
+      { id: "concept-b", name: "Concept B" },
     ],
     isLoading: false,
   }),
+}));
+
+vi.mock("@/hooks/useDepartments", () => ({
+  useDepartmentsForLocations: (locationIds: string[]) => queryState.departmentsFetching
+    ? { data: undefined, isLoading: true, isFetching: true }
+    : {
+        data: [
+          { id: "dept-kitchen", location_id: "loc-1", name: "Kitchen" },
+          { id: "dept-bar", location_id: "loc-2", name: "Bar" },
+        ].filter(d => locationIds.includes(d.location_id)),
+        isLoading: false,
+        isFetching: false,
+      },
 }));
 
 vi.mock("@/hooks/usePlan", () => ({
@@ -159,51 +169,96 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe("ReportingTab concept scoping", () => {
+function selectConceptA() {
+  fireEvent.click(screen.getByTestId("reporting-concept-filter-trigger"));
+  fireEvent.click(screen.getByTestId("reporting-concept-filter-option-concept-a"));
+}
+
+describe("ReportingTab concept/location/department filters", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    conceptFilterState.scopedLocationIds = null;
-    mockUseChecklistLogs.mockImplementation((filters?: any) => ({
-      data: filters?.location_id
-        ? MOCK_LOGS.filter(log => log.location_id === filters.location_id)
-        : MOCK_LOGS,
-      isLoading: false,
-    }));
+    queryState.locationsLoaded = true;
+    queryState.departmentsFetching = false;
   });
 
-  it("lists every location in the filter dropdown when no concept is selected", () => {
+  it("lists every location in the picker when no concept is selected", () => {
     render(<ReportingTab />, { wrapper });
-    const select = screen.getByTestId("location-filter");
-    expect(within(select).getByRole("option", { name: "Main Branch" })).toBeInTheDocument();
-    expect(within(select).getByRole("option", { name: "Terrace" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
+    expect(screen.getByTestId("reporting-location-filter-option-loc-1")).toBeInTheDocument();
+    expect(screen.getByTestId("reporting-location-filter-option-loc-2")).toBeInTheDocument();
   });
 
-  it("narrows the location filter dropdown to the selected concept's locations", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
+  it("narrows the location picker's options to the selected concept's locations", () => {
     render(<ReportingTab />, { wrapper });
-    const select = screen.getByTestId("location-filter");
-    expect(within(select).getByRole("option", { name: "Main Branch" })).toBeInTheDocument();
-    expect(within(select).queryByRole("option", { name: "Terrace" })).not.toBeInTheDocument();
+    selectConceptA();
+    fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
+    expect(screen.getByTestId("reporting-location-filter-option-loc-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("reporting-location-filter-option-loc-2")).not.toBeInTheDocument();
   });
 
-  it("excludes logs from locations outside the selected concept when the in-page filter is 'All'", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
+  it("excludes logs from locations outside the selected concept", () => {
     render(<ReportingTab />, { wrapper });
+    selectConceptA();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
   it("excludes an unstarted checklist from a location outside the selected concept", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ReportingTab />, { wrapper });
+    selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 
   it("keeps an org-wide (unassigned) unstarted checklist visible even when a concept is selected", () => {
-    conceptFilterState.scopedLocationIds = ["loc-1"];
     render(<ReportingTab />, { wrapper });
+    selectConceptA();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     expect(screen.getByText("Org Wide Checklist")).toBeInTheDocument();
+  });
+
+  it("narrows the department picker's options to the union of departments across scoped locations", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
+    expect(screen.getByTestId("reporting-department-filter-option-dept-kitchen")).toBeInTheDocument();
+    expect(screen.getByTestId("reporting-department-filter-option-dept-bar")).toBeInTheDocument();
+  });
+
+  it("excludes logs whose checklist doesn't belong to the selected department", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-department-filter-option-dept-kitchen"));
+    expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
+  });
+
+  it("drops a picked location once a concept that excludes it is selected", () => {
+    render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByTestId("reporting-location-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-location-filter-option-loc-2"));
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Terrace");
+    selectConceptA();
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("All locations");
+  });
+
+  it("keeps a deep-linked initialLocationId while locations are still loading", () => {
+    queryState.locationsLoaded = false;
+    const { rerender } = render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    queryState.locationsLoaded = true;
+    rerender(<ReportingTab initialLocationId="loc-2" />);
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Terrace");
+    expect(screen.getByText("Closing Checklist")).toBeInTheDocument();
+    expect(screen.queryByText("Opening Checklist")).not.toBeInTheDocument();
+  });
+
+  it("keeps a department pick while the department list refetches", () => {
+    const { rerender } = render(<ReportingTab />, { wrapper });
+    fireEvent.click(screen.getByTestId("reporting-department-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-department-filter-option-dept-kitchen"));
+    queryState.departmentsFetching = true;
+    rerender(<ReportingTab />);
+    queryState.departmentsFetching = false;
+    rerender(<ReportingTab />);
+    expect(screen.getByTestId("reporting-department-filter-trigger")).toHaveTextContent("Kitchen");
+    expect(screen.queryByText("Closing Checklist")).not.toBeInTheDocument();
   });
 });
