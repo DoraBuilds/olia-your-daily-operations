@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, Plus, ChevronDown, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
@@ -216,6 +216,19 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
     () => new Map(allLocations.map(location => [location.id, location.name])),
     [allLocations]
   );
+
+  // A deep link to one location (e.g. from the dashboard's daily compliance)
+  // also preselects that location's concept. Runs once per link, after
+  // locations load, so a background refetch can't override a concept the
+  // user has since changed.
+  const conceptPresetForLocation = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialLocationId || !locationsLoaded) return;
+    if (conceptPresetForLocation.current === initialLocationId) return;
+    conceptPresetForLocation.current = initialLocationId;
+    const conceptId = allLocations.find(l => l.id === initialLocationId)?.concept_id;
+    setConceptIds(conceptId ? [conceptId] : []);
+  }, [initialLocationId, locationsLoaded, allLocations]);
 
   // Narrow the location picker's options to the selected concept(s).
   const conceptScopedLocations = useMemo(

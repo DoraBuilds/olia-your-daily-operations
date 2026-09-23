@@ -277,6 +277,34 @@ describe("ReportingTab concept/location/department filters", () => {
     expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("All locations");
   });
 
+  it("preselects the concept of a deep-linked location", () => {
+    render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    expect(screen.getByTestId("reporting-filters-count")).toHaveTextContent("2");
+    openFilters();
+    expect(screen.getByTestId("reporting-concept-filter-trigger")).toHaveTextContent("Concept B");
+    expect(screen.getByTestId("reporting-location-filter-trigger")).toHaveTextContent("Terrace");
+  });
+
+  it("preselects the deep-linked location's concept once locations finish loading", () => {
+    queryState.locationsLoaded = false;
+    const { rerender } = render(<ReportingTab initialLocationId="loc-1" />, { wrapper });
+    queryState.locationsLoaded = true;
+    rerender(<ReportingTab initialLocationId="loc-1" />);
+    openFilters();
+    expect(screen.getByTestId("reporting-concept-filter-trigger")).toHaveTextContent("Concept A");
+  });
+
+  it("doesn't re-apply the deep-linked concept after the user changes it", () => {
+    const { rerender } = render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
+    openFilters();
+    fireEvent.click(screen.getByTestId("reporting-concept-filter-trigger"));
+    fireEvent.click(screen.getByTestId("reporting-concept-filter-option-all"));
+    applyFilters();
+    rerender(<ReportingTab initialLocationId="loc-2" />);
+    openFilters();
+    expect(screen.getByTestId("reporting-concept-filter-trigger")).toHaveTextContent("All concepts");
+  });
+
   it("keeps a deep-linked initialLocationId while locations are still loading", () => {
     queryState.locationsLoaded = false;
     const { rerender } = render(<ReportingTab initialLocationId="loc-2" />, { wrapper });
