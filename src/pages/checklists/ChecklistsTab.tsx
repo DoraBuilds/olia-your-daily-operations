@@ -2,12 +2,15 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2, Building2, MapPin, Layers, CheckCircle2 } from "lucide-react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
+import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useConceptFilter } from "@/contexts/ConceptFilterContext";
 import { ConceptScopeNotice } from "@/components/ConceptScopeNotice";
 import { usePlan } from "@/hooks/usePlan";
@@ -54,17 +57,30 @@ function checklistInScope(
   return true;
 }
 
+type PublishStatus = "all" | "published" | "draft";
+
+/** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
+interface PanelFilters {
+  conceptIds: string[];
+  locationIds: string[];
+  departmentIds: string[];
+  status: PublishStatus;
+}
+
+const DEFAULT_PANEL_FILTERS: PanelFilters = { conceptIds: [], locationIds: [], departmentIds: [], status: "all" };
+
 export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
   const { t } = useTranslation("checklists");
   const [searchParams] = useSearchParams();
   const { can } = usePlan();
   const { data: allDbLocations = [] } = useLocations();
-  const { scopedLocationIds, selectedConceptId } = useConceptFilter();
-  const dbLocations = scopedLocationIds === null
-    ? allDbLocations
-    : allDbLocations.filter(l => scopedLocationIds.includes(l.id));
-  const allLocationsLabel = t("locations.all");
-  const locationOptions = [allLocationsLabel, ...dbLocations.map(l => l.name)];
+  const { scopedLocationIds, selectedConceptId, concepts } = useConceptFilter();
+  const dbLocations = useMemo(
+    () => scopedLocationIds === null ? allDbLocations : allDbLocations.filter(l => scopedLocationIds.includes(l.id)),
+    [allDbLocations, scopedLocationIds],
+  );
+  // Under a header concept, the Filters popover only offers that concept.
+  const conceptOptions = scopedLocationIds === null ? concepts : concepts.filter(c => c.id === selectedConceptId);
 
   // DB data
   const { data: allDbFolders = [] } = useFolders();
@@ -138,17 +154,65 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState(allLocationsLabel);
-  // If the in-page location filter points at a location outside the newly
-  // selected concept (or a deleted location), fall back to "all" rather than
-  // silently showing an empty list under a stale label.
+  // Applied filters, plus the staged copy the Filters popover edits —
+  // committed on Apply, discarded if the popover is dismissed.
+  const [filters, setFilters] = useState<PanelFilters>(DEFAULT_PANEL_FILTERS);
+  const [draft, setDraft] = useState<PanelFilters>(DEFAULT_PANEL_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const updateDraft = (patch: Partial<PanelFilters>) => setDraft(prev => ({ ...prev, ...patch }));
+
+  // If the header concept changes, drop applied picks that fall outside it
+  // rather than silently showing an empty list.
   useEffect(() => {
-    if (selectedLocation === allLocationsLabel) return;
-    if (!dbLocations.some(l => l.name === selectedLocation)) {
-      setSelectedLocation(allLocationsLabel);
-    }
-  }, [dbLocations, selectedLocation, allLocationsLabel]);
-  const [showLocationDrop, setShowLocationDrop] = useState(false);
+    setFilters(prev => {
+      const conceptIds = scopedLocationIds === null ? prev.conceptIds : prev.conceptIds.filter(id => id === selectedConceptId);
+      const locationIds = prev.locationIds.filter(id => dbLocations.some(l => l.id === id));
+      return conceptIds.length === prev.conceptIds.length && locationIds.length === prev.locationIds.length
+        ? prev : { ...prev, conceptIds, locationIds };
+    });
+  }, [scopedLocationIds, selectedConceptId, dbLocations]);
+
+  // The popover's location list narrows to the draft concept(s); departments
+  // are the union across the draft's locations in scope.
+  const draftConceptScopedLocations = useMemo(
+    () => draft.conceptIds.length === 0 ? dbLocations : dbLocations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [dbLocations, draft.conceptIds],
+  );
+  const departmentLocationIds = useMemo(
+    () => (draft.locationIds.length > 0 ? draft.locationIds : draftConceptScopedLocations.map(l => l.id)),
+    [draft.locationIds, draftConceptScopedLocations],
+  );
+  const { data: availableDepartments = [], isFetching: departmentsFetching } = useDepartmentsForLocations(departmentLocationIds);
+
+  // Drop draft locations a concept change put out of scope — keeps the same
+  // object when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    setDraft(prev => {
+      const next = prev.locationIds.filter(id => draftConceptScopedLocations.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [draftConceptScopedLocations]);
+
+  // Same for departments — skipped mid-refetch so picks aren't wiped while loading.
+  useEffect(() => {
+    if (departmentsFetching) return;
+    setDraft(prev => {
+      const next = prev.departmentIds.filter(id => availableDepartments.some(d => d.id === id));
+      return next.length === prev.departmentIds.length ? prev : { ...prev, departmentIds: next };
+    });
+  }, [departmentsFetching, availableDepartments]);
+
+  const openFiltersPanel = () => {
+    setDraft(filters);
+    setFiltersOpen(true);
+  };
+  const applyFilters = () => {
+    setFilters(draft);
+    setFiltersOpen(false);
+  };
+
+  const activeFilterCount = [filters.conceptIds.length > 0, filters.locationIds.length > 0, filters.departmentIds.length > 0, filters.status !== "all"]
+    .filter(Boolean).length;
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBuilder, setShowBuilder] = useState(() => {
     // Auto-reopen builder if a meaningful draft was saved (e.g. after a tab switch that reloaded the page)
@@ -182,23 +246,38 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [previewChecklist, setPreviewChecklist] = useState<ChecklistItem | null>(null);
   const editingChecklist = editingChecklistId ? dbChecklists.find(c => c.id === editingChecklistId) : null;
   const normalizedSearch = search.trim().toLowerCase();
+  // Search or any active filter lists matching checklists across every
+  // folder; folders themselves only show up as search matches.
+  const isFiltering = activeFilterCount > 0;
   const visibleFolders = [...folders]
-    .filter(f => normalizedSearch ? f.name.toLowerCase().includes(normalizedSearch) : f.parentId === currentFolder)
+    .filter(f => normalizedSearch ? f.name.toLowerCase().includes(normalizedSearch) : !isFiltering && f.parentId === currentFolder)
     .sort((a, b) => folderOrder.indexOf(a.id) - folderOrder.indexOf(b.id));
-  const selectedLocationObj = dbLocations.find(l => l.name === selectedLocation);
+  const matchesScope = (c: ChecklistItem) => {
+    if (filters.locationIds.length > 0) {
+      return dbLocations.some(l => filters.locationIds.includes(l.id) && checklistAppliesToLocation(c, l.id, l.concept_id));
+    }
+    if (filters.conceptIds.length > 0) {
+      if (!c.location_ids?.length) return !c.concept_id || filters.conceptIds.includes(c.concept_id);
+      return dbLocations.some(l => l.concept_id && filters.conceptIds.includes(l.concept_id) && c.location_ids.includes(l.id));
+    }
+    return true;
+  };
   const visibleChecklists = checklists
-    .filter(c => normalizedSearch ? c.title.toLowerCase().includes(normalizedSearch) : c.folderId === currentFolder)
     .filter(c => {
-      if (selectedLocation === allLocationsLabel) return true;
-      if (!selectedLocationObj) return true;
-      return checklistAppliesToLocation(
-        { location_id: c.location_id, location_ids: c.location_ids, concept_id: c.concept_id },
-        selectedLocationObj.id,
-        selectedLocationObj.concept_id,
-      );
+      if (normalizedSearch) return c.title.toLowerCase().includes(normalizedSearch);
+      return isFiltering || c.folderId === currentFolder;
+    })
+    .filter(c => {
+      if (!matchesScope(c)) return false;
+      if (filters.departmentIds.length > 0 && c.department_ids?.length
+        && !c.department_ids.some(id => filters.departmentIds.includes(id))) return false;
+      if (filters.status === "published" && !c.is_published) return false;
+      if (filters.status === "draft" && c.is_published) return false;
+      return true;
     });
 
-  const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch;
+  const isEmpty = visibleFolders.length === 0 && visibleChecklists.length === 0 && !normalizedSearch && !isFiltering;
+  const noResults = !isEmpty && visibleFolders.length === 0 && visibleChecklists.length === 0;
 
   // Mirror isBuilderDirty into a ref so useBlocker and the location-key effect
   // always read the *current* value synchronously — no render cycle needed.
@@ -410,47 +489,155 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     <>
       <ConceptScopeNotice />
 
-      {/* Location dropdown */}
-      <div className="relative">
-        <button onClick={() => setShowLocationDrop(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card w-full text-sm text-foreground hover:bg-muted transition-colors">
-          <span className="flex-1 text-left">{selectedLocation}</span>
-          <ChevronDown size={14} className={cn("text-muted-foreground transition-transform", showLocationDrop && "rotate-180")} />
-        </button>
-        {showLocationDrop && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-30 overflow-hidden">
-            {locationOptions.map(loc => (
-              <button key={loc} onClick={() => { setSelectedLocation(loc); setShowLocationDrop(false); }}
-                className={cn("w-full text-left px-4 py-3 text-sm transition-colors hover:bg-muted",
-                  selectedLocation === loc ? "text-sage font-medium" : "text-foreground"
-                )}>
-                {loc}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Search + Plus */}
+      {/* Toolbar: search + Filters toggle + create */}
+      <PopoverPrimitive.Root open={filtersOpen} onOpenChange={o => (o ? openFiltersPanel() : setFiltersOpen(false))}>
+      <PopoverPrimitive.Anchor asChild>
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input type="text" placeholder={t("search.placeholder")} value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring" />
+            className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
+        <PopoverPrimitive.Trigger asChild>
+        <button
+          type="button"
+          data-testid="checklists-filters-toggle"
+          className={cn(
+            "shrink-0 flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors",
+            filtersOpen || activeFilterCount > 0
+              ? "bg-sage text-white border-sage"
+              : "border-border text-foreground hover:border-sage/40"
+          )}
+        >
+          <Plus size={14} className={cn("transition-transform", filtersOpen && "rotate-45")} />
+          {t("reporting.filters.button")}
+          {activeFilterCount > 0 && (
+            <span data-testid="checklists-filters-count" className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-xs">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        </PopoverPrimitive.Trigger>
         <button
           data-testid="checklists-create-btn"
           onClick={() => setShowCreateMenu(true)}
-          className="w-10 h-10 rounded-xl bg-sage text-primary-foreground flex items-center justify-center hover:bg-sage-deep transition-colors shrink-0">
+          aria-label={t("shell.newChecklist")}
+          className="w-10 h-10 rounded-full bg-sage text-primary-foreground flex items-center justify-center hover:bg-sage-deep transition-colors shrink-0">
           <Plus size={18} />
         </button>
       </div>
+      </PopoverPrimitive.Anchor>
+
+      {/* Floats over the list instead of pushing it down; nested pickers
+          portal above it at z-[60]. */}
+      <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        data-testid="checklists-filters-panel"
+        align="end"
+        sideOffset={8}
+        collisionPadding={16}
+        onOpenAutoFocus={e => e.preventDefault()}
+        className="z-50 w-[var(--radix-popover-trigger-width)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto bg-card border border-border rounded-[20px] p-4 space-y-3 shadow-xl outline-none"
+      >
+        <div className="grid gap-2 md:grid-cols-2">
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.concept")}</span>
+            <MultiSelectFilter
+              testId="checklists-concept-filter"
+              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+              options={conceptOptions.map((c): MultiSelectOption => ({ id: c.id, label: c.name }))}
+              selected={draft.conceptIds}
+              onChange={ids => updateDraft({ conceptIds: ids })}
+              allLabel={t("reporting.filters.allConcepts")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allConcepts")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.location")}</span>
+            <MultiSelectFilter
+              testId="checklists-location-filter"
+              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+              options={draftConceptScopedLocations.map((l): MultiSelectOption => ({ id: l.id, label: l.name }))}
+              selected={draft.locationIds}
+              onChange={ids => updateDraft({ locationIds: ids })}
+              allLabel={t("reporting.filters.allLocations")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.allLocations")}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.department")}</span>
+            <MultiSelectFilter
+              testId="checklists-department-filter"
+              icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+              options={availableDepartments.map((d): MultiSelectOption => ({ id: d.id, label: d.name }))}
+              selected={draft.departmentIds}
+              onChange={ids => updateDraft({ departmentIds: ids })}
+              allLabel={t("reporting.filters.allDepartments")}
+              renderSelectedSummary={opts => opts.length === 1 ? opts[0].label : t("reporting.filters.selectedCount", { count: opts.length })}
+              searchPlaceholder={t("reporting.filters.searchPlaceholder")}
+              noMatchLabel={t("reporting.filters.noMatch")}
+              noOptionsLabel={t("reporting.filters.noDepartments")}
+            />
+          </div>
+
+          <label className="space-y-1">
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">{t("reporting.filters.status")}</span>
+            <div className="relative">
+              <CheckCircle2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <select
+                data-testid="checklists-status-filter"
+                value={draft.status}
+                onChange={e => updateDraft({ status: e.target.value as PublishStatus })}
+                className="w-full appearance-none rounded-xl border border-border bg-background py-2.5 pl-9 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">{t("reporting.filters.allStatuses")}</option>
+                <option value="published">{t("filters.statusPublished")}</option>
+                <option value="draft">{t("filters.statusDraft")}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+          <button
+            data-testid="checklists-clear-filters"
+            type="button"
+            onClick={() => setDraft(DEFAULT_PANEL_FILTERS)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <X size={12} />
+            {t("reporting.filters.clear")}
+          </button>
+          <button
+            data-testid="checklists-apply-filters"
+            type="button"
+            onClick={applyFilters}
+            className="rounded-full bg-sage px-5 py-2 text-sm font-semibold text-white hover:bg-sage/90 transition-colors"
+          >
+            {t("reporting.filters.apply")}
+          </button>
+        </div>
+      </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
 
       {/* Breadcrumb */}
       <FolderBreadcrumb folders={folders} currentId={currentFolder} onNavigate={setCurrentFolder} />
 
       {/* Empty state */}
-      {isEmpty ? (
+      {noResults ? (
+        <div className="card-surface p-8 text-center">
+          <p data-testid="checklists-no-results" className="text-sm text-muted-foreground">{t("filters.noResults")}</p>
+        </div>
+      ) : isEmpty ? (
         <button onClick={() => setShowCreateMenu(true)}
           className="card-surface p-10 flex flex-col items-center gap-3 text-center w-full hover:bg-muted/30 transition-colors active:scale-[0.99]">
           <div className="w-14 h-14 rounded-2xl bg-sage-light flex items-center justify-center">

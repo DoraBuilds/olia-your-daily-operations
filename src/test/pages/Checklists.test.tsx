@@ -103,26 +103,13 @@ describe("Checklists page", () => {
 
   it("shows '+' add button (Plus icon button)", () => {
     renderWithProviders(<Checklists />);
-    // The Plus button is a square button next to search
-    const plusBtns = screen.getAllByRole("button").filter(btn =>
-      btn.querySelector("svg") && btn.className.includes("rounded-xl") && btn.className.includes("sage")
-    );
-    expect(plusBtns.length).toBeGreaterThan(0);
+    expect(screen.getByTestId("checklists-create-btn")).toBeInTheDocument();
   });
 
-  it("shows location filter dropdown with 'All locations'", () => {
+  it("shows the Filters toggle and opens the filters popover", () => {
     renderWithProviders(<Checklists />);
-    expect(screen.getByText("All locations")).toBeInTheDocument();
-  });
-
-  it("clicking location dropdown opens the location list", () => {
-    renderWithProviders(<Checklists />);
-    const locationBtn = screen.getByText("All locations").closest("button") as HTMLElement;
-    if (locationBtn) {
-      fireEvent.click(locationBtn);
-      // The dropdown should open showing location options
-      expect(document.body).toBeDefined();
-    }
+    fireEvent.click(screen.getByTestId("checklists-filters-toggle"));
+    expect(screen.getByTestId("checklists-filters-panel")).toBeInTheDocument();
   });
 
   it("shows empty state when no checklists or folders exist", () => {
@@ -138,14 +125,9 @@ describe("Checklists page", () => {
 
   it("clicking '+' button opens the create menu", () => {
     renderWithProviders(<Checklists />);
-    const plusBtns = screen.getAllByRole("button").filter(btn =>
-      btn.querySelector("svg") && btn.className.includes("rounded-xl") && btn.className.includes("sage")
-    );
-    if (plusBtns.length > 0) {
-      fireEvent.click(plusBtns[0]);
-      // CreateMenuSheet would normally open, but it's mocked to return null
-      expect(document.body).toBeDefined();
-    }
+    fireEvent.click(screen.getByTestId("checklists-create-btn"));
+    // CreateMenuSheet would normally open, but it's mocked to return null
+    expect(document.body).toBeDefined();
   });
 
   it("searching filters the checklist list", () => {

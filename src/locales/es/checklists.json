@@ -22,6 +22,11 @@
   "search": {
     "placeholder": "Buscar listas…"
   },
+  "filters": {
+    "statusPublished": "Publicadas",
+    "statusDraft": "Borradores",
+    "noResults": "Ninguna lista coincide con tus filtros."
+  },
   "empty": {
     "folderEmpty": "Esta carpeta está vacía",
     "noChecklists": "Aún no hay listas",

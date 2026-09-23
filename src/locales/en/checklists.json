@@ -22,6 +22,11 @@
   "search": {
     "placeholder": "Search checklists…"
   },
+  "filters": {
+    "statusPublished": "Published",
+    "statusDraft": "Draft",
+    "noResults": "No checklists match your filters."
+  },
   "empty": {
     "folderEmpty": "This folder is empty",
     "noChecklists": "No checklists yet",
