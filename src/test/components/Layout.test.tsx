@@ -119,7 +119,12 @@ describe("Layout", () => {
 
   describe("with a live kiosk-PIN admin session", () => {
     beforeEach(() => {
+      localStorage.setItem("kiosk_location_id", "location-1");
       grantKioskAdminSession("staff-1", "location-1");
+    });
+
+    afterEach(() => {
+      localStorage.removeItem("kiosk_location_id");
     });
 
     it("shows a title-less 'Back to Kiosk' strip even on a page with no title, so a kiosk grant always has an exit", () => {

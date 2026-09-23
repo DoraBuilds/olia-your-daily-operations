@@ -9,14 +9,25 @@ import {
 
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.setItem("kiosk_location_id", "location-1");
 });
 
 afterEach(() => {
   sessionStorage.clear();
+  localStorage.removeItem("kiosk_location_id");
   vi.useRealTimers();
 });
 
 describe("kiosk-admin-session", () => {
+  // Regression (#832): a grant left over after this browser stopped being a
+  // kiosk kept Layout's idle timer bouncing a normal admin back to /kiosk.
+  it("ignores and drops a grant once this browser is no longer a kiosk device", () => {
+    grantKioskAdminSession("user-1", "location-1");
+    localStorage.removeItem("kiosk_location_id");
+    expect(hasActiveKioskAdminSession()).toBe(false);
+    expect(sessionStorage.getItem("kiosk_admin_session")).toBeNull();
+  });
+
   it("grants a session that reads back with the same userId and locationId", () => {
     grantKioskAdminSession("user-1", "location-1");
     expect(readKioskAdminSession()).toMatchObject({ userId: "user-1", locationId: "location-1" });

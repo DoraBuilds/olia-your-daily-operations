@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 // A device that has completed kiosk setup (kiosk_location_id present in
 // localStorage) must never surface the marketing/auth entry points. The
@@ -44,6 +45,9 @@ export function clearKioskDeviceState(): void {
   for (const key of KIOSK_DEVICE_STORAGE_KEYS) {
     localStorage.removeItem(key);
   }
+  // No longer a kiosk -> any kiosk-PIN admin grant (and its idle timer in
+  // Layout.tsx) must end too, or it keeps redirecting to /kiosk (#832).
+  clearKioskAdminSession();
 }
 
 // ─── touchKioskDevice ─────────────────────────────────────────────────────────

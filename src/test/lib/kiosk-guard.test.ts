@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { shouldRedirectToKiosk, clearKioskDeviceState, KIOSK_DEVICE_STORAGE_KEYS } from "@/lib/kiosk-guard";
+import { grantKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 describe("shouldRedirectToKiosk", () => {
   it("redirects the landing page back to the kiosk once kiosk mode is configured", () => {
@@ -42,6 +43,15 @@ describe("clearKioskDeviceState", () => {
     for (const key of KIOSK_DEVICE_STORAGE_KEYS) {
       expect(localStorage.getItem(key)).toBeNull();
     }
+  });
+
+  // Regression (#832): deactivating a device used to leave its kiosk-PIN
+  // admin grant behind, so the 90s idle timer kept redirecting to /kiosk.
+  it("also ends any kiosk-PIN admin session", () => {
+    grantKioskAdminSession("staff-1", "some-value");
+    expect(hasActiveKioskAdminSession()).toBe(true);
+    clearKioskDeviceState();
+    expect(hasActiveKioskAdminSession()).toBe(false);
   });
 
   it("leaves unrelated localStorage keys untouched", () => {
