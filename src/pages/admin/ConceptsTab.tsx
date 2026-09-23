@@ -2,28 +2,38 @@
 // Company > Concept > Location browsing + management (#747). Replaces the old
 // MyLocationTab. Onboarding CTA when there are no concepts yet, a concept
 // picker when there's more than one, location cards within the selected
-// concept, and a location detail view (departments, address, kiosk launch,
-// filtered team members, filtered checklists).
+// concept, and a location detail view: address, and the location's slice of
+// departments, kiosks and team members — managed right here with the same
+// actions as their own Admin tabs (Owner-only, like those tabs).
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Building2, UtensilsCrossed, MapPin, Mail, Pencil, Trash2, Plus,
-  ChevronDown, Tablet, MoreVertical,
+  ChevronDown, Tablet, MoreVertical, X, UserMinus,
 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import {
   type Location, type Concept, type TeamMember, type ManagerPermissions,
-  getInitials,
+  type CompanyDepartment, type DepartmentAssignment, getInitials,
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
-import { useDepartments } from "@/hooks/useDepartments";
+import { useCompanyDepartments, useDepartments, useSaveDepartment } from "@/hooks/useDepartments";
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
+import { ConfirmModal, type ConfirmState } from "./SharedUI";
+import { DepartmentModal } from "./DepartmentsTab";
+import { KioskDeviceRow, useConfirmDeactivateKiosk } from "./KiosksTab";
+import {
+  addLocationToAssignments, departmentUnassignImpact, removeLocationFromAssignments,
+} from "./departments";
 
 export interface ConceptsTabProps {
   concepts: Concept[];
   locations: Location[];
+  /** Includes plan-inactive locations — department assignment edits must keep covering them. */
+  allLocations?: Location[];
   teamMembers: TeamMember[];
   checklists: ChecklistItem[];
   currentConceptId: string;
@@ -46,13 +56,17 @@ export interface ConceptsTabProps {
   onActivateKiosk: () => void;
   /** Opens Admin → Departments. Omitted for managers, who can't manage departments. */
   onManageDepartments?: () => void;
+  onAddTeamMember?: (locationId: string) => void;
+  onEditTeamMember?: (m: TeamMember) => void;
+  onRemoveTeamMember?: (m: TeamMember, locationId: string) => void;
 }
 
 export function ConceptsTab({
-  concepts, locations, teamMembers, checklists,
+  concepts, locations, allLocations = locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
   onAddLocation, onEditLocation, onDeleteLocation, onRunKiosk, onActivateKiosk, onManageDepartments,
+  onAddTeamMember, onEditTeamMember, onRemoveTeamMember,
 }: ConceptsTabProps) {
   const { t } = useTranslation("admin");
 
@@ -63,11 +77,9 @@ export function ConceptsTab({
   // — so those stay Owner-only here too, not newly opened up to managers.
   const canEditLocation = !permissions || permissions.edit_location_details;
 
-  // Locations with at least one active (non-revoked) kiosk device get a
-  // small green dot on their card — replaces the old "this browser is the
-  // kiosk" banner, which was per-browser and noisy.
+  // Active (non-revoked) kiosk devices; the selected location's are listed
+  // in its Kiosks card.
   const { data: kioskDevices = [] } = useKioskDevices();
-  const locationsWithKiosk = new Set(kioskDevices.map(d => d.location_id));
 
   // Self-heals stale local kiosk state (#824): this browser may have been
   // marked a kiosk device, then deactivated remotely from Admin -> Kiosks on
@@ -91,6 +103,11 @@ export function ConceptsTab({
   // Departments are company-wide and managed in Admin → Departments (#838);
   // here they're just listed for the selected location.
   const { data: departments = [] } = useDepartments(currentLocation?.id);
+  const { data: companyDepartments = [] } = useCompanyDepartments();
+  const saveDepartmentMut = useSaveDepartment();
+  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
+  const confirmDeactivateKiosk = useConfirmDeactivateKiosk(setConfirmModal);
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
   if (concepts.length === 0) {
@@ -121,7 +138,7 @@ export function ConceptsTab({
     return (
       <div className="space-y-4">
         {isOwner && (
-          <ConceptPicker
+          <ConceptTiles
             concepts={concepts}
             currentConceptId={currentConcept?.id ?? ""}
             onChange={setCurrentConceptId}
@@ -155,12 +172,58 @@ export function ConceptsTab({
   if (!currentLocation) return null;
 
   const locationTeamMembers = teamMembers.filter(m => m.location_ids.includes(currentLocation.id));
-  const locationChecklists = checklists.filter(c => c.location_id === currentLocation.id);
+  const locationKiosks = kioskDevices.filter(d => d.location_id === currentLocation.id);
+
+  // Departments are company-wide; adding one here assigns it to this
+  // location, removing one takes just this location out of its assignments.
+  const conceptIds = concepts.map(c => c.id);
+  const locationDepartmentIds = new Set(departments.map(d => d.id));
+  const addableDepartments = companyDepartments.filter(d => !locationDepartmentIds.has(d.id));
+
+  const saveDepartment = (dep: { id?: string; name: string; assignments: DepartmentAssignment[] }, onDone?: () => void) => {
+    saveDepartmentMut.mutate(dep, {
+      onSuccess: () => {
+        onDone?.();
+        toast.success(t("departmentsTab.saved"));
+      },
+      onError: (err: Error) => toast.error(t("departmentsTab.saveFailed", { error: err.message })),
+    });
+  };
+
+  const addDepartment = (dep: CompanyDepartment) => {
+    saveDepartment({ id: dep.id, name: dep.name, assignments: addLocationToAssignments(dep.assignments, currentLocation, allLocations) });
+  };
+
+  const confirmRemoveDepartment = (depId: string) => {
+    const dep = companyDepartments.find(d => d.id === depId);
+    if (!dep) return;
+    const assignments = removeLocationFromAssignments(dep.assignments, currentLocation, allLocations, conceptIds);
+    const impact = departmentUnassignImpact(dep.id, assignments, allLocations, teamMembers, checklists);
+    setConfirmModal({
+      title: t("conceptsTab.removeDepartmentTitle"),
+      message: (
+        <>
+          {t("conceptsTab.removeDepartmentMessage", { name: dep.name, location: currentLocation.name })}
+          {impact.staff + impact.checklists > 0 && (
+            <> {t("departmentsTab.impact", {
+              staff: t("departmentsTab.staffCount", { count: impact.staff }),
+              checklists: t("departmentsTab.checklistCount", { count: impact.checklists }),
+            })} {t("departmentsTab.unassignBody")}</>
+          )}
+        </>
+      ),
+      actionLabel: t("confirm.remove"),
+      onConfirm: () => {
+        setConfirmModal(null);
+        saveDepartment({ id: dep.id, name: dep.name, assignments });
+      },
+    });
+  };
 
   return (
     <div className="space-y-4">
       {isOwner && (
-        <ConceptPicker
+        <ConceptTiles
           concepts={concepts}
           currentConceptId={currentConcept?.id ?? ""}
           onChange={id => { setCurrentConceptId(id); setCurrentLocationId(""); }}
@@ -170,175 +233,191 @@ export function ConceptsTab({
         />
       )}
 
-      {/* Location cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {conceptLocations.map(loc => (
-          <button
-            key={loc.id}
-            onClick={() => setCurrentLocationId(loc.id)}
-            className={cn(
-              "flex flex-col items-center gap-2 rounded-2xl border px-3 py-4 text-center transition-colors",
-              currentLocation.id === loc.id
-                ? "border-sage bg-sage/5"
-                : "border-border bg-card hover:border-sage/40",
-            )}
-          >
-            <div className={cn(
-              "relative w-10 h-10 rounded-full flex items-center justify-center",
-              currentLocation.id === loc.id ? "bg-sage text-primary-foreground" : "bg-muted text-muted-foreground",
-            )}>
-              <UtensilsCrossed size={18} />
-              {locationsWithKiosk.has(loc.id) && (
-                <span
-                  role="img"
-                  aria-label={t("conceptsTab.kioskActive")}
-                  title={t("conceptsTab.kioskActive")}
-                  className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-status-ok ring-2 ring-card"
-                />
-              )}
-            </div>
-            <p className="text-xs font-medium text-foreground truncate w-full">{loc.name}</p>
-          </button>
-        ))}
-        {isOwner && (
-          <button
-            onClick={onAddLocation}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3 py-4 text-center text-muted-foreground hover:border-sage/40 hover:text-sage transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-              <Plus size={18} />
-            </div>
-            <p className="text-xs font-medium">{t("conceptsTab.addLocation")}</p>
-          </button>
+      <LocationPicker
+        locations={conceptLocations}
+        currentLocation={currentLocation}
+        onChange={setCurrentLocationId}
+        onAddLocation={isOwner ? onAddLocation : undefined}
+        onEditLocation={canEditLocation ? () => onEditLocation(currentLocation) : undefined}
+        onDeleteLocation={isOwner ? () => onDeleteLocation(currentLocation.id) : undefined}
+      />
+
+      {/* Departments */}
+      <div className="card-surface p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="section-label">{t("conceptsTab.departments")}</p>
+          {isOwner && (
+            <AddDepartmentMenu
+              options={addableDepartments}
+              onPick={addDepartment}
+              onCreate={() => setDepartmentModalOpen(true)}
+              onManage={onManageDepartments}
+            />
+          )}
+        </div>
+        {departments.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {departments.map(dep => (
+              <span key={dep.id} className="inline-flex items-center gap-1 rounded-full bg-muted pl-2.5 pr-1 py-1 text-xs text-foreground">
+                {dep.name}
+                {isOwner ? (
+                  <button
+                    onClick={() => confirmRemoveDepartment(dep.id)}
+                    aria-label={t("conceptsTab.removeDepartmentAria", { name: dep.name })}
+                    className="p-0.5 rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                  >
+                    <X size={12} />
+                  </button>
+                ) : <span className="w-1.5" />}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Departments + Address/Kiosk */}
-      <div className="flex gap-3 items-stretch flex-wrap sm:flex-nowrap">
-        {/* Departments (read-only — managed in Admin → Departments) */}
-        <div className="card-surface p-4 flex-1 min-w-[200px] space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="section-label">{t("conceptsTab.departments")}</p>
-            {onManageDepartments && (
-              <button onClick={onManageDepartments} className="text-xs text-sage font-medium hover:underline">
-                {t("conceptsTab.manageDepartments")}
-              </button>
-            )}
-          </div>
-          {departments.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{t("conceptsTab.noDepartments")}</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {departments.map(dep => (
-                <span key={dep.id} className="rounded-full bg-muted px-2.5 py-1 text-xs text-foreground">{dep.name}</span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Address + Kiosk */}
-        <div className="flex flex-col gap-2 w-full sm:w-[35%] shrink-0">
-          <div className="card-surface p-4 space-y-2 flex-1">
-            <div className="flex items-center justify-between">
-              <p className="section-label">{t("conceptsTab.address")}</p>
-              {canEditLocation && (
-                <button onClick={() => onEditLocation(currentLocation)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
-                  <Pencil size={12} /> {t("myLocationTab.edit")}
-                </button>
-              )}
-            </div>
-            {currentLocation.address ? (
-              <div className="flex items-start gap-2">
-                <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-                <p className="text-sm text-foreground">{currentLocation.address}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">{t("conceptsTab.noAddress")}</p>
-            )}
-            {currentLocation.contact_email ? (
-              <div className="flex items-start gap-2">
-                <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
-                <p className="text-sm text-foreground">{currentLocation.contact_email}</p>
-              </div>
-            ) : null}
-          </div>
+      {/* Kiosks */}
+      <div className="card-surface overflow-hidden">
+        <div className="flex items-center justify-between gap-2 flex-wrap p-4">
+          <p className="section-label">
+            {locationKiosks.length > 0
+              ? t("conceptsTab.kiosksWithCount", { count: locationKiosks.length })
+              : t("conceptsTab.kiosks")}
+          </p>
           <div className="flex gap-2">
             <button
               onClick={onActivateKiosk}
-              className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase border border-sage text-sage hover:bg-sage/10 transition-colors flex flex-row items-center justify-center gap-2 px-2 py-3"
+              className="rounded-xl text-xs font-bold tracking-wider uppercase border border-sage text-sage hover:bg-sage/10 transition-colors px-3 py-2"
             >
-              <span>{t("myLocationTab.activateKiosk")}</span>
+              {t("myLocationTab.activateKiosk")}
             </button>
             <button
               onClick={onRunKiosk}
-              className="flex-1 rounded-2xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex flex-row items-center justify-center gap-2 shadow-md px-2 py-3"
+              className="rounded-xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-1.5 px-3 py-2"
             >
-              <span>{t("myLocationTab.runKiosk")}</span>
-              <Tablet size={14} />
+              {t("myLocationTab.runKiosk")}
+              <Tablet size={13} />
             </button>
           </div>
         </div>
+        {locationKiosks.length === 0 ? (
+          <p className="px-4 pb-4 text-sm text-muted-foreground">{t("conceptsTab.noKiosks")}</p>
+        ) : (
+          <div className="divide-y divide-border border-t border-border">
+            {locationKiosks.map(device => (
+              <KioskDeviceRow
+                key={device.id}
+                device={device}
+                onDeactivate={isOwner ? () => confirmDeactivateKiosk(device, currentLocation.name) : undefined}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Team members (filtered, read-only — full management lives in the Users tab) */}
+      {/* Team members */}
       <div className="card-surface p-4">
-        <p className="section-label mb-3">
-          {locationTeamMembers.length > 0
-            ? t("conceptsTab.teamMembersWithCount", { count: locationTeamMembers.length })
-            : t("conceptsTab.teamMembers")}
-        </p>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="section-label">
+            {locationTeamMembers.length > 0
+              ? t("conceptsTab.teamMembersWithCount", { count: locationTeamMembers.length })
+              : t("conceptsTab.teamMembers")}
+          </p>
+          {isOwner && onAddTeamMember && (
+            <button
+              onClick={() => onAddTeamMember(currentLocation.id)}
+              className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
+            >
+              <Plus size={12} /> {t("conceptsTab.addTeamMember")}
+            </button>
+          )}
+        </div>
         {locationTeamMembers.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("conceptsTab.noTeamMembers")}</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {locationTeamMembers.map(m => (
               <div key={m.id} className="flex items-center gap-2 py-0.5">
                 <div className="w-7 h-7 rounded-full bg-sage-light flex items-center justify-center text-[10px] font-semibold text-sage-deep shrink-0">
                   {getInitials(m.name)}
                 </div>
                 <p className="text-sm text-foreground flex-1 min-w-0 truncate">{m.name}</p>
-                {m.role && <span className="text-xs text-muted-foreground shrink-0">{m.role}</span>}
+                {(m.is_owner || m.role) && (
+                  <span className="text-xs text-muted-foreground shrink-0 truncate max-w-[40%]">
+                    {m.is_owner ? t("roles.Owner") : m.role}
+                  </span>
+                )}
+                {isOwner && onEditTeamMember && (
+                  <button
+                    onClick={() => onEditTeamMember(m)}
+                    aria-label={t("accountTab.editAria", { name: m.name })}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                  >
+                    <Pencil size={14} className="text-muted-foreground" />
+                  </button>
+                )}
+                {isOwner && onRemoveTeamMember && (
+                  <button
+                    onClick={() => onRemoveTeamMember(m, currentLocation.id)}
+                    aria-label={t("conceptsTab.removeTeamMemberAria", { name: m.name, location: currentLocation.name })}
+                    title={t("conceptsTab.removeFromLocation")}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                  >
+                    <UserMinus size={14} className="text-status-error" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Assigned checklists */}
-      <div className="card-surface p-4">
-        <p className="section-label mb-3">
-          {locationChecklists.length > 0
-            ? t("myLocationTab.assignedChecklistsWithCount", { count: locationChecklists.length })
-            : t("myLocationTab.assignedChecklists")}
-        </p>
-        {locationChecklists.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("myLocationTab.noChecklistsAssigned")}</p>
-        ) : (
-          <div className="space-y-2">
-            {locationChecklists.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-2 py-0.5">
-                <span className="text-xs font-medium text-muted-foreground w-5 shrink-0">{i + 1}.</span>
-                <p className="text-sm text-foreground">{c.title}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {departmentModalOpen && (
+        <DepartmentModal
+          department={null}
+          initialAssignments={[{ concept_id: currentLocation.concept_id, location_id: currentLocation.id }]}
+          existingNames={companyDepartments.map(d => d.name.toLowerCase())}
+          concepts={concepts}
+          locations={allLocations}
+          saving={saveDepartmentMut.isPending}
+          onClose={() => setDepartmentModalOpen(false)}
+          onSave={dep => saveDepartment(dep, () => setDepartmentModalOpen(false))}
+        />
+      )}
 
-      {isOwner && (
-        <div className="flex justify-end">
-          <button onClick={() => onDeleteLocation(currentLocation.id)} className="flex items-center gap-1 text-xs text-status-error font-medium hover:underline">
-            <Trash2 size={12} /> {t("conceptsTab.deleteLocation")}
-          </button>
-        </div>
+      {confirmModal && (
+        <ConfirmModal {...confirmModal} onClose={() => setConfirmModal(null)} />
       )}
     </div>
   );
 }
 
-// ─── ConceptPicker ────────────────────────────────────────────────────────────
+// ─── Menus ────────────────────────────────────────────────────────────────────
 
-function ConceptPicker({
+/** Open state for a click-away popover menu (the 3-dot / Add menus here). */
+function useMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  return { open, setOpen, ref };
+}
+
+const menuPanelCls = "absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[200px] py-1 animate-fade-in";
+const menuItemCls = "w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors";
+
+// ─── ConceptTiles ─────────────────────────────────────────────────────────────
+// Small rounded tiles with the name underneath; the selected one carries the
+// edit/delete menu.
+
+function ConceptTiles({
   concepts, currentConceptId, onChange, onAddConcept, onEditConcept, onDeleteConcept,
 }: {
   concepts: Concept[];
@@ -349,68 +428,195 @@ function ConceptPicker({
   onDeleteConcept: () => void;
 }) {
   const { t } = useTranslation("admin");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
+  const menu = useMenu();
 
   return (
-    <div>
-      <p className="section-label mb-2">{t("conceptsTab.conceptLabel")}</p>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <select
-            value={currentConceptId}
-            onChange={e => onChange(e.target.value)}
-            className="w-full border border-border rounded-xl px-4 py-3 pr-10 text-sm bg-muted appearance-none focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            {concepts.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        </div>
+    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 pt-1">
+      {concepts.map(c => {
+        const selected = c.id === currentConceptId;
+        return (
+          <div key={c.id} className="relative shrink-0 w-20">
+            <button
+              onClick={() => onChange(c.id)}
+              aria-pressed={selected}
+              className="group flex w-20 flex-col items-center gap-1.5"
+            >
+              <span className={cn(
+                "flex h-20 w-20 items-center justify-center rounded-[22px] font-display text-2xl transition-all",
+                selected
+                  ? "bg-sage text-primary-foreground shadow-md"
+                  : "bg-muted text-muted-foreground group-hover:bg-muted/70",
+              )}>
+                {getInitials(c.name)}
+              </span>
+              <span className={cn(
+                "w-full truncate text-center text-xs",
+                selected ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}>
+                {c.name}
+              </span>
+            </button>
+            {selected && (
+              <div ref={menu.ref} className="absolute right-1 top-1">
+                <button
+                  onClick={() => menu.setOpen(v => !v)}
+                  aria-label={t("conceptsTab.conceptOptionsAria")}
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-card/90 text-foreground shadow-sm hover:bg-card"
+                >
+                  <MoreVertical size={13} />
+                </button>
+                {menu.open && (
+                  <div className={cn(menuPanelCls, "left-0 right-auto min-w-[180px]")}>
+                    <button onClick={() => { menu.setOpen(false); onEditConcept(); }} className={cn(menuItemCls, "text-foreground")}>
+                      <Pencil size={14} /> {t("conceptsTab.editConcept")}
+                    </button>
+                    {concepts.length > 1 && (
+                      <button onClick={() => { menu.setOpen(false); onDeleteConcept(); }} className={cn(menuItemCls, "text-status-error")}>
+                        <Trash2 size={14} /> {t("conceptsTab.deleteConcept")}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button onClick={onAddConcept} className="group flex w-20 shrink-0 flex-col items-center gap-1.5">
+        <span className="flex h-20 w-20 items-center justify-center rounded-[22px] border border-dashed border-border text-muted-foreground transition-colors group-hover:border-sage/40 group-hover:text-sage">
+          <Plus size={20} />
+        </span>
+        <span className="w-full truncate text-center text-xs text-muted-foreground">{t("conceptsTab.addConcept")}</span>
+      </button>
+    </div>
+  );
+}
+
+// ─── LocationPicker ───────────────────────────────────────────────────────────
+// Dropdown of the concept's locations. Address/contact live in the 3-dot menu
+// with edit/delete, since they're rarely needed at a glance.
+
+function LocationPicker({
+  locations, currentLocation, onChange, onAddLocation, onEditLocation, onDeleteLocation,
+}: {
+  locations: Location[];
+  currentLocation: Location;
+  onChange: (id: string) => void;
+  onAddLocation?: () => void;
+  onEditLocation?: () => void;
+  onDeleteLocation?: () => void;
+}) {
+  const { t } = useTranslation("admin");
+  const menu = useMenu();
+
+  return (
+    <div className="flex gap-2">
+      <div className="relative flex-1 min-w-0">
+        <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <select
+          value={currentLocation.id}
+          onChange={e => onChange(e.target.value)}
+          aria-label={t("conceptsTab.locationLabel")}
+          className="w-full border border-border rounded-xl pl-10 pr-10 py-3 text-sm bg-muted appearance-none focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          {locations.map(l => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      </div>
+      {onAddLocation && (
         <button
-          onClick={onAddConcept}
+          onClick={onAddLocation}
+          aria-label={t("conceptsTab.addLocation")}
           className="shrink-0 px-3 py-3 rounded-xl border border-border text-xs font-medium text-sage hover:bg-sage/5 transition-colors flex items-center gap-1"
         >
-          <Plus size={13} /> {t("conceptsTab.addConcept")}
+          <Plus size={13} /> <span className="hidden sm:inline">{t("conceptsTab.addLocation")}</span>
         </button>
-        <div ref={menuRef} className="relative shrink-0">
-          <button
-            onClick={() => setMenuOpen(v => !v)}
-            aria-label={t("conceptsTab.conceptOptionsAria")}
-            className="h-full px-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors flex items-center"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[180px] py-1 animate-fade-in">
-              <button
-                onClick={() => { setMenuOpen(false); onEditConcept(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-foreground hover:bg-muted/50 transition-colors"
-              >
-                <Pencil size={14} /> {t("conceptsTab.editConcept")}
-              </button>
-              {concepts.length > 1 && (
-                <button
-                  onClick={() => { setMenuOpen(false); onDeleteConcept(); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-status-error hover:bg-muted/50 transition-colors"
-                >
-                  <Trash2 size={14} /> {t("conceptsTab.deleteConcept")}
-                </button>
+      )}
+      <div ref={menu.ref} className="relative shrink-0">
+        <button
+          onClick={() => menu.setOpen(v => !v)}
+          aria-label={t("conceptsTab.locationOptionsAria")}
+          className="h-full px-2.5 rounded-xl border border-border text-muted-foreground hover:bg-muted transition-colors flex items-center"
+        >
+          <MoreVertical size={16} />
+        </button>
+        {menu.open && (
+          <div className={cn(menuPanelCls, "min-w-[240px] max-w-[300px]")}>
+            <div className="px-4 py-2.5 space-y-1.5">
+              <p className="section-label">{t("conceptsTab.address")}</p>
+              {currentLocation.address ? (
+                <div className="flex items-start gap-2">
+                  <MapPin size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-sm text-foreground">{currentLocation.address}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t("conceptsTab.noAddressYet")}</p>
+              )}
+              {currentLocation.contact_email && (
+                <div className="flex items-start gap-2">
+                  <Mail size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-sm text-foreground break-all">{currentLocation.contact_email}</p>
+                </div>
               )}
             </div>
+            {(onEditLocation || onDeleteLocation) && <div className="my-1 border-t border-border" />}
+            {onEditLocation && (
+              <button onClick={() => { menu.setOpen(false); onEditLocation(); }} className={cn(menuItemCls, "text-foreground")}>
+                <Pencil size={14} /> {t("conceptsTab.editLocation")}
+              </button>
+            )}
+            {onDeleteLocation && (
+              <button onClick={() => { menu.setOpen(false); onDeleteLocation(); }} className={cn(menuItemCls, "text-status-error")}>
+                <Trash2 size={14} /> {t("conceptsTab.deleteLocation")}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── AddDepartmentMenu ────────────────────────────────────────────────────────
+
+function AddDepartmentMenu({
+  options, onPick, onCreate, onManage,
+}: {
+  options: CompanyDepartment[];
+  onPick: (dep: CompanyDepartment) => void;
+  onCreate: () => void;
+  onManage?: () => void;
+}) {
+  const { t } = useTranslation("admin");
+  const { open, setOpen, ref } = useMenu();
+  const item = menuItemCls;
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(v => !v)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
+        <Plus size={12} /> {t("conceptsTab.addDepartment")}
+      </button>
+      {open && (
+        <div className={cn(menuPanelCls, "max-h-72 overflow-y-auto")}>
+          {options.map(dep => (
+            <button key={dep.id} onClick={() => { setOpen(false); onPick(dep); }} className={cn(item, "text-foreground")}>
+              {dep.name}
+            </button>
+          ))}
+          {options.length > 0 && <div className="my-1 border-t border-border" />}
+          <button onClick={() => { setOpen(false); onCreate(); }} className={cn(item, "text-sage font-medium")}>
+            <Plus size={14} /> {t("conceptsTab.newDepartment")}
+          </button>
+          {onManage && (
+            <button onClick={() => { setOpen(false); onManage(); }} className={cn(item, "text-muted-foreground")}>
+              {t("conceptsTab.manageAllDepartments")}
+            </button>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

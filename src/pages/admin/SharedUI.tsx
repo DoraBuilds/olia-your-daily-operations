@@ -151,17 +151,19 @@ export function ConfirmModal({
 // at signup.
 
 export function TeamMemberModal({
-  member, locations, onClose, onSave, isOwner,
+  member, locations, onClose, onSave, isOwner, initialLocationIds,
 }: {
   member: TeamMember | null; locations: Location[];
   onClose: () => void; onSave: (m: TeamMember & { rawPin?: string }) => void;
   isOwner?: boolean;
+  /** Pre-ticked locations for a new member (e.g. added from a location's page). */
+  initialLocationIds?: string[];
 }) {
   const { t } = useTranslation("admin");
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState(member?.role ?? "");
-  const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? []);
+  const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? initialLocationIds ?? []);
   const [isManager, setIsManager] = useState(member?.is_manager ?? false);
   const [departmentIds, setDepartmentIds] = useState<string[]>(member?.department_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });

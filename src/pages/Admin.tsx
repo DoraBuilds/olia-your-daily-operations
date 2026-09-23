@@ -16,6 +16,7 @@ import { useLocations, useSaveLocation, useDeleteLocation } from "@/hooks/useLoc
 import { useConcepts, useSaveConcept, useDeleteConcept } from "@/hooks/useConcepts";
 import { useTeamMembers, useSaveTeamMember, useDeleteTeamMember, useSendInvite, useTeamMemberInvites } from "@/hooks/useTeamMembers";
 import { useChecklists } from "@/hooks/useChecklists";
+import { useCompanyDepartments } from "@/hooks/useDepartments";
 import { toast } from "@/components/ui/sonner";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ import { ConceptsTab } from "./admin/ConceptsTab";
 import { AccountTab } from "./admin/AccountTab";
 import { DepartmentsTab } from "./admin/DepartmentsTab";
 import { KiosksTab } from "./admin/KiosksTab";
+import { resolveDepartmentLocationIds } from "./admin/departments";
 import {
   ConfirmModal, LocationModal, TeamMemberModal, ConceptModal,
   BottomSheet, ModalHeader,
@@ -78,6 +80,7 @@ export default function Admin() {
   const deleteMemberMut = useDeleteTeamMember();
   const sendInviteMut = useSendInvite();
   const { data: pendingInvites = [] } = useTeamMemberInvites();
+  const { data: companyDepartments = [] } = useCompanyDepartments();
 
   // UI state
   const routeTab: "location" | "departments" | "users" | "account" | "billing" | "kiosks" =
@@ -115,6 +118,8 @@ export default function Admin() {
   const [locationModal, setLocationModal] = useState<Location | null | "new">(null);
   const [conceptModal, setConceptModal] = useState<Concept | null | "new">(null);
   const [memberModal, setMemberModal] = useState<TeamMember | null | "new">(null);
+  // Set when "Add team member" comes from a location's page, so it's pre-ticked.
+  const [newMemberLocationId, setNewMemberLocationId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
   // Location-limit upgrade prompt — rendered AFTER </Layout> so position:fixed
   // escapes the animate-fade-in containing block on <main>.
@@ -379,6 +384,43 @@ export default function Admin() {
     });
   };
 
+  // Removing someone from one location on the Concepts tab. Empty
+  // location_ids means "every location", so a member whose only location is
+  // this one can't just have it dropped — for them it's the same full
+  // removal as the Users tab.
+  const removeMemberFromLocation = (m: TeamMember, locationId: string) => {
+    const remaining = m.location_ids.filter(id => id !== locationId);
+    if (remaining.length === 0) {
+      deleteMember(m);
+      return;
+    }
+    const locationName = allLocations.find(l => l.id === locationId)?.name ?? "";
+    // Departments that only applied at this location go with it.
+    const departmentIds = m.department_ids.filter(depId => {
+      const dep = companyDepartments.find(d => d.id === depId);
+      if (!dep) return true;
+      const covered = resolveDepartmentLocationIds(dep.assignments, allLocations);
+      return remaining.some(id => covered.has(id));
+    });
+    setConfirmModal({
+      title: t("confirm.removeFromLocationTitle"),
+      message: (
+        <Trans
+          i18nKey="admin:confirm.removeFromLocationMessage"
+          values={{ name: m.name, location: locationName }}
+          components={{ bold: <strong className="text-foreground" /> }}
+        />
+      ),
+      actionLabel: t("confirm.remove"),
+      onConfirm: () => {
+        saveMemberMut.mutate({ ...m, location_ids: remaining, department_ids: departmentIds }, {
+          onSuccess: () => toast.success(t("toast.removedFromLocation", { name: m.name, location: locationName })),
+        });
+        setConfirmModal(null);
+      },
+    });
+  };
+
   // ─── Derived values ─────────────────────────────────────────────────────────
 
   const TABS = [
@@ -453,7 +495,7 @@ export default function Admin() {
               pendingInviteStatus: new Map(
                 pendingInvites.map(i => [i.team_member_id, new Date(i.expires_at) <= new Date()]),
               ),
-              onInviteMember: () => setMemberModal("new"),
+              onInviteMember: () => { setNewMemberLocationId(null); setMemberModal("new"); },
               onEditMember: (m: any) => setMemberModal(m),
               onDeleteMember: deleteMember,
             } : null;
@@ -464,6 +506,7 @@ export default function Admin() {
                   <ConceptsTab
                     concepts={concepts}
                     locations={locations}
+                    allLocations={allLocations}
                     teamMembers={teamMembers}
                     checklists={checklists}
                     currentConceptId={currentConceptId}
@@ -481,6 +524,9 @@ export default function Admin() {
                     onRunKiosk={runKiosk}
                     onActivateKiosk={activateKiosk}
                     onManageDepartments={isOwner ? () => navigate("/admin/departments") : undefined}
+                    onAddTeamMember={locationId => { setNewMemberLocationId(locationId); setMemberModal("new"); }}
+                    onEditTeamMember={m => setMemberModal(m)}
+                    onRemoveTeamMember={removeMemberFromLocation}
                   />
                 )}
                 {activeTab === "departments" && isOwner && (
@@ -593,8 +639,9 @@ export default function Admin() {
         <TeamMemberModal
           member={memberModal === "new" ? null : memberModal}
           locations={locations}
-          onClose={() => setMemberModal(null)}
-          onSave={m => { saveMember(m); setMemberModal(null); }}
+          initialLocationIds={newMemberLocationId ? [newMemberLocationId] : undefined}
+          onClose={() => { setMemberModal(null); setNewMemberLocationId(null); }}
+          onSave={m => { saveMember(m); setMemberModal(null); setNewMemberLocationId(null); }}
           isOwner={isOwner}
         />
       )}

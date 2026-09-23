@@ -19,7 +19,7 @@ export interface KiosksTabProps {
   locations: Location[];
 }
 
-function kioskStatus(device: KioskDevice, t: (key: string, opts?: Record<string, unknown>) => string) {
+export function kioskStatus(device: KioskDevice, t: (key: string, opts?: Record<string, unknown>) => string) {
   if (!device.last_seen_at) return { label: t("kiosksTab.neverCheckedIn"), online: false };
   const diffMs = Date.now() - new Date(device.last_seen_at).getTime();
   if (diffMs < 3 * 60 * 1000) return { label: t("kiosksTab.activeNow"), online: true };
@@ -34,8 +34,8 @@ function kioskStatus(device: KioskDevice, t: (key: string, opts?: Record<string,
 export function KiosksTab({ concepts, locations }: KiosksTabProps) {
   const { t } = useTranslation("admin");
   const { data: devices = [], isLoading } = useKioskDevices();
-  const revokeMut = useRevokeKioskDevice();
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
+  const confirmDeactivate = useConfirmDeactivateKiosk(setConfirmModal);
 
   const groups = concepts
     .map(concept => ({
@@ -49,32 +49,6 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
         .filter(g => g.devices.length > 0),
     }))
     .filter(g => g.locationGroups.length > 0);
-
-  const confirmDeactivate = (device: KioskDevice, locationName: string) => {
-    setConfirmModal({
-      title: t("kiosksTab.deactivateConfirmTitle"),
-      message: t("kiosksTab.deactivateConfirmMessage", { label: device.label, location: locationName }),
-      actionLabel: t("kiosksTab.deactivateConfirmCta"),
-      onConfirm: () => {
-        revokeMut.mutate(device.id, {
-          onSuccess: () => {
-            toast.success(t("kiosksTab.deactivated"));
-            // You got into Admin -> Kiosks on some browser; if that browser
-            // happens to be the very device you just deactivated (you PIN'd
-            // in from the kiosk itself), its local "this browser is a
-            // kiosk" state would otherwise keep showing stale until its next
-            // heartbeat, up to 60s away (#824). Never touches the admin
-            // session itself, only the device/location bits.
-            if (localStorage.getItem("kiosk_device_id") === device.id) {
-              clearKioskDeviceState();
-            }
-          },
-          onError: (err: Error) => toast.error(t("kiosksTab.deactivateFailed", { error: err.message })),
-        });
-        setConfirmModal(null);
-      },
-    });
-  };
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground py-8 text-center">{t("kiosksTab.loading")}</p>;
@@ -112,34 +86,9 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
                 <p className="text-sm font-medium text-foreground">{location.name}</p>
               </div>
               <div className="divide-y divide-border">
-                {locationDevices.map(device => {
-                  const status = kioskStatus(device, t);
-                  return (
-                    <div key={device.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Tablet size={15} className="text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{device.label}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <span
-                              className={cn(
-                                "inline-block w-1.5 h-1.5 rounded-full shrink-0",
-                                status.online ? "bg-status-ok" : "bg-muted-foreground/40",
-                              )}
-                            />
-                            {status.label}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => confirmDeactivate(device, location.name)}
-                        className="text-xs font-semibold text-status-error hover:underline shrink-0"
-                      >
-                        {t("kiosksTab.deactivate")}
-                      </button>
-                    </div>
-                  );
-                })}
+                {locationDevices.map(device => (
+                  <KioskDeviceRow key={device.id} device={device} onDeactivate={() => confirmDeactivate(device, location.name)} />
+                ))}
               </div>
             </div>
           ))}
@@ -154,6 +103,72 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
           onClose={() => setConfirmModal(null)}
           onConfirm={confirmModal.onConfirm}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Shared by this tab and a location's page in the Concepts tab: opens the
+ * "deactivate this kiosk" confirm in the caller's own ConfirmModal slot.
+ */
+export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState) => void) {
+  const { t } = useTranslation("admin");
+  const revokeMut = useRevokeKioskDevice();
+  return (device: KioskDevice, locationName: string) => {
+    setConfirmModal({
+      title: t("kiosksTab.deactivateConfirmTitle"),
+      message: t("kiosksTab.deactivateConfirmMessage", { label: device.label, location: locationName }),
+      actionLabel: t("kiosksTab.deactivateConfirmCta"),
+      onConfirm: () => {
+        revokeMut.mutate(device.id, {
+          onSuccess: () => {
+            toast.success(t("kiosksTab.deactivated"));
+            // You got into Admin -> Kiosks on some browser; if that browser
+            // happens to be the very device you just deactivated (you PIN'd
+            // in from the kiosk itself), its local "this browser is a
+            // kiosk" state would otherwise keep showing stale until its next
+            // heartbeat, up to 60s away (#824). Never touches the admin
+            // session itself, only the device/location bits.
+            if (localStorage.getItem("kiosk_device_id") === device.id) {
+              clearKioskDeviceState();
+            }
+          },
+          onError: (err: Error) => toast.error(t("kiosksTab.deactivateFailed", { error: err.message })),
+        });
+        setConfirmModal(null);
+      },
+    });
+  };
+}
+
+export function KioskDeviceRow({ device, onDeactivate }: { device: KioskDevice; onDeactivate?: () => void }) {
+  const { t } = useTranslation("admin");
+  const status = kioskStatus(device, t);
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <Tablet size={15} className="text-muted-foreground shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{device.label}</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-block w-1.5 h-1.5 rounded-full shrink-0",
+                status.online ? "bg-status-ok" : "bg-muted-foreground/40",
+              )}
+            />
+            {status.label}
+          </p>
+        </div>
+      </div>
+      {onDeactivate && (
+        <button
+          onClick={onDeactivate}
+          className="text-xs font-semibold text-status-error hover:underline shrink-0"
+        >
+          {t("kiosksTab.deactivate")}
+        </button>
       )}
     </div>
   );

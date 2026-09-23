@@ -39,7 +39,8 @@
     "conceptDeleted": "Concept deleted",
     "deleteConceptFailed": "Failed to delete concept: {{error}}",
     "activateKioskFailed": "Could not activate kiosk: {{error}}",
-    "linkCopied": "Link copied"
+    "linkCopied": "Link copied",
+    "removedFromLocation": "{{name}} removed from {{location}}"
   },
   "confirm": {
     "deleteLocationTitle": "Delete location",
@@ -78,7 +79,9 @@
     "copyLink": "Copy link",
     "typeToConfirm": "Type",
     "toConfirm": "to confirm.",
-    "placeholder": "Type DELETE"
+    "placeholder": "Type DELETE",
+    "removeFromLocationTitle": "Remove from location",
+    "removeFromLocationMessage": "<bold>{{name}}</bold> will be removed from {{location}}. They keep access to their other locations."
   },
   "locationLimit": {
     "title": "Add more locations with Growth",
@@ -145,9 +148,6 @@
     "days": "days",
     "save": "Save",
     "enterNumberAtLeastOne": "Enter a number ≥ 1",
-    "assignedChecklists": "Assigned checklists",
-    "assignedChecklistsWithCount": "Assigned checklists ({{count}})",
-    "noChecklistsAssigned": "No checklists assigned to this location yet.",
     "neverUsed": "Never used",
     "lastUsed": "Last used: {{day}}, {{time}}"
   },
@@ -160,7 +160,6 @@
       "locationBody": "Locations are where your team works. Set up your first one to start creating checklists, managing staff, and using the kiosk.",
       "addLocationCta": "Add a location"
     },
-    "conceptLabel": "Concept",
     "addConcept": "Add concept",
     "conceptOptionsAria": "Concept options",
     "editConcept": "Edit concept",
@@ -171,11 +170,26 @@
     "manageDepartments": "Manage",
     "noDepartments": "No departments apply to this location yet.",
     "address": "Address",
-    "noAddress": "No address on file — tap Edit to add one.",
     "teamMembers": "Team members",
     "teamMembersWithCount": "Team members ({{count}})",
     "noTeamMembers": "No team members assigned to this location yet.",
-    "kioskActive": "Kiosk active"
+    "kioskActive": "Kiosk active",
+    "addDepartment": "Add",
+    "newDepartment": "New department",
+    "manageAllDepartments": "Manage all departments",
+    "removeDepartmentAria": "Remove {{name}} from this location",
+    "removeDepartmentTitle": "Remove department from this location",
+    "removeDepartmentMessage": "{{name}} will no longer apply at {{location}}. It stays everywhere else it’s assigned.",
+    "kiosks": "Kiosks",
+    "kiosksWithCount": "Kiosks ({{count}})",
+    "noKiosks": "No kiosks at this location yet.",
+    "addTeamMember": "Add",
+    "removeFromLocation": "Remove from location",
+    "removeTeamMemberAria": "Remove {{name}} from {{location}}",
+    "locationLabel": "Location",
+    "locationOptionsAria": "Location options",
+    "editLocation": "Edit location",
+    "noAddressYet": "No address on file yet."
   },
   "departmentsTab": {
     "add": "Add department",
