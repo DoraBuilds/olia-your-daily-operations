@@ -127,11 +127,7 @@
     "mapTitle": "Location map",
     "activateKiosk": "Activate",
     "runKiosk": "Run kiosk",
-    "kioskDeviceActive": "This browser is currently running as the kiosk for {{name}}.",
     "kioskDeviceActiveFallbackName": "this location",
-    "exitKiosk": "Exit kiosk mode",
-    "exitKioskConfirm": "Stop treating this device as a kiosk?",
-    "exitKioskConfirmCta": "Exit kiosk mode",
     "staffProfiles": "Staff profiles",
     "add": "Add",
     "searchStaff": "Search staff…",
@@ -176,7 +172,8 @@
     "noAddress": "No address on file — tap Edit to add one.",
     "teamMembers": "Team members",
     "teamMembersWithCount": "Team members ({{count}})",
-    "noTeamMembers": "No team members assigned to this location yet."
+    "noTeamMembers": "No team members assigned to this location yet.",
+    "kioskActive": "Kiosk active"
   },
   "perms": {
     "create_edit_checklists": "Create & edit checklists",
