@@ -425,7 +425,6 @@
   "kiosksTab": {
     "loading": "Cargando…",
     "heading": "Kioscos",
-    "subtitle": "Todas las tablets que funcionan como kiosco en tus conceptos.",
     "emptyHeading": "Aún no hay kioscos",
     "emptyBody": "Configura un kiosco desde la página de una ubicación en la pestaña Conceptos y aparecerá aquí.",
     "activeNow": "Activo ahora",

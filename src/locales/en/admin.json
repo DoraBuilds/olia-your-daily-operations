@@ -425,7 +425,6 @@
   "kiosksTab": {
     "loading": "Loading…",
     "heading": "Kiosks",
-    "subtitle": "Every tablet currently running as a kiosk across your concepts.",
     "emptyHeading": "No kiosks yet",
     "emptyBody": "Launch a kiosk from a location's detail page in the Concepts tab and it'll show up here.",
     "activeNow": "Active now",
