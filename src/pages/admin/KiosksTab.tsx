@@ -1,41 +1,52 @@
 // ─── KiosksTab ──────────────────────────────────────────────────────────────
 // Fleet view of every kiosk device across every concept/location (#818).
-// Kiosk launch itself still happens from a location's detail page in the
-// Concepts tab — this tab is purely for visibility ("what's running, and
-// where") and remote deactivation of a lost/misbehaving tablet.
+// Kiosks are created per location in the Concepts tab and paired on the
+// tablet with a one-time code (Login -> Kiosk, #861); this tab is for
+// visibility ("what's running, and where"), codes, and remote deactivation.
 
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Tablet, Building2, UtensilsCrossed } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Tablet, Building2, UtensilsCrossed, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Location, type Concept } from "@/lib/admin-repository";
-import { useKioskDevices, useRevokeKioskDevice, type KioskDevice } from "@/hooks/useKioskDevices";
+import {
+  useKioskDevices, useRevokeKioskDevice, useCreateKioskDevice, useRegenerateKioskCode, type KioskDevice,
+} from "@/hooks/useKioskDevices";
+import { formatPairingCode } from "@/lib/kiosk-pairing";
 import { toast } from "@/components/ui/sonner";
-import { ConfirmModal, type ConfirmState } from "./SharedUI";
-import { useState } from "react";
+import { BottomSheet, ModalHeader, FormField, SaveButton, ConfirmModal, inputCls, type ConfirmState } from "./SharedUI";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 
 export interface KiosksTabProps {
   concepts: Concept[];
   locations: Location[];
+  isOwner?: boolean;
 }
 
 export function kioskStatus(device: KioskDevice, t: (key: string, opts?: Record<string, unknown>) => string) {
-  if (!device.last_seen_at) return { label: t("kiosksTab.neverCheckedIn"), online: false };
+  if (!device.paired_at) return { label: t("kiosksTab.waitingForDevice"), online: false, waiting: true };
+  if (!device.last_seen_at) return { label: t("kiosksTab.neverCheckedIn"), online: false, waiting: false };
   const diffMs = Date.now() - new Date(device.last_seen_at).getTime();
-  if (diffMs < 3 * 60 * 1000) return { label: t("kiosksTab.activeNow"), online: true };
+  if (diffMs < 3 * 60 * 1000) return { label: t("kiosksTab.activeNow"), online: true, waiting: false };
   const minutes = Math.round(diffMs / 60000);
-  if (minutes < 60) return { label: t("kiosksTab.lastSeenMinutes", { count: minutes }), online: false };
+  if (minutes < 60) return { label: t("kiosksTab.lastSeenMinutes", { count: minutes }), online: false, waiting: false };
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return { label: t("kiosksTab.lastSeenHours", { count: hours }), online: false };
+  if (hours < 24) return { label: t("kiosksTab.lastSeenHours", { count: hours }), online: false, waiting: false };
   const days = Math.round(hours / 24);
-  return { label: t("kiosksTab.lastSeenDays", { count: days }), online: false };
+  return { label: t("kiosksTab.lastSeenDays", { count: days }), online: false, waiting: false };
 }
 
-export function KiosksTab({ concepts, locations }: KiosksTabProps) {
+export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProps) {
   const { t } = useTranslation("admin");
   const { data: devices = [], isLoading } = useKioskDevices();
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
+  const [codeDevice, setCodeDevice] = useState<{ id: string; locationName: string } | null>(null);
   const confirmDeactivate = useConfirmDeactivateKiosk(setConfirmModal);
+
+  // "Manage" on a location's Devices card links here with ?device=<id>.
+  const [searchParams] = useSearchParams();
+  const focusDeviceId = searchParams.get("device");
 
   const groups = concepts
     .map(concept => ({
@@ -87,13 +98,23 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
               </div>
               <div className="divide-y divide-border">
                 {locationDevices.map(device => (
-                  <KioskDeviceRow key={device.id} device={device} onDeactivate={() => confirmDeactivate(device, location.name)} />
+                  <KioskDeviceRow
+                    key={device.id}
+                    device={device}
+                    highlighted={device.id === focusDeviceId}
+                    onShowCode={isOwner ? () => setCodeDevice({ id: device.id, locationName: location.name }) : undefined}
+                    onDeactivate={isOwner ? () => confirmDeactivate(device, location.name) : undefined}
+                  />
                 ))}
               </div>
             </div>
           ))}
         </div>
       ))}
+
+      {codeDevice && (
+        <KioskCodeModal deviceId={codeDevice.id} locationName={codeDevice.locationName} onClose={() => setCodeDevice(null)} />
+      )}
 
       {confirmModal && (
         <ConfirmModal
@@ -109,8 +130,8 @@ export function KiosksTab({ concepts, locations }: KiosksTabProps) {
 }
 
 /**
- * Shared by this tab and a location's page in the Concepts tab: opens the
- * "deactivate this kiosk" confirm in the caller's own ConfirmModal slot.
+ * Opens the "deactivate this kiosk" confirm in the caller's own
+ * ConfirmModal slot.
  */
 export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState) => void) {
   const { t } = useTranslation("admin");
@@ -124,7 +145,7 @@ export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState)
         revokeMut.mutate(device.id, {
           onSuccess: () => {
             toast.success(t("kiosksTab.deactivated"));
-            // You got into Admin -> Kiosks on some browser; if that browser
+            // You got into Admin -> Devices on some browser; if that browser
             // happens to be the very device you just deactivated (you PIN'd
             // in from the kiosk itself), its local "this browser is a
             // kiosk" state would otherwise keep showing stale until its next
@@ -142,34 +163,220 @@ export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState)
   };
 }
 
-export function KioskDeviceRow({ device, onDeactivate }: { device: KioskDevice; onDeactivate?: () => void }) {
+const rowActionCls = "text-xs font-semibold hover:underline shrink-0";
+
+export function KioskDeviceRow({
+  device, onShowCode, onManage, onDeactivate, highlighted,
+}: {
+  device: KioskDevice;
+  onShowCode?: () => void;
+  onManage?: () => void;
+  onDeactivate?: () => void;
+  highlighted?: boolean;
+}) {
   const { t } = useTranslation("admin");
   const status = kioskStatus(device, t);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (highlighted) ref.current?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, [highlighted]);
+
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div
+      ref={ref}
+      className={cn("flex items-center justify-between gap-3 px-4 py-3 transition-colors", highlighted && "bg-sage/5")}
+    >
       <div className="flex items-center gap-2.5 min-w-0">
         <Tablet size={15} className="text-muted-foreground shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{device.label}</p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-1.5">
             <span
               className={cn(
                 "inline-block w-1.5 h-1.5 rounded-full shrink-0",
-                status.online ? "bg-status-ok" : "bg-muted-foreground/40",
+                status.online ? "bg-status-ok" : status.waiting ? "bg-status-warn" : "bg-muted-foreground/40",
               )}
             />
-            {status.label}
+            <span className="whitespace-nowrap">{status.label}</span>
+            {status.waiting && device.pairing_code && (
+              <span className="whitespace-nowrap font-semibold tracking-wider tabular-nums text-foreground">· {formatPairingCode(device.pairing_code)}</span>
+            )}
           </p>
         </div>
       </div>
-      {onDeactivate && (
-        <button
-          onClick={onDeactivate}
-          className="text-xs font-semibold text-status-error hover:underline shrink-0"
-        >
-          {t("kiosksTab.deactivate")}
-        </button>
-      )}
+      <div className="flex items-center gap-3 shrink-0">
+        {onShowCode && (
+          <button onClick={onShowCode} className={cn(rowActionCls, "text-sage")}>
+            {t("kiosksTab.code")}
+          </button>
+        )}
+        {onManage && (
+          <button onClick={onManage} className={cn(rowActionCls, "text-sage")}>
+            {t("kiosksTab.manage")}
+          </button>
+        )}
+        {onDeactivate && (
+          <button onClick={onDeactivate} className={cn(rowActionCls, "text-status-error")}>
+            {t("kiosksTab.deactivate")}
+          </button>
+        )}
+      </div>
     </div>
+  );
+}
+
+// ─── AddKioskModal ────────────────────────────────────────────────────────────
+// Creates a kiosk for one location; the caller then shows its code.
+
+export function AddKioskModal({
+  locationId, locationName, existingCount, onClose, onCreated,
+}: {
+  locationId: string;
+  locationName: string;
+  existingCount: number;
+  onClose: () => void;
+  onCreated: (deviceId: string) => void;
+}) {
+  const { t } = useTranslation("admin");
+  const [label, setLabel] = useState(() => t("kiosksTab.defaultName", { number: existingCount + 1 }));
+  const createMut = useCreateKioskDevice();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!label.trim() || createMut.isPending) return;
+    createMut.mutate({ locationId, label: label.trim() }, {
+      onSuccess: row => onCreated(row.device_id),
+      onError: (err: Error) => toast.error(t("kiosksTab.createFailed", { error: err.message })),
+    });
+  };
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <ModalHeader title={t("kiosksTab.addTitle", { location: locationName })} onClose={onClose} />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FormField label={t("kiosksTab.nameLabel")}>
+          <input
+            autoFocus
+            type="text"
+            value={label}
+            maxLength={60}
+            onChange={e => setLabel(e.target.value)}
+            placeholder={t("kiosksTab.namePlaceholder")}
+            className={inputCls}
+          />
+        </FormField>
+        <p className="text-xs text-muted-foreground">{t("kiosksTab.addHint")}</p>
+        <SaveButton disabled={!label.trim() || createMut.isPending} label={t("kiosksTab.addCta")} />
+      </form>
+    </BottomSheet>
+  );
+}
+
+// ─── KioskCodeModal ───────────────────────────────────────────────────────────
+// Unpaired: shows the code + how to use it. Paired: says so, and offers a new
+// code, which disconnects the tablet that's paired now.
+
+export function KioskCodeModal({
+  deviceId, locationName, onClose,
+}: {
+  deviceId: string;
+  locationName: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("admin");
+  const { data: devices = [] } = useKioskDevices();
+  const device = devices.find(d => d.id === deviceId);
+  const regenerateMut = useRegenerateKioskCode();
+  const [confirmingNew, setConfirmingNew] = useState(false);
+
+  // Deactivated elsewhere, or not in the refetched list yet.
+  if (!device) return null;
+
+  const code = device.pairing_code ? formatPairingCode(device.pairing_code) : null;
+  const paired = Boolean(device.paired_at);
+
+  const newCode = () => {
+    regenerateMut.mutate(device.id, {
+      onSuccess: () => setConfirmingNew(false),
+      onError: (err: Error) => toast.error(t("kiosksTab.newCodeFailed", { error: err.message })),
+    });
+  };
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <ModalHeader title={device.label} onClose={onClose} />
+      <p className="text-xs text-muted-foreground -mt-2">{locationName}</p>
+
+      {!paired && code ? (
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-muted py-5 text-center">
+            <p className="text-3xl font-semibold tracking-[0.2em] tabular-nums text-foreground select-all">{code}</p>
+          </div>
+          <button
+            onClick={() => {
+              void navigator.clipboard?.writeText(code).then(
+                () => toast.success(t("kiosksTab.codeCopied")),
+                () => undefined,
+              );
+            }}
+            className="mx-auto flex items-center gap-1.5 text-xs font-semibold text-sage hover:underline"
+          >
+            <Copy size={12} /> {t("kiosksTab.copyCode")}
+          </button>
+          <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1">
+            <li>{t("kiosksTab.pairStep1")}</li>
+            <li>{t("kiosksTab.pairStep2")}</li>
+            <li>{t("kiosksTab.pairStep3")}</li>
+          </ol>
+        </div>
+      ) : (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>{t("kiosksTab.pairedMessage", { status: kioskStatus(device, t).label.toLowerCase() })}</p>
+          <p>
+            {code ? (
+              <>{t("kiosksTab.codeUsedPrefix")} <span className="font-semibold tracking-wider text-foreground line-through">{code}</span> {t("kiosksTab.codeUsedSuffix")}</>
+            ) : t("kiosksTab.pairedBeforeCodes")}
+          </p>
+        </div>
+      )}
+
+      {confirmingNew ? (
+        <div className="rounded-xl border border-status-error/30 bg-status-error/5 p-3 space-y-3">
+          <p className="text-sm text-foreground">
+            {paired ? t("kiosksTab.newCodeWarningPaired") : t("kiosksTab.newCodeWarningUnpaired")}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmingNew(false)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
+            >
+              {t("sharedUI.cancel")}
+            </button>
+            <button
+              disabled={regenerateMut.isPending}
+              onClick={newCode}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors disabled:opacity-40"
+            >
+              {t("kiosksTab.newCode")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <button
+            onClick={() => setConfirmingNew(true)}
+            className="flex-1 py-3 rounded-xl text-sm font-medium border border-border text-foreground hover:bg-muted transition-colors"
+          >
+            {t("kiosksTab.newCode")}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
+          >
+            {t("kiosksTab.done")}
+          </button>
+        </div>
+      )}
+    </BottomSheet>
   );
 }

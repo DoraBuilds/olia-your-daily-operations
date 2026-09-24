@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Building2, UtensilsCrossed, MapPin, Mail, Pencil, Trash2, Plus,
-  ChevronDown, Tablet, MoreVertical, UserMinus, Layers, MinusCircle,
+  ChevronDown, MoreVertical, UserMinus, Layers, MinusCircle,
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
 import { ConfirmModal, type ConfirmState } from "./SharedUI";
 import { DepartmentModal } from "./DepartmentsTab";
-import { KioskDeviceRow, useConfirmDeactivateKiosk } from "./KiosksTab";
+import { KioskDeviceRow, AddKioskModal, KioskCodeModal } from "./KiosksTab";
 import {
   addLocationToAssignments, departmentUnassignImpact, removeLocationFromAssignments,
 } from "./departments";
@@ -50,10 +50,8 @@ export interface ConceptsTabProps {
   onAddLocation: () => void;
   onEditLocation: (loc: Location) => void;
   onDeleteLocation: (id: string) => void;
-  /** This browser becomes the kiosk immediately (navigates to /kiosk). */
-  onRunKiosk: () => void;
-  /** Registers a kiosk device for the location without navigating anywhere — hands back a link to open later, on this browser or another. */
-  onActivateKiosk: () => void;
+  /** Opens Admin -> Devices focused on this kiosk. */
+  onManageKiosk: (deviceId: string) => void;
   /** Opens Admin → Departments. Omitted for managers, who can't manage departments. */
   onManageDepartments?: () => void;
   onAddTeamMember?: (locationId: string) => void;
@@ -65,7 +63,7 @@ export function ConceptsTab({
   concepts, locations, allLocations = locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
-  onAddLocation, onEditLocation, onDeleteLocation, onRunKiosk, onActivateKiosk, onManageDepartments,
+  onAddLocation, onEditLocation, onDeleteLocation, onManageKiosk, onManageDepartments,
   onAddTeamMember, onEditTeamMember, onRemoveTeamMember,
 }: ConceptsTabProps) {
   const { t } = useTranslation("admin");
@@ -107,7 +105,10 @@ export function ConceptsTab({
   const saveDepartmentMut = useSaveDepartment();
   const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
-  const confirmDeactivateKiosk = useConfirmDeactivateKiosk(setConfirmModal);
+  // Kiosks (#861): "Add kiosk" creates one with a pairing code, then its
+  // code is shown straight away.
+  const [addingKiosk, setAddingKiosk] = useState(false);
+  const [codeDeviceId, setCodeDeviceId] = useState<string | null>(null);
   const [collapsed, toggleSection] = useCollapsedSections();
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
@@ -298,22 +299,14 @@ export function ConceptsTab({
         title={locationKiosks.length > 0 ? t("conceptsTab.kiosksWithCount", { count: locationKiosks.length }) : t("conceptsTab.kiosks")}
         open={!collapsed.has("devices")}
         onToggle={() => toggleSection("devices")}
-        actions={(
-          <div className="flex gap-2">
-            <button
-              onClick={onActivateKiosk}
-              className="rounded-xl text-xs font-bold tracking-wider uppercase border border-sage text-sage hover:bg-sage/10 transition-colors px-3 py-2"
-            >
-              {t("myLocationTab.activateKiosk")}
-            </button>
-            <button
-              onClick={onRunKiosk}
-              className="rounded-xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-1.5 px-3 py-2"
-            >
-              {t("myLocationTab.runKiosk")}
-              <Tablet size={13} />
-            </button>
-          </div>
+        actions={isOwner && (
+          <button
+            onClick={() => setAddingKiosk(true)}
+            className="rounded-xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-1.5 px-3 py-2"
+          >
+            <Plus size={13} />
+            {t("kiosksTab.addKiosk")}
+          </button>
         )}
       >
         {locationKiosks.length === 0 ? (
@@ -324,7 +317,8 @@ export function ConceptsTab({
               <KioskDeviceRow
                 key={device.id}
                 device={device}
-                onDeactivate={isOwner ? () => confirmDeactivateKiosk(device, currentLocation.name) : undefined}
+                onShowCode={isOwner ? () => setCodeDeviceId(device.id) : undefined}
+                onManage={isOwner ? () => onManageKiosk(device.id) : undefined}
               />
             ))}
           </div>
@@ -398,6 +392,20 @@ export function ConceptsTab({
           onClose={() => setDepartmentModalOpen(false)}
           onSave={dep => saveDepartment(dep, () => setDepartmentModalOpen(false))}
         />
+      )}
+
+      {addingKiosk && (
+        <AddKioskModal
+          locationId={currentLocation.id}
+          locationName={currentLocation.name}
+          existingCount={locationKiosks.length}
+          onClose={() => setAddingKiosk(false)}
+          onCreated={deviceId => { setAddingKiosk(false); setCodeDeviceId(deviceId); }}
+        />
+      )}
+
+      {codeDeviceId && (
+        <KioskCodeModal deviceId={codeDeviceId} locationName={currentLocation.name} onClose={() => setCodeDeviceId(null)} />
       )}
 
       {confirmModal && (

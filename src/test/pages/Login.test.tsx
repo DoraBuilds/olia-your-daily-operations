@@ -2,9 +2,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Login from "@/pages/Login";
 
-const { mockSignInWithOtp, mockVerifyOtp } = vi.hoisted(() => ({
+const { mockSignInWithOtp, mockVerifyOtp, mockRpc } = vi.hoisted(() => ({
   mockSignInWithOtp: vi.fn(),
   mockVerifyOtp: vi.fn(),
+  mockRpc: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -17,6 +18,7 @@ vi.mock("@/lib/supabase", () => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       }),
     },
+    rpc: mockRpc,
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -41,9 +43,9 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-function renderPage() {
+function renderPage(path = "/login") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[path]}>
       <Login />
     </MemoryRouter>
   );
@@ -180,5 +182,65 @@ describe("Login page", () => {
     mockUseAuth.mockReturnValue({ user: { id: "u1" }, loading: false });
     renderPage();
     expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
+  });
+
+  describe("Kiosk tab (#861)", () => {
+    beforeEach(() => localStorage.clear());
+
+    it("opens straight onto the Kiosk tab from /login?tab=kiosk", () => {
+      renderPage("/login?tab=kiosk");
+      expect(screen.getByRole("tab", { name: "Kiosk" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByLabelText("Kiosk code")).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("you@yourbusiness.com")).not.toBeInTheDocument();
+    });
+
+    it("switches between Log in and Kiosk", () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("tab", { name: "Kiosk" }));
+      expect(screen.getByLabelText("Kiosk code")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("tab", { name: "Log in" }));
+      expect(screen.getByPlaceholderText("you@yourbusiness.com")).toBeInTheDocument();
+    });
+
+    it("formats the code as it's typed and only enables Start once it's complete", () => {
+      renderPage("/login?tab=kiosk");
+      const input = screen.getByLabelText("Kiosk code");
+      fireEvent.change(input, { target: { value: "abcd2" } });
+      expect(input).toHaveValue("ABCD-2");
+      expect(screen.getByRole("button", { name: "Start kiosk" })).toBeDisabled();
+      fireEvent.change(input, { target: { value: "abcd2345" } });
+      expect(input).toHaveValue("ABCD-2345");
+      expect(screen.getByRole("button", { name: "Start kiosk" })).toBeEnabled();
+    });
+
+    it("pairs this browser and opens the kiosk", async () => {
+      mockRpc.mockResolvedValue({
+        data: [{ device_id: "d1", device_token: "t1", device_label: "Bar", location_id: "l1", location_name: "Downtown", kiosk_token: "k1" }],
+        error: null,
+      });
+      renderPage("/login?tab=kiosk");
+      fireEvent.change(screen.getByLabelText("Kiosk code"), { target: { value: "ABCD-2345" } });
+      fireEvent.click(screen.getByRole("button", { name: "Start kiosk" }));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/kiosk", { replace: true }));
+      expect(mockRpc).toHaveBeenCalledWith("pair_kiosk_device", { p_code: "ABCD2345" });
+      expect(localStorage.getItem("kiosk_location_id")).toBe("l1");
+    });
+
+    it("explains a used or wrong code", async () => {
+      mockRpc.mockResolvedValue({ data: [], error: null });
+      renderPage("/login?tab=kiosk");
+      fireEvent.change(screen.getByLabelText("Kiosk code"), { target: { value: "ABCD2345" } });
+      fireEvent.click(screen.getByRole("button", { name: "Start kiosk" }));
+      expect(await screen.findByText(/That code isn't valid/)).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalledWith("/kiosk", expect.anything());
+    });
+
+    it("reports a connection problem separately", async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: "fetch failed" } });
+      renderPage("/login?tab=kiosk");
+      fireEvent.change(screen.getByLabelText("Kiosk code"), { target: { value: "ABCD2345" } });
+      fireEvent.click(screen.getByRole("button", { name: "Start kiosk" }));
+      expect(await screen.findByText(/Couldn't reach Olia/)).toBeInTheDocument();
+    });
   });
 });

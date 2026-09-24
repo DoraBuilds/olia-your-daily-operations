@@ -815,12 +815,32 @@ describe("Admin page", () => {
     });
   });
 
-  it("Concepts tab shows 'Run kiosk' and 'Activate' buttons", async () => {
+  // #861: kiosks are created here and paired on the tablet with a code —
+  // the old on-device "Run kiosk" / "Activate" are gone.
+  it("Concepts tab shows 'Add kiosk' and no longer offers Run kiosk / Activate", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-    await waitFor(() => {
-      expect(screen.getByText("Run kiosk")).toBeInTheDocument();
-      expect(screen.getByText("Activate")).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add kiosk" })).toBeInTheDocument());
+    expect(screen.queryByText("Run kiosk")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
+  });
+
+  it("Add kiosk creates a kiosk for the selected location and shows its code", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    (supabase.rpc as ReturnType<typeof vi.fn>).mockImplementation((fn: string) =>
+      fn === "create_kiosk_device"
+        ? Promise.resolve({ data: [{ device_id: "k9", label: "Kiosk 1", pairing_code: "ABCD2345" }], error: null })
+        : Promise.resolve({ data: { success: true }, error: null }),
+    );
+    try {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      await waitFor(() => expect(screen.getByRole("button", { name: "Add kiosk" })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: "Add kiosk" }));
+      await waitFor(() => expect(screen.getByDisplayValue("Kiosk 1")).toBeInTheDocument());
+      fireEvent.click(screen.getByText("Create kiosk"));
+      await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("create_kiosk_device", { p_location_id: "l1", p_label: "Kiosk 1" }));
+    } finally {
+      (supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { success: true }, error: null });
+    }
   });
 
   it("shows the address only inside the location options menu", async () => {
@@ -906,16 +926,20 @@ describe("Admin page", () => {
     });
   });
 
-  it("lists the location's kiosks with a Deactivate action", async () => {
+  it("lists the location's kiosks with Code and Manage actions", async () => {
     mockKioskDevices = [
-      { id: "k1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-01" },
+      { id: "k1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-01", pairing_code: "ABCD2345", paired_at: null },
     ];
+    mockNavigate.mockClear();
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Host stand")).toBeInTheDocument());
       expect(screen.getByText("Devices (1)")).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
-      expect(screen.getByText("Deactivate this device")).toBeInTheDocument();
+      expect(screen.getByText("Waiting for device")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Manage" }));
+      expect(mockNavigate).toHaveBeenCalledWith("/admin/kiosks?device=k1");
+      fireEvent.click(screen.getByRole("button", { name: "Code" }));
+      expect(screen.getByText("Open the Kiosk tab and enter this code.")).toBeInTheDocument();
     } finally {
       mockKioskDevices = [];
     }
@@ -1044,90 +1068,6 @@ describe("Admin page", () => {
     fireEvent.click(screen.getByRole("button", { name: /yes, delete my account/i }));
 
     await waitFor(() => expect(supabase.functions.invoke).toHaveBeenCalledWith("delete-my-account"));
-  });
-
-  describe("Run kiosk confirmation", () => {
-    beforeEach(() => {
-      mockNavigate.mockClear();
-    });
-
-    it("does not navigate immediately when the Run kiosk button is clicked", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Run kiosk" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Run kiosk" }));
-
-      expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/kiosk?locationId="));
-      await waitFor(() => {
-        expect(screen.getByText("Set up this device as a kiosk")).toBeInTheDocument();
-      });
-    });
-
-    it("names the current location in the confirmation message", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Run kiosk" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Run kiosk" }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/will become the kiosk for Main Branch/)).toBeInTheDocument();
-      });
-    });
-
-    it("navigates to /kiosk with the location id only after confirming", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Run kiosk" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Run kiosk" }));
-      await waitFor(() => expect(screen.getByText("Set up kiosk")).toBeInTheDocument());
-      fireEvent.click(screen.getByText("Set up kiosk"));
-
-      expect(mockNavigate).toHaveBeenCalledWith("/kiosk?locationId=l1");
-    });
-
-    it("includes a typed device name as deviceLabel on the /kiosk navigation", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Run kiosk" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Run kiosk" }));
-      await waitFor(() => expect(screen.getByPlaceholderText(/Host stand/)).toBeInTheDocument());
-      fireEvent.change(screen.getByPlaceholderText(/Host stand/), { target: { value: "Kitchen tablet" } });
-      fireEvent.click(screen.getByText("Set up kiosk"));
-
-      expect(mockNavigate).toHaveBeenCalledWith("/kiosk?locationId=l1&deviceLabel=Kitchen%20tablet");
-    });
-
-    it("does not navigate when the confirmation is cancelled", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Run kiosk" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Run kiosk" }));
-      await waitFor(() => expect(screen.getByText("Cancel")).toBeInTheDocument());
-      fireEvent.click(screen.getByText("Cancel"));
-
-      expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/kiosk?locationId="));
-      expect(screen.queryByText("Set up this device as a kiosk")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Activate kiosk", () => {
-    it("registers a device without navigating, then shows a copyable link", async () => {
-      const { supabase } = await import("@/lib/supabase");
-      (supabase.rpc as ReturnType<typeof vi.fn>).mockImplementation((fn: string) =>
-        fn === "register_kiosk_device"
-          ? Promise.resolve({ data: [{ device_id: "d1", device_token: "t1" }], error: null })
-          : Promise.resolve({ data: { success: true }, error: null }),
-      );
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByRole("button", { name: "Activate" })).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: "Activate" }));
-      await waitFor(() => expect(screen.getByText("Activate a kiosk for this location")).toBeInTheDocument());
-      const activateButtons = screen.getAllByRole("button", { name: "Activate" });
-      fireEvent.click(activateButtons[activateButtons.length - 1]);
-
-      await waitFor(() => expect(supabase.rpc).toHaveBeenCalledWith("register_kiosk_device", { p_location_id: "l1", p_label: "" }));
-      expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/kiosk?locationId="));
-      await waitFor(() => expect(screen.getByText("Kiosk activated")).toBeInTheDocument());
-      const linkInput = screen.getByDisplayValue(/deviceId=d1&deviceToken=t1/) as HTMLInputElement;
-      expect(linkInput.value).toContain("locationId=l1");
-
-      (supabase.rpc as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { success: true }, error: null });
-    });
   });
 
   describe("Active kiosk indicator", () => {

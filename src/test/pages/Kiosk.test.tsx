@@ -1,4 +1,6 @@
-import { screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Kiosk, { ChecklistRunner } from "@/pages/Kiosk";
 import { CompletionScreen } from "@/pages/kiosk/CompletionScreen";
 import i18n from "@/lib/i18n";
@@ -41,8 +43,15 @@ vi.mock("@/lib/supabase", () => ({
     auth: {
       signInWithPassword: vi.fn().mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null }),
       signOut: vi.fn().mockResolvedValue({}),
+      setSession: vi.fn().mockResolvedValue({ error: null }),
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+    },
+    functions: {
+      invoke: vi.fn().mockResolvedValue({
+        data: { access_token: "a", refresh_token: "r", team_member_id: "tm-1", location_id: "00000000-0000-0000-0000-000000000011" },
+        error: null,
+      }),
     },
     storage: {
       from: vi.fn().mockReturnValue({
@@ -157,6 +166,29 @@ vi.mock("@/hooks/useLocations", () => ({
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Renders Kiosk in a plain <MemoryRouter> with a /login stand-in. Use for
+ * any test that ends unpaired: Kiosk then <Navigate>s to /login?tab=kiosk,
+ * and a data router's navigation (renderWithProviders) throws in jsdom
+ * (undici rejects jsdom's AbortSignal).
+ */
+function renderWithLoginRoute(initialPath = "/kiosk") {
+  function LoginProbe() {
+    const location = useLocation();
+    return <p>login page {location.search}</p>;
+  }
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path="/kiosk" element={<Kiosk />} />
+          <Route path="/login" element={<LoginProbe />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 /** Render the Kiosk in Setup screen (no stored location). */
 function renderSetup() {
@@ -295,118 +327,21 @@ afterEach(() => {
 
 // ─── Setup Screen tests ───────────────────────────────────────────────────────
 
-describe("Kiosk — Setup Screen", () => {
-  it("renders setup screen with 'Olia Kiosk' title", async () => {
-    renderSetup();
-    await waitFor(() => {
-      expect(screen.getByText("Olia Kiosk")).toBeInTheDocument();
-    });
-  });
-
-  it("setup screen shows 'Select a location to launch' prompt", async () => {
-    renderSetup();
-    await waitFor(() => {
-      expect(screen.getByText(/Select a location to launch/i)).toBeInTheDocument();
-    });
-  });
-
-  it("shows 'System Online' status text", async () => {
-    renderSetup();
-    await waitFor(() => {
-      expect(screen.getByText(/System Online/i)).toBeInTheDocument();
-    });
-  });
-
-  it("renders in Spanish when the device's stored kiosk_language is es", async () => {
+// #861: pairing happens on Login -> Kiosk with a code; /kiosk itself no
+// longer has an on-device location picker.
+describe("Kiosk — not paired", () => {
+  it("sends an unpaired browser to the Kiosk tab of the login page", async () => {
     localStorage.clear();
-    localStorage.setItem("kiosk_language", "es");
-    renderWithProviders(<Kiosk />);
-    await waitFor(() => {
-      expect(screen.getByText("Selecciona una ubicación para iniciar")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Sistema en línea")).toBeInTheDocument();
+    renderWithLoginRoute();
+    expect(await screen.findByText("login page ?tab=kiosk")).toBeInTheDocument();
   });
 
-  it("'Launch Kiosk' button appears", async () => {
-    renderSetup();
-    await waitFor(() => {
-      expect(screen.getByText(/Launch Kiosk/i)).toBeInTheDocument();
-    });
-  });
-
-  it("location select dropdown appears after loading", async () => {
-    renderSetup();
-    await waitFor(() => {
-      const select = document.getElementById("location-select");
-      expect(select).not.toBeNull();
-    });
-  });
-
-  it("mock location 'Terrace' appears in the dropdown", async () => {
-    renderSetup();
-    await waitFor(() => {
-      // Either as an option in the select or via getAllByText
-      const options = Array.from(document.querySelectorAll("option"));
-      const terraceOpt = options.find(o => o.textContent === "Terrace");
-      // If supabase mock returns data the option will be there; if not,
-      // fallback to MOCK_LOCATIONS which also has Terrace
-      expect(terraceOpt).toBeDefined();
-    });
-  });
-
-  it("mock location 'Grand Ballroom' appears in the dropdown", async () => {
-    renderSetup();
-    await waitFor(() => {
-      const options = Array.from(document.querySelectorAll("option"));
-      const grandOpt = options.find(o => o.textContent === "Grand Ballroom");
-      expect(grandOpt).toBeDefined();
-    });
-  });
-
-  it("shows a safe empty state when Supabase returns no locations", async () => {
-    const { supabase } = await import("@/lib/supabase");
-    supabase.from.mockReturnValueOnce({
-      select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      then: vi.fn().mockImplementation((cb) =>
-        Promise.resolve(cb({ data: [], error: null }))
-      ),
-    } as any);
-
-    renderSetup();
-
-    await waitFor(() => {
-      expect(screen.getByText(/No locations available/i)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText("Terrace")).not.toBeInTheDocument();
-    expect(screen.queryByText("Grand Ballroom")).not.toBeInTheDocument();
-    const launchBtn = document.getElementById("launch-kiosk-btn") as HTMLButtonElement;
-    expect(launchBtn.disabled).toBe(true);
-  });
-
-  it("'Launch Kiosk' button is disabled when loading (before locations load)", () => {
-    // Before the async .then resolves the button should be disabled
+  it("ignores the old ?locationId= setup links", async () => {
+    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
     localStorage.clear();
-    renderWithProviders(<Kiosk />);
-    const btn = document.getElementById("launch-kiosk-btn") as HTMLButtonElement;
-    // During the loading phase the button starts disabled
-    // (may or may not still be disabled by the time we inspect — check the attribute)
-    expect(btn).not.toBeNull();
-  });
-
-  it("clicking 'Launch Kiosk' transitions to grid screen", async () => {
-    renderSetup();
-    await waitFor(() => {
-      expect(document.getElementById("location-select")).not.toBeNull();
-    });
-    const btn = document.getElementById("launch-kiosk-btn") as HTMLButtonElement;
-    await act(async () => {
-      fireEvent.click(btn);
-    });
-    await waitFor(() => {
-      expect(screen.queryByTestId("kiosk-tab-due")).toBeInTheDocument();
-    });
+    renderWithLoginRoute("/kiosk?locationId=00000000-0000-0000-0000-000000000011");
+    expect(await screen.findByText("login page ?tab=kiosk")).toBeInTheDocument();
+    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
   });
 });
 
@@ -457,36 +392,26 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByRole("combobox")).toHaveTextContent("ES");
   });
 
-  it("clears stale kiosk location state when a signed-in owner has no kiosk owner stored yet", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
-    localStorage.setItem("kiosk_location_name", "Terrace");
-    renderWithProviders(<Kiosk />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select a location to launch/i)).toBeInTheDocument();
-    });
-
-    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
-    expect(localStorage.getItem("kiosk_location_name")).toBeNull();
+  // #861: a paired kiosk runs signed out. Any session it finds without a
+  // live Admin-PIN grant (e.g. the owner session devices set up the old way
+  // were left with) is signed out — and the kiosk keeps running.
+  it("signs out a leftover session when there's no admin grant, without un-pairing", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    (supabase.auth.signOut as ReturnType<typeof vi.fn>).mockClear();
+    await renderGridScreen({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+    await waitFor(() => expect(supabase.auth.signOut).toHaveBeenCalledWith({ scope: "local" }));
+    expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
   });
 
-  it("does not restore a stored kiosk location from another organization once a real owner signs in", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    localStorage.setItem("kiosk_location_id", "foreign-location");
-    localStorage.setItem("kiosk_location_name", "Little Fern Bakery");
-    localStorage.setItem("kiosk_owner_user_id", "u1");
-    localStorage.setItem("kiosk_owner_org_id", "foreign-org");
-
-    renderWithProviders(<Kiosk />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Select a location to launch/i)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText("Little Fern Bakery")).not.toBeInTheDocument();
-    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
-    expect(localStorage.getItem("kiosk_location_name")).toBeNull();
+  it("keeps the session while an Admin-PIN grant is live", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    const { grantKioskAdminSession } = await import("@/lib/kiosk-admin-session");
+    (supabase.auth.signOut as ReturnType<typeof vi.fn>).mockClear();
+    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
+    grantKioskAdminSession("tm-1", "00000000-0000-0000-0000-000000000011");
+    await renderGridScreen({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    sessionStorage.clear();
   });
 
   it("keeps a configured kiosk on the grid screen when the auth session disappears (session expiry, not a sign-out)", async () => {
@@ -602,8 +527,9 @@ describe("Kiosk — Grid Screen", () => {
     expect(supabase.rpc).not.toHaveBeenCalledWith("validate_admin_pin", expect.anything());
   });
 
-  it("entering 4 digits auto-submits and calls supabase.rpc validate_admin_pin", async () => {
+  it("entering 4 digits auto-submits the PIN with this device's token to kiosk-admin-login", async () => {
     const { supabase } = await import("@/lib/supabase");
+    localStorage.setItem("kiosk_device_token", "device-token-1");
     await renderGridScreen();
     const adminBtn = document.getElementById("admin-btn") as HTMLButtonElement;
     fireEvent.click(adminBtn);
@@ -621,11 +547,13 @@ describe("Kiosk — Grid Screen", () => {
 
 
     await waitFor(() => {
-      expect(supabase.rpc).toHaveBeenCalledWith("validate_admin_pin", {
-        p_pin: "1234",
-        p_location_id: "00000000-0000-0000-0000-000000000011",
+      expect(supabase.functions.invoke).toHaveBeenCalledWith("kiosk-admin-login", {
+        body: { device_token: "device-token-1", pin: "1234" },
       });
     });
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin?from=kiosk"));
+    expect(supabase.auth.setSession).toHaveBeenCalledWith({ access_token: "a", refresh_token: "r" });
+    sessionStorage.clear();
   });
 
   it("offers a logout-and-login recovery path instead of a signup bypass", async () => {
@@ -1915,56 +1843,9 @@ describe("Kiosk — Checklist Runner", () => {
   });
 });
 
-// ─── URL param tests ──────────────────────────────────────────────────────────
-
-describe("Kiosk — URL param locationId", () => {
-  it("reading locationId from URL params jumps directly to grid screen", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    localStorage.clear();
-    renderWithProviders(<Kiosk />, {
-      initialEntries: ["/kiosk?locationId=00000000-0000-0000-0000-000000000011"],
-    });
-    await screen.findByTestId("kiosk-tab-due");
-    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
-  });
-
-  // "Activate kiosk" (#826) hands out a link carrying a pre-registered
-  // device's own id/token — opening it should adopt that device directly
-  // rather than ensureKioskDevice minting a fresh one for the same launch.
-  it("adopts a deviceId/deviceToken pair from URL params instead of registering a new device", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    localStorage.clear();
-    renderWithProviders(<Kiosk />, {
-      initialEntries: [
-        "/kiosk?locationId=00000000-0000-0000-0000-000000000011&deviceId=pre-d1&deviceToken=pre-t1",
-      ],
-    });
-    await screen.findByTestId("kiosk-tab-due");
-
-    await waitFor(() => expect(localStorage.getItem("kiosk_device_id")).toBe("pre-d1"));
-    expect(localStorage.getItem("kiosk_device_token")).toBe("pre-t1");
-    expect(localStorage.getItem("kiosk_device_location_id")).toBe("00000000-0000-0000-0000-000000000011");
-
-    const { supabase } = await import("@/lib/supabase");
-    expect(supabase.rpc).not.toHaveBeenCalledWith("register_kiosk_device", expect.anything());
-  });
-});
-
 describe("Kiosk — survives a transient locations-fetch error", () => {
-  // useLocations().isFetched is true after a FAILED fetch too (react-query
-  // marks a query "fetched" on error, not just success), so allLocations
-  // being empty during an errored fetch looks identical to "this location
-  // was deleted." A device must not wipe its kiosk config over a network
-  // blip — it should just wait for the next successful refetch.
-  it("keeps the stored kiosk location instead of clearing it when the locations query errors", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    mockUseLocations.mockReturnValue({ allLocations: [], isFetched: true, isError: true });
-    await renderGridScreen({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-
-    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
-    expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
-  });
-
+  // A device must not wipe its kiosk config over a network blip — it should
+  // just wait for the next successful re-check.
   it("keeps the stored kiosk location on an anonymous device when the location re-check query errors", async () => {
     // The anonymous kiosk path (no live session — the normal state for a
     // wall-mounted device) re-verifies its location via a raw supabase call,
@@ -1997,18 +1878,19 @@ describe("Kiosk — survives a transient locations-fetch error", () => {
     expect(localStorage.getItem("kiosk_location_id")).toBe("00000000-0000-0000-0000-000000000011");
   });
 
-  it("still clears the kiosk location when the locations query succeeds but genuinely no longer contains it", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    mockUseLocations.mockReturnValue({ allLocations: [], isFetched: true, isError: false });
-    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
-    localStorage.setItem("kiosk_location_name", "Terrace");
-    localStorage.setItem("kiosk_owner_user_id", "u1");
-    localStorage.setItem("kiosk_owner_org_id", "org-1");
+  it("still clears the kiosk location when the re-check succeeds but the location is gone", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    localStorage.setItem("kiosk_location_id", "deleted-location");
+    localStorage.setItem("kiosk_location_name", "Old Place");
     localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
-    renderWithProviders(<Kiosk />);
+    (supabase.from as any).mockImplementationOnce(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }));
+    renderWithLoginRoute();
 
-    await waitFor(() => {
-      expect(localStorage.getItem("kiosk_location_id")).toBeNull();
-    });
+    expect(await screen.findByText("login page ?tab=kiosk")).toBeInTheDocument();
+    expect(localStorage.getItem("kiosk_location_id")).toBeNull();
   });
 });

@@ -10,7 +10,7 @@
  *
  * Checks:
  *  1. App root loads (HTTP 200, page has content)
- *  2. /kiosk loads and shows the kiosk setup screen
+ *  2. /kiosk on an unpaired browser lands on Login -> Kiosk (code entry)
  *  3. Protected route /dashboard redirects to /login (not a 404)
  *  4. Protected route /admin redirects to /login (not a 404)
  *  5. No uncaught JavaScript errors on the home page
@@ -53,20 +53,14 @@ test.describe("Smoke: app root", () => {
   });
 });
 
-// A fresh Playwright browser context has no localStorage, so it never has a
-// "kiosk_location_id" set — Kiosk.tsx's `!locationId` branch means every
-// anonymous visit to /kiosk lands on KioskSetupScreen ("Olia Kiosk" / "Select
-// a location to launch"), never the agenda grid. Assert on that, not on
-// agenda-grid content that only a previously-configured device would see —
-// asserting the grid text here could never pass against a real stateless
-// visit (see #597-adjacent investigation: this is why /kiosk had never
-// actually passed in this workflow's history, independent of the CLI/deps
-// issues fixed in #598 and the smoke.yml dependency-install fix alongside
-// this change).
+// A fresh Playwright browser context has no localStorage, so it's never a
+// paired kiosk — Kiosk.tsx sends it to /login?tab=kiosk, where a tablet
+// enters its kiosk code (#861). Assert on that code field, not on agenda
+// grid content that only a paired device would see.
 test.describe("Smoke: /kiosk", () => {
-  test("loads and shows the kiosk setup screen", async ({ page }) => {
+  test("sends an unpaired browser to the kiosk code entry", async ({ page }) => {
     await page.goto(url("/kiosk"));
-    await expect(page.getByText(/select a location to launch/i)).toBeVisible({
+    await expect(page.getByLabel(/kiosk code/i)).toBeVisible({
       timeout: 15_000,
     });
   });

@@ -54,7 +54,7 @@ const MOCK_CHECKLISTS = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Navigate straight to the kiosk grid (skip the setup / location-select screen)
+ * Navigate straight to the kiosk grid (as a paired device)
  * by pre-seeding localStorage with the test location and mocking all Supabase calls.
  */
 async function gotoGrid(page: import("@playwright/test").Page) {

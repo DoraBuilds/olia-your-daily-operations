@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLocations } from "@/hooks/useLocations";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import i18n, { resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
@@ -21,11 +20,10 @@ import {
   isVisibleAtTime,
   dbToKioskChecklist,
 } from "./kiosk/utils";
-import { KioskSetupScreen } from "./kiosk/KioskSetupScreen";
-import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken, ensureKioskDevice, touchKioskDevice } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken, touchKioskDevice } from "./kiosk/PinEntryModal";
 import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, type KioskStaffSession } from "@/lib/kiosk-staff-session";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
-import { clearKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { clearKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { toast } from "@/components/ui/sonner";
 import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
@@ -39,24 +37,13 @@ export { ChecklistRunner };
 // Re-export utility functions used by tests
 export { getKioskVisibilityState, isKioskDue, isKioskOverdue, isVisibleAtTime };
 
-// ─── Module-level persistence (survives in-app navigation) ───────────────────
-let _kioskLocationId: string | null = null;
-let _kioskLocationName: string | null = null;
-
 function clearKioskLocationSelection() {
-  _kioskLocationId = null;
-  _kioskLocationName = null;
   localStorage.removeItem("kiosk_location_id");
   localStorage.removeItem("kiosk_location_name");
   localStorage.removeItem("kiosk_token");
   localStorage.removeItem("kiosk_device_id");
   localStorage.removeItem("kiosk_device_token");
   localStorage.removeItem("kiosk_device_location_id");
-}
-
-function clearKioskOwnership() {
-  localStorage.removeItem("kiosk_owner_user_id");
-  localStorage.removeItem("kiosk_owner_org_id");
 }
 
 async function fetchKioskChecklists(locationId: string, departmentIds: string[]) {
@@ -151,10 +138,7 @@ function ChecklistCardSkeleton() {
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
 export default function Kiosk() {
   const { t } = useTranslation("kiosk");
-  const [searchParams] = useSearchParams();
-  const urlLocationId = searchParams.get("locationId");
   const { user, teamMember, loading } = useAuth();
-  const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
   const queryClient = useQueryClient();
 
   // Hydrate straight from localStorage on mount so a properly-configured
@@ -214,161 +198,16 @@ export default function Kiosk() {
     localStorage.setItem("kiosk_language", language);
   };
 
+  // A paired kiosk runs signed out, on the anon key (#861). The only time
+  // this device has a session is the owner's Admin-PIN session
+  // (kiosk-admin-login edge function); once that grant is over and we're
+  // back on the kiosk, end the session too so the tablet never keeps an
+  // account signed in. Also cleans up the owner session that devices set
+  // up the old way (signed in on the tablet) were left with.
   useEffect(() => {
-    if (loading) return;
-
-    // No live auth session on this device. That's the normal state for a
-    // kiosk most of the time (it runs on the anon key), and it's also what
-    // a silently expired/failed-to-refresh JWT looks like (Safari ITP
-    // evicting localStorage after ~7 days with no top-level interaction, a
-    // long offline stretch, etc). The kiosk's location binding lives in
-    // kiosk_location_id/kiosk_token, independent of the auth session, so
-    // leave it alone here — only a genuinely re-authenticated owner whose
-    // account doesn't match the stored one (below) should ever reset it.
-    if (!user?.id) return;
-
-    const ownerKey = "kiosk_owner_user_id";
-    const ownerOrgKey = "kiosk_owner_org_id";
-    const storedOwnerId = localStorage.getItem(ownerKey);
-    const storedOwnerOrgId = localStorage.getItem(ownerOrgKey);
-    const currentOrgId = teamMember?.organization_id ?? null;
-
-    if (
-      !storedOwnerId
-      || storedOwnerId !== user.id
-      || (storedOwnerOrgId && currentOrgId && storedOwnerOrgId !== currentOrgId)
-    ) {
-      clearKioskLocationSelection();
-      clearKioskOwnership();
-      setLocationId(null);
-      setLocationName("");
-      setScreen("grid");
-      setKioskChecklists([]);
-    }
-
-    localStorage.setItem(ownerKey, user.id);
-    if (currentOrgId) {
-      localStorage.setItem(ownerOrgKey, currentOrgId);
-    }
-  }, [loading, teamMember?.organization_id, user?.id]);
-
-  useEffect(() => {
-    if (loading || !user?.id || !teamMember?.organization_id || !locationsFetched) return;
-
-    if (urlLocationId) {
-      const matchedUrlLocation = allLocations.find((location) => location.id === urlLocationId);
-      if (!matchedUrlLocation) {
-        // A failed fetch also leaves allLocations empty (isFetched is true on
-        // error too), which looks identical to "this location was deleted."
-        // Treat an errored fetch as "don't know yet" and retry later instead
-        // of wiping a device's kiosk config over a transient network blip.
-        if (locationsErrored) return;
-        clearKioskLocationSelection();
-        clearKioskOwnership();
-        setLocationId(null);
-        setLocationName("");
-        setKioskChecklists([]);
-        return;
-      }
-
-      _kioskLocationId = matchedUrlLocation.id;
-      _kioskLocationName = matchedUrlLocation.name;
-      localStorage.setItem("kiosk_location_id", matchedUrlLocation.id);
-      localStorage.setItem("kiosk_location_name", matchedUrlLocation.name);
-      localStorage.setItem("kiosk_owner_user_id", user.id);
-      localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
-
-      // "Activate kiosk" (#826) pre-registers a device from Admin, without
-      // navigating anywhere, and hands out a link carrying that device's own
-      // id/token so opening it here adopts the already-created row instead
-      // of ensureKioskDevice (PinEntryModal.tsx's heartbeat effect) minting
-      // a second one for the same physical launch.
-      const urlDeviceId = searchParams.get("deviceId");
-      const urlDeviceToken = searchParams.get("deviceToken");
-      if (urlDeviceId && urlDeviceToken) {
-        localStorage.setItem("kiosk_device_id", urlDeviceId);
-        localStorage.setItem("kiosk_device_token", urlDeviceToken);
-        localStorage.setItem("kiosk_device_location_id", matchedUrlLocation.id);
-      }
-
-      // Fetch and store the server-issued kiosk_token for the URL-param setup path (SEQ-009).
-      void supabase
-        .from("locations")
-        .select("kiosk_token")
-        .eq("id", matchedUrlLocation.id)
-        .single()
-        .then(({ data: urlLocationData }) => {
-          if (urlLocationData?.kiosk_token) {
-            localStorage.setItem("kiosk_token", urlLocationData.kiosk_token);
-          }
-        })
-        .catch(() => {
-          // Non-fatal: PIN validation will fail gracefully if token is missing.
-        });
-
-      setLocationId(matchedUrlLocation.id);
-      setLocationName(matchedUrlLocation.name);
-      return;
-    }
-
-    const storedOwnerId = localStorage.getItem("kiosk_owner_user_id");
-    const storedOwnerOrgId = localStorage.getItem("kiosk_owner_org_id");
-    const storedLocationId = localStorage.getItem("kiosk_location_id");
-
-    if (
-      !storedLocationId ||
-      storedOwnerId !== user.id ||
-      storedOwnerOrgId !== teamMember.organization_id
-    ) {
-      if (locationId !== null || locationName !== "") {
-        setLocationId(null);
-        setLocationName("");
-      }
-      return;
-    }
-
-    const matchedStoredLocation = allLocations.find((location) => location.id === storedLocationId);
-    if (!matchedStoredLocation) {
-      // Same reasoning as the urlLocationId branch above: don't tear down a
-      // working kiosk's configuration just because this one fetch errored.
-      if (locationsErrored) return;
-      clearKioskLocationSelection();
-      clearKioskOwnership();
-      setLocationId(null);
-      setLocationName("");
-      setKioskChecklists([]);
-      return;
-    }
-
-    if (locationId !== matchedStoredLocation.id || locationName !== matchedStoredLocation.name) {
-      _kioskLocationId = matchedStoredLocation.id;
-      _kioskLocationName = matchedStoredLocation.name;
-      setLocationId(matchedStoredLocation.id);
-      setLocationName(matchedStoredLocation.name);
-    }
-  }, [
-    allLocations,
-    loading,
-    locationsErrored,
-    locationsFetched,
-    teamMember?.organization_id,
-    urlLocationId,
-    user?.id,
-  ]);
-
-  useEffect(() => {
-    if (!locationId || !teamMember?.organization_id || !locationsFetched || locationsErrored) return;
-
-    const locationStillAccessible = allLocations.some((location) => location.id === locationId);
-    if (!locationStillAccessible) {
-      clearKioskLocationSelection();
-      clearKioskOwnership();
-      setLocationId(null);
-      setLocationName("");
-      setScreen("grid");
-      setKioskChecklists([]);
-    }
-  }, [allLocations, locationId, locationsErrored, locationsFetched, teamMember?.organization_id]);
+    if (loading || !user?.id || !locationId || hasActiveKioskAdminSession()) return;
+    void supabase.auth.signOut({ scope: "local" });
+  }, [loading, user?.id, locationId]);
 
   // Load persisted completions for today whenever locationId is resolved
   useEffect(() => {
@@ -504,26 +343,7 @@ export default function Kiosk() {
     useInactivityTimer(screen === "grid" && staffIdentity !== null, handleStaffIdentityTimeout);
 
   useEffect(() => {
-    if (loading || !user?.id || !locationId || !locationsFetched || locationsErrored) return;
-    const matchedLocation = allLocations.find((location) => location.id === locationId);
-    if (matchedLocation) {
-      if (matchedLocation.name !== locationName) {
-        _kioskLocationName = matchedLocation.name;
-        localStorage.setItem("kiosk_location_name", matchedLocation.name);
-        setLocationName(matchedLocation.name);
-      }
-      return;
-    }
-
-    clearKioskLocationSelection();
-    clearKioskOwnership();
-    setLocationId(null);
-    setLocationName("");
-    setKioskChecklists([]);
-  }, [allLocations, loading, locationId, locationName, locationsErrored, locationsFetched, user?.id]);
-
-  useEffect(() => {
-    if (loading || user?.id || !locationId) return;
+    if (!locationId) return;
     let cancelled = false;
 
     supabase
@@ -535,7 +355,6 @@ export default function Kiosk() {
         if (cancelled) return;
         if (data?.id) {
           if (data.name && data.name !== locationName) {
-            _kioskLocationName = data.name;
             localStorage.setItem("kiosk_location_name", data.name);
             setLocationName(data.name);
           }
@@ -557,7 +376,7 @@ export default function Kiosk() {
     return () => {
       cancelled = true;
     };
-  }, [loading, locationId, locationName, user?.id]);
+  }, [locationId, locationName]);
 
   // Drain any queued submissions from previous offline sessions.
   // Legacy queue entries may contain location_id values that reference mock/test
@@ -587,10 +406,6 @@ export default function Kiosk() {
   // grid fresh when the kiosk regains focus after checklist/admin edits.
   useEffect(() => {
     if (!locationId) return;
-    if (user?.id && teamMember?.organization_id && locationsFetched) {
-      const locationStillAccessible = allLocations.some((location) => location.id === locationId);
-      if (!locationStillAccessible) return;
-    }
     let cancelled = false;
 
     const load = async (showSpinner = false) => {
@@ -631,7 +446,7 @@ export default function Kiosk() {
       window.removeEventListener("focus", handleFocusRefresh);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [allLocations, locationId, locationsFetched, teamMember?.organization_id, user?.id, staffIdentity]);
+  }, [locationId, staffIdentity]);
 
   // Proactively refresh kiosk_token whenever the locationId is resolved.
   // Covers the case where the kiosk was set up before the token feature was
@@ -641,16 +456,14 @@ export default function Kiosk() {
     void ensureKioskToken(locationId);
   }, [locationId]);
 
-  // Fleet registry (#818): registers this browser as a named device (once —
-  // see ensureKioskDevice) and, every 60s, checks in with the server. If an
-  // owner deactivated this specific device from Admin -> Kiosks, fall all the
-  // way back to the unconfigured/setup state, same as "Exit kiosk mode".
+  // Fleet registry (#818): every 60s, checks in with the server. If an owner
+  // deactivated this device from Admin -> Devices, or issued it a new
+  // pairing code (#861), un-pair and fall back to Login -> Kiosk.
   useEffect(() => {
     if (!locationId) return;
     let cancelled = false;
 
     const tick = async () => {
-      await ensureKioskDevice(locationId, searchParams.get("deviceLabel") ?? undefined);
       const stillActive = await touchKioskDevice();
       if (cancelled || stillActive) return;
       clearKioskDeviceState();
@@ -669,37 +482,6 @@ export default function Kiosk() {
       window.clearInterval(intervalId);
     };
   }, [locationId]);
-
-  const handleSetup = async (id: string, name: string) => {
-    _kioskLocationId = id;
-    _kioskLocationName = name;
-    localStorage.setItem("kiosk_location_id", id);
-    localStorage.setItem("kiosk_location_name", name);
-    if (user?.id) {
-      localStorage.setItem("kiosk_owner_user_id", user.id);
-    }
-    if (teamMember?.organization_id) {
-      localStorage.setItem("kiosk_owner_org_id", teamMember.organization_id);
-    }
-
-    // Fetch and store the server-issued kiosk_token so PIN validation can
-    // verify the location hasn't been tampered with in localStorage (SEQ-009).
-    try {
-      const { data: locationData } = await supabase
-        .from("locations")
-        .select("kiosk_token")
-        .eq("id", id)
-        .single();
-      if (locationData?.kiosk_token) {
-        localStorage.setItem("kiosk_token", locationData.kiosk_token);
-      }
-    } catch {
-      // Non-fatal: PIN validation will fail gracefully if token is missing.
-    }
-
-    setLocationId(id);
-    setLocationName(name);
-  };
 
   const handleStart = (staffId: string | null, staffName: string, orgId: string) => {
     setSelectedStaffId(staffId);
@@ -861,10 +643,8 @@ export default function Kiosk() {
 
   // ── Setup screen ──────────────────────────────────────────────────────────
   if (!locationId) {
-    const setupLocations = user?.id
-      ? allLocations.map((location) => ({ id: location.id, name: location.name }))
-      : undefined;
-    return <KioskSetupScreen onSetup={handleSetup} presetLocations={setupLocations} />;
+    // Not paired (or just deactivated): pairing happens on Login -> Kiosk.
+    return <Navigate to="/login?tab=kiosk" replace />;
   }
 
   // Split checklists by state — completed items leave Due/Upcoming immediately

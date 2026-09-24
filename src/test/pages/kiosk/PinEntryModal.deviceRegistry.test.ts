@@ -1,4 +1,4 @@
-import { ensureKioskDevice, touchKioskDevice } from "@/pages/kiosk/PinEntryModal";
+import { touchKioskDevice } from "@/pages/kiosk/PinEntryModal";
 
 const mockRpc = vi.fn();
 
@@ -11,50 +11,6 @@ vi.mock("@/lib/supabase", () => ({
 beforeEach(() => {
   localStorage.clear();
   mockRpc.mockReset();
-});
-
-describe("ensureKioskDevice", () => {
-  it("registers a device and stores its id/token/location when none is stored yet", async () => {
-    mockRpc.mockResolvedValue({ data: [{ device_id: "d1", device_token: "t1" }], error: null });
-    await ensureKioskDevice("loc-1", "Host stand");
-    expect(mockRpc).toHaveBeenCalledWith("register_kiosk_device", { p_location_id: "loc-1", p_label: "Host stand" });
-    expect(localStorage.getItem("kiosk_device_id")).toBe("d1");
-    expect(localStorage.getItem("kiosk_device_token")).toBe("t1");
-    expect(localStorage.getItem("kiosk_device_location_id")).toBe("loc-1");
-  });
-
-  it("is a no-op once a device token is already stored for this same location", async () => {
-    localStorage.setItem("kiosk_device_token", "existing-token");
-    localStorage.setItem("kiosk_device_location_id", "loc-1");
-    await ensureKioskDevice("loc-1", "Host stand");
-    expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  // Regression (#822): relaunching a kiosk for a different location without
-  // first exiting kiosk mode overwrites kiosk_location_id directly, so a
-  // device already registered for location A must register a fresh device
-  // for location B rather than silently keep reusing A's token — otherwise
-  // only the first location a device was ever pinned to ever shows up in
-  // Admin -> Kiosks.
-  it("registers a new device when the stored token belongs to a different location", async () => {
-    localStorage.setItem("kiosk_device_id", "d1");
-    localStorage.setItem("kiosk_device_token", "t1");
-    localStorage.setItem("kiosk_device_location_id", "loc-1");
-    mockRpc.mockResolvedValue({ data: [{ device_id: "d2", device_token: "t2" }], error: null });
-
-    await ensureKioskDevice("loc-2", "Kitchen");
-
-    expect(mockRpc).toHaveBeenCalledWith("register_kiosk_device", { p_location_id: "loc-2", p_label: "Kitchen" });
-    expect(localStorage.getItem("kiosk_device_id")).toBe("d2");
-    expect(localStorage.getItem("kiosk_device_token")).toBe("t2");
-    expect(localStorage.getItem("kiosk_device_location_id")).toBe("loc-2");
-  });
-
-  it("does not throw when the rpc fails", async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: "boom" } });
-    await expect(ensureKioskDevice("loc-1")).resolves.toBeUndefined();
-    expect(localStorage.getItem("kiosk_device_token")).toBeNull();
-  });
 });
 
 describe("touchKioskDevice", () => {

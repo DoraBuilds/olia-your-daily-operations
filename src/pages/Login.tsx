@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
@@ -9,8 +9,10 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { formatPairingCode, normalizePairingCode, pairKioskDevice, PAIRING_CODE_LENGTH } from "@/lib/kiosk-pairing";
 
 type Step = "email" | "code";
+type Mode = "login" | "kiosk";
 
 function isEmailRateLimited(message: string | null | undefined) {
   const normalized = (message ?? "").toLowerCase();
@@ -49,6 +51,9 @@ export default function Login() {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode: Mode = searchParams.get("tab") === "kiosk" ? "kiosk" : "login";
+  const setMode = (next: Mode) => setSearchParams(next === "kiosk" ? { tab: "kiosk" } : {}, { replace: true });
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -158,10 +163,29 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
-          <h1 className="font-display text-2xl text-foreground">{t("login.heading")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("login.subheading")}</p>
+          <h1 className="font-display text-2xl text-foreground">{mode === "kiosk" ? t("login.kioskHeading") : t("login.heading")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{mode === "kiosk" ? t("login.kioskSubheading") : t("login.subheading")}</p>
         </div>
 
+        <div role="tablist" className="grid grid-cols-2 p-1 rounded-full border border-border bg-card">
+          {(["login", "kiosk"] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={mode === tab}
+              onClick={() => setMode(tab)}
+              className={cn(
+                "py-2 rounded-full text-sm font-semibold transition-colors",
+                mode === tab ? "bg-[#0B0F0C] text-white" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab === "login" ? t("login.tabLogin") : t("login.tabKiosk")}
+            </button>
+          ))}
+        </div>
+
+        {mode === "kiosk" ? <KioskPairForm /> : (<>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">{t("login.email")}</label>
@@ -267,7 +291,69 @@ export default function Login() {
             {t("login.createOne")}
           </Link>
         </p>
+        </>)}
       </div>
     </div>
+  );
+}
+
+// ─── KioskPairForm ────────────────────────────────────────────────────────────
+// Login -> "Kiosk" tab (#861): turns this browser into the kiosk that an
+// owner created in Admin, using its one-time code. No account sign-in.
+function KioskPairForm() {
+  const { t } = useTranslation("auth");
+  const navigate = useNavigate();
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const complete = normalizePairingCode(code).length === PAIRING_CODE_LENGTH;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!complete || loading) return;
+    setLoading(true);
+    setError(null);
+    const result = await pairKioskDevice(code);
+    if (!result.ok) {
+      setLoading(false);
+      setError(result.reason === "invalid_code" ? t("login.kioskInvalidCode") : t("login.kioskNetworkError"));
+      return;
+    }
+    navigate("/kiosk", { replace: true });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="kiosk-code" className="text-xs text-muted-foreground mb-1 block">{t("login.kioskCodeLabel")}</label>
+        <input
+          id="kiosk-code"
+          autoFocus
+          type="text"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          value={formatPairingCode(code)}
+          onChange={e => { setCode(normalizePairingCode(e.target.value)); setError(null); }}
+          placeholder={t("login.kioskCodePlaceholder")}
+          className="w-full border border-border rounded-xl px-4 py-3 text-lg text-center font-semibold tracking-[0.25em] tabular-nums uppercase bg-card focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </div>
+
+      {error && <p className="text-xs text-status-error">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={!complete || loading}
+        className={cn(
+          "w-full py-3 rounded-full text-sm font-semibold transition-colors",
+          complete && !loading
+            ? "bg-[#0B0F0C] text-white hover:bg-[#151A16]"
+            : "bg-muted text-muted-foreground cursor-not-allowed",
+        )}
+      >
+        {loading ? t("login.kioskStarting") : t("login.kioskStart")}
+      </button>
+    </form>
   );
 }

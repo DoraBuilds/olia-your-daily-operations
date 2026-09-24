@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.check-checklist-alerts]
 verify_jwt = false
+
+[functions.kiosk-admin-login]
+verify_jwt = false
