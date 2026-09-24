@@ -157,14 +157,17 @@ export default function Login() {
     setInfo(t("login.freshCodeSentInfo", { email: emailValue }));
   };
 
+  // Top-anchored, not vertically centered: the Log in and Kiosk forms differ
+  // in height, and centering made the header + tabs jump when switching tabs.
+  // The subheading reserves two lines for the same reason.
   return (
-    <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12" style={legalTheme}>
+    <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-start px-6 pt-[14vh] pb-12" style={legalTheme}>
       <style>{legalLinkStyle}</style>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />
           <h1 className="font-display text-2xl text-foreground">{mode === "kiosk" ? t("login.kioskHeading") : t("login.heading")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{mode === "kiosk" ? t("login.kioskSubheading") : t("login.subheading")}</p>
+          <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{mode === "kiosk" ? t("login.kioskSubheading") : t("login.subheading")}</p>
         </div>
 
         <div role="tablist" className="grid grid-cols-2 p-1 rounded-full border border-border bg-card">
