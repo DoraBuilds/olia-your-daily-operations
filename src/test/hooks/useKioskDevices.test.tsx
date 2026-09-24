@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { useKioskDevices, useRevokeKioskDevice } from "@/hooks/useKioskDevices";
+import { useKioskDevices, useRevokeKioskDevice, useCreateKioskDevice, useRegenerateKioskCode } from "@/hooks/useKioskDevices";
 
 const mockFrom = vi.fn();
 const mockRpc = vi.fn();
@@ -84,5 +84,38 @@ describe("useRevokeKioskDevice", () => {
     const { result } = renderHook(() => useRevokeKioskDevice(), { wrapper: makeWrapper() });
     result.current.mutate("d1");
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+describe("useCreateKioskDevice", () => {
+  it("creates a kiosk for the location and returns its code", async () => {
+    mockRpc.mockResolvedValue({ data: [{ device_id: "d1", label: "Bar", pairing_code: "ABCD2345" }], error: null });
+    const { result } = renderHook(() => useCreateKioskDevice(), { wrapper: makeWrapper() });
+    const row = await result.current.mutateAsync({ locationId: "loc-1", label: "Bar" });
+    expect(mockRpc).toHaveBeenCalledWith("create_kiosk_device", { p_location_id: "loc-1", p_label: "Bar" });
+    expect(row).toEqual({ device_id: "d1", label: "Bar", pairing_code: "ABCD2345" });
+  });
+
+  it("rejects when the rpc errors or returns nothing", async () => {
+    const { result } = renderHook(() => useCreateKioskDevice(), { wrapper: makeWrapper() });
+    mockRpc.mockResolvedValue({ data: null, error: new Error("only the account owner can add kiosks") });
+    await expect(result.current.mutateAsync({ locationId: "loc-1", label: "Bar" })).rejects.toThrow("only the account owner");
+    mockRpc.mockResolvedValue({ data: [], error: null });
+    await expect(result.current.mutateAsync({ locationId: "loc-1", label: "Bar" })).rejects.toThrow("No device returned");
+  });
+});
+
+describe("useRegenerateKioskCode", () => {
+  it("issues a new code for the device", async () => {
+    mockRpc.mockResolvedValue({ data: "WXYZ6789", error: null });
+    const { result } = renderHook(() => useRegenerateKioskCode(), { wrapper: makeWrapper() });
+    await expect(result.current.mutateAsync("d1")).resolves.toBe("WXYZ6789");
+    expect(mockRpc).toHaveBeenCalledWith("regenerate_kiosk_pairing_code", { p_device_id: "d1" });
+  });
+
+  it("rejects when the rpc fails", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: new Error("nope") });
+    const { result } = renderHook(() => useRegenerateKioskCode(), { wrapper: makeWrapper() });
+    await expect(result.current.mutateAsync("d1")).rejects.toThrow("nope");
   });
 });

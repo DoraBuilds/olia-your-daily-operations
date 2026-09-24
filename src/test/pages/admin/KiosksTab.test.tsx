@@ -1,13 +1,32 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { KiosksTab } from "@/pages/admin/KiosksTab";
+import { render as rtlRender, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { KiosksTab, AddKioskModal, KioskCodeModal } from "@/pages/admin/KiosksTab";
 
 const mockUseKioskDevices = vi.fn();
 const mockRevokeMutate = vi.fn();
+const mockCreateMutate = vi.fn();
+const mockRegenerateMutate = vi.fn();
 
 vi.mock("@/hooks/useKioskDevices", () => ({
   useKioskDevices: () => mockUseKioskDevices(),
   useRevokeKioskDevice: () => ({ mutate: mockRevokeMutate }),
+  useCreateKioskDevice: () => ({ mutate: mockCreateMutate, isPending: false }),
+  useRegenerateKioskCode: () => ({ mutate: mockRegenerateMutate, isPending: false }),
 }));
+
+// KiosksTab reads ?device= (the "Manage" link from a location's Devices card).
+function render(ui: React.ReactElement, path = "/admin/kiosks") {
+  return rtlRender(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
+}
+
+function device(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand",
+    last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z",
+    pairing_code: "ABCD2345", paired_at: "2026-09-21T00:00:00Z",
+    ...overrides,
+  };
+}
 
 vi.mock("@/components/ui/sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -20,6 +39,8 @@ const locations = [
 
 beforeEach(() => {
   mockRevokeMutate.mockReset();
+  mockCreateMutate.mockReset();
+  mockRegenerateMutate.mockReset();
   localStorage.clear();
 });
 
@@ -33,7 +54,7 @@ describe("KiosksTab", () => {
   it("groups devices under their concept and location", () => {
     mockUseKioskDevices.mockReturnValue({
       data: [
-        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z", pairing_code: null, paired_at: "2026-09-21T00:00:00Z" },
       ],
       isLoading: false,
     });
@@ -47,7 +68,7 @@ describe("KiosksTab", () => {
   it("shows a device as active when it checked in recently", () => {
     mockUseKioskDevices.mockReturnValue({
       data: [
-        { id: "d1", organization_id: "org1", location_id: "l1", label: "Kitchen", last_seen_at: new Date().toISOString(), revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Kitchen", last_seen_at: new Date().toISOString(), revoked_at: null, created_at: "2026-09-21T00:00:00Z", pairing_code: null, paired_at: "2026-09-21T00:00:00Z" },
       ],
       isLoading: false,
     });
@@ -58,7 +79,7 @@ describe("KiosksTab", () => {
   it("deactivates a device after confirming", async () => {
     mockUseKioskDevices.mockReturnValue({
       data: [
-        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z", pairing_code: null, paired_at: "2026-09-21T00:00:00Z" },
       ],
       isLoading: false,
     });
@@ -79,7 +100,7 @@ describe("KiosksTab", () => {
     localStorage.setItem("kiosk_location_id", "l1");
     mockUseKioskDevices.mockReturnValue({
       data: [
-        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z", pairing_code: null, paired_at: "2026-09-21T00:00:00Z" },
       ],
       isLoading: false,
     });
@@ -101,7 +122,7 @@ describe("KiosksTab", () => {
     localStorage.setItem("kiosk_location_id", "l1");
     mockUseKioskDevices.mockReturnValue({
       data: [
-        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z" },
+        { id: "d1", organization_id: "org1", location_id: "l1", label: "Host stand", last_seen_at: null, revoked_at: null, created_at: "2026-09-21T00:00:00Z", pairing_code: null, paired_at: "2026-09-21T00:00:00Z" },
       ],
       isLoading: false,
     });
@@ -122,5 +143,87 @@ describe("KiosksTab", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
     expect(screen.queryByText("Downtown")).not.toBeInTheDocument();
+  });
+
+  it("shows an unpaired kiosk as waiting, with its code", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device({ paired_at: null })], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    expect(screen.getByText("Waiting for device")).toBeInTheDocument();
+    expect(screen.getByText("· ABCD-2345")).toBeInTheDocument();
+  });
+
+  it("hides owner actions from non-owners", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} isOwner={false} />);
+    expect(screen.queryByText("Deactivate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Code")).not.toBeInTheDocument();
+  });
+
+  it("opens the code dialog from a row", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device({ paired_at: null })], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    fireEvent.click(screen.getByText("Code"));
+    expect(screen.getByText("ABCD-2345")).toBeInTheDocument();
+    expect(screen.getByText("Open the Kiosk tab and enter this code.")).toBeInTheDocument();
+  });
+
+  it("scrolls to and highlights the device named in ?device=", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />, "/admin/kiosks?device=d1");
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+});
+
+describe("KioskCodeModal", () => {
+  it("says a paired kiosk's code has been used", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KioskCodeModal deviceId="d1" locationName="Downtown" onClose={vi.fn()} />);
+    expect(screen.getByText(/Paired with a tablet/)).toBeInTheDocument();
+    expect(screen.getByText("ABCD-2345")).toHaveClass("line-through");
+  });
+
+  it("explains a kiosk set up before codes existed", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device({ pairing_code: null })], isLoading: false });
+    render(<KioskCodeModal deviceId="d1" locationName="Downtown" onClose={vi.fn()} />);
+    expect(screen.getByText("This tablet was set up before kiosk codes existed.")).toBeInTheDocument();
+  });
+
+  it("asks before issuing a new code, warning that the paired tablet disconnects", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KioskCodeModal deviceId="d1" locationName="Downtown" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByText("New code"));
+    expect(mockRegenerateMutate).not.toHaveBeenCalled();
+    expect(screen.getByText(/will be disconnected within a minute/)).toBeInTheDocument();
+    const buttons = screen.getAllByText("New code");
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(mockRegenerateMutate).toHaveBeenCalledWith("d1", expect.anything());
+  });
+
+  it("renders nothing once the device is gone", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
+    const { container } = render(<KioskCodeModal deviceId="d1" locationName="Downtown" onClose={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("AddKioskModal", () => {
+  it("prefills the next kiosk number and creates it for the location", () => {
+    const onCreated = vi.fn();
+    render(<AddKioskModal locationId="l1" locationName="Downtown" existingCount={2} onClose={vi.fn()} onCreated={onCreated} />);
+    const input = screen.getByDisplayValue("Kiosk 3");
+    fireEvent.change(input, { target: { value: "Bar tablet" } });
+    fireEvent.click(screen.getByText("Create kiosk"));
+    expect(mockCreateMutate).toHaveBeenCalledWith({ locationId: "l1", label: "Bar tablet" }, expect.anything());
+    mockCreateMutate.mock.calls[0][1].onSuccess({ device_id: "new-id" });
+    expect(onCreated).toHaveBeenCalledWith("new-id");
+  });
+
+  it("won't create a kiosk without a name", () => {
+    render(<AddKioskModal locationId="l1" locationName="Downtown" existingCount={0} onClose={vi.fn()} onCreated={vi.fn()} />);
+    fireEvent.change(screen.getByDisplayValue("Kiosk 1"), { target: { value: "  " } });
+    fireEvent.click(screen.getByText("Create kiosk"));
+    expect(mockCreateMutate).not.toHaveBeenCalled();
   });
 });

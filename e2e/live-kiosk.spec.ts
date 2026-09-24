@@ -30,10 +30,9 @@ test.afterEach(async () => {
 });
 
 test.describe("Kiosk live smoke", () => {
-  test("loads a real local-Supabase location on the setup screen", async ({ page }) => {
+  test("sends an unpaired browser to the kiosk code entry", async ({ page }) => {
     await page.goto("/kiosk");
-    await expect(page.getByText("Olia Kiosk")).toBeVisible();
-    await expect(page.locator("#location-select")).toContainText(locationName!);
+    await expect(page.getByLabel(/kiosk code/i)).toBeVisible();
   });
 
   test("shows real local-Supabase checklists on the kiosk grid", async ({ page }) => {

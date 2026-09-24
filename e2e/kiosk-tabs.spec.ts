@@ -5,7 +5,7 @@
  * No auth required — the kiosk is publicly accessible.
  *
  * What is covered:
- *  1. Kiosk loads and shows the location-select screen
+ *  1. An unpaired browser is sent to Login -> Kiosk (code entry)
  *  2. Launching with a stored location goes straight to the grid
  *  3. The stat strip shows Due now / Upcoming / Done
  *  4. "Upcoming" is a real clickable button (regression: was a dead <div>)
@@ -60,17 +60,11 @@ async function gotoGrid(page: import("@playwright/test").Page) {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-test.describe("Kiosk — setup screen", () => {
-  test("shows 'Olia Kiosk' on the setup screen", async ({ page }) => {
-    await mockLocations(page, [{ id: LOCATION_ID, name: LOCATION_NAME }]);
+test.describe("Kiosk — not paired", () => {
+  test("sends an unpaired browser to Login -> Kiosk code entry", async ({ page }) => {
     await page.goto("/kiosk");
-    await expect(page.getByText("Olia Kiosk")).toBeVisible();
-  });
-
-  test("shows 'Select a location to launch' prompt", async ({ page }) => {
-    await mockLocations(page, [{ id: LOCATION_ID, name: LOCATION_NAME }]);
-    await page.goto("/kiosk");
-    await expect(page.getByText(/select a location to launch/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/login\?tab=kiosk/);
+    await expect(page.getByLabel(/kiosk code/i)).toBeVisible();
   });
 });
 

@@ -4,9 +4,7 @@ import { useTranslation, Trans } from "react-i18next";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
-import { useLocations } from "@/hooks/useLocations";
-import { grantKioskAdminSession } from "@/lib/kiosk-admin-session";
+import { kioskAdminLogin } from "@/lib/kiosk-pairing";
 import { captureEvent } from "@/lib/posthog";
 import type { KioskChecklist } from "./types";
 import { useInactivityTimer } from "./hooks";
@@ -18,13 +16,6 @@ import { useInactivityTimer } from "./hooks";
 export { touchKioskDevice } from "@/lib/kiosk-guard";
 
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
-
-export async function validateKioskAdminPin(pin: string, locationId: string) {
-  return supabase.rpc("validate_admin_pin", {
-    p_pin: pin,
-    p_location_id: locationId,
-  });
-}
 
 export async function validateKioskStaffPin(pin: string, locationId: string) {
   return supabase.rpc("validate_staff_pin", {
@@ -41,17 +32,6 @@ export async function validateKioskMemberPin(pin: string, locationId: string) {
     p_pin: pin,
     p_location_id: locationId,
   });
-}
-
-// ─── clearKioskLocationSelection (needed by AdminLoginModal) ──────────────────
-
-export function clearKioskLocationSelectionForModal() {
-  localStorage.removeItem("kiosk_location_id");
-  localStorage.removeItem("kiosk_location_name");
-  localStorage.removeItem("kiosk_token");
-  localStorage.removeItem("kiosk_device_id");
-  localStorage.removeItem("kiosk_device_token");
-  localStorage.removeItem("kiosk_device_location_id");
 }
 
 // ─── ensureKioskToken ─────────────────────────────────────────────────────────
@@ -75,41 +55,6 @@ export async function ensureKioskToken(locationId: string): Promise<string | nul
     }
   } catch { /* non-fatal */ }
   return null;
-}
-
-// ─── ensureKioskDevice ────────────────────────────────────────────────────────
-// Registers this browser as a named kiosk device for the given location —
-// once per location. Also backfills a device row for kiosks that were pinned
-// before this feature shipped, so they show up in Admin -> Kiosks without a
-// relaunch.
-//
-// Guarded on (token present AND it was issued for *this* locationId), not
-// just "a token is present" (#822): relaunching a kiosk to a different
-// location from Admin overwrites kiosk_location_id directly (see the
-// urlLocationId effect in Kiosk.tsx) without going through
-// clearKioskLocationSelection first, so an already-configured device that
-// gets repointed at a new location would otherwise keep reusing its old
-// device row — silently never registering a device for the new location,
-// while that stale row kept looking "Active now" because touchKioskDevice
-// doesn't know its token has effectively moved.
-export async function ensureKioskDevice(locationId: string, label?: string): Promise<void> {
-  const storedToken = localStorage.getItem("kiosk_device_token");
-  const storedLocationId = localStorage.getItem("kiosk_device_location_id");
-  if (storedToken && storedLocationId === locationId) return;
-  try {
-    const { data, error } = await supabase.rpc("register_kiosk_device", {
-      p_location_id: locationId,
-      p_label: label ?? "",
-    });
-    const row = data?.[0];
-    if (!error && row) {
-      localStorage.setItem("kiosk_device_id", row.device_id);
-      localStorage.setItem("kiosk_device_token", row.device_token);
-      localStorage.setItem("kiosk_device_location_id", locationId);
-    }
-  } catch {
-    // Non-fatal: this device just won't appear in the fleet list yet.
-  }
 }
 
 // ─── verifyKioskToken ─────────────────────────────────────────────────────────
@@ -220,71 +165,38 @@ export function KioskPinShell({
 }
 
 // ─── AdminLoginModal ───────────────────────────────────────────────────────────
+// A paired kiosk has no account signed in (#861). An owner's Admin PIN is
+// exchanged, together with this device's token, for a session for that
+// owner (kioskAdminLogin -> kiosk-admin-login edge function), which lasts
+// until "Back to Kiosk" / the idle timeout (Layout.tsx, Kiosk.tsx).
 export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => void; kioskLocationId?: string | null }) {
   const { t } = useTranslation("kiosk");
   const navigate = useNavigate();
-  const { teamMember } = useAuth();
-  const { allLocations = [], isFetched: locationsFetched, isError: locationsErrored } = useLocations();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitPin = async (value: string) => {
     setError("");
     setLoading(true);
-
     const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
     if (!locationId) {
       setLoading(false);
-      setError(t("pin.selectLocationBeforeAdmin"));
+      setError(t("pin.selectLocationFirst"));
+      setPin("");
       return;
     }
-
-    if (teamMember?.organization_id && locationsFetched && !locationsErrored) {
-      const locationStillAccessible = allLocations.some((location) => location.id === locationId);
-      if (!locationStillAccessible) {
-        clearKioskLocationSelectionForModal();
-        setLoading(false);
-        setError(t("pin.locationNoLongerLinked"));
-        return;
-      }
-    }
-
-    // Verify the kiosk_token if available (SEQ-009).
-    // When ensureKioskToken returns null the token infrastructure is not yet
-    // set up in the database — skip the check rather than blocking all PINs.
-    const storedToken = await ensureKioskToken(locationId);
-    if (storedToken) {
-      const tokenValid = await verifyKioskToken(locationId, storedToken);
-      if (!tokenValid) {
-        clearKioskLocationSelectionForModal();
-        setLoading(false);
-        setError(t("pin.kioskSetupRequired"));
-        return;
-      }
-    }
-
-    const { data, error: rpcError } = await validateKioskAdminPin(pin, locationId);
-
+    const result = await kioskAdminLogin(value, locationId);
     setLoading(false);
-
-    if (rpcError) {
-      if (rpcError.message?.includes("Too many PIN attempts")) {
-        setError(t("pin.tooManyAttempts"));
-      } else {
-        setError(t("pin.couldNotVerifyAdminPin"));
-      }
+    if (result.ok) {
+      navigate("/admin?from=kiosk");
       return;
     }
-
-    if (!data || data.length === 0) {
-      setError(t("pin.invalidPin"));
-      return;
-    }
-
-    grantKioskAdminSession(data[0].id, locationId);
-    navigate("/admin?from=kiosk");
+    setPin("");
+    if (result.reason === "invalid_pin") setError(t("pin.invalidPin"));
+    else if (result.reason === "rate_limited") setError(t("pin.tooManyAttempts"));
+    else if (result.reason === "device_inactive" || result.reason === "not_paired") setError(t("pin.kioskSetupRequired"));
+    else setError(t("pin.couldNotVerifyPin"));
   };
 
   const handlePinRecovery = async () => {
@@ -300,42 +212,8 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
     if (pin.length >= 4 || loading) return;
     const next = pin + d;
     setPin(next);
-    if (next.length === 4) {
-      // Auto-submit once all 4 digits entered
-      void (async () => {
-        setError("");
-        setLoading(true);
-        const locationId = kioskLocationId ?? localStorage.getItem("kiosk_location_id");
-        if (!locationId) { setLoading(false); setError(t("pin.selectLocationFirst")); setPin(""); return; }
-        if (teamMember?.organization_id && locationsFetched && !locationsErrored) {
-          if (!allLocations.some(l => l.id === locationId)) {
-            clearKioskLocationSelectionForModal();
-            setLoading(false);
-            setError(t("pin.locationNoLongerAccessible"));
-            setPin("");
-            return;
-          }
-        }
-        // Verify the kiosk_token if available (SEQ-009).
-        const storedToken = await ensureKioskToken(locationId);
-        if (storedToken) {
-          const tokenValid = await verifyKioskToken(locationId, storedToken);
-          if (!tokenValid) {
-            clearKioskLocationSelectionForModal();
-            setLoading(false);
-            setError(t("pin.kioskSetupRequired"));
-            setPin("");
-            return;
-          }
-        }
-        const { data, error: rpcError } = await validateKioskAdminPin(next, locationId);
-        setLoading(false);
-        if (rpcError) { setError(rpcError.message?.includes("Too many PIN attempts") ? t("pin.tooManyAttempts") : t("pin.couldNotVerifyPin")); setPin(""); return; }
-        if (!data || data.length === 0) { setError(t("pin.invalidPin")); setPin(""); return; }
-        grantKioskAdminSession(data[0].id, locationId);
-        navigate("/admin?from=kiosk");
-      })();
-    }
+    // Auto-submit once all 4 digits entered
+    if (next.length === 4) void submitPin(next);
   };
 
   const handleBackspace = () => {
