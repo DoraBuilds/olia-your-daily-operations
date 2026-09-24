@@ -61,7 +61,8 @@ describe("Login page", () => {
 
   it("renders an email-first sign-in form", () => {
     renderPage();
-    expect(screen.getByText("Sign in")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByText("You'll receive a one-time code at the email address you enter.")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("you@yourbusiness.com")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/Enter the code from your email/i)).not.toBeInTheDocument();
   });
@@ -198,6 +199,7 @@ describe("Login page", () => {
       renderPage();
       fireEvent.click(screen.getByRole("tab", { name: "Kiosk" }));
       expect(screen.getByLabelText("Kiosk code")).toBeInTheDocument();
+      expect(screen.getByText("Enter the kiosk code from Olia Admin.")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("tab", { name: "Log in" }));
       expect(screen.getByPlaceholderText("you@yourbusiness.com")).toBeInTheDocument();
     });
