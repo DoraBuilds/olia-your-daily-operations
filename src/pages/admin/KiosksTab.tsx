@@ -66,8 +66,9 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
     return <p className="text-sm text-muted-foreground py-8 text-center">{t("kiosksTab.loading")}</p>;
   }
 
+  // pr: card border + row padding, so Add lines up with the rows' Deactivate
   const header = isOwner && locations.length > 0 && (
-    <div className="flex justify-end">
+    <div className="flex justify-end pr-[17px]">
       <AddLink onClick={() => setAdding(true)} ariaLabel={t("kiosksTab.addKiosk")} />
     </div>
   );

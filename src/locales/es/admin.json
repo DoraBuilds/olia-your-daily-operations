@@ -388,7 +388,6 @@
     "readOnly": "Solo lectura",
     "addLocation": "Agregar ubicación",
     "teamMembers": "Miembros del equipo ({{count}})",
-    "teamMembersNotice": "Todos los miembros del equipo en todas las ubicaciones de la organización.",
     "name": "Nombre",
     "role": "Rol",
     "noRoleSet": "—",

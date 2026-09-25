@@ -625,13 +625,9 @@ export function AccountTab({
 
       {/* Team Members */}
       {show("users") && <section>
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {t("accountTab.teamMembersNotice")}
-          </p>
-          <div className="shrink-0">
-            <AddLink onClick={onInviteMember} ariaLabel={t("accountTab.addTeamMember")} />
-          </div>
+        {/* pr: card border + row padding + trash button padding, so Add lines up with the trash icons */}
+        <div className="flex justify-end mb-3 pr-[23px]">
+          <AddLink onClick={onInviteMember} ariaLabel={t("accountTab.addTeamMember")} />
         </div>
         <div className="card-surface divide-y divide-border">
           {/* Column headers */}
