@@ -29,7 +29,7 @@ export function SupportModeBanner() {
   return (
     <div
       role="status"
-      className="relative z-50 shrink-0 bg-status-warn text-white safe-area-pt"
+      className="relative z-50 shrink-0 bg-status-error/50 text-foreground safe-area-pt"
     >
       <div className="mx-auto flex w-full max-w-[1240px] items-center gap-2 px-3 py-1.5 sm:px-6 text-xs">
         <ShieldCheck size={14} className="shrink-0" />
@@ -39,7 +39,7 @@ export function SupportModeBanner() {
         <button
           type="button"
           onClick={() => navigate("/super-admin")}
-          className="shrink-0 rounded-md px-2 py-1 font-semibold hover:bg-white/15"
+          className="shrink-0 rounded-md px-2 py-1 font-semibold hover:bg-black/10"
         >
           Switch
         </button>
@@ -47,7 +47,7 @@ export function SupportModeBanner() {
           type="button"
           onClick={handleExit}
           disabled={exiting}
-          className="shrink-0 rounded-md bg-white/20 px-2 py-1 font-semibold hover:bg-white/30 disabled:opacity-60"
+          className="shrink-0 rounded-md bg-white/50 px-2 py-1 font-semibold hover:bg-white/70 disabled:opacity-60"
         >
           {exiting ? "Exiting…" : "Exit"}
         </button>
