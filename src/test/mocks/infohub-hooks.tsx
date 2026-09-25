@@ -202,6 +202,12 @@ export function useMockInfohubContent() {
         archivedLibraryDocs: mockContentState.archivedLibraryDocs.filter((item) => item.id !== id),
       };
     }),
+    deleteArchivedDocument: createMutation(setData, (id: string) => {
+      mockContentState = {
+        ...mockContentState,
+        archivedLibraryDocs: mockContentState.archivedLibraryDocs.filter((item) => item.id !== id),
+      };
+    }),
     reorderFolders: createMutation(setData, ({ section, orderedIds }: { section: "library" | "training"; orderedIds: string[] }) => {
       const reorder = <T extends { id: string; sortOrder: number | null }>(items: T[]) =>
         items.map((item) => {

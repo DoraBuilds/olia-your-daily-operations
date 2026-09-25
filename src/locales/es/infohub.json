@@ -34,6 +34,12 @@
   },
   "archived": "Archivados",
   "restore": "Restaurar",
+  "deleteArchived": {
+    "action": "Eliminar definitivamente",
+    "aria": "Eliminar {{title}} definitivamente",
+    "title": "¿Eliminar el archivo definitivamente?",
+    "message": "\"{{title}}\" se eliminará para siempre, incluido cualquier archivo subido. Esta acción no se puede deshacer."
+  },
   "actions": {
     "moveToFolder": "Mover a carpeta",
     "renameFolder": "Renombrar carpeta",

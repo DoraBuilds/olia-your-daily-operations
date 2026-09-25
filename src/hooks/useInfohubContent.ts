@@ -651,8 +651,11 @@ export function useInfohubContent() {
 
   const deleteArchivedDocument = useMutation({
     mutationFn: async (id: string) => {
+      const filePath = qc.getQueryData<InfohubContentData>(queryKey)?.archivedLibraryDocs.find((doc) => doc.id === id)?.filePath;
       const { error } = await supabase.from("infohub_documents").delete().eq("id", id);
       if (error) throw error;
+      // Best-effort: the row is gone either way, an orphaned file is harmless.
+      if (filePath) await supabase.storage.from("infohub-files").remove([filePath]);
     },
     onMutate: async (id) => {
       const previous = qc.getQueryData<InfohubContentData>(queryKey) ?? getDefaultContent();

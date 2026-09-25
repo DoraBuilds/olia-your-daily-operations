@@ -98,6 +98,7 @@ vi.mock("@/hooks/useInfohubContent", () => ({
     deleteFolder: { mutate: vi.fn() },
     archiveDocument: { mutate: vi.fn() },
     restoreDocument: { mutate: vi.fn() },
+    deleteArchivedDocument: { mutate: vi.fn() },
     reorderFolders: { mutate: vi.fn() },
   }),
 }));
