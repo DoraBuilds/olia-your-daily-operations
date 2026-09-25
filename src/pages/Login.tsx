@@ -9,6 +9,7 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { AuthLanguageSwitcher } from "@/components/AuthLanguageSwitcher";
 import { formatPairingCode, normalizePairingCode, pairKioskDevice, PAIRING_CODE_LENGTH } from "@/lib/kiosk-pairing";
 
 type Step = "email" | "code";
@@ -163,6 +164,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-start px-6 pt-[14vh] pb-12" style={legalTheme}>
       <style>{legalLinkStyle}</style>
+      <AuthLanguageSwitcher />
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />

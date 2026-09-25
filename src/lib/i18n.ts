@@ -46,11 +46,64 @@ export function resolveSupportedLanguage(tag: string | null | undefined): Suppor
     : DEFAULT_LANGUAGE;
 }
 
+// The device's last known language: picked on the Log in / Sign up page, or
+// the signed-in user's saved preference. Lets signed-out pages (and the first
+// paint after a reload) open in that language instead of the browser's.
+const DEVICE_LANGUAGE_KEY = "olia_language";
+// Set only when someone explicitly picks a language on Log in / Sign up;
+// consumed once they're signed in, when it's saved to their profile.
+const PENDING_LANGUAGE_KEY = "olia_language_pending";
+
+function readStorage(key: string): string | null {
+  try {
+    return typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getDeviceLanguage(): SupportedLanguage {
+  return resolveSupportedLanguage(
+    readStorage(DEVICE_LANGUAGE_KEY) ?? (typeof navigator !== "undefined" ? navigator.language : undefined),
+  );
+}
+
+export function rememberDeviceLanguage(language: SupportedLanguage): void {
+  try {
+    localStorage.setItem(DEVICE_LANGUAGE_KEY, language);
+  } catch {
+    // Storage unavailable (private mode) — the choice just won't persist.
+  }
+}
+
+/** Log in / Sign up picker: switch now, and carry the choice into the app. */
+export function chooseSignedOutLanguage(language: SupportedLanguage): void {
+  i18n.changeLanguage(language);
+  rememberDeviceLanguage(language);
+  try {
+    localStorage.setItem(PENDING_LANGUAGE_KEY, language);
+  } catch {
+    // See rememberDeviceLanguage.
+  }
+}
+
+/** Returns (and clears) a language picked on Log in / Sign up, if any. */
+export function takePendingLanguageChoice(): SupportedLanguage | null {
+  const pending = readStorage(PENDING_LANGUAGE_KEY);
+  if (!pending) return null;
+  try {
+    localStorage.removeItem(PENDING_LANGUAGE_KEY);
+  } catch {
+    // See rememberDeviceLanguage.
+  }
+  return resolveSupportedLanguage(pending);
+}
+
 i18n.use(initReactI18next).init({
   resources,
   ns: NAMESPACES,
   defaultNS: "common",
-  lng: resolveSupportedLanguage(typeof navigator !== "undefined" ? navigator.language : undefined),
+  lng: getDeviceLanguage(),
   fallbackLng: DEFAULT_LANGUAGE,
   interpolation: { escapeValue: false },
   react: { useSuspense: false },

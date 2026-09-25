@@ -327,6 +327,31 @@ describe("AuthContext", () => {
       expect(changeLanguageSpy).toHaveBeenCalledWith("es");
     });
 
+    it("saves a language picked on Log in / Sign up to the profile once signed in, only once", async () => {
+      localStorage.setItem("olia_language_pending", "es");
+      const changeLanguageSpy = vi.spyOn(i18n, "changeLanguage");
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await signInUser1(result);
+
+      await waitFor(() => expect(result.current.teamMember?.language).toBe("es"));
+      expect(changeLanguageSpy).toHaveBeenCalledWith("es");
+      expect(changeLanguageSpy).not.toHaveBeenCalledWith("en");
+      expect(localStorage.getItem("olia_language_pending")).toBeNull();
+      expect(localStorage.getItem("olia_language")).toBe("es");
+    });
+
+    it("remembers the saved language on the device when nothing was picked signed out", async () => {
+      localStorage.removeItem("olia_language_pending");
+      teamMemberRow!.language = "es";
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      await signInUser1(result);
+
+      expect(localStorage.getItem("olia_language")).toBe("es");
+    });
+
     it("updateLanguage persists the new language and updates local state", async () => {
       const { result } = renderHook(() => useAuth(), { wrapper });
       await waitFor(() => expect(result.current.loading).toBe(false));
