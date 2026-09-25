@@ -725,7 +725,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             </div>
             <div>
               <p className="text-xs text-muted-foreground">
-                {t("deleteConfirm.typeToConfirm")} <strong className="text-foreground">DELETE</strong> {t("deleteConfirm.toConfirm")}
+                {t("deleteConfirm.typeToConfirm")} <strong className="text-foreground">{t("deleteConfirm.confirmWord")}</strong> {t("deleteConfirm.toConfirm")}
               </p>
               <input
                 autoFocus
@@ -742,9 +742,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 {t("deleteConfirm.cancel")}
               </button>
               <button
-                disabled={deleteConfirmText !== "DELETE"}
+                disabled={deleteConfirmText !== t("deleteConfirm.confirmWord")}
                 onClick={() => {
-                  if (deleteConfirmText !== "DELETE") return;
+                  if (deleteConfirmText !== t("deleteConfirm.confirmWord")) return;
                   if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id);
                   else deleteChecklistMut.mutate(deleteConfirm.id);
                   setDeleteConfirm(null);

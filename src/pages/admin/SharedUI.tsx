@@ -141,7 +141,8 @@ export function ConfirmModal({
 }) {
   const { t } = useTranslation("admin");
   const [deleteText, setDeleteText] = useState("");
-  const locked = requireDeleteText && deleteText !== "DELETE";
+  const confirmWord = t("confirm.confirmWord");
+  const locked = requireDeleteText && deleteText !== confirmWord;
   return (
     <BottomSheet onClose={onClose}>
       <ModalHeader title={title} onClose={onClose} />
@@ -150,7 +151,7 @@ export function ConfirmModal({
       {requireDeleteText && (
         <div>
           <p className="text-xs text-muted-foreground">
-            {t("confirm.typeToConfirm")} <strong className="text-foreground">DELETE</strong> {t("confirm.toConfirm")}
+            {t("confirm.typeToConfirm")} <strong className="text-foreground">{confirmWord}</strong> {t("confirm.toConfirm")}
           </p>
           <input
             autoFocus

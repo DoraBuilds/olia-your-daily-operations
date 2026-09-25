@@ -52,6 +52,7 @@
     "headingChecklist": "Delete checklist?",
     "body": "\"{{name}}\" will be permanently removed.",
     "typeToConfirm": "Type",
+    "confirmWord": "DELETE",
     "toConfirm": "to confirm.",
     "placeholder": "Type DELETE",
     "cancel": "Cancel",
