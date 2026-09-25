@@ -214,6 +214,21 @@ describe("Infohub extended behavior", () => {
     expect(screen.queryByText("Archived")).not.toBeInTheDocument();
   });
 
+  it("permanently deletes an archived library document after confirming", () => {
+    renderWithProviders(<Infohub />);
+    const opened = openFirstDocMenu();
+    if (!opened) return;
+    fireEvent.click(screen.getByText("Archive file"));
+    fireEvent.click(screen.getByText("Archived").closest("button")!);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Delete .* permanently$/ }));
+    expect(screen.getByText("Delete file permanently?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Delete permanently" }));
+
+    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /restore/i })).not.toBeInTheDocument();
+  });
+
   it("lets a document be edited and saved", () => {
     renderWithProviders(<Infohub />);
     const folderRow = screen.getByText("Food Safety").closest("div[class*='flex']") as HTMLElement | null;

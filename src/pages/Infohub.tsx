@@ -22,6 +22,7 @@ import {
   FolderInput,
   Pencil,
   Archive,
+  Trash2,
   Download,
   Shield,
   Lock,
@@ -46,6 +47,7 @@ import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
 import { AIActionsSheet, CreateDocModal, CreateFolderModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
+import { ConfirmModal } from "./admin/SharedUI";
 
 // ─── Infohub Page ─────────────────────────────────────────────────────────────
 
@@ -66,6 +68,7 @@ export default function Infohub() {
     deleteFolder,
     archiveDocument,
     restoreDocument,
+    deleteArchivedDocument,
     reorderFolders,
   } = useInfohubContent();
   const { data: trainingProgress = [], saveProgress } = useTrainingProgress();
@@ -92,6 +95,7 @@ export default function Infohub() {
   const archivedLibDocs = infohubData.archivedLibraryDocs;
   const trainFolders = infohubData.trainingFolders;
   const [showArchived, setShowArchived] = useState(false);
+  const [deleteArchivedTarget, setDeleteArchivedTarget] = useState<DocItem | null>(null);
 
   // Navigation state
   const [currentLibFolder, setCurrentLibFolder] = useState<string | null>(null);
@@ -744,6 +748,14 @@ export default function Infohub() {
                       >
                         {t("restore")}
                       </button>
+                      <button
+                        onClick={() => setDeleteArchivedTarget(doc)}
+                        aria-label={t("deleteArchived.aria", { title: doc.title })}
+                        title={t("deleteArchived.action")}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+                      >
+                        <Trash2 size={14} className="text-status-error" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -985,6 +997,18 @@ export default function Infohub() {
           onSave={(newName) => {
             handleRenameFolder(renameTarget.id, newName, renameTarget.section);
             setRenameTarget(null);
+          }}
+        />
+      )}
+      {deleteArchivedTarget && (
+        <ConfirmModal
+          title={t("deleteArchived.title")}
+          message={t("deleteArchived.message", { title: deleteArchivedTarget.title })}
+          actionLabel={t("deleteArchived.action")}
+          onClose={() => setDeleteArchivedTarget(null)}
+          onConfirm={() => {
+            deleteArchivedDocument.mutate(deleteArchivedTarget.id);
+            setDeleteArchivedTarget(null);
           }}
         />
       )}

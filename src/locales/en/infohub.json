@@ -34,6 +34,12 @@
   },
   "archived": "Archived",
   "restore": "Restore",
+  "deleteArchived": {
+    "action": "Delete permanently",
+    "aria": "Delete {{title}} permanently",
+    "title": "Delete file permanently?",
+    "message": "\"{{title}}\" will be deleted for good, including any uploaded file. This can't be undone."
+  },
   "actions": {
     "moveToFolder": "Move to folder",
     "renameFolder": "Rename folder",
