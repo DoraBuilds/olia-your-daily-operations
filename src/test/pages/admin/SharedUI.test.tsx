@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { TeamMemberModal, ConfirmModal } from "@/pages/admin/SharedUI";
+import i18n from "@/lib/i18n";
 
 const { mockDepartmentsOrder } = vi.hoisted(() => ({
   mockDepartmentsOrder: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -305,5 +306,36 @@ describe("ConfirmModal", () => {
     const input = screen.getByPlaceholderText("Type DELETE") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "delete" } });
     expect(input.value).toBe("DELETE");
+  });
+
+  it("asks for the translated word (ELIMINAR) in Spanish", async () => {
+    await i18n.changeLanguage("es");
+    try {
+      const onConfirm = vi.fn();
+      render(
+        <ConfirmModal
+          title="Eliminar ubicación"
+          message="No se puede deshacer."
+          actionLabel="Eliminar"
+          onClose={vi.fn()}
+          onConfirm={onConfirm}
+          requireDeleteText
+        />
+      );
+
+      expect(screen.getByText("ELIMINAR")).toBeInTheDocument();
+      const confirmBtn = screen.getByText("Eliminar").closest("button") as HTMLButtonElement;
+      const input = screen.getByPlaceholderText("Escribe ELIMINAR");
+
+      fireEvent.change(input, { target: { value: "delete" } });
+      expect(confirmBtn).toBeDisabled();
+
+      fireEvent.change(input, { target: { value: "eliminar" } });
+      expect(confirmBtn).not.toBeDisabled();
+      fireEvent.click(confirmBtn);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });

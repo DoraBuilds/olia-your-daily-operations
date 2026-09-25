@@ -66,8 +66,9 @@
     "remove": "Quitar",
     "copyLink": "Copiar enlace",
     "typeToConfirm": "Escribe",
+    "confirmWord": "ELIMINAR",
     "toConfirm": "para confirmar.",
-    "placeholder": "Escribe DELETE",
+    "placeholder": "Escribe ELIMINAR",
     "removeFromLocationTitle": "Quitar de la ubicación",
     "removeFromLocationMessage": "<bold>{{name}}</bold> dejará de estar en {{location}}. Mantiene el acceso a sus otras ubicaciones."
   },
@@ -421,8 +422,9 @@
       "retentionNotice": "Tus datos se conservan durante 30 días por si esto fue un error.",
       "afterRetention": "Después de eso se eliminan de forma permanente y no podremos restaurarlos.",
       "typeToConfirm": "Escribe",
+      "confirmWord": "ELIMINAR",
       "toConfirm": "para confirmar.",
-      "placeholder": "Escribe DELETE",
+      "placeholder": "Escribe ELIMINAR",
       "deleting": "Eliminando…",
       "confirmAction": "Sí, eliminar mi cuenta"
     }
