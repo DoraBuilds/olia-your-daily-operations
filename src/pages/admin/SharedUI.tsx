@@ -2,7 +2,7 @@
 // BottomSheet, ModalHeader, FormField, SaveButton,
 // ConfirmModal, TeamMemberModal, ConceptModal, LocationModal
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -108,6 +108,26 @@ export function AddLink({ onClick, ariaLabel }: { onClick: () => void; ariaLabel
     </button>
   );
 }
+
+// ─── Menus ────────────────────────────────────────────────────────────────────
+
+/** Open state for a click-away popover menu (the 3-dot / Add menus). */
+export function useMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  return { open, setOpen, ref };
+}
+
+export const menuPanelCls = "absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[200px] py-1 animate-fade-in";
+export const menuItemCls = "w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors";
 
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
