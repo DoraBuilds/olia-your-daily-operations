@@ -27,6 +27,7 @@
     "selectedCount_one": "{{count}} seleccionado",
     "selectedCount_other": "{{count}} seleccionados",
     "searchPlaceholder": "Buscar…",
-    "noMatch": "Sin resultados"
+    "noMatch": "Sin resultados",
+    "deselectAll": "Deseleccionar todo"
   }
 }

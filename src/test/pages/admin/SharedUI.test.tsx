@@ -106,36 +106,47 @@ describe("TeamMemberModal", () => {
       });
     });
 
-    it("keeps the department picker visible after a second location is selected", async () => {
+    it("hides the department picker when no location is ticked, and shows it again after", async () => {
       renderModal({ locations });
-      pick("locations", "l1");
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
 
-      pick("locations", "l2");
-      expect(trigger("departments")).toBeInTheDocument();
+      fireEvent.click(trigger("locations"));
+      fireEvent.click(screen.getByTestId("member-locations-deselect-all"));
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+      expect(screen.queryByTestId("member-departments-trigger")).not.toBeInTheDocument();
+
+      pick("locations", "l1");
+      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
     });
 
-    it("lists departments from every selected location, once each by name", async () => {
+    it("lists departments from every ticked location, once each by name", async () => {
       renderModal({ locations });
-      pick("locations", "l1");
-      pick("locations", "l2");
-
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       fireEvent.click(trigger("departments"));
       expect(screen.getByTestId("member-departments-option-d1")).toHaveTextContent("Kitchen");
       expect(screen.getByTestId("member-departments-option-d2")).toHaveTextContent("Front of House");
     });
 
+    it("selects every department via All, and clears them via Deselect all", async () => {
+      const onSave = vi.fn();
+      renderModal({ locations, onSave });
+      await waitFor(() => expect(trigger("departments")).toHaveTextContent("No department"));
+
+      fireEvent.click(trigger("departments"));
+      fireEvent.click(screen.getByTestId("member-departments-option-all"));
+      expect(trigger("departments")).toHaveTextContent("All departments");
+
+      fireEvent.click(screen.getByTestId("member-departments-deselect-all"));
+      expect(trigger("departments")).toHaveTextContent("No department");
+    });
+
     it("allows selecting more than one department at once", async () => {
       const onSave = vi.fn();
       renderModal({ locations, onSave });
-      pick("locations", "l1");
-      pick("locations", "l2");
-
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       pick("departments", "d1");
       pick("departments", "d2");
-      expect(trigger("departments")).toHaveTextContent("2 selected");
+      expect(trigger("departments")).toHaveTextContent("All departments");
 
       fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: "Ana" } });
       fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
@@ -144,8 +155,6 @@ describe("TeamMemberModal", () => {
 
     it("toggles a selected department off when clicked again", async () => {
       renderModal({ locations });
-      pick("locations", "l1");
-
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       pick("departments", "d1");
       expect(trigger("departments")).toHaveTextContent("Kitchen");
@@ -160,16 +169,16 @@ describe("TeamMemberModal", () => {
         member: {
           id: "m1", name: "Sam", email: "sam@example.com", role: "GM",
           is_owner: false, is_manager: true, location_ids: ["l1", "l2"],
-          department_ids: ["d1", "d2"], initials: "S",
+          department_ids: ["d1"], initials: "S",
           permissions: {} as any,
         } as Parameters<typeof TeamMemberModal>[0]["member"],
       });
 
-      await waitFor(() => expect(trigger("departments")).toHaveTextContent("2 selected"));
+      await waitFor(() => expect(trigger("departments")).toHaveTextContent("Kitchen"));
     });
   });
 
-  describe("Concept picker (#871)", () => {
+  describe("Concept picker (#871, #877)", () => {
     const concepts = [
       { id: "c1", name: "Bistro" },
       { id: "c2", name: "Bakery" },
@@ -185,50 +194,53 @@ describe("TeamMemberModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
     };
 
-    it("offers every location under All concepts, and only the picked concept's after", () => {
-      renderModal({ concepts, locations });
-      fireEvent.click(trigger("locations"));
-      expect(screen.getByTestId("member-locations-option-l3")).toBeInTheDocument();
-      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    it("starts a new member with every concept and location ticked, saved as every location", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave });
+      expect(trigger("concepts")).toHaveTextContent("All concepts");
+      expect(trigger("locations")).toHaveTextContent("All locations");
 
-      pick("concepts", "c1");
+      saveAs("Ana");
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: [] }));
+    });
+
+    it("only offers the ticked concepts' locations", () => {
+      renderModal({ concepts, locations });
+      pick("concepts", "c2");
       fireEvent.click(trigger("locations"));
       expect(screen.getByTestId("member-locations-option-l1")).toBeInTheDocument();
-      expect(screen.getByTestId("member-locations-option-l2")).toBeInTheDocument();
       expect(screen.queryByTestId("member-locations-option-l3")).not.toBeInTheDocument();
     });
 
-    it("derives selected concepts from the member's locations", () => {
+    it("derives ticked concepts from the member's locations", () => {
       renderModal({ concepts, locations, initialLocationIds: ["l3"] });
       expect(trigger("concepts")).toHaveTextContent("Bakery");
-      expect(trigger("locations")).toHaveTextContent("Bakery Camden");
-    });
-
-    it("drops a concept's locations when the concept is deselected", () => {
-      const onSave = vi.fn();
-      renderModal({ concepts, locations, onSave, initialLocationIds: ["l1", "l3"] });
-      pick("concepts", "c1");
-      expect(trigger("locations")).toHaveTextContent("Bakery Camden");
-
-      saveAs("Ana");
-      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: ["l3"] }));
-    });
-
-    it("saves every location of the picked concepts when no specific location is chosen", () => {
-      const onSave = vi.fn();
-      renderModal({ concepts, locations, onSave });
-      pick("concepts", "c1");
       expect(trigger("locations")).toHaveTextContent("All locations in selected concepts");
+    });
 
+    it("ticks a concept's locations when the concept is ticked, and drops them when unticked", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave, initialLocationIds: ["l3"] });
+      pick("concepts", "c1");
+      expect(trigger("locations")).toHaveTextContent("All locations");
+
+      pick("concepts", "c2");
       saveAs("Ana");
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: ["l1", "l2"] }));
     });
 
-    it("saves an empty list (every location) when nothing is narrowed", () => {
-      const onSave = vi.fn();
-      renderModal({ concepts, locations, onSave });
-      saveAs("Ana");
-      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: [] }));
+    it("All concepts ticks everything; Deselect all clears concepts and locations and blocks saving", () => {
+      renderModal({ concepts, locations, initialLocationIds: ["l3"] });
+      fireEvent.click(trigger("concepts"));
+      fireEvent.click(screen.getByTestId("member-concepts-option-all"));
+      expect(trigger("concepts")).toHaveTextContent("All concepts");
+
+      fireEvent.click(screen.getByTestId("member-concepts-deselect-all"));
+      expect(trigger("concepts")).toHaveTextContent("Select concepts");
+      expect(trigger("locations")).toHaveTextContent("Select at least one location");
+
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: "Ana" } });
+      expect(screen.getByRole("button", { name: "Add team member" })).toBeDisabled();
     });
   });
 });

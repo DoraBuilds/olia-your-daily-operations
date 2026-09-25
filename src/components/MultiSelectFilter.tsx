@@ -24,12 +24,22 @@ interface MultiSelectFilterProps {
   testId: string;
   /** Extra classes for the dropdown panel, e.g. to match the trigger's width. */
   contentClassName?: string;
+  /**
+   * "filter" (default): an empty selection means "all" — the All row resets
+   * to it. "pick": the selection is explicit — the All row ticks every
+   * option (or unticks them when all are ticked) and a "Deselect all"
+   * footer clears it; an empty selection shows `noneLabel`.
+   */
+  mode?: "filter" | "pick";
+  noneLabel?: string;
+  deselectAllLabel?: string;
 }
 
 /** Compact popover-based multi-select (checkbox list + "All" option), replacing long native <select> dropdowns in filter toolbars. */
 export function MultiSelectFilter({
   icon, options, selected, onChange, allLabel, renderSelectedSummary,
   searchPlaceholder, noMatchLabel, noOptionsLabel, disabled, testId, contentClassName,
+  mode = "filter", noneLabel, deselectAllLabel,
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -45,7 +55,19 @@ export function MultiSelectFilter({
     [options, selected]
   );
 
-  const summary = selectedOptions.length === 0 ? allLabel : renderSelectedSummary(selectedOptions);
+  const pick = mode === "pick";
+  const allSelected = pick
+    ? options.length > 0 && selectedOptions.length === options.length
+    : selected.length === 0;
+
+  const summary = selectedOptions.length === 0
+    ? (pick ? noneLabel ?? allLabel : allLabel)
+    : pick && allSelected ? allLabel : renderSelectedSummary(selectedOptions);
+
+  const clickAll = () => {
+    if (!pick) onChange([]);
+    else onChange(allSelected ? [] : options.map(o => o.id));
+  };
 
   const toggle = (id: string) => {
     onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
@@ -88,17 +110,17 @@ export function MultiSelectFilter({
           <button
             type="button"
             data-testid={`${testId}-option-all`}
-            onClick={() => onChange([])}
+            onClick={clickAll}
             className={cn(
               "w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-left transition-colors",
-              selected.length === 0 ? "bg-sage-light text-sage-deep font-medium" : "hover:bg-muted/60",
+              allSelected ? "bg-sage-light text-sage-deep font-medium" : "hover:bg-muted/60",
             )}
           >
             <span className={cn(
               "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-              selected.length === 0 ? "bg-sage border-sage text-white" : "border-border",
+              allSelected ? "bg-sage border-sage text-white" : "border-border",
             )}>
-              {selected.length === 0 && <Check size={11} />}
+              {allSelected && <Check size={11} />}
             </span>
             {allLabel}
           </button>
@@ -133,14 +155,15 @@ export function MultiSelectFilter({
             );
           })}
         </div>
-        {selected.length > 0 && (
+        {pick && selected.length > 0 && (
           <div className="border-t border-border p-1.5">
             <button
               type="button"
+              data-testid={`${testId}-deselect-all`}
               onClick={() => onChange([])}
               className="w-full flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <X size={11} /> {allLabel}
+              <X size={11} /> {deselectAllLabel}
             </button>
           </div>
         )}
