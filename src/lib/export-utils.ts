@@ -205,7 +205,7 @@ export async function exportChecklistTemplatePdf(checklist: ChecklistTemplateDat
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(100, 100, 100);
-      doc.text(section.name.toUpperCase(), margin, y);
+      doc.text(section.name, margin, y);
       y += 7;
       doc.setTextColor(0, 0, 0);
     }

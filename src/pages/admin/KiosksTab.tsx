@@ -123,7 +123,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
 
       {groups.map(({ concept, locationGroups }) => (
         <div key={concept.id} className="space-y-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
             <Building2 size={12} />
             {concept.name}
           </div>

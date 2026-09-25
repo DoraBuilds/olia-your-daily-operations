@@ -233,7 +233,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
   return (
     <div className="space-y-2">
       <div>
-        <label className="text-xs text-muted-foreground uppercase tracking-widest mb-1 block">Date</label>
+        <label className="text-xs text-muted-foreground mb-1 block">Date</label>
         <input
           type="date"
           value={datePart}
@@ -242,7 +242,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
         />
       </div>
       <div>
-        <label className="text-xs text-muted-foreground uppercase tracking-widest mb-1 block">Time</label>
+        <label className="text-xs text-muted-foreground mb-1 block">Time</label>
         <input
           type="time"
           value={timePart}
@@ -295,7 +295,7 @@ export function InstructionBlock({
           onClick={onLinkedResourceOpen}
           className="w-full rounded-lg border border-lavender-deep/20 bg-background/70 px-4 py-3 text-left transition-colors hover:bg-background"
         >
-          <p className="text-xs uppercase tracking-wide text-lavender-deep/70">
+          <p className="text-xs text-lavender-deep/70">
             Open linked {linkedResourceSection === "training" ? "training" : "document"}
           </p>
           <p className="text-sm font-medium text-lavender-deep mt-1">{linkedResourceTitle}</p>

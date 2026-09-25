@@ -159,7 +159,8 @@ export default function Dashboard() {
   const [page, setPage]                            = useState(0);
 
   const today    = new Date();
-  const dateLabel = today.toLocaleDateString(i18n.language === "es" ? "es-ES" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const rawDate   = today.toLocaleDateString(i18n.language === "es" ? "es-ES" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const dateLabel = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
   const greeting  = t("greeting");
 
   // ── Auth ──
@@ -283,7 +284,7 @@ export default function Dashboard() {
         {/* ── Greeting Hero ── */}
         <section className="pt-1 pb-2">
         <div className="rounded-[24px] bg-gradient-to-b from-[hsl(var(--powder-blue-light))] to-transparent p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{dateLabel}</p>
+          <p className="text-xs text-muted-foreground font-medium">{dateLabel}</p>
           <h1 id="dashboard-greeting" className="font-display text-3xl text-foreground mt-1 leading-tight">
             {greeting}
           </h1>
@@ -304,7 +305,7 @@ export default function Dashboard() {
               <p className="text-xl font-semibold text-[hsl(var(--powder-blue-deep))]">
                 {logs.filter(l => l.created_at.slice(0, 10) === todayStr).length}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.checklists")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("stats.checklists")}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.checklistsCaption")}</p>
             </div>
             <div
@@ -325,7 +326,7 @@ export default function Dashboard() {
               )}>
                 {allAlerts.length}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.alerts")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("stats.alerts")}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.alertsCaption")}</p>
             </div>
             <div
@@ -344,7 +345,7 @@ export default function Dashboard() {
               <p data-testid="stats-overdue" className={cn("text-xl font-semibold", overdueCount > 0 ? "text-status-warn" : "text-foreground")}>
                 {overdueCount}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 uppercase tracking-wide">{t("stats.overdue")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("stats.overdue")}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">{t("stats.overdueCaption")}</p>
             </div>
           </div>

@@ -610,7 +610,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                   <div className="flex items-center gap-1.5 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{cl.title}</p>
                     {!cl.is_published && (
-                      <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-status-warn/10 text-status-warn">
+                      <span className="shrink-0 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-status-warn/10 text-status-warn">
                         {t("checklist.draftBadge")}
                       </span>
                     )}

@@ -292,10 +292,10 @@ export function DepartmentModal({
         </FormField>
 
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">{t("departmentsTab.assignedHeading")}</p>
+          <p className="text-xs text-muted-foreground font-semibold">{t("departmentsTab.assignedHeading")}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <span className="text-xs uppercase tracking-widest text-muted-foreground">{tc("reporting.filters.concept")}</span>
+              <span className="text-xs text-muted-foreground">{tc("reporting.filters.concept")}</span>
               <MultiSelectFilter
                 testId="department-concept-filter"
                 icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
@@ -310,7 +310,7 @@ export function DepartmentModal({
               />
             </div>
             <div className="space-y-1">
-              <span className="text-xs uppercase tracking-widest text-muted-foreground">{tc("reporting.filters.location")}</span>
+              <span className="text-xs text-muted-foreground">{tc("reporting.filters.location")}</span>
               <MultiSelectFilter
                 testId="department-location-filter"
                 icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}

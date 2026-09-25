@@ -43,7 +43,7 @@ export function MobileRouteTitle() {
     const section = adminSections.find((s) => location.pathname.startsWith(s.to)) ?? adminSections[0];
     return (
       <div className="flex-1 min-w-0">
-        <span className="block text-[10px] uppercase tracking-[0.12em] text-muted-foreground leading-none">{t("nav.admin")}</span>
+        <span className="block text-xs text-muted-foreground leading-none">{t("nav.admin")}</span>
         <span className="block font-display text-lg text-foreground leading-tight truncate">{tAdmin(section.labelKey)}</span>
       </div>
     );

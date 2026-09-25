@@ -236,7 +236,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
               {section.name && (
                 <div className="px-5 pt-4 pb-2 flex items-center gap-3">
                   <div className="flex-1 h-px bg-border" />
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{section.name}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">{section.name}</p>
                   <div className="flex-1 h-px bg-border" />
                 </div>
               )}
@@ -277,7 +277,7 @@ export function ChecklistPreviewModal({ checklist, onClose, onEdit }: {
                                 if (!followUp) return null;
                                 return (
                                   <div key={`${q.id}-${ri}-${ti}`} className="rounded-lg border border-sage/20 bg-sage/5 px-3 py-2">
-                                    <p className="text-xs uppercase tracking-wide text-sage-deep/70">{t("preview.followUpQuestion")}</p>
+                                    <p className="text-xs text-sage-deep/70">{t("preview.followUpQuestion")}</p>
                                     <p className="text-sm font-medium text-foreground mt-1">{followUp.text || t("preview.untitledFollowUp")}</p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                       {t("preview.nestedTriggersEnabled", {

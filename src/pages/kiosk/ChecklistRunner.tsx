@@ -443,7 +443,7 @@ export function ChecklistRunner({
               >
                 <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
                   <div className="min-w-0">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{resource.section}</p>
+                    <p className="text-xs text-muted-foreground">{resource.section}</p>
                     <h3 className="text-base font-semibold text-foreground mt-1">{resource.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{resource.subtitle}</p>
                   </div>

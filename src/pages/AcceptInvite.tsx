@@ -195,7 +195,7 @@ export default function AcceptInvite() {
               )}
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <label className="text-xs font-medium text-muted-foreground">
                   {t("acceptInvite.verificationCode")}
                 </label>
                 <input

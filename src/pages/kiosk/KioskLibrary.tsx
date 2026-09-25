@@ -127,7 +127,7 @@ export function KioskLibrary({
           <button
             data-testid="library-back-btn"
             onClick={handleBack}
-            className="text-xs text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             ← {backLabel}
           </button>

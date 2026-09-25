@@ -140,7 +140,7 @@ export function KioskPinShell({
             onClick={onCta}
             disabled={ctaDisabled}
             className={cn(
-              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-all active:scale-[0.98]",
+              "w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]",
               !ctaDisabled
                 ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
                 : "bg-muted text-muted-foreground cursor-not-allowed",
@@ -517,7 +517,7 @@ export function IdentifyModal({
             onClick={() => canStart && validate(pin)}
             disabled={!canStart}
             className={cn(
-              "w-full py-3.5 rounded-2xl font-bold tracking-widest text-sm transition-all active:scale-[0.98]",
+              "w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]",
               canStart
                 ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
                 : "bg-muted text-muted-foreground cursor-not-allowed",

@@ -637,8 +637,8 @@ export function AccountTab({
           {/* Column headers */}
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="w-9 shrink-0" />
-            <p className="flex-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.name")}</p>
-            <p className="w-24 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("accountTab.role")}</p>
+            <p className="flex-1 text-xs font-semibold text-muted-foreground">{t("accountTab.name")}</p>
+            <p className="w-24 shrink-0 text-xs font-semibold text-muted-foreground">{t("accountTab.role")}</p>
             <div className="w-32 shrink-0" />
           </div>
           {[...teamMembers].sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0).map(member => {
@@ -785,7 +785,7 @@ export function AccountTab({
                 )}
               </div>
               <span className={cn(
-                "text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shrink-0",
+                "text-xs font-bold px-2.5 py-1 rounded-full border shrink-0",
                 isActive ? "border-sage/20 text-sage bg-sage/10" : "border-status-warn/30 text-status-warn bg-status-warn/10"
               )}>
                 {planStatus === "trialing" ? t("accountTab.trial") : isActive ? t("accountTab.active") : planStatus}
@@ -824,7 +824,7 @@ export function AccountTab({
               </p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <p className="text-xs font-medium text-muted-foreground">
                 {t("accountTab.gracePeriod.chooseActive")}
               </p>
               <div className="grid gap-2">

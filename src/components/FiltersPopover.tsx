@@ -98,7 +98,7 @@ export function FiltersPopover({
 export function FilterField({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
   return (
     <div className={cn("space-y-1", className)}>
-      <span className="text-xs uppercase tracking-widest text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       {children}
     </div>
   );

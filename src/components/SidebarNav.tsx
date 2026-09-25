@@ -134,7 +134,7 @@ export function SidebarNav() {
                           key={child.to}
                           to={child.to}
                           className={cn(
-                            "block rounded-xl px-3 py-2 text-xs font-semibold tracking-[0.08em] uppercase transition-colors",
+                            "block rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
                             childActive
                               ? "bg-muted text-foreground"
                               : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",

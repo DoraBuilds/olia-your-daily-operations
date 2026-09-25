@@ -667,7 +667,7 @@ export default function Billing() {
               if (row.isHeader) {
                 return (
                   <div key={`header-${row.label}`} className="grid grid-cols-4 gap-1 pt-3 pb-1">
-                    <p className="col-span-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    <p className="col-span-4 text-xs font-semibold text-muted-foreground/60">
                       {row.label}
                     </p>
                   </div>

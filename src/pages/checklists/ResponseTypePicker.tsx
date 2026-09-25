@@ -65,7 +65,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
           </button>
         </div>
         <div className="overflow-y-auto flex-1 pb-6">
-          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("responsePicker.responsesSection")}</p>
+          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground">{t("responsePicker.responsesSection")}</p>
           {RESPONSE_TYPES.map(rt => (
             <button key={rt.key} onClick={() => { onSelect(rt.key); onClose(); }}
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left">
@@ -73,7 +73,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
               <span className="text-sm text-foreground">{getResponseTypeLabel(rt.key)}</span>
             </button>
           ))}
-          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("responsePicker.multipleChoiceSection")}</p>
+          <p className="px-5 pt-4 pb-2 text-xs font-semibold text-muted-foreground">{t("responsePicker.multipleChoiceSection")}</p>
           {multipleChoiceSets.map(mc => (
             <button key={mc.id} onClick={() => { onSelect("multiple_choice", mc.id); onClose(); }}
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left">

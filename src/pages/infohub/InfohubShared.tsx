@@ -848,7 +848,7 @@ export function AIActionsSheet({
         {result && result.type === "summary" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSheet.summary.sectionLabel")}</p>
+              <p className="text-xs text-muted-foreground">{t("aiSheet.summary.sectionLabel")}</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <ul className="space-y-2">
@@ -860,7 +860,7 @@ export function AIActionsSheet({
               ))}
             </ul>
             <div className="rounded-xl bg-lavender-light px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-lavender-deep/70">{t("aiSheet.summary.takeawayLabel")}</p>
+              <p className="text-xs text-lavender-deep/70">{t("aiSheet.summary.takeawayLabel")}</p>
               <p className="text-sm text-lavender-deep mt-1">{result.takeaway}</p>
             </div>
           </div>
@@ -868,7 +868,7 @@ export function AIActionsSheet({
         {result && result.type === "flashcards" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSheet.flashcards.sectionLabel")}</p>
+              <p className="text-xs text-muted-foreground">{t("aiSheet.flashcards.sectionLabel")}</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <div className="space-y-2">
@@ -886,7 +886,7 @@ export function AIActionsSheet({
         {result && result.type === "quiz" && (
           <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("aiSheet.quiz.sectionLabel")}</p>
+              <p className="text-xs text-muted-foreground">{t("aiSheet.quiz.sectionLabel")}</p>
               <h4 className="text-sm font-semibold text-foreground mt-1">{result.title}</h4>
             </div>
             <div className="space-y-3">
