@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, teamMember, loading, setupError, signOut } = useAuth();
+  const { user, teamMember, loading, setupError, signOut, platformAdmin } = useAuth();
   const navigate = useNavigate();
 
   // Navigate first, then sign out. Calling signOut first fires SIGNED_OUT
@@ -57,6 +57,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (setupError) {
     return null;
+  }
+
+  // A platform admin with no org of their own (and not viewing one) has
+  // nothing to show on org pages — send them to the support console.
+  if (platformAdmin?.isAdmin && !teamMember) {
+    return <Navigate to="/super-admin" replace />;
   }
 
   return <>{children}</>;

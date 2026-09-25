@@ -65,6 +65,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 // ─── AuthContext mock ─────────────────────────────────────────────────────────
+let mockPlatformAdmin: { isAdmin: boolean; viewingOrg: { id: string; name: string } | null } = { isAdmin: false, viewingOrg: null };
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { id: "u1", email: "manager@example.com" },
@@ -76,6 +77,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     },
     loading: false,
     signOut: mockSignOut,
+    platformAdmin: mockPlatformAdmin,
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -1049,6 +1051,31 @@ describe("Admin page", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /account options/i }));
     expect(screen.getByRole("button", { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  describe("platform admin", () => {
+    afterEach(() => { mockPlatformAdmin = { isAdmin: false, viewingOrg: null }; });
+
+    it("hides the Support console link from regular owners", async () => {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+      await waitFor(() => screen.getByRole("button", { name: /log out/i }));
+      expect(screen.queryByRole("button", { name: "Support console" })).not.toBeInTheDocument();
+    });
+
+    it("shows a Support console link that opens /super-admin", async () => {
+      mockPlatformAdmin = { isAdmin: true, viewingOrg: null };
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+      fireEvent.click(await screen.findByRole("button", { name: "Support console" }));
+      expect(mockNavigate).toHaveBeenCalledWith("/super-admin");
+    });
+
+    it("hides Delete account (and the console link) while in support mode", async () => {
+      mockPlatformAdmin = { isAdmin: true, viewingOrg: { id: "org1", name: "Customer" } };
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/account"] });
+      await waitFor(() => screen.getByRole("button", { name: /log out/i }));
+      expect(screen.queryByRole("button", { name: /account options/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Support console" })).not.toBeInTheDocument();
+    });
   });
 
   it("opens the delete confirmation modal when 'Delete account' is clicked from the menu", async () => {

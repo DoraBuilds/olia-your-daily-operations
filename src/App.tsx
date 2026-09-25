@@ -59,6 +59,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Cookies = lazy(() => import("./pages/Cookies"));
 const AvisoLegal = lazy(() => import("./pages/AvisoLegal"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 
 function RootLayout() {
   const location = useLocation();
@@ -169,6 +170,8 @@ const router = createBrowserRouter(
         { path: "/admin/billing", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/admin/kiosks", element: <ProtectedRoute><Admin /></ProtectedRoute> },
         { path: "/billing", element: <ProtectedRoute><Billing /></ProtectedRoute> },
+        // Platform-admin support console; guards itself (see SuperAdmin.tsx).
+        { path: "/super-admin", element: <SuperAdmin /> },
         { path: "*", element: <NotFound /> },
       ],
     },

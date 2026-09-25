@@ -121,6 +121,12 @@ export default function Terms() {
             Olia, including photos that show staff, customers, or other people, and for informing them
             where the law requires it.
           </p>
+          <p>
+            <strong className="text-foreground">Support access.</strong> Authorised Olia staff may access
+            your account, and view or change its data, when needed to provide support, fix problems,
+            maintain the service, or meet a legal obligation. Every such access is logged, and we only
+            use it for those purposes.
+          </p>
         </Section>
 
         <Section title="7. Availability">

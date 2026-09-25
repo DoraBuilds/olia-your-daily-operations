@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown, MailCheck, Send, Eye, EyeOff, X,
-  LogOut, MoreVertical,
+  LogOut, MoreVertical, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -68,7 +68,7 @@ export function AccountTab({
 }: AccountTabProps) {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  const { teamMember: authTeamMember, updateLanguage, signOut } = useAuth();
+  const { teamMember: authTeamMember, updateLanguage, signOut, platformAdmin } = useAuth();
   const { plan, planStatus, isActive, hasStripeSubscription, org } = usePlan();
   const isNative = useIsNativeApp();
   const saveAdminPin = useSaveAdminPin();
@@ -598,7 +598,18 @@ export function AccountTab({
             >
               <LogOut size={15} /> {loggingOut ? t("accountTab.loggingOut") : t("accountTab.logOut")}
             </button>
-            <div ref={dangerMenuRef} className="relative shrink-0">
+            {/* Platform admins only; internal tool, so English-only. */}
+            {platformAdmin?.isAdmin && !platformAdmin.viewingOrg && (
+              <button
+                type="button"
+                onClick={() => navigate("/super-admin")}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-border text-foreground hover:bg-muted transition-colors"
+              >
+                <ShieldCheck size={15} /> Support console
+              </button>
+            )}
+            {/* Hidden in support mode: account deletion acts on the admin's own login. */}
+            {!platformAdmin?.viewingOrg && <div ref={dangerMenuRef} className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setDangerMenuOpen(v => !v)}
@@ -618,7 +629,7 @@ export function AccountTab({
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </section>
       )}

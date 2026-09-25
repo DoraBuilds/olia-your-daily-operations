@@ -164,6 +164,8 @@ export default function Privacy() {
             All data is encrypted in transit (TLS) and at rest. PINs are stored as salted hashes
             and are never readable after creation. Access to the database is restricted to
             authenticated users within their own organisation via row-level security policies.
+            Authorised Olia staff can access an organisation's data for support and maintenance only;
+            every such access is logged.
           </p>
         </Section>
 
