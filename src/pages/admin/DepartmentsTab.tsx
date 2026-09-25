@@ -121,8 +121,9 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
     checklists: checklists.filter(c => (c.department_ids ?? []).includes(dep.id)).length,
   });
 
+  // pr: card border + row padding + trash button padding, so Add lines up with the trash icons
   const header = !isLoading && (
-    <div className="flex justify-end">
+    <div className="flex justify-end pr-[23px]">
       <AddLink onClick={() => setModal("new")} ariaLabel={t("departmentsTab.add")} />
     </div>
   );

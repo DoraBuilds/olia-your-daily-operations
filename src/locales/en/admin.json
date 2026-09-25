@@ -388,7 +388,6 @@
     "readOnly": "Read-only",
     "addLocation": "Add location",
     "teamMembers": "Team members ({{count}})",
-    "teamMembersNotice": "All team members across all locations in the organisation.",
     "name": "Name",
     "role": "Role",
     "noRoleSet": "—",
