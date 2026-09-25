@@ -8,7 +8,7 @@
     "adminTitle": "PIN de administrador",
     "insertTitle": "Introduce el PIN",
     "identifyTitle": "¿Quién eres?",
-    "identifySubtitle": "Introduce tu PIN para ver tus listas.",
+    "identifySubtitle": "Introduce tu PIN:",
     "staffLibraryTitle": "Biblioteca del personal",
     "checking": "Comprobando PIN…",
     "tryAgainIn": "Vuelve a intentarlo en <bold>{{seconds}}s</bold>",
