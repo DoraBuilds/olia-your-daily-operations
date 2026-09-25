@@ -53,7 +53,8 @@
     "completeButton": "Completar lista de verificación",
     "missingRequired_one": "{{count}} pregunta obligatoria aún necesita respuesta.",
     "missingRequired_other": "{{count}} preguntas obligatorias aún necesitan respuesta.",
-    "cancelConfirmTitle": "¿Cancelar la lista de verificación?",
+    "exit": "Salir",
+    "cancelConfirmTitle": "¿Salir de la lista de verificación?",
     "cancelConfirmBody": "Tus respuestas se guardan como borrador. Puedes continuar donde lo dejaste la próxima vez.",
     "keepGoing": "Continuar",
     "closeLinkedResource": "Cerrar recurso vinculado"

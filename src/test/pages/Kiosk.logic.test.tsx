@@ -483,51 +483,37 @@ describe("Kiosk — ChecklistRunner per-question attribution", () => {
 
 // ─── Cancel confirm modal ─────────────────────────────────────────────────────
 
-describe("Kiosk — ChecklistRunner cancel confirm", () => {
-  it("clicking Cancel shows confirm dialog", async () => {
-    const onCancel = vi.fn();
-    renderRunner(makeChecklist([
-      { id: "q1", text: "Q1", type: "text", required: false },
-    ]), { onCancel });
-    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
-    fireEvent.click(cancelBtn);
-    await waitFor(() => {
-      // A confirmation dialog should appear
-      const yesBtn = screen.queryByRole("button", { name: /yes, cancel/i });
-      const keepGoingBtn = screen.queryByRole("button", { name: /keep going/i });
-      expect(yesBtn || keepGoingBtn).toBeTruthy();
-    });
-  });
-
-  it("clicking 'Keep going' in cancel confirm dismisses the dialog", async () => {
+describe("Kiosk — ChecklistRunner exit confirm", () => {
+  it("clicking Exit shows confirm dialog", () => {
     renderRunner(makeChecklist([
       { id: "q1", text: "Q1", type: "text", required: false },
     ]));
-    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
-    fireEvent.click(cancelBtn);
-    await waitFor(() => {
-      const keepGoingBtn = screen.queryByRole("button", { name: /keep going/i });
-      if (keepGoingBtn) {
-        fireEvent.click(keepGoingBtn);
-        expect(screen.queryByRole("button", { name: /keep going/i })).not.toBeInTheDocument();
-      }
-    });
+    expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^exit$/i }));
+    expect(screen.getByText(/exit checklist\?/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /keep going/i })).toBeInTheDocument();
   });
 
-  it("clicking 'Yes, cancel' in confirm dialog calls onCancel", async () => {
+  it("clicking 'Keep going' in exit confirm dismisses the dialog", () => {
     const onCancel = vi.fn();
     renderRunner(makeChecklist([
       { id: "q1", text: "Q1", type: "text", required: false },
     ]), { onCancel });
-    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
-    fireEvent.click(cancelBtn);
-    await waitFor(async () => {
-      const yesCancelBtn = screen.queryByRole("button", { name: /yes, cancel/i });
-      if (yesCancelBtn) {
-        fireEvent.click(yesCancelBtn);
-        await waitFor(() => expect(onCancel).toHaveBeenCalled());
-      }
-    });
+    fireEvent.click(screen.getByRole("button", { name: /^exit$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /keep going/i }));
+    expect(screen.queryByRole("button", { name: /keep going/i })).not.toBeInTheDocument();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("clicking Exit in confirm dialog calls onCancel", () => {
+    const onCancel = vi.fn();
+    renderRunner(makeChecklist([
+      { id: "q1", text: "Q1", type: "text", required: false },
+    ]), { onCancel });
+    fireEvent.click(screen.getByRole("button", { name: /^exit$/i }));
+    const exitButtons = screen.getAllByRole("button", { name: /^exit$/i });
+    fireEvent.click(exitButtons[exitButtons.length - 1]);
+    expect(onCancel).toHaveBeenCalled();
   });
 });
 
