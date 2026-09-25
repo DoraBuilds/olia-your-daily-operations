@@ -163,11 +163,11 @@
       "allStarted": "All checklists have been started this period.",
       "noMatchFilters": "No logs match your filters.",
       "noneRecorded": "No logs recorded for this period.",
-      "badgeUnfinished": "UNFINISHED",
-      "badgePass": "PASS",
-      "badgeReview": "REVIEW",
-      "badgeActionRequired": "ACTION REQ.",
-      "badgeUnstarted": "UNSTARTED"
+      "badgeUnfinished": "Unfinished",
+      "badgePass": "Pass",
+      "badgeReview": "Review",
+      "badgeActionRequired": "Action req.",
+      "badgeUnstarted": "Unstarted"
     }
   },
   "logDetail": {

@@ -620,7 +620,7 @@ export function ChecklistBuilderModal({
 
         {/* Applies to: concept → locations → departments */}
         <div className="space-y-3">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.appliesTo.heading")}</label>
+          <label className="text-xs text-muted-foreground block font-semibold">{t("builder.appliesTo.heading")}</label>
           <div data-testid="builder-applies-to" className="rounded-[20px] border border-border bg-card p-4 space-y-3">
             <div className="grid gap-2 md:grid-cols-3">
               <FilterField label={t("builder.appliesTo.concept")}>
@@ -692,7 +692,7 @@ export function ChecklistBuilderModal({
 
         {/* Schedule */}
         <div className="space-y-4">
-          <label className="text-xs text-muted-foreground block font-semibold uppercase tracking-wide">{t("builder.schedule.heading")}</label>
+          <label className="text-xs text-muted-foreground block font-semibold">{t("builder.schedule.heading")}</label>
 
           {/* Start date */}
           <div>
@@ -847,7 +847,7 @@ export function ChecklistBuilderModal({
               <div className="pt-2">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">{t("builder.insert.sectionOption")}</span>
+                  <span className="text-xs text-muted-foreground">{t("builder.insert.sectionOption")}</span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
                 <input type="text" placeholder={t("builder.question.sectionNamePlaceholder")} value={section.name}
@@ -1356,7 +1356,7 @@ export function ChecklistBuilderModal({
                                   )}
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-foreground">{resource.title}</p>
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">{resource.section}</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{resource.section}</p>
                                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resource.subtitle}</p>
                                   </div>
                                 </div>

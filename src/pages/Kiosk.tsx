@@ -758,7 +758,7 @@ export default function Kiosk() {
         {/* Center: brand mark + name */}
         <div className="flex items-center justify-center gap-2.5">
           <img src="/brand/logo/olia-mark-dark.svg" alt="Olia" className="w-10 h-10 shrink-0" />
-          <p className="text-xs font-bold text-foreground uppercase tracking-widest leading-none">Olia</p>
+          <p className="text-xs font-bold text-foreground leading-none">Olia</p>
         </div>
 
         {/* Right: language + library + admin */}
@@ -998,9 +998,9 @@ export default function Kiosk() {
       <div className="px-5 py-3 border-t border-border flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-status-ok" />
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">{t("systemOnline")}</p>
+          <p className="text-xs text-muted-foreground font-medium">{t("systemOnline")}</p>
         </div>
-        <p className="text-xs text-muted-foreground/50 uppercase tracking-widest">{t("grid.footerBrand")}</p>
+        <p className="text-xs text-muted-foreground/50">{t("grid.footerBrand")}</p>
       </div>
 
       {/* Inactivity countdown — returns to the identify PIN screen (#796) */}

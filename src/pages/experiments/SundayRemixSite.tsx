@@ -40,8 +40,8 @@ const css = `
 
   .rx-badge {
     display: inline-flex; align-items: center; gap: 8px;
-    font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--ink); margin-bottom: 16px;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink); margin-bottom: 16px;
   }
   .rx-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 0 4px rgba(0,229,204,0.18); flex-shrink: 0; }
   .rx-badge.on-dark { color: rgba(255,255,255,0.82); }
@@ -170,7 +170,7 @@ const css = `
 
   /* KIOSK CARD */
   .rx-kiosk-card { background: var(--black-panel); border-radius: 20px; padding: 26px; box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,229,204,0.12); transform: rotate(1.6deg); }
-  .rx-kiosk-venue { font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(0,229,204,0.75); margin-bottom: 10px; }
+  .rx-kiosk-venue { font-size: 11px; font-weight: 600; color: rgba(0,229,204,0.75); margin-bottom: 10px; }
   .rx-kiosk-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 18px; }
   .rx-kprog { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 5px; overflow: hidden; }
   .rx-kprog-fill { height: 100%; width: 0; background: linear-gradient(90deg, #007E70, #00E5CC); border-radius: 2px; transition: width 0.55s cubic-bezier(0.4,0,0.2,1); }
@@ -204,7 +204,7 @@ const css = `
   .rx-team-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
   .rx-team-vis { background: var(--black-panel); border-radius: 20px; padding: 28px; position: relative; overflow: hidden; }
   .rx-team-vis::after { content: ''; position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(0,229,204,0.14) 0%, transparent 70%); pointer-events: none; }
-  .rx-vis-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(0,229,204,0.8); margin-bottom: 16px; }
+  .rx-vis-label { font-size: 12px; font-weight: 600; color: rgba(0,229,204,0.8); margin-bottom: 16px; }
   .rx-mini-task { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.055); }
   .rx-mini-task:last-of-type { border-bottom: none; }
   .rx-mini-circle { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.16); display: flex; align-items: center; justify-content: center; }
@@ -256,12 +256,12 @@ const css = `
   }
   .rx-founder-portrait img { width: 100%; height: 100%; object-fit: cover; }
   .rx-founder-name { font-size: 21px; margin-bottom: 3px; }
-  .rx-founder-role { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--neon); margin-bottom: 16px; }
+  .rx-founder-role { font-size: 13px; font-weight: 600; color: var(--neon); margin-bottom: 16px; }
   .rx-founder-bio p { font-size: 15.5px; font-weight: 300; color: var(--ink-soft); line-height: 1.7; margin-bottom: 12px; }
   .rx-founder-offclock {
     margin-top: auto; padding-top: 16px; border-top: 1px dashed var(--line-mid);
   }
-  .rx-founder-offclock-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+  .rx-founder-offclock-label { font-size: 12px; font-weight: 700; color: var(--ink-faint); margin-bottom: 8px; }
   .rx-founder-offclock p { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.5; }
   .rx-founder-link { align-self: flex-start; margin-top: 16px; font-size: 12.5px; font-weight: 600; color: var(--ink); text-decoration: none; border-bottom: 1.5px solid var(--neon); padding-bottom: 1px; }
 
@@ -305,7 +305,7 @@ const css = `
   .rx-pcard { border-radius: var(--r); padding: 30px; border: 1px solid var(--line); background: var(--white); transition: transform 0.22s, box-shadow 0.22s; }
   .rx-pcard:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
   .rx-pcard.featured { background: var(--black-panel); border-color: var(--black-panel); box-shadow: 0 22px 60px rgba(11,15,12,0.24); }
-  .rx-pbadge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); background: var(--neon); padding: 4px 10px; border-radius: 4px; margin-bottom: 18px; }
+  .rx-pbadge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--neon); padding: 4px 10px; border-radius: 4px; margin-bottom: 18px; }
   .rx-pname { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 7px; }
   .rx-pcard.featured .rx-pname { color: var(--white); }
   .rx-pamount { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 40px; font-weight: 500; color: var(--ink); letter-spacing: -0.02em; line-height: 1; }

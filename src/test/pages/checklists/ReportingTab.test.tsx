@@ -217,6 +217,10 @@ vi.mock("@/hooks/usePlan", () => ({
   }),
 }));
 
+// Status badges share their wording with the status filter options, so match the pill itself.
+const statusBadge = (text: string) =>
+  screen.queryAllByText(text).find(el => el.classList.contains("rounded-full"));
+
 describe("ReportingTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -346,22 +350,22 @@ describe("ReportingTab", () => {
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows UNFINISHED badge for incomplete log entries", () => {
+  it("shows Unfinished badge for incomplete log entries", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
+    expect(statusBadge("Unfinished")).toBeInTheDocument();
   });
 
   it("shows PASS badge for score 90", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    expect(screen.getByText("PASS")).toBeInTheDocument();
+    expect(statusBadge("Pass")).toBeInTheDocument();
   });
 
   it("shows REVIEW badge for score 65", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
-    expect(screen.getByText("REVIEW")).toBeInTheDocument();
+    expect(statusBadge("Review")).toBeInTheDocument();
   });
 
   it("shows completed by names in log", () => {
@@ -511,7 +515,7 @@ describe("ReportingTab", () => {
 
     fireEvent.change(screen.getByTestId("reporting-checklist-search"), { target: { value: "" } });
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unfinished" } });
-    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
+    expect(statusBadge("Unfinished")).toBeInTheDocument();
   });
 
   it("clears filters when the reset button is clicked", () => {
@@ -629,7 +633,7 @@ describe("ReportingTab", () => {
     expect(screen.getByText("Action needed")).toBeInTheDocument();
   });
 
-  it("shows ACTION REQ. badge for score < 65 in log entries", () => {
+  it("shows Action req. badge for score < 65 in log entries", () => {
     mockUseChecklistLogs.mockReturnValueOnce({
       data: [
         { id: "r1", checklist_id: "c1", checklist_title: "Low Score Entry", completed_by: "Hank", score: 40, type: "opening", answers: [], created_at: "2024-03-09T08:00:00Z", started_at: "2024-03-09T07:00:00Z", location_id: "loc-1" },
@@ -637,7 +641,7 @@ describe("ReportingTab", () => {
       isLoading: false,
     });
     render(<ReportingTab />, { wrapper });
-    expect(screen.getByText("ACTION REQ.")).toBeInTheDocument();
+    expect(statusBadge("Action req.")).toBeInTheDocument();
   });
 
   // ── Score trend chart ───────────────────────────────────────────────
@@ -772,16 +776,16 @@ describe("ReportingTab", () => {
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "completed" } });
     applyFilters();
-    expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
-    expect(screen.getByText("PASS")).toBeInTheDocument();
+    expect(statusBadge("Unfinished")).toBeUndefined();
+    expect(statusBadge("Pass")).toBeInTheDocument();
   });
 
   it("status filter 'all' shows all logs", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "all" } });
-    expect(screen.getByText("UNFINISHED")).toBeInTheDocument();
-    expect(screen.getByText("PASS")).toBeInTheDocument();
+    expect(statusBadge("Unfinished")).toBeInTheDocument();
+    expect(statusBadge("Pass")).toBeInTheDocument();
   });
 
   // ── Log count display ───────────────────────────────────────────────
@@ -928,7 +932,7 @@ describe("ReportingTab", () => {
     render(<ReportingTab />, { wrapper });
     openFilters();
     // Safety Walk (c3) has no log in MOCK_LOGS — should show as UNSTARTED
-    expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
+    expect(statusBadge("Unstarted")).toBeInTheDocument();
   });
 
   it("status filter 'unstarted' shows only unstarted checklists", () => {
@@ -936,9 +940,9 @@ describe("ReportingTab", () => {
     openFilters();
     fireEvent.change(screen.getByTestId("reporting-status-filter"), { target: { value: "unstarted" } });
     applyFilters();
-    expect(screen.getByText("UNSTARTED")).toBeInTheDocument();
-    expect(screen.queryByText("PASS")).not.toBeInTheDocument();
-    expect(screen.queryByText("UNFINISHED")).not.toBeInTheDocument();
+    expect(statusBadge("Unstarted")).toBeInTheDocument();
+    expect(statusBadge("Pass")).toBeUndefined();
+    expect(statusBadge("Unfinished")).toBeUndefined();
   });
 
   it("status filter 'unstarted' shows the unstarted checklist name", () => {

@@ -151,7 +151,7 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                       <p className="text-sm text-foreground leading-snug">{ans.label}</p>
                       {ans.required && <span className="text-xs text-muted-foreground/60">{t("logDetail.required")}</span>}
                       {type === "instruction" && (
-                        <span className="text-xs text-sage/70 font-medium uppercase tracking-wide">{t("logDetail.instruction")}</span>
+                        <span className="text-xs text-sage/70 font-medium">{t("logDetail.instruction")}</span>
                       )}
                     </div>
 

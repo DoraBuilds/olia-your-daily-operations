@@ -880,8 +880,8 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
           unstartedChecklists.length > 0 ? (
             <div className="bg-card border border-border rounded-[20px] divide-y divide-border overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-24 text-right">{t("reporting.log.statusColumn")}</p>
+                <p className="text-xs font-bold text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
+                <p className="text-xs font-bold text-muted-foreground w-24 text-right">{t("reporting.log.statusColumn")}</p>
               </div>
               {unstartedChecklists.map(c => (
                 <div key={c.id} className="flex items-center gap-3 px-4 py-3.5">
@@ -889,7 +889,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                     <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{t("reporting.log.noActivity")}</p>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">{t("reporting.log.badgeUnstarted")}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold status-error">{t("reporting.log.badgeUnstarted")}</span>
                 </div>
               ))}
             </div>
@@ -902,10 +902,10 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
           <div className="bg-card border border-border rounded-[20px] divide-y divide-border overflow-hidden">
             {/* Table header */}
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:block w-44">{t("reporting.log.completedByColumn")}</p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground hidden sm:block w-32">{t("reporting.log.completedAtColumn")}</p>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground w-28 text-right">{t("reporting.log.statusColumn")}</p>
+              <p className="text-xs font-bold text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
+              <p className="text-xs font-bold text-muted-foreground hidden sm:block w-44">{t("reporting.log.completedByColumn")}</p>
+              <p className="text-xs font-bold text-muted-foreground hidden sm:block w-32">{t("reporting.log.completedAtColumn")}</p>
+              <p className="text-xs font-bold text-muted-foreground w-28 text-right">{t("reporting.log.statusColumn")}</p>
               <div className="w-[13px]" />
             </div>
             {logEntries.map(log => {
@@ -921,7 +921,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                   <div className="hidden sm:block w-44 min-w-0"><ContributorsCell completedBy={log.completedBy} /></div>
                   <p className="hidden sm:block w-32 text-sm text-muted-foreground tabular-nums">{log.date}</p>
                   <div className="w-28 flex justify-end shrink-0">
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold tracking-wide", badge.cls)}>
+                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold", badge.cls)}>
                       {badge.label}
                     </span>
                   </div>
@@ -939,7 +939,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
                 <p className="hidden sm:block w-44 text-sm text-muted-foreground">—</p>
                 <p className="hidden sm:block w-32 text-sm text-muted-foreground">—</p>
                 <div className="w-28 flex justify-end shrink-0">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold tracking-wide status-error">{t("reporting.log.badgeUnstarted")}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold status-error">{t("reporting.log.badgeUnstarted")}</span>
                 </div>
                 <div className="w-[13px] shrink-0" />
               </div>

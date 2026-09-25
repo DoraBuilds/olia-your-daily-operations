@@ -163,11 +163,11 @@
       "allStarted": "Todas las listas se han iniciado en este período.",
       "noMatchFilters": "Ningún registro coincide con tus filtros.",
       "noneRecorded": "No hay registros para este período.",
-      "badgeUnfinished": "SIN TERMINAR",
-      "badgePass": "APROBADO",
-      "badgeReview": "REVISAR",
-      "badgeActionRequired": "REQUIERE ACCIÓN",
-      "badgeUnstarted": "SIN EMPEZAR"
+      "badgeUnfinished": "Sin terminar",
+      "badgePass": "Aprobado",
+      "badgeReview": "Revisar",
+      "badgeActionRequired": "Requiere acción",
+      "badgeUnstarted": "Sin empezar"
     }
   },
   "logDetail": {

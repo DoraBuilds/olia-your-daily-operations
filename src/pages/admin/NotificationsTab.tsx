@@ -112,7 +112,7 @@ export function NotificationsTab() {
           <div className="space-y-4 pt-1 border-t border-border">
             {/* What to notify */}
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("notificationsTab.alertMeAbout")}</p>
+              <p className="text-xs text-muted-foreground">{t("notificationsTab.alertMeAbout")}</p>
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={14} className="text-status-warn" />
@@ -139,7 +139,7 @@ export function NotificationsTab() {
 
             {/* Recipient email */}
             <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Mail size={12} />
                 {t("notificationsTab.sendTo")}
               </label>
@@ -155,7 +155,7 @@ export function NotificationsTab() {
 
             {/* Notify time */}
             <div className="space-y-1.5">
-              <label className="text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock size={12} />
                 {t("notificationsTab.sendAt")}
               </label>
