@@ -201,7 +201,11 @@
     "noPhotoAttached": "Sin foto adjunta",
     "noAnswerEntered": "No se ingresó respuesta",
     "noAnswerDetail": "No hay detalle de respuestas registrado para este envío.",
-    "readOnlyNotice": "Este es un informe de solo lectura. Las respuestas enviadas no se pueden editar."
+    "readOnlyNotice": "Este es un informe de solo lectura. Las respuestas enviadas no se pueden editar.",
+    "viewPhoto": "Ver foto",
+    "downloadPhoto": "Descargar",
+    "photoUnavailable": "Foto no disponible",
+    "photoExpired": "Foto eliminada tras 2 años"
   },
   "responseTypes": {
     "checkbox": "Casilla",

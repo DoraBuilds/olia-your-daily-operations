@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { exportLogDetailPdf } from "@/lib/export-utils";
 import type { LogEntry } from "./types";
 import { INSTRUCTION_ACKNOWLEDGED } from "@/pages/kiosk/utils";
+import { LogPhoto } from "./LogPhoto";
 
 /** Normalise the question type stored in the DB to a consistent rendering key.
  *  The kiosk writes the builder's ResponseType values ("number", "text", etc.).
@@ -15,6 +16,7 @@ import { INSTRUCTION_ACKNOWLEDGED } from "@/pages/kiosk/utils";
 function normaliseType(raw: string | undefined): string {
   if (!raw) return "text";
   if (raw === "numeric") return "number"; // legacy mock alias
+  if (raw === "media") return "photo";    // kiosk photo questions
   return raw;
 }
 
@@ -168,10 +170,15 @@ export function LogDetailModal({ log, onClose }: { log: LogEntry; onClose: () =>
                       <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noValueEntered")}</p>
                     )}
                     {type === "photo" && (answered ? (
-                      <div className="mt-2 w-24 h-16 rounded-lg bg-muted flex items-center justify-center border border-border">
-                        <Camera size={18} className="text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground ml-1">{t("logDetail.photo")}</span>
-                      </div>
+                      ans.answer ? (
+                        <LogPhoto value={ans.answer} label={ans.label} takenAt={ans.answeredAt ?? log.finishedAt ?? log.startedAt} />
+                      ) : (
+                        // Legacy/demo entries flag a photo without storing one.
+                        <div className="mt-2 w-24 h-16 rounded-lg bg-muted flex items-center justify-center border border-border">
+                          <Camera size={18} className="text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground ml-1">{t("logDetail.photo")}</span>
+                        </div>
+                      )
                     ) : <p className="mt-1 text-xs text-status-error font-medium">{t("logDetail.noPhotoAttached")}</p>)}
                     {(type === "text" || type === "multiple_choice" || type === "datetime") && (
                       ans.answer
