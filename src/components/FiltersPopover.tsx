@@ -126,6 +126,7 @@ export function FilterMultiSelect({
       contentClassName={contentClassName}
       mode={mode}
       noneLabel={noneLabel}
+      selectAllLabel={t("filters.selectAll")}
       deselectAllLabel={t("filters.deselectAll")}
       testId={testId}
       icon={icon}

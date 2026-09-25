@@ -28,6 +28,7 @@
     "selectedCount_other": "{{count}} seleccionados",
     "searchPlaceholder": "Buscar…",
     "noMatch": "Sin resultados",
-    "deselectAll": "Deseleccionar todo"
+    "deselectAll": "Deseleccionar todo",
+    "selectAll": "Seleccionar todo"
   }
 }

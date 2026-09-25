@@ -32,6 +32,8 @@ interface MultiSelectFilterProps {
    */
   mode?: "filter" | "pick";
   noneLabel?: string;
+  /** Pick mode's top row (defaults to allLabel); allLabel still names the all-ticked trigger summary. */
+  selectAllLabel?: string;
   deselectAllLabel?: string;
 }
 
@@ -39,7 +41,7 @@ interface MultiSelectFilterProps {
 export function MultiSelectFilter({
   icon, options, selected, onChange, allLabel, renderSelectedSummary,
   searchPlaceholder, noMatchLabel, noOptionsLabel, disabled, testId, contentClassName,
-  mode = "filter", noneLabel, deselectAllLabel,
+  mode = "filter", noneLabel, selectAllLabel, deselectAllLabel,
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -113,7 +115,7 @@ export function MultiSelectFilter({
             onClick={clickAll}
             className={cn(
               "w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-left transition-colors",
-              allSelected ? "bg-sage-light text-sage-deep font-medium" : "hover:bg-muted/60",
+              "hover:bg-muted/60",
             )}
           >
             <span className={cn(
@@ -122,7 +124,7 @@ export function MultiSelectFilter({
             )}>
               {allSelected && <Check size={11} />}
             </span>
-            {allLabel}
+            {pick ? selectAllLabel ?? allLabel : allLabel}
           </button>
           {options.length === 0 ? (
             <p className="px-2.5 py-3 text-xs text-muted-foreground">{noOptionsLabel}</p>
@@ -138,7 +140,7 @@ export function MultiSelectFilter({
                 onClick={() => toggle(opt.id)}
                 className={cn(
                   "w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-left transition-colors",
-                  isSelected ? "bg-sage-light text-sage-deep font-medium" : "hover:bg-muted/60",
+                  "hover:bg-muted/60",
                 )}
               >
                 <span className={cn(
