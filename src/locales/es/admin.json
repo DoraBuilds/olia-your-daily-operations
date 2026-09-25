@@ -169,6 +169,7 @@
     "kiosks": "Dispositivos",
     "kiosksWithCount": "Dispositivos ({{count}})",
     "noKiosks": "Aún no hay dispositivos en esta ubicación.",
+    "addKiosk": "Añadir",
     "addTeamMember": "Añadir",
     "removeFromLocation": "Quitar de la ubicación",
     "removeTeamMemberAria": "Quitar a {{name}} de {{location}}",
