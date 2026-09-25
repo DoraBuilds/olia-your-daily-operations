@@ -23,7 +23,7 @@ import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
 import { PERM_LABELS, getPermLabel } from "./shared";
-import { ConfirmModal } from "./SharedUI";
+import { AddLink, ConfirmModal } from "./SharedUI";
 import { NotificationsTab } from "./NotificationsTab";
 
 export interface AccountTabProps {
@@ -625,12 +625,14 @@ export function AccountTab({
 
       {/* Team Members */}
       {show("users") && <section>
-        <div className="flex items-center justify-between mb-1">
-          <p className="section-label">{t("accountTab.teamMembers", { count: teamMembers.length })}</p>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {t("accountTab.teamMembersNotice")}
+          </p>
+          <div className="shrink-0">
+            <AddLink onClick={onInviteMember} ariaLabel={t("accountTab.addTeamMember")} />
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-          {t("accountTab.teamMembersNotice")}
-        </p>
         <div className="card-surface divide-y divide-border">
           {/* Column headers */}
           <div className="flex items-center gap-3 px-4 py-2">
@@ -756,14 +758,6 @@ export function AccountTab({
               </div>
             );
           })}
-          <div className="flex justify-end px-4 py-3 border-t border-border">
-            <button
-              onClick={onInviteMember}
-              className="py-2 px-4 rounded-xl text-sm font-semibold bg-sage text-white hover:bg-sage-deep transition-colors flex items-center justify-center gap-2 w-52"
-            >
-              <Plus size={14} /> {t("accountTab.addTeamMember")}
-            </button>
-          </div>
         </div>
       </section>}
 

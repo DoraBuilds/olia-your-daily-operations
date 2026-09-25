@@ -92,6 +92,23 @@ export function SaveButton({ disabled, label }: { disabled: boolean; label: stri
   );
 }
 
+// ─── AddLink ─────────────────────────────────────────────────────────────────
+// The quiet "+ Add" used at the top of admin lists and sections. The visible
+// text is always "Add"; ariaLabel says what gets added.
+
+export function AddLink({ onClick, ariaLabel }: { onClick: () => void; ariaLabel: string }) {
+  const { t } = useTranslation("admin");
+  return (
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
+    >
+      <Plus size={12} /> {t("sharedUI.add")}
+    </button>
+  );
+}
+
 // ─── ConfirmModal ─────────────────────────────────────────────────────────────
 
 export function ConfirmModal({

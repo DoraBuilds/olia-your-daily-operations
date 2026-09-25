@@ -1,7 +1,7 @@
 // ─── KiosksTab ──────────────────────────────────────────────────────────────
 // Fleet view of every kiosk device across every concept/location (#818).
-// Kiosks are created per location in the Concepts tab and paired on the
-// tablet with a one-time code (Login -> Kiosk, #861); this tab is for
+// Kiosks are created per location (here or in the Concepts tab) and paired on
+// the tablet with a one-time code (Login -> Kiosk, #861); this tab is for
 // visibility ("what's running, and where"), codes, and remote deactivation.
 
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import {
 } from "@/hooks/useKioskDevices";
 import { formatPairingCode } from "@/lib/kiosk-pairing";
 import { toast } from "@/components/ui/sonner";
-import { BottomSheet, ModalHeader, FormField, SaveButton, ConfirmModal, inputCls, type ConfirmState } from "./SharedUI";
+import { AddLink, BottomSheet, ModalHeader, FormField, SaveButton, ConfirmModal, inputCls, type ConfirmState } from "./SharedUI";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 
 export interface KiosksTabProps {
@@ -43,6 +43,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
   const [codeDevice, setCodeDevice] = useState<{ id: string; locationName: string } | null>(null);
   const confirmDeactivate = useConfirmDeactivateKiosk(setConfirmModal);
+  const [adding, setAdding] = useState(false);
 
   // "Manage" on a location's Devices card links here with ?device=<id>.
   const [searchParams] = useSearchParams();
@@ -65,8 +66,43 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
     return <p className="text-sm text-muted-foreground py-8 text-center">{t("kiosksTab.loading")}</p>;
   }
 
+  const header = isOwner && locations.length > 0 && (
+    <div className="flex justify-end">
+      <AddLink onClick={() => setAdding(true)} ariaLabel={t("kiosksTab.addKiosk")} />
+    </div>
+  );
+
+  const modals = (
+    <>
+      {adding && (
+        <AddKioskModal
+          locationOptions={locations}
+          concepts={concepts}
+          onClose={() => setAdding(false)}
+          onCreated={(deviceId, locationName) => { setAdding(false); setCodeDevice({ id: deviceId, locationName }); }}
+        />
+      )}
+
+      {codeDevice && (
+        <KioskCodeModal deviceId={codeDevice.id} locationName={codeDevice.locationName} onClose={() => setCodeDevice(null)} />
+      )}
+
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          actionLabel={confirmModal.actionLabel}
+          onClose={() => setConfirmModal(null)}
+          onConfirm={confirmModal.onConfirm}
+        />
+      )}
+    </>
+  );
+
   if (groups.length === 0) {
     return (
+      <div className="space-y-4">
+      {header}
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center space-y-5">
         <div className="w-16 h-16 rounded-2xl bg-sage/10 flex items-center justify-center">
           <Tablet size={28} className="text-sage" />
@@ -76,12 +112,14 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">{t("kiosksTab.emptyBody")}</p>
         </div>
       </div>
+      {modals}
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="font-display text-lg text-foreground">{t("kiosksTab.heading")}</h2>
+      {header}
 
       {groups.map(({ concept, locationGroups }) => (
         <div key={concept.id} className="space-y-3">
@@ -112,19 +150,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
         </div>
       ))}
 
-      {codeDevice && (
-        <KioskCodeModal deviceId={codeDevice.id} locationName={codeDevice.locationName} onClose={() => setCodeDevice(null)} />
-      )}
-
-      {confirmModal && (
-        <ConfirmModal
-          title={confirmModal.title}
-          message={confirmModal.message}
-          actionLabel={confirmModal.actionLabel}
-          onClose={() => setConfirmModal(null)}
-          onConfirm={confirmModal.onConfirm}
-        />
-      )}
+      {modals}
     </div>
   );
 }
@@ -226,47 +252,73 @@ export function KioskDeviceRow({
 }
 
 // ─── AddKioskModal ────────────────────────────────────────────────────────────
-// Creates a kiosk for one location; the caller then shows its code.
+// Creates a kiosk for one location; the caller then shows its code. Given a
+// fixed location (Concepts tab) or locationOptions to pick from (Devices tab).
 
-export function AddKioskModal({
-  locationId, locationName, existingCount, onClose, onCreated,
-}: {
-  locationId: string;
-  locationName: string;
-  existingCount: number;
+type AddKioskModalProps = {
   onClose: () => void;
-  onCreated: (deviceId: string) => void;
-}) {
+  onCreated: (deviceId: string, locationName: string) => void;
+} & (
+  | { locationId: string; locationName: string; locationOptions?: never; concepts?: never }
+  | { locationOptions: Location[]; concepts: Concept[]; locationId?: never; locationName?: never }
+);
+
+export function AddKioskModal({ onClose, onCreated, ...props }: AddKioskModalProps) {
   const { t } = useTranslation("admin");
-  const [label, setLabel] = useState(() => t("kiosksTab.defaultName", { number: existingCount + 1 }));
+  const { data: devices = [] } = useKioskDevices();
+  const [locationId, setLocationId] = useState(() => props.locationId ?? props.locationOptions?.[0]?.id ?? "");
+  const locationName = props.locationName ?? props.locationOptions?.find(l => l.id === locationId)?.name ?? "";
+  const defaultLabel = t("kiosksTab.defaultName", {
+    number: devices.filter(d => d.location_id === locationId).length + 1,
+  });
+  // Follows the picked location's count until the user types their own name.
+  const [customLabel, setCustomLabel] = useState<string | null>(null);
+  const label = customLabel ?? defaultLabel;
   const createMut = useCreateKioskDevice();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!label.trim() || createMut.isPending) return;
+    if (!locationId || !label.trim() || createMut.isPending) return;
     createMut.mutate({ locationId, label: label.trim() }, {
-      onSuccess: row => onCreated(row.device_id),
+      onSuccess: row => onCreated(row.device_id, locationName),
       onError: (err: Error) => toast.error(t("kiosksTab.createFailed", { error: err.message })),
     });
   };
 
   return (
     <BottomSheet onClose={onClose}>
-      <ModalHeader title={t("kiosksTab.addTitle", { location: locationName })} onClose={onClose} />
+      <ModalHeader
+        title={props.locationOptions ? t("kiosksTab.addKiosk") : t("kiosksTab.addTitle", { location: locationName })}
+        onClose={onClose}
+      />
       <form onSubmit={handleSubmit} className="space-y-4">
+        {props.locationOptions && (
+          <FormField label={t("kiosksTab.locationLabel")}>
+            <select value={locationId} onChange={e => setLocationId(e.target.value)} className={inputCls}>
+              {props.concepts.map(concept => {
+                const conceptLocations = props.locationOptions.filter(l => l.concept_id === concept.id);
+                return conceptLocations.length > 0 && (
+                  <optgroup key={concept.id} label={concept.name}>
+                    {conceptLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </optgroup>
+                );
+              })}
+            </select>
+          </FormField>
+        )}
         <FormField label={t("kiosksTab.nameLabel")}>
           <input
-            autoFocus
+            autoFocus={!props.locationOptions}
             type="text"
             value={label}
             maxLength={60}
-            onChange={e => setLabel(e.target.value)}
+            onChange={e => setCustomLabel(e.target.value)}
             placeholder={t("kiosksTab.namePlaceholder")}
             className={inputCls}
           />
         </FormField>
         <p className="text-xs text-muted-foreground">{t("kiosksTab.addHint")}</p>
-        <SaveButton disabled={!label.trim() || createMut.isPending} label={t("kiosksTab.addCta")} />
+        <SaveButton disabled={!locationId || !label.trim() || createMut.isPending} label={t("kiosksTab.addCta")} />
       </form>
     </BottomSheet>
   );
