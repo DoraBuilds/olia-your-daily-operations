@@ -73,12 +73,15 @@ test.describe("Smoke: /kiosk", () => {
 // branch and redirects to /login instead. That's the real, correct behavior
 // to check here; asserting a /kiosk landing (as this suite originally did)
 // doesn't match how an anonymous visitor's browser actually behaves.
+// Assert on the URL plus the Login heading ("Log in" since #863) rather than
+// loose "sign in" text, which silently broke when that copy changed.
 test.describe("Smoke: protected routes redirect to /login", () => {
   test("/dashboard redirects to /login — not a 404", async ({ page }) => {
     await page.goto(url("/dashboard"));
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByText(/sign in/i)).toBeVisible({
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /log in/i })).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -87,7 +90,8 @@ test.describe("Smoke: protected routes redirect to /login", () => {
     await page.goto(url("/admin"));
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByText(/sign in/i)).toBeVisible({
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /log in/i })).toBeVisible({
       timeout: 15_000,
     });
   });
