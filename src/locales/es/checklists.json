@@ -169,6 +169,24 @@
       "badgeReview": "Revisar",
       "badgeActionRequired": "Requiere acción",
       "badgeUnstarted": "Sin empezar"
+    },
+    "views": {
+      "checklists": "Checklists",
+      "training": "Capacitación"
+    },
+    "training": {
+      "searchPlaceholder": "Buscar capacitación",
+      "summary_one": "{{count}} capacitación",
+      "summary_other": "{{count}} capacitaciones",
+      "loading": "Cargando capacitaciones…",
+      "empty": "Aún no hay capacitaciones. Añádelas en el Info Hub.",
+      "noMatch": "Ninguna capacitación coincide con tu búsqueda.",
+      "nobody": "No se ha compartido con nadie",
+      "completedOf": "{{done}} de {{total}} completadas",
+      "completedTitle": "Completada ({{count}})",
+      "notCompletedTitle": "No completada ({{count}})",
+      "none": "Nadie",
+      "everyLocation": "Todas las ubicaciones"
     }
   },
   "logDetail": {
