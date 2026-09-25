@@ -355,17 +355,30 @@ export function MediaInput({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Storage path → the data URL we captured it from. The kiosk is anonymous
+  // and kiosk-photos only grants SELECT to signed-in managers, so it can't
+  // sign a URL for its own upload — preview the local capture instead.
+  const localPreviews = useRef<Record<string, string>>({});
 
   useEffect(() => {
+    setPreviewFailed(false);
     if (!value) { setDisplayUrl(null); return; }
     const { isBase64, isStoragePath } = detectPhotoFormat(value);
     if (isBase64) { setDisplayUrl(value); return; }
+    const local = localPreviews.current[value];
+    if (local) { setDisplayUrl(local); return; }
     if (isStoragePath) {
       let cancelled = false;
-      getSignedUrl(value).then(url => { if (!cancelled) setDisplayUrl(url); });
+      setDisplayUrl(null);
+      getSignedUrl(value).then(url => {
+        if (cancelled) return;
+        setDisplayUrl(url);
+        if (!url) setPreviewFailed(true);
+      });
       return () => { cancelled = true; };
     }
     setDisplayUrl(null);
@@ -437,6 +450,7 @@ export function MediaInput({
         setIsUploading(false);
         return;
       }
+      if (captured) localPreviews.current[uploadData.path] = captured;
       onChange(uploadData.path);
       closeCamera();
     } catch (err: any) {
@@ -455,7 +469,7 @@ export function MediaInput({
               <img src={displayUrl} alt="Captured" className="w-full max-h-52 object-cover" />
             ) : (
               <div className="w-full h-32 flex items-center justify-center bg-muted text-xs text-muted-foreground">
-                Loading photo…
+                {previewFailed ? "Photo saved" : "Loading photo…"}
               </div>
             )}
             <button
