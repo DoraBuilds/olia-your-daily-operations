@@ -120,3 +120,26 @@ export function useTrainingProgress() {
     saveProgress,
   };
 }
+
+/**
+ * Every team member's training progress in the company — for the Reporting
+ * training view. RLS (training_progress_select_reporting) only returns other
+ * members' rows to owners and managers with View reporting (#915).
+ */
+export function useTeamTrainingProgress(enabled = true) {
+  const { teamMember } = useAuth();
+  const organizationId = teamMember?.organization_id ?? null;
+
+  return useQuery({
+    queryKey: ["training-progress", organizationId, "team"] as const,
+    enabled: enabled && !!organizationId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("training_progress")
+        .select("id, organization_id, user_id, team_member_id, module_id, completed_step_indices, is_completed, completed_at, created_at, updated_at")
+        .eq("organization_id", organizationId);
+      if (error) throw error;
+      return (data ?? []) as TrainingProgressRow[];
+    },
+  });
+}

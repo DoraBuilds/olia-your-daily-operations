@@ -166,6 +166,33 @@ export function exportReportingCsv(rows: ReportingRow[], periodLabel: string) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Training report: CSV (#915) ────────────────────────────────────────────
+
+export interface TrainingReportCsvRow {
+  training: string;
+  folder: string;
+  person: string;
+  locations: string;
+  completed: boolean;
+  date: string;
+}
+
+export function exportTrainingCsv(rows: TrainingReportCsvRow[]) {
+  const headers = ["Training", "Folder", "Person", "Locations", "Completed", "Completed on"];
+  const body = rows.map(r => [r.training, r.folder, r.person, r.locations, r.completed ? "Yes" : "No", r.date]);
+  const csv = [headers, ...body]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `training-completion-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Checklist Template: PDF ────────────────────────────────────────────────
 
 export async function exportChecklistTemplatePdf(checklist: ChecklistTemplateData) {

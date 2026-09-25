@@ -169,6 +169,24 @@
       "badgeReview": "Review",
       "badgeActionRequired": "Action req.",
       "badgeUnstarted": "Unstarted"
+    },
+    "views": {
+      "checklists": "Checklists",
+      "training": "Training"
+    },
+    "training": {
+      "searchPlaceholder": "Search training",
+      "summary_one": "{{count}} training",
+      "summary_other": "{{count}} trainings",
+      "loading": "Loading training…",
+      "empty": "No training yet. Add training in the Info Hub.",
+      "noMatch": "No training matches your search.",
+      "nobody": "Not shared with anyone",
+      "completedOf": "{{done}} of {{total}} completed",
+      "completedTitle": "Completed ({{count}})",
+      "notCompletedTitle": "Not completed ({{count}})",
+      "none": "No one",
+      "everyLocation": "Every location"
     }
   },
   "logDetail": {

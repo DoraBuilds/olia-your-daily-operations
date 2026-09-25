@@ -39,11 +39,15 @@ export function canAccessInfohubContent(
   if (access.accessScope === "org") return true;
 
   const locationIds = principal.locationIds ?? [];
+  // No specific locations = every location, so anything shared by location applies.
+  const locationMatch = locationIds.length === 0
+    ? access.allowedLocationIds.length > 0
+    : locationIds.some(locationId => access.allowedLocationIds.includes(locationId));
 
   return Boolean(
     (principal.teamMemberId && access.allowedTeamMemberIds.includes(principal.teamMemberId))
     || (principal.role && access.allowedRoles.includes(principal.role))
-    || locationIds.some(locationId => access.allowedLocationIds.includes(locationId)),
+    || locationMatch,
   );
 }
 

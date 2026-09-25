@@ -50,6 +50,15 @@ describe("infohub access helpers", () => {
     })).toBe(false);
   });
 
+  it("lets an every-location member (no specific locations) see content shared by location", () => {
+    const byLocation = { accessScope: "restricted" as const, allowedTeamMemberIds: [], allowedRoles: [], allowedLocationIds: ["loc-9"] };
+    const byPersonOnly = { accessScope: "restricted" as const, allowedTeamMemberIds: ["tm-2"], allowedRoles: [], allowedLocationIds: [] };
+    const everywhere = { teamMemberId: "tm-1", role: "Staff", locationIds: [], permissions: {}, isOwner: false };
+
+    expect(canAccessInfohubContent(byLocation, everywhere)).toBe(true);
+    expect(canAccessInfohubContent(byPersonOnly, everywhere)).toBe(false);
+  });
+
   it("treats owners and content managers as able to manage access", () => {
     expect(canManageInfohubAccess({
       teamMemberId: "tm-1",
