@@ -1076,6 +1076,7 @@ describe("Kiosk — Checklist Runner", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Did you recheck the fridge?")).toBeInTheDocument();
@@ -1185,6 +1186,7 @@ describe("Kiosk — Checklist Runner", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/note required/i)).toBeInTheDocument();
@@ -1259,6 +1261,7 @@ describe("Kiosk — Checklist Runner", () => {
       });
 
       fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+      fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/photo required/i)).toBeInTheDocument();
@@ -1328,6 +1331,7 @@ describe("Kiosk — Checklist Runner", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next →/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Wash your hands")).toBeInTheDocument();
@@ -1377,6 +1381,27 @@ describe("Kiosk — Checklist Runner", () => {
     const shell = screen.getByTestId("kiosk-runner-shell");
     expect(shell.className).toContain("min-[900px]:max-w-[1120px]");
     expect(shell.className).toContain("mx-auto");
+  });
+
+  it("stays on a question after it is answered until the user taps Next", async () => {
+    await openRunnerWithQuestions([
+      { id: "q-required-checkbox", text: "Fridge checked", responseType: "checkbox", required: true },
+      { id: "q-after", text: "After checkbox", responseType: "text", required: true },
+    ]);
+
+    const nextBtn = screen.getByRole("button", { name: /next/i });
+    expect(nextBtn).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+    expect(screen.queryByPlaceholderText("Type your answer here…")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Type your answer here…")).toBeInTheDocument();
+    });
   });
 
   it("shows a manual next CTA for an optional unchecked checkbox and lets the user continue", async () => {
