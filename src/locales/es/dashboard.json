@@ -2,7 +2,7 @@
   "greeting": "Esto es lo que ocurre hoy",
   "notificationsAriaLabel": "Notificaciones",
   "stats": {
-    "checklists": "Listas",
+    "checklists": "Checklists",
     "checklistsCaption": "Registradas hoy",
     "checklistsAriaLabel": "Ver informes de listas",
     "alerts": "Alertas",

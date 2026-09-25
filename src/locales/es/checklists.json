@@ -95,7 +95,7 @@
     "noMatch": "Ninguna carpeta coincide con tu búsqueda.",
     "noFolder": "Sin carpeta",
     "noFolderUnfiled": "Sin carpeta (sin clasificar)",
-    "noFoldersYet": "Aún no hay carpetas — crea una desde la vista principal de Listas."
+    "noFoldersYet": "Aún no hay carpetas — crea una desde la vista principal de Checklists."
   },
   "reporting": {
     "period": {
@@ -156,7 +156,7 @@
     "log": {
       "heading": "Registro de finalización",
       "loading": "Cargando…",
-      "checklistColumn": "Lista",
+      "checklistColumn": "Checklist",
       "completedByColumn": "Completada por",
       "completedAtColumn": "Finalizada",
       "statusColumn": "Estado",
