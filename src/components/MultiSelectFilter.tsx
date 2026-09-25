@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -26,13 +26,13 @@ interface MultiSelectFilterProps {
   contentClassName?: string;
   /**
    * "filter" (default): an empty selection means "all" — the All row resets
-   * to it. "pick": the selection is explicit — the All row ticks every
-   * option (or unticks them when all are ticked) and a "Deselect all"
-   * footer clears it; an empty selection shows `noneLabel`.
+   * to it. "pick": the selection is explicit — the top row reads "Select
+   * all" and ticks every option, then once everything is ticked it reads
+   * "Deselect all" and clears them; an empty selection shows `noneLabel`.
    */
   mode?: "filter" | "pick";
   noneLabel?: string;
-  /** Pick mode's top row (defaults to allLabel); allLabel still names the all-ticked trigger summary. */
+  /** Pick mode's top row text (defaults to allLabel); allLabel still names the all-ticked trigger summary. */
   selectAllLabel?: string;
   deselectAllLabel?: string;
 }
@@ -124,7 +124,7 @@ export function MultiSelectFilter({
             )}>
               {allSelected && <Check size={11} />}
             </span>
-            {pick ? selectAllLabel ?? allLabel : allLabel}
+            {!pick ? allLabel : allSelected ? deselectAllLabel ?? allLabel : selectAllLabel ?? allLabel}
           </button>
           {options.length === 0 ? (
             <p className="px-2.5 py-3 text-xs text-muted-foreground">{noOptionsLabel}</p>
@@ -157,18 +157,6 @@ export function MultiSelectFilter({
             );
           })}
         </div>
-        {pick && selected.length > 0 && (
-          <div className="border-t border-border p-1.5">
-            <button
-              type="button"
-              data-testid={`${testId}-deselect-all`}
-              onClick={() => onChange([])}
-              className="w-full flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X size={11} /> {deselectAllLabel}
-            </button>
-          </div>
-        )}
       </PopoverContent>
     </Popover>
   );

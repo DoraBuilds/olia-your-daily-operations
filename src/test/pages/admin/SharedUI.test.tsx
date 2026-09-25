@@ -111,7 +111,7 @@ describe("TeamMemberModal", () => {
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
 
       fireEvent.click(trigger("locations"));
-      fireEvent.click(screen.getByTestId("member-locations-deselect-all"));
+      fireEvent.click(screen.getByTestId("member-locations-option-all"));
       fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
       expect(screen.queryByTestId("member-departments-trigger")).not.toBeInTheDocument();
 
@@ -127,7 +127,7 @@ describe("TeamMemberModal", () => {
       expect(screen.getByTestId("member-departments-option-d2")).toHaveTextContent("Front of House");
     });
 
-    it("selects every department via All, and clears them via Deselect all", async () => {
+    it("ticks every department via Select all, and clears them via Deselect all in the same row", async () => {
       const onSave = vi.fn();
       renderModal({ locations, onSave });
       await waitFor(() => expect(trigger("departments")).toHaveTextContent("No department"));
@@ -136,7 +136,7 @@ describe("TeamMemberModal", () => {
       fireEvent.click(screen.getByTestId("member-departments-option-all"));
       expect(trigger("departments")).toHaveTextContent("All departments");
 
-      fireEvent.click(screen.getByTestId("member-departments-deselect-all"));
+      fireEvent.click(screen.getByTestId("member-departments-option-all"));
       expect(trigger("departments")).toHaveTextContent("No department");
     });
 
@@ -229,13 +229,14 @@ describe("TeamMemberModal", () => {
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: ["l1", "l2"] }));
     });
 
-    it("All concepts ticks everything; Deselect all clears concepts and locations and blocks saving", () => {
+    it("Select all ticks every concept; the same row, now Deselect all, clears concepts and locations and blocks saving", () => {
       renderModal({ concepts, locations, initialLocationIds: ["l3"] });
       fireEvent.click(trigger("concepts"));
       fireEvent.click(screen.getByTestId("member-concepts-option-all"));
       expect(trigger("concepts")).toHaveTextContent("All concepts");
 
-      fireEvent.click(screen.getByTestId("member-concepts-deselect-all"));
+      expect(screen.getByTestId("member-concepts-option-all")).toHaveTextContent("Deselect all");
+      fireEvent.click(screen.getByTestId("member-concepts-option-all"));
       expect(trigger("concepts")).toHaveTextContent("Select concepts");
       expect(trigger("locations")).toHaveTextContent("Select at least one location");
 
