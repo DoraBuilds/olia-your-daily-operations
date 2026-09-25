@@ -397,12 +397,12 @@ describe("Admin page", () => {
       );
     });
 
-    it("opens the new-department form from the location's Add menu", async () => {
+    it("doesn't offer creating a department from the location's Add menu — that lives in the Departments tab", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
       fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
-      fireEvent.click(screen.getByRole("button", { name: "New department" }));
-      expect(screen.getByText("New department", { selector: "h2, h3" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Manage all departments" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "New department" })).not.toBeInTheDocument();
     });
 
     it("shows a Departments tab right after Concepts for the Owner", () => {

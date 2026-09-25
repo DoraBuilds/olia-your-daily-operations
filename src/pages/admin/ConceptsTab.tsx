@@ -23,7 +23,6 @@ import { useCompanyDepartments, useDepartments, useSaveDepartment } from "@/hook
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
 import { AddLink, ConfirmModal, type ConfirmState } from "./SharedUI";
-import { DepartmentModal } from "./DepartmentsTab";
 import { KioskDeviceRow, AddKioskModal, KioskCodeModal } from "./KiosksTab";
 import {
   addLocationToAssignments, departmentUnassignImpact, removeLocationFromAssignments,
@@ -103,7 +102,6 @@ export function ConceptsTab({
   const { data: departments = [] } = useDepartments(currentLocation?.id);
   const { data: companyDepartments = [] } = useCompanyDepartments();
   const saveDepartmentMut = useSaveDepartment();
-  const [departmentModalOpen, setDepartmentModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState<ConfirmState>(null);
   // Kiosks (#861): "Add kiosk" creates one with a pairing code, then its
   // code is shown straight away.
@@ -182,12 +180,9 @@ export function ConceptsTab({
   const locationDepartmentIds = new Set(departments.map(d => d.id));
   const addableDepartments = companyDepartments.filter(d => !locationDepartmentIds.has(d.id));
 
-  const saveDepartment = (dep: { id?: string; name: string; assignments: DepartmentAssignment[] }, onDone?: () => void) => {
+  const saveDepartment = (dep: { id: string; name: string; assignments: DepartmentAssignment[] }) => {
     saveDepartmentMut.mutate(dep, {
-      onSuccess: () => {
-        onDone?.();
-        toast.success(t("departmentsTab.saved"));
-      },
+      onSuccess: () => toast.success(t("departmentsTab.saved")),
       onError: (err: Error) => toast.error(t("departmentsTab.saveFailed", { error: err.message })),
     });
   };
@@ -253,7 +248,6 @@ export function ConceptsTab({
           <AddDepartmentMenu
             options={addableDepartments}
             onPick={addDepartment}
-            onCreate={() => setDepartmentModalOpen(true)}
             onManage={onManageDepartments}
           />
         )}
@@ -369,19 +363,6 @@ export function ConceptsTab({
           )}
         </div>
       </SectionCard>
-
-      {departmentModalOpen && (
-        <DepartmentModal
-          department={null}
-          initialAssignments={[{ concept_id: currentLocation.concept_id, location_id: currentLocation.id }]}
-          existingNames={companyDepartments.map(d => d.name.toLowerCase())}
-          concepts={concepts}
-          locations={allLocations}
-          saving={saveDepartmentMut.isPending}
-          onClose={() => setDepartmentModalOpen(false)}
-          onSave={dep => saveDepartment(dep, () => setDepartmentModalOpen(false))}
-        />
-      )}
 
       {addingKiosk && (
         <AddKioskModal
@@ -642,11 +623,10 @@ function LocationPicker({
 // ─── AddDepartmentMenu ────────────────────────────────────────────────────────
 
 function AddDepartmentMenu({
-  options, onPick, onCreate, onManage,
+  options, onPick, onManage,
 }: {
   options: CompanyDepartment[];
   onPick: (dep: CompanyDepartment) => void;
-  onCreate: () => void;
   onManage?: () => void;
 }) {
   const { t } = useTranslation("admin");
@@ -664,10 +644,7 @@ function AddDepartmentMenu({
               {dep.name}
             </button>
           ))}
-          {options.length > 0 && <div className="my-1 border-t border-border" />}
-          <button onClick={() => { setOpen(false); onCreate(); }} className={cn(item, "text-sage font-medium")}>
-            <Plus size={14} /> {t("conceptsTab.newDepartment")}
-          </button>
+          {options.length > 0 && onManage && <div className="my-1 border-t border-border" />}
           {onManage && (
             <button onClick={() => { setOpen(false); onManage(); }} className={cn(item, "text-muted-foreground")}>
               {t("conceptsTab.manageAllDepartments")}
