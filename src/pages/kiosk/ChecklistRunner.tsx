@@ -59,7 +59,7 @@ export function ChecklistRunner({
 
   const [showDraftBanner, setShowDraftBanner] = useState(hasSavedDraft);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [showMissingError, setShowMissingError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [linkedResourceId, setLinkedResourceId] = useState<string | null>(null);
 
@@ -124,11 +124,11 @@ export function ChecklistRunner({
     }
   }, [answers, currentQuestionId, questions, persistDraft]);
 
-  useEffect(() => {
-    if (!completionError) return;
-    const missing = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
-    if (missing.length === 0) setCompletionError(null);
-  }, [answers, questions, completionError]);
+  // Derived from live answers so the footer count drops as each missing question is filled in.
+  const missingRequired = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
+  const completionError = showMissingError && missingRequired.length > 0
+    ? t("runner.missingRequired", { count: missingRequired.length })
+    : null;
 
   useEffect(() => {
     if (!lightboxImage) return;
@@ -138,10 +138,9 @@ export function ChecklistRunner({
   }, [lightboxImage]);
 
   const handleComplete = () => {
-    const missing = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
-    if (missing.length > 0) {
-      setCompletionError(t("runner.missingRequired", { count: missing.length }));
-      document.getElementById(`question-${missing[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    if (missingRequired.length > 0) {
+      setShowMissingError(true);
+      document.getElementById(`question-${missingRequired[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }

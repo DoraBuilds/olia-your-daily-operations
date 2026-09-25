@@ -421,6 +421,18 @@ describe("Kiosk — ChecklistRunner required-question validation", () => {
     expect(document.body).toBeDefined();
   });
 
+  it("updates the missing-question count as required questions get answered", async () => {
+    renderRunner(makeChecklist([
+      { id: "q-a", text: "First required", type: "text", required: true },
+      { id: "q-b", text: "Second required", type: "text", required: true },
+    ]));
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+    await waitFor(() => expect(screen.getByText("2 required questions still need an answer.")).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "done" } });
+    await waitFor(() => expect(screen.getByText("1 required question still needs an answer.")).toBeInTheDocument());
+    expect(screen.queryByText(/2 required questions/)).not.toBeInTheDocument();
+  });
+
   it("completes successfully when all required questions answered", async () => {
     const onComplete = vi.fn();
     renderRunner(makeChecklist([
