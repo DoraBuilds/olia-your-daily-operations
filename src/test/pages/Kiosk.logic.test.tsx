@@ -416,7 +416,6 @@ describe("Kiosk — ChecklistRunner required-question validation", () => {
     // Now answer the question
     const textarea = screen.getByPlaceholderText("Type your answer here…");
     fireEvent.change(textarea, { target: { value: "my answer" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     // After advancing, the required error banner for this question should be gone
     // (The question is answered now)
     expect(document.body).toBeDefined();
@@ -429,7 +428,6 @@ describe("Kiosk — ChecklistRunner required-question validation", () => {
     ]), { onComplete });
     const textarea = screen.getByPlaceholderText("Type your answer here…");
     fireEvent.change(textarea, { target: { value: "answered" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       const completeBtn = screen.getByRole("button", { name: /complete checklist/i });
       fireEvent.click(completeBtn);
@@ -449,7 +447,6 @@ describe("Kiosk — ChecklistRunner per-question attribution", () => {
       { id: "q-text", text: "Notes", type: "text", required: true },
     ]), { onComplete });
     fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "all good" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
     await waitFor(() => expect(onComplete).toHaveBeenCalled());
     const attribution = onComplete.mock.calls[0][2];

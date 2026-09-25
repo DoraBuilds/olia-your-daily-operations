@@ -227,17 +227,11 @@ export function ChecklistRunner({
             const isNoAnswer = q.type === "multiple_choice" && !q.optionColors?.length &&
               typeof answerVal === "string" && answerVal.toLowerCase() === "no";
             const hasBlankUnansweredTrigger = hasUnansweredTrigger(q);
-            const needsNextBtn = isCurrent && (
-              isInstruction ||
-              q.type === "text" ||
-              q.type === "number" ||
-              q.type === "datetime" ||
-              q.type === "media" ||
-              (!q.required && q.type === "checkbox") ||
-              hasBlankUnansweredTrigger ||
-              (q.type === "multiple_choice" && (q.selectionMode === "multiple" || !q.required))
-            );
-            const nextBtnDisabled = q.type === "multiple_choice" && q.selectionMode === "multiple" && q.required && !isAnswered && !hasBlankUnansweredTrigger;
+            // Every question keeps its own forward CTA — answering never jumps ahead.
+            // On the last question the footer "Complete checklist" is the CTA.
+            const needsNextBtn = isCurrent && (isInstruction || hasBlankUnansweredTrigger || !isLastQ);
+            const nextBtnDisabled = !isInstruction && q.required && !isAnswered && !hasBlankUnansweredTrigger &&
+              (q.type === "checkbox" || q.type === "multiple_choice");
 
             return (
               <Fragment key={q.id}>
@@ -289,11 +283,6 @@ export function ChecklistRunner({
                           setAnswers(nextAnswers);
                           persistDraft(nextAnswers, currentQuestionId);
                           onQuestionAnswerChange?.(q, v);
-                          const shouldAutoAdvance = (
-                            (q.type === "checkbox" && v === true) ||
-                            (q.type === "multiple_choice" && q.selectionMode !== "multiple" && v)
-                          );
-                          if (shouldAutoAdvance) advanceQuestion(nextAnswers);
                         }}
                         onImageClick={url => setLightboxImage(url)}
                         onLinkedResourceOpen={() => setLinkedResourceId(q.linkedResourceId ?? null)}
@@ -315,10 +304,9 @@ export function ChecklistRunner({
                               const nextAnswers = { ...answers, [q.id]: UNANSWERED_SENTINEL };
                               attribute(q.id);
                               setAnswers(nextAnswers);
-                              advanceQuestion(nextAnswers);
+                              if (isLastQ) { persistDraft(nextAnswers, q.id); } else { advanceQuestion(nextAnswers); }
                               return;
                             }
-                            if (isLastQ) { persistDraft(answers, q.id); return; }
                             advanceQuestion();
                           }}
                           disabled={nextBtnDisabled}
