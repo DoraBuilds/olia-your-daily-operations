@@ -130,7 +130,8 @@ describe("Notifications page", () => {
 
   it("renders an inline 'Back' link to the dashboard (no more Layout header)", () => {
     renderWithProviders(<Notifications />);
-    expect(document.querySelector("header")).toBeNull();
+    // Only the phone-width header (burger + page name); no md+ title bar.
+    expect(document.querySelector("header")).toHaveClass("md:hidden");
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
   });
 

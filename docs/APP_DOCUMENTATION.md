@@ -19,7 +19,7 @@ There is **no backend** yet. All data lives in React state and in-memory stores.
 | Component | File | Purpose |
 |---|---|---|
 | `Layout` | `src/components/Layout.tsx` | Shared page shell — sticky header, scrollable content area, bottom nav. Max-width `lg` (480 px). |
-| `BottomNav` | `src/components/BottomNav.tsx` | Fixed bottom tab bar with 4 tabs: **Home**, **Checklists**, **Infohub**, **Admin**. Uses `lucide-react` icons and active-state underline. |
+| `MobileNav` | `src/components/MobileNav.tsx` | Phone-width (below `md`) navigation: burger button in the Layout header opening a left drawer with Dashboard, Checklists, Reporting, Infohub and Admin (Admin expands to its six sections), plus the signed-in user and Log out / Back to Kiosk. Replaced the old bottom tab bar. |
 | `NavLink` | `src/components/NavLink.tsx` | Thin wrapper around `react-router-dom` `NavLink` with `className` / `activeClassName` support. |
 
 ### Routes (`src/App.tsx`)
@@ -274,7 +274,7 @@ src/
 ├── vite-env.d.ts
 ├── components/
 │   ├── Layout.tsx             # Page shell
-│   ├── BottomNav.tsx          # Tab bar
+│   ├── MobileNav.tsx          # Phone burger menu + drawer
 │   ├── NavLink.tsx            # Router NavLink wrapper
 │   └── ui/                    # shadcn/ui components (60+ files)
 ├── hooks/
