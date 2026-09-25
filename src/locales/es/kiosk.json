@@ -41,6 +41,11 @@
     "documentCount_other": "{{count}} documentos",
     "attachmentFallback": "Adjunto",
     "openInAdminToDownload": "Abre el panel de administración para descargarlo",
+    "markComplete": "Marcar como completada",
+    "completed": "Completada",
+    "undo": "Deshacer",
+    "completedCount": "{{done}} de {{total}} completadas",
+    "saveError": "No se pudo guardar. Revisa tu conexión y vuelve a intentarlo.",
     "sections": {
       "library": "Biblioteca",
       "training": "Capacitación"

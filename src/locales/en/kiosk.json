@@ -41,6 +41,11 @@
     "documentCount_other": "{{count}} documents",
     "attachmentFallback": "Attachment",
     "openInAdminToDownload": "Open in admin panel to download",
+    "markComplete": "Mark as complete",
+    "completed": "Completed",
+    "undo": "Undo",
+    "completedCount": "{{done}} of {{total}} completed",
+    "saveError": "Couldn't save. Check your connection and try again.",
     "sections": {
       "library": "Library",
       "training": "Training"
