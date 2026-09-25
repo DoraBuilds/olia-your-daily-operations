@@ -430,7 +430,7 @@
   "kiosksTab": {
     "loading": "Loading…",
     "emptyHeading": "No devices yet",
-    "emptyBody": "Tap Add to create a kiosk for one of your locations.",
+    "emptyBody": "Add a location in the Concepts tab first, then add its kiosks here.",
     "activeNow": "Active now",
     "neverCheckedIn": "Never checked in",
     "lastSeenMinutes_one": "Last seen {{count}} minute ago",
@@ -451,7 +451,6 @@
     "done": "Done",
     "defaultName": "Kiosk {{number}}",
     "addKiosk": "Add kiosk",
-    "addTitle": "Add a kiosk to {{location}}",
     "nameLabel": "Kiosk name",
     "namePlaceholder": "e.g. Bar tablet, Kitchen iPad…",
     "addHint": "You'll get a one-time code to enter on the tablet.",
@@ -475,6 +474,16 @@
     "conceptFilter": "Concept",
     "allConcepts": "All concepts",
     "allLocations": "All locations",
-    "noResults": "No devices match your search or filters."
+    "noResults": "No devices match your search or filters.",
+    "addKioskTo": "Add kiosk to {{location}}",
+    "addingToPrefix": "You're adding a device to",
+    "noDevicesAtLocation": "No devices yet.",
+    "deviceOptionsAria": "Options for {{label}}",
+    "rename": "Rename",
+    "showCode": "Show code",
+    "renameTitle": "Rename kiosk",
+    "save": "Save",
+    "renamed": "Kiosk renamed",
+    "renameFailed": "Could not rename kiosk: {{error}}"
   }
 }

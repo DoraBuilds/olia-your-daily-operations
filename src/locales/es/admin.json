@@ -430,7 +430,7 @@
   "kiosksTab": {
     "loading": "Cargando…",
     "emptyHeading": "Aún no hay dispositivos",
-    "emptyBody": "Pulsa Añadir para crear un kiosco en una de tus ubicaciones.",
+    "emptyBody": "Primero añade una ubicación en la pestaña Conceptos y luego añade aquí sus quioscos.",
     "activeNow": "Activo ahora",
     "neverCheckedIn": "Nunca se ha conectado",
     "lastSeenMinutes_one": "Visto hace {{count}} minuto",
@@ -451,7 +451,6 @@
     "done": "Listo",
     "defaultName": "Kiosco {{number}}",
     "addKiosk": "Añadir kiosco",
-    "addTitle": "Añadir un kiosco a {{location}}",
     "nameLabel": "Nombre del kiosco",
     "namePlaceholder": "p. ej. Tableta de barra, iPad de cocina…",
     "addHint": "Recibirás un código de un solo uso para introducir en la tableta.",
@@ -475,6 +474,16 @@
     "conceptFilter": "Concepto",
     "allConcepts": "Todos los conceptos",
     "allLocations": "Todas las ubicaciones",
-    "noResults": "Ningún dispositivo coincide con tu búsqueda o filtros."
+    "noResults": "Ningún dispositivo coincide con tu búsqueda o filtros.",
+    "addKioskTo": "Añadir quiosco a {{location}}",
+    "addingToPrefix": "Estás añadiendo un dispositivo a",
+    "noDevicesAtLocation": "Aún no hay dispositivos.",
+    "deviceOptionsAria": "Opciones de {{label}}",
+    "rename": "Cambiar nombre",
+    "showCode": "Ver código",
+    "renameTitle": "Cambiar nombre del quiosco",
+    "save": "Guardar",
+    "renamed": "Quiosco renombrado",
+    "renameFailed": "No se pudo renombrar el quiosco: {{error}}"
   }
 }

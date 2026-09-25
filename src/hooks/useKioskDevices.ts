@@ -86,3 +86,15 @@ export function useRegenerateKioskCode() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kiosk_devices"] }),
   });
 }
+
+// Owner-only (#897): renames a kiosk from the Devices tab's 3-dot menu.
+export function useRenameKioskDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ deviceId, label }: { deviceId: string; label: string }) => {
+      const { error } = await supabase.rpc("rename_kiosk_device", { p_device_id: deviceId, p_label: label });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["kiosk_devices"] }),
+  });
+}

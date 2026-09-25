@@ -22,7 +22,7 @@ import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useCompanyDepartments, useDepartments, useSaveDepartment } from "@/hooks/useDepartments";
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
-import { AddLink, ConfirmModal, type ConfirmState } from "./SharedUI";
+import { AddLink, ConfirmModal, useMenu, menuPanelCls, menuItemCls, type ConfirmState } from "./SharedUI";
 import { KioskDeviceRow, AddKioskModal, KioskCodeModal } from "./KiosksTab";
 import {
   departmentUnassignImpact, removeLocationFromAssignments,
@@ -368,26 +368,6 @@ export function ConceptsTab({
     </div>
   );
 }
-
-// ─── Menus ────────────────────────────────────────────────────────────────────
-
-/** Open state for a click-away popover menu (the 3-dot / Add menus here). */
-function useMenu() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-  return { open, setOpen, ref };
-}
-
-const menuPanelCls = "absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-xl shadow-lg min-w-[200px] py-1 animate-fade-in";
-const menuItemCls = "w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors";
 
 // ─── SectionCard ──────────────────────────────────────────────────────────────
 // Collapsible card for the location's Departments / Devices / Team members.

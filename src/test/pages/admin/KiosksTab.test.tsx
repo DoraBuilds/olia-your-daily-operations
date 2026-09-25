@@ -6,13 +6,20 @@ const mockUseKioskDevices = vi.fn();
 const mockRevokeMutate = vi.fn();
 const mockCreateMutate = vi.fn();
 const mockRegenerateMutate = vi.fn();
+const mockRenameMutate = vi.fn();
 
 vi.mock("@/hooks/useKioskDevices", () => ({
   useKioskDevices: () => mockUseKioskDevices(),
   useRevokeKioskDevice: () => ({ mutate: mockRevokeMutate }),
   useCreateKioskDevice: () => ({ mutate: mockCreateMutate, isPending: false }),
   useRegenerateKioskCode: () => ({ mutate: mockRegenerateMutate, isPending: false }),
+  useRenameKioskDevice: () => ({ mutate: mockRenameMutate, isPending: false }),
 }));
+
+// Devices-tab rows keep their actions in a 3-dot menu.
+function openDeviceMenu(label = "Host stand") {
+  fireEvent.click(screen.getByRole("button", { name: `Options for ${label}` }));
+}
 
 // KiosksTab reads ?device= (the "Manage" link from a location's Devices card).
 function render(ui: React.ReactElement, path = "/admin/kiosks") {
@@ -41,6 +48,7 @@ beforeEach(() => {
   mockRevokeMutate.mockReset();
   mockCreateMutate.mockReset();
   mockRegenerateMutate.mockReset();
+  mockRenameMutate.mockReset();
   localStorage.clear();
 });
 
@@ -81,6 +89,7 @@ describe("KiosksTab", () => {
       fireEvent.change(screen.getByTestId("devices-search"), { target: { value: "harb" } });
       expect(screen.getByText("Bar tablet")).toBeInTheDocument();
       expect(screen.queryByText("Host stand")).not.toBeInTheDocument();
+      expect(screen.queryByText("Downtown")).not.toBeInTheDocument();
     });
 
     it("shows a no-results message, not the empty state, when nothing matches", () => {
@@ -116,18 +125,20 @@ describe("KiosksTab", () => {
     });
   });
 
-  it("shows the empty state when there are no devices", () => {
+  it("shows the empty state when there are no locations", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
-    render(<KiosksTab concepts={concepts} locations={locations} />);
+    render(<KiosksTab concepts={concepts} locations={[]} />);
     expect(screen.getByText("No devices yet")).toBeInTheDocument();
   });
 
-  it("the quiet Add link opens the add-kiosk form", () => {
+  it("each location's Add link opens the add form fixed to that location", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
-    fireEvent.click(screen.getByRole("button", { name: "Add kiosk" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add kiosk to Downtown" }));
     expect(screen.getByText("Kiosk name")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Downtown")).toBeInTheDocument();
+    expect(screen.getByText("You're adding a device to")).toBeInTheDocument();
+    expect(screen.getAllByText("Downtown").find(el => el.tagName === "STRONG")).toBeTruthy();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("groups devices under their concept and location", () => {
@@ -163,6 +174,7 @@ describe("KiosksTab", () => {
       isLoading: false,
     });
     render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
     fireEvent.click(screen.getByText("Deactivate"));
     const confirmButtons = screen.getAllByText("Deactivate");
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
@@ -184,6 +196,7 @@ describe("KiosksTab", () => {
       isLoading: false,
     });
     render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
     fireEvent.click(screen.getByText("Deactivate"));
     const confirmButtons = screen.getAllByText("Deactivate");
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
@@ -206,6 +219,7 @@ describe("KiosksTab", () => {
       isLoading: false,
     });
     render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
     fireEvent.click(screen.getByText("Deactivate"));
     const confirmButtons = screen.getAllByText("Deactivate");
     fireEvent.click(confirmButtons[confirmButtons.length - 1]);
@@ -218,10 +232,11 @@ describe("KiosksTab", () => {
     expect(localStorage.getItem("kiosk_device_id")).toBe("some-other-device");
   });
 
-  it("does not render a location group with zero devices", () => {
+  it("shows every location, even one with no devices yet", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
-    expect(screen.queryByText("Downtown")).not.toBeInTheDocument();
+    expect(screen.getByText("Downtown")).toBeInTheDocument();
+    expect(screen.getByText("No devices yet.")).toBeInTheDocument();
   });
 
   it("shows an unpaired kiosk as waiting, with its code", () => {
@@ -234,16 +249,37 @@ describe("KiosksTab", () => {
   it("hides owner actions from non-owners", () => {
     mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} isOwner={false} />);
-    expect(screen.queryByText("Deactivate")).not.toBeInTheDocument();
-    expect(screen.queryByText("Code")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Options for Host stand" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add kiosk to Downtown" })).not.toBeInTheDocument();
   });
 
-  it("opens the code dialog from a row", () => {
+  it("opens the code dialog from the row's menu", () => {
     mockUseKioskDevices.mockReturnValue({ data: [device({ paired_at: null })], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
-    fireEvent.click(screen.getByText("Code"));
+    openDeviceMenu();
+    fireEvent.click(screen.getByText("Show code"));
     expect(screen.getByText("ABCD-2345")).toBeInTheDocument();
     expect(screen.getByText("Open the Kiosk tab and enter this code.")).toBeInTheDocument();
+  });
+
+  it("renames a device from the row's menu", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
+    fireEvent.click(screen.getByText("Rename"));
+    fireEvent.change(screen.getByDisplayValue("Host stand"), { target: { value: "  Front desk " } });
+    fireEvent.click(screen.getByText("Save"));
+    expect(mockRenameMutate).toHaveBeenCalledWith({ deviceId: "d1", label: "Front desk" }, expect.anything());
+  });
+
+  it("won't save an empty device name", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
+    fireEvent.click(screen.getByText("Rename"));
+    fireEvent.change(screen.getByDisplayValue("Host stand"), { target: { value: "   " } });
+    fireEvent.click(screen.getByText("Save"));
+    expect(mockRenameMutate).not.toHaveBeenCalled();
   });
 
   it("scrolls to and highlights the device named in ?device=", () => {
@@ -298,20 +334,6 @@ describe("AddKioskModal", () => {
     expect(mockCreateMutate).toHaveBeenCalledWith({ locationId: "l1", label: "Bar tablet" }, expect.anything());
     mockCreateMutate.mock.calls[0][1].onSuccess({ device_id: "new-id" });
     expect(onCreated).toHaveBeenCalledWith("new-id", "Downtown");
-  });
-
-  it("lets you pick the location when opened from the Devices tab", () => {
-    mockUseKioskDevices.mockReturnValue({ data: [device({ location_id: "l2" })], isLoading: false });
-    const twoLocations = [...locations, { ...locations[0], id: "l2", name: "Harbour" }];
-    const onCreated = vi.fn();
-    render(<AddKioskModal locationOptions={twoLocations} concepts={concepts} onClose={vi.fn()} onCreated={onCreated} />);
-    expect(screen.getByDisplayValue("Kiosk 1")).toBeInTheDocument();
-    fireEvent.change(screen.getByDisplayValue("Downtown"), { target: { value: "l2" } });
-    expect(screen.getByDisplayValue("Kiosk 2")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Create kiosk"));
-    expect(mockCreateMutate).toHaveBeenCalledWith({ locationId: "l2", label: "Kiosk 2" }, expect.anything());
-    mockCreateMutate.mock.calls[0][1].onSuccess({ device_id: "new-id" });
-    expect(onCreated).toHaveBeenCalledWith("new-id", "Harbour");
   });
 
   it("won't create a kiosk without a name", () => {
