@@ -29,7 +29,7 @@ export default function Privacy() {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="font-display text-4xl text-foreground">Privacy Policy</h1>
-          <p className="text-sm text-muted-foreground">Last updated: 21 August 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: 25 September 2026</p>
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -57,7 +57,7 @@ export default function Privacy() {
           <p><strong className="text-foreground">Account holders (owners):</strong> name, email address, business name.</p>
           <p><strong className="text-foreground">Managers:</strong> name, email address, hashed PIN.</p>
           <p><strong className="text-foreground">Staff profiles:</strong> name, role, hashed PIN. Staff profiles do not require an email address.</p>
-          <p><strong className="text-foreground">Operational data:</strong> checklists, checklist completion logs, locations, infohub documents and training materials you create within Olia.</p>
+          <p><strong className="text-foreground">Operational data:</strong> checklists, checklist completion logs, photos taken while completing checklists, locations, infohub documents and training materials you create within Olia. Checklist photos may show people, such as staff at work.</p>
           <p><strong className="text-foreground">Usage and error data:</strong> if you consent, we collect anonymised error and performance data via Sentry to help us fix bugs.</p>
           <p><strong className="text-foreground">Payment data:</strong> billing is handled by Stripe. We do not store card numbers — only your subscription status and Stripe customer ID.</p>
           <p><strong className="text-foreground">AI-generated drafts:</strong> Build with AI, Convert File, and the AI training tools send the prompt or file you submit to our AI provider (Anthropic) to generate a draft, which you review and edit before saving. This content is not used to train AI models.</p>
@@ -93,9 +93,20 @@ export default function Privacy() {
 
         <Section title="5. Data retention">
           <p>
-            We keep your data for as long as your account is active. When you delete your account,
-            all organisation data — including locations, team members, staff profiles, checklists,
-            and logs — is permanently deleted within 30 days.
+            We keep your data for as long as your account is active, with these exceptions:
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li><strong className="text-foreground">Checklist photos</strong> are kept for 2 years from the date they are taken, then automatically and permanently deleted. The checklist log itself is kept and still records that a photo was attached.</li>
+            <li><strong className="text-foreground">Unused photos</strong> — photos taken but never saved to a submitted checklist, for example because they were retaken — are automatically deleted after a few days.</li>
+          </ul>
+          <p>
+            To keep storage efficient, checklist photos and uploaded images are resized and
+            compressed when they are saved.
+          </p>
+          <p>
+            When you delete your account, all organisation data — including locations, team members,
+            staff profiles, checklists, logs, checklist photos, and uploaded files — is permanently
+            deleted within 30 days.
           </p>
           <p>
             You can delete your account at any time from the Admin → Account tab inside Olia.

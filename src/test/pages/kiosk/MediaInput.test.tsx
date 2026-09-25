@@ -56,6 +56,23 @@ describe("MediaInput", () => {
     expect(screen.queryByText("Loading photo…")).not.toBeInTheDocument();
   });
 
+  it("caps the stored photo at 1280px even when the camera streams 4K", async () => {
+    vi.spyOn(HTMLVideoElement.prototype, "videoWidth", "get").mockReturnValue(3840);
+    vi.spyOn(HTMLVideoElement.prototype, "videoHeight", "get").mockReturnValue(2160);
+    let drawnSize: [number, number] | null = null;
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (this: HTMLCanvasElement) {
+      return { drawImage: () => { drawnSize = [this.width, this.height]; } } as never;
+    });
+
+    render(<Harness />);
+    fireEvent.click(screen.getByText("Take photo"));
+    fireEvent.click(await screen.findByRole("button", { name: /capture photo/i }));
+
+    expect(drawnSize).toEqual([1280, 720]);
+    const constraints = (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(constraints.video.width).toEqual({ ideal: 1280 });
+  });
+
   it("stops showing 'Loading photo…' when a stored photo can't be signed", async () => {
     render(<Harness initial="org/loc/older_q1.jpg" />);
     await waitFor(() => expect(screen.getByText("Photo saved")).toBeInTheDocument());

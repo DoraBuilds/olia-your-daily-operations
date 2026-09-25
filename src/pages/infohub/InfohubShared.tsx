@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { supabase } from "@/lib/supabase";
+import { shrinkImageFile } from "@/lib/image-resize";
 import i18n from "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthContext";
 import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
@@ -432,7 +433,9 @@ export function UploadDocModal({
   const MAX_SIZE = 20 * 1024 * 1024;
 
   function handleFile(file: File) {
-    if (file.size > MAX_SIZE) {
+    // Images are downscaled on submit, so only reject them if they're too big even to read.
+    const limit = file.type.startsWith("image/") ? MAX_SIZE * 3 : MAX_SIZE;
+    if (file.size > limit) {
       setError(t("shared.upload.fileTooLarge"));
       return;
     }
@@ -457,12 +460,15 @@ export function UploadDocModal({
     setUploading(true);
     setError(null);
     try {
-      const ext = selectedFile.name.includes(".") ? selectedFile.name.slice(selectedFile.name.lastIndexOf(".")) : "";
+      // Phone photos are often 3–8 MB; store images at a size that's still sharp full-screen.
+      const file = await shrinkImageFile(selectedFile);
+      if (file.size > MAX_SIZE) { setError(t("shared.upload.fileTooLarge")); return; }
+      const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
       const path = `${orgId}/${Date.now()}${ext}`;
-      const { error: uploadError } = await supabase.storage.from("infohub-files").upload(path, selectedFile);
+      const { error: uploadError } = await supabase.storage.from("infohub-files").upload(path, file);
       if (uploadError) throw uploadError;
       const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
-      onSave(title.trim(), selectedFolder, path, selectedFile.type, tags);
+      onSave(title.trim(), selectedFolder, path, file.type, tags);
       onClose();
     } catch (err: any) {
       setError(err.message ?? t("shared.upload.uploadFailed"));

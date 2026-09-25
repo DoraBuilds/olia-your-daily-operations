@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.kiosk-admin-login]
 verify_jwt = false
+
+[functions.cleanup-media]
+verify_jwt = false
