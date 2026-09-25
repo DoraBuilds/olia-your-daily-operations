@@ -364,6 +364,7 @@ export default function Infohub() {
           moduleId: activeSelectedTrainingDoc.id,
           completedStepIndices: completed ? activeSelectedTrainingDoc.steps.map((_, index) => index) : [],
           totalSteps,
+          isCompleted: completed,
         });
       }}
     />

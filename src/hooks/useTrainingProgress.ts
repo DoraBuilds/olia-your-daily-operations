@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export interface TrainingProgressRow {
   id: string;
   organization_id: string;
-  user_id: string;
+  user_id: string | null;
+  team_member_id: string;
   module_id: string;
   completed_step_indices: number[];
   is_completed: boolean;
@@ -18,28 +19,38 @@ export interface SaveTrainingProgressInput {
   moduleId: string;
   completedStepIndices: number[];
   totalSteps: number;
+  /** Explicit complete/incomplete toggle; otherwise derived from the steps. */
+  isCompleted?: boolean;
 }
 
 function normalizeStepIndices(indices: number[]) {
   return Array.from(new Set(indices.filter(Number.isInteger))).sort((a, b) => a - b);
 }
 
+function resolveIsCompleted(input: SaveTrainingProgressInput, completedStepIndices: number[]) {
+  if (input.isCompleted !== undefined) return input.isCompleted;
+  return input.totalSteps > 0 && completedStepIndices.length >= input.totalSteps;
+}
+
 export function useTrainingProgress() {
   const qc = useQueryClient();
+  // Progress belongs to the team member (not the login) so it's shared with
+  // the kiosk, where PIN-only members complete training too (#905).
   const { user, teamMember } = useAuth();
   const organizationId = teamMember?.organization_id ?? null;
+  const teamMemberId = teamMember?.id ?? null;
   const userId = user?.id ?? null;
-  const queryKey = ["training-progress", organizationId, userId] as const;
+  const queryKey = ["training-progress", organizationId, teamMemberId] as const;
 
   const query = useQuery({
     queryKey,
-    enabled: !!organizationId && !!userId,
+    enabled: !!organizationId && !!teamMemberId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("training_progress")
-        .select("id, organization_id, user_id, module_id, completed_step_indices, is_completed, completed_at, created_at, updated_at")
+        .select("id, organization_id, user_id, team_member_id, module_id, completed_step_indices, is_completed, completed_at, created_at, updated_at")
         .eq("organization_id", organizationId)
-        .eq("user_id", userId)
+        .eq("team_member_id", teamMemberId)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as TrainingProgressRow[];
@@ -48,21 +59,22 @@ export function useTrainingProgress() {
 
   const saveProgress = useMutation({
     mutationFn: async (input: SaveTrainingProgressInput) => {
-      if (!organizationId || !userId) throw new Error("Missing training progress context");
+      if (!organizationId || !teamMemberId) throw new Error("Missing training progress context");
 
       const completedStepIndices = normalizeStepIndices(input.completedStepIndices);
-      const isCompleted = input.totalSteps > 0 && completedStepIndices.length >= input.totalSteps;
+      const isCompleted = resolveIsCompleted(input, completedStepIndices);
       const now = new Date().toISOString();
 
       const { error } = await supabase.from("training_progress").upsert({
         organization_id: organizationId,
         user_id: userId,
+        team_member_id: teamMemberId,
         module_id: input.moduleId,
         completed_step_indices: completedStepIndices,
         is_completed: isCompleted,
         completed_at: isCompleted ? now : null,
         updated_at: now,
-      }, { onConflict: "organization_id,user_id,module_id" });
+      }, { onConflict: "organization_id,team_member_id,module_id" });
 
       if (error) throw error;
     },
@@ -70,12 +82,13 @@ export function useTrainingProgress() {
       await qc.cancelQueries({ queryKey });
       const previous = qc.getQueryData<TrainingProgressRow[]>(queryKey) ?? [];
       const completedStepIndices = normalizeStepIndices(input.completedStepIndices);
-      const isCompleted = input.totalSteps > 0 && completedStepIndices.length >= input.totalSteps;
+      const isCompleted = resolveIsCompleted(input, completedStepIndices);
       const now = new Date().toISOString();
       const nextRow: TrainingProgressRow = {
-        id: `${organizationId}-${userId}-${input.moduleId}`,
+        id: `${organizationId}-${teamMemberId}-${input.moduleId}`,
         organization_id: organizationId ?? "",
-        user_id: userId ?? "",
+        user_id: userId,
+        team_member_id: teamMemberId ?? "",
         module_id: input.moduleId,
         completed_step_indices: completedStepIndices,
         is_completed: isCompleted,

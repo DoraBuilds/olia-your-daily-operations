@@ -52,16 +52,18 @@ beforeEach(() => {
 });
 
 describe("useTrainingProgress", () => {
-  it("loads training progress rows for the active user", async () => {
+  it("loads the signed-in team member's progress rows", async () => {
+    const eq = vi.fn().mockReturnThis();
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
+      eq,
       order: vi.fn().mockResolvedValue({
         data: [
           {
             id: "tp-1",
             organization_id: "org-1",
             user_id: "user-1",
+            team_member_id: "tm-1",
             module_id: "tr1",
             completed_step_indices: [0, 1],
             is_completed: false,
@@ -80,6 +82,7 @@ describe("useTrainingProgress", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data?.[0].module_id).toBe("tr1");
+    expect(eq).toHaveBeenCalledWith("team_member_id", "tm-1");
   });
 
   it("upserts normalized progress and marks a module complete when all steps are done", async () => {
@@ -105,13 +108,35 @@ describe("useTrainingProgress", () => {
       expect.objectContaining({
         organization_id: "org-1",
         user_id: "user-1",
+        team_member_id: "tm-1",
         module_id: "tr1",
         completed_step_indices: [0, 1, 2, 3],
         is_completed: true,
         completed_at: expect.any(String),
         updated_at: expect.any(String),
       }),
-      expect.objectContaining({ onConflict: "organization_id,user_id,module_id" }),
+      expect.objectContaining({ onConflict: "organization_id,team_member_id,module_id" }),
+    );
+  });
+
+  it("honours an explicit complete toggle, even for a doc with no steps", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      upsert,
+    });
+
+    const { result } = renderHook(() => useTrainingProgress(), { wrapper: makeWrapper() });
+
+    await act(async () => {
+      await result.current.saveProgress.mutateAsync({ moduleId: "tr2", completedStepIndices: [], totalSteps: 0, isCompleted: true });
+    });
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ module_id: "tr2", is_completed: true, completed_at: expect.any(String) }),
+      expect.anything(),
     );
   });
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { BookOpen, FileText, Folder, GraduationCap } from "lucide-react";
+import { BookOpen, Check, CheckCircle2, FileText, Folder, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
@@ -51,6 +51,12 @@ export function KioskLibrary({
   const [section, setSection] = useState<Section>("library");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<KioskDoc | null>(null);
+  // Training docs this member has completed (by doc id). Only tracked when a
+  // member identified with their PIN — otherwise the Infohub is read-only.
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [savingDocId, setSavingDocId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const canComplete = memberId !== null;
 
   const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onBack);
 
@@ -73,6 +79,20 @@ export function KioskLibrary({
             setData((rpcData as KioskLibraryData) ?? { folders: [], documents: [] });
           }
           setLoading(false);
+        });
+      if (!memberId) return;
+      supabase
+        .rpc("get_kiosk_training_progress", {
+          p_location_id: locationId,
+          p_team_member_id: memberId,
+          p_kiosk_token: token,
+        })
+        .then(({ data: rows, error: progressError }) => {
+          if (cancelled || progressError) return;
+          const done = ((rows ?? []) as { module_id: string; is_completed: boolean }[])
+            .filter(row => row.is_completed)
+            .map(row => row.module_id);
+          setCompletedIds(new Set(done));
         });
     });
     return () => {
@@ -97,6 +117,27 @@ export function KioskLibrary({
     if (selectedDoc) { setSelectedDoc(null); return; }
     if (currentFolderId) { setCurrentFolderId(currentFolder?.parent_id ?? null); return; }
     onBack();
+  };
+
+  const setDocCompleted = async (docId: string, completed: boolean) => {
+    if (!memberId) return;
+    setSavingDocId(docId);
+    setSaveError(false);
+    const token = await ensureKioskToken(locationId);
+    const { error: rpcError } = await supabase.rpc("set_kiosk_training_complete", {
+      p_location_id: locationId,
+      p_team_member_id: memberId,
+      p_kiosk_token: token,
+      p_document_id: docId,
+      p_completed: completed,
+    });
+    setSavingDocId(null);
+    if (rpcError) { setSaveError(true); return; }
+    setCompletedIds(prev => {
+      const next = new Set(prev);
+      if (completed) next.add(docId); else next.delete(docId);
+      return next;
+    });
   };
 
   const selectSection = (next: Section) => {
@@ -180,11 +221,20 @@ export function KioskLibrary({
           </div>
         )}
         {selectedDoc ? (
-          <DocDetail doc={selectedDoc} />
+          <DocDetail
+            doc={selectedDoc}
+            completion={canComplete && selectedDoc.section === "training" ? {
+              completed: completedIds.has(selectedDoc.id),
+              saving: savingDocId === selectedDoc.id,
+              error: saveError,
+              onChange: completed => setDocCompleted(selectedDoc.id, completed),
+            } : null}
+          />
         ) : currentFolderId ? (
           <FolderContents
             subFolders={childFolders(currentFolderId)}
             docs={docsInFolder(currentFolderId)}
+            completedIds={canComplete ? completedIds : null}
             onFolderSelect={setCurrentFolderId}
             onDocSelect={setSelectedDoc}
           />
@@ -193,6 +243,7 @@ export function KioskLibrary({
             section={section}
             folders={rootFolders}
             docsInFolder={docsInFolder}
+            completedIds={canComplete ? completedIds : null}
             onFolderSelect={setCurrentFolderId}
           />
         )}
@@ -217,11 +268,14 @@ function RootFolders({
   section,
   folders,
   docsInFolder,
+  completedIds,
   onFolderSelect,
 }: {
   section: Section;
   folders: KioskFolder[];
   docsInFolder: (id: string) => KioskDoc[];
+  /** null = no member identified, so no progress to show. */
+  completedIds: Set<string> | null;
   onFolderSelect: (id: string) => void;
 }) {
   const { t } = useTranslation("kiosk");
@@ -236,7 +290,10 @@ function RootFolders({
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
       {folders.map(folder => {
-        const count = docsInFolder(folder.id).length;
+        const folderDocs = docsInFolder(folder.id);
+        const count = folderDocs.length;
+        const showProgress = section === "training" && completedIds !== null && count > 0;
+        const done = showProgress ? folderDocs.filter(d => completedIds.has(d.id)).length : 0;
         return (
           <button
             key={folder.id}
@@ -250,7 +307,9 @@ function RootFolders({
             <div className="w-full">
               <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {t("library.documentCount", { count })}
+                {showProgress
+                  ? t("library.completedCount", { done, total: count })
+                  : t("library.documentCount", { count })}
               </p>
             </div>
           </button>
@@ -263,11 +322,13 @@ function RootFolders({
 function FolderContents({
   subFolders,
   docs,
+  completedIds,
   onFolderSelect,
   onDocSelect,
 }: {
   subFolders: KioskFolder[];
   docs: KioskDoc[];
+  completedIds: Set<string> | null;
   onFolderSelect: (id: string) => void;
   onDocSelect: (doc: KioskDoc) => void;
 }) {
@@ -292,13 +353,22 @@ function FolderContents({
       ))}
       {docs.map(doc => {
         const isTraining = doc.section === "training";
+        const isDone = isTraining && !!completedIds?.has(doc.id);
         return (
           <button
             key={doc.id}
             data-testid={`library-doc-${doc.id}`}
             onClick={() => onDocSelect(doc)}
-            className={tileCls}
+            className={cn(tileCls, "relative")}
           >
+            {isDone && (
+              <CheckCircle2
+                size={16}
+                data-testid={`library-doc-done-${doc.id}`}
+                aria-label={t("library.completed")}
+                className="absolute top-2.5 right-2.5 text-sage"
+              />
+            )}
             <div className="w-9 h-9 rounded-lg bg-lavender-light flex items-center justify-center shrink-0">
               {isTraining ? <GraduationCap size={16} className="text-lavender-deep" /> : <FileText size={16} className="text-lavender-deep" />}
             </div>
@@ -313,7 +383,14 @@ function FolderContents({
   );
 }
 
-function DocDetail({ doc }: { doc: KioskDoc }) {
+interface DocCompletion {
+  completed: boolean;
+  saving: boolean;
+  error: boolean;
+  onChange: (completed: boolean) => void;
+}
+
+function DocDetail({ doc, completion }: { doc: KioskDoc; completion: DocCompletion | null }) {
   const { t } = useTranslation("kiosk");
   return (
     <div className="space-y-4">
@@ -364,6 +441,37 @@ function DocDetail({ doc }: { doc: KioskDoc }) {
               {doc.metadata.fileType ?? t("library.attachmentFallback")} · {t("library.openInAdminToDownload")}
             </p>
           </div>
+        </div>
+      )}
+      {completion && (
+        <div className="pt-2 space-y-2">
+          {completion.completed ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-sage-light px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-medium text-sage-deep">
+                <CheckCircle2 size={16} /> {t("library.completed")}
+              </p>
+              <button
+                data-testid="training-undo-btn"
+                disabled={completion.saving}
+                onClick={() => completion.onChange(false)}
+                className="text-xs font-medium text-sage-deep underline disabled:opacity-50"
+              >
+                {t("library.undo")}
+              </button>
+            </div>
+          ) : (
+            <button
+              data-testid="training-complete-btn"
+              disabled={completion.saving}
+              onClick={() => completion.onChange(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-sage text-white py-3 text-sm font-semibold hover:bg-sage-deep transition-colors disabled:opacity-50"
+            >
+              <Check size={16} /> {t("library.markComplete")}
+            </button>
+          )}
+          {completion.error && (
+            <p className="text-xs text-status-error text-center">{t("library.saveError")}</p>
+          )}
         </div>
       )}
     </div>

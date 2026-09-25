@@ -5,11 +5,15 @@ import { renderWithProviders } from "../../test-utils";
 
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 const mockGetKioskLibrary = vi.fn();
+const mockGetProgress = vi.fn();
+const mockSetComplete = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     rpc: vi.fn().mockImplementation((fn: string, _params?: unknown) => {
       if (fn === "get_kiosk_library") return mockGetKioskLibrary();
+      if (fn === "get_kiosk_training_progress") return mockGetProgress(_params);
+      if (fn === "set_kiosk_training_complete") return mockSetComplete(_params);
       if (fn === "get_kiosk_token") return Promise.resolve({ data: { kiosk_token: "test-token" }, error: null });
       return Promise.resolve({ data: null, error: null });
     }),
@@ -56,6 +60,8 @@ const DEFAULT_PROPS = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetProgress.mockResolvedValue({ data: [], error: null });
+  mockSetComplete.mockResolvedValue({ data: null, error: null });
   DEFAULT_PROPS.onBack = vi.fn();
 });
 
@@ -296,5 +302,88 @@ describe("KioskLibrary Library/Training sections", () => {
     await waitFor(() => screen.getByText("Safety Procedures"));
     fireEvent.click(screen.getByTestId("infohub-tab-training"));
     expect(screen.getByText("No training available.")).toBeInTheDocument();
+  });
+});
+
+// ─── Training completion ─────────────────────────────────────────────────────
+
+describe("KioskLibrary training completion", () => {
+  const TRAINING_RESPONSE = {
+    data: {
+      folders: [{ id: "t1", name: "Bar Training", parent_id: null, section: "training" }],
+      documents: [
+        { id: "td1", title: "Opening the bar", summary: "", body: "", folder_id: "t1", section: "training", metadata: { duration: "10 min", steps: ["Unlock", "Check fridges"] } },
+        { id: "td2", title: "Cocktail basics", summary: "", body: "", folder_id: "t1", section: "training", metadata: { steps: ["Jigger"] } },
+      ],
+    },
+    error: null,
+  };
+
+  const openTraining = async () => {
+    await waitFor(() => screen.getByTestId("infohub-tab-training"));
+    fireEvent.click(screen.getByTestId("infohub-tab-training"));
+  };
+
+  it("shows the member's completed count on folders and a check on completed docs", async () => {
+    mockGetKioskLibrary.mockResolvedValue(TRAINING_RESPONSE);
+    mockGetProgress.mockResolvedValue({ data: [{ module_id: "td1", is_completed: true, completed_step_indices: [0, 1] }], error: null });
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await openTraining();
+    await waitFor(() => expect(screen.getByText("1 of 2 completed")).toBeInTheDocument());
+    expect(mockGetProgress).toHaveBeenCalledWith(expect.objectContaining({ p_team_member_id: "tm-1", p_kiosk_token: "test-token" }));
+
+    fireEvent.click(screen.getByTestId("library-folder-t1"));
+    expect(screen.getByTestId("library-doc-done-td1")).toBeInTheDocument();
+    expect(screen.queryByTestId("library-doc-done-td2")).not.toBeInTheDocument();
+  });
+
+  it("marks a training doc complete, then undoes it", async () => {
+    mockGetKioskLibrary.mockResolvedValue(TRAINING_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await openTraining();
+    fireEvent.click(screen.getByTestId("library-folder-t1"));
+    fireEvent.click(screen.getByTestId("library-doc-td2"));
+
+    fireEvent.click(screen.getByTestId("training-complete-btn"));
+    await waitFor(() => expect(screen.getByTestId("training-undo-btn")).toBeInTheDocument());
+    expect(mockSetComplete).toHaveBeenCalledWith({
+      p_location_id: "loc-1", p_team_member_id: "tm-1", p_kiosk_token: "test-token", p_document_id: "td2", p_completed: true,
+    });
+
+    fireEvent.click(screen.getByTestId("training-undo-btn"));
+    await waitFor(() => expect(screen.getByTestId("training-complete-btn")).toBeInTheDocument());
+    expect(mockSetComplete).toHaveBeenLastCalledWith(expect.objectContaining({ p_document_id: "td2", p_completed: false }));
+  });
+
+  it("keeps the doc incomplete and shows an error when saving fails", async () => {
+    mockGetKioskLibrary.mockResolvedValue(TRAINING_RESPONSE);
+    mockSetComplete.mockResolvedValue({ data: null, error: { message: "not allowed" } });
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await openTraining();
+    fireEvent.click(screen.getByTestId("library-folder-t1"));
+    fireEvent.click(screen.getByTestId("library-doc-td1"));
+    fireEvent.click(screen.getByTestId("training-complete-btn"));
+    await waitFor(() => expect(screen.getByText(/Couldn't save/)).toBeInTheDocument());
+    expect(screen.getByTestId("training-complete-btn")).toBeInTheDocument();
+  });
+
+  it("is read-only when no member identified: no button, no progress lookup", async () => {
+    mockGetKioskLibrary.mockResolvedValue(TRAINING_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} memberId={null} memberName="Staff Member" />);
+    await openTraining();
+    expect(screen.getByText("2 documents")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("library-folder-t1"));
+    fireEvent.click(screen.getByTestId("library-doc-td1"));
+    expect(screen.queryByTestId("training-complete-btn")).not.toBeInTheDocument();
+    expect(mockGetProgress).not.toHaveBeenCalled();
+  });
+
+  it("doesn't offer completion on library docs", async () => {
+    mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await waitFor(() => screen.getByText("Safety Procedures"));
+    fireEvent.click(screen.getByTestId("library-folder-f2"));
+    fireEvent.click(screen.getByTestId("library-doc-d2"));
+    expect(screen.queryByTestId("training-complete-btn")).not.toBeInTheDocument();
   });
 });
