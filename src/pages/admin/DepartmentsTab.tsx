@@ -232,11 +232,9 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
 // Also opened from a location's page in the Concepts tab, pre-assigned there.
 
 export function DepartmentModal({
-  department, initialAssignments, existingNames, concepts, locations, saving, onClose, onSave,
+  department, existingNames, concepts, locations, saving, onClose, onSave,
 }: {
   department: CompanyDepartment | null;
-  /** Starting assignments for a new department. Omitted = All / All. */
-  initialAssignments?: DepartmentAssignment[];
   existingNames: string[];
   concepts: Concept[];
   locations: Location[];
@@ -247,7 +245,7 @@ export function DepartmentModal({
   const { t } = useTranslation("admin");
   const { t: tc } = useTranslation("checklists");
   const [name, setName] = useState(department?.name ?? "");
-  const [selection, setSelection] = useState(() => assignmentsToSelection(department?.assignments ?? initialAssignments ?? [], locations));
+  const [selection, setSelection] = useState(() => assignmentsToSelection(department?.assignments ?? [], locations));
 
   const trimmed = name.trim();
   const duplicate = existingNames.includes(trimmed.toLowerCase());
