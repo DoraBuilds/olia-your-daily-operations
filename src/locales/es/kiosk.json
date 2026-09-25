@@ -8,7 +8,7 @@
     "adminTitle": "PIN de administrador",
     "identifyTitle": "¿Quién eres?",
     "identifySubtitle": "Introduce tu PIN:",
-    "staffLibraryTitle": "Biblioteca del personal",
+    "staffLibraryTitle": "Infohub",
     "checking": "Comprobando PIN…",
     "tryAgainIn": "Vuelve a intentarlo en <bold>{{seconds}}s</bold>",
     "forgotPin": "¿Olvidaste tu PIN?",
@@ -30,16 +30,21 @@
     "pinNotRecognised": "PIN no reconocido. Vuelve a intentarlo."
   },
   "library": {
-    "title": "Biblioteca del personal",
-    "loading": "Cargando biblioteca…",
-    "loadError": "No se pudo cargar la biblioteca. Revisa tu conexión y vuelve a intentarlo.",
+    "title": "Infohub",
+    "loading": "Cargando Infohub…",
+    "loadError": "No se pudo cargar el Infohub. Revisa tu conexión y vuelve a intentarlo.",
     "backToKiosk": "Volver al kiosco",
     "noDocuments": "No hay documentos disponibles en la biblioteca.",
+    "noTraining": "No hay capacitaciones disponibles.",
     "noFolderDocuments": "No hay documentos en esta carpeta.",
     "documentCount_one": "{{count}} documento",
     "documentCount_other": "{{count}} documentos",
     "attachmentFallback": "Adjunto",
-    "openInAdminToDownload": "Abre el panel de administración para descargarlo"
+    "openInAdminToDownload": "Abre el panel de administración para descargarlo",
+    "sections": {
+      "library": "Biblioteca",
+      "training": "Capacitación"
+    }
   },
   "runner": {
     "answeredCount": "{{answered}}/{{total}} respondidas",
@@ -69,7 +74,7 @@
     "kioskFallbackName": "Kiosco",
     "identifiedAs": "Hola, {{name}}",
     "notYou": "¿No eres tú?",
-    "library": "Biblioteca",
+    "library": "Infohub",
     "admin": "Admin",
     "stats": {
       "dueNow": "Vence ahora",

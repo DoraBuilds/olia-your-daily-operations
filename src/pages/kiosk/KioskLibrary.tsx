@@ -1,14 +1,21 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { BookOpen, FileText, Folder } from "lucide-react";
+import { BookOpen, FileText, Folder, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
+import { cn } from "@/lib/utils";
+
+// Kiosk Infohub: the Library and Training sections of the Info Hub, limited
+// server-side (get_kiosk_library) to what this team member may see.
+type Section = "library" | "training";
 
 interface KioskFolder {
   id: string;
   name: string;
   parent_id: string | null;
+  /** Missing on rows from the pre-Training RPC — treated as library. */
+  section?: Section;
 }
 
 interface KioskDoc {
@@ -17,7 +24,8 @@ interface KioskDoc {
   summary: string;
   body: string;
   folder_id: string;
-  metadata: { tags?: string[]; filePath?: string; fileType?: string };
+  section?: Section;
+  metadata: { tags?: string[]; filePath?: string; fileType?: string; duration?: string; steps?: string[] };
 }
 
 interface KioskLibraryData {
@@ -40,6 +48,7 @@ export function KioskLibrary({
   const [data, setData] = useState<KioskLibraryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [section, setSection] = useState<Section>("library");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<KioskDoc | null>(null);
 
@@ -71,8 +80,9 @@ export function KioskLibrary({
     };
   }, [locationId, memberId, t]);
 
-  const folders = data?.folders ?? [];
-  const documents = data?.documents ?? [];
+  const inSection = (item: { section?: Section }) => (item.section ?? "library") === section;
+  const folders = (data?.folders ?? []).filter(inSection);
+  const documents = (data?.documents ?? []).filter(inSection);
 
   const rootFolders = folders.filter(f => f.parent_id === null);
   const childFolders = (parentId: string) => folders.filter(f => f.parent_id === parentId);
@@ -89,10 +99,16 @@ export function KioskLibrary({
     onBack();
   };
 
+  const selectSection = (next: Section) => {
+    setSection(next);
+    setCurrentFolderId(null);
+    setSelectedDoc(null);
+  };
+
   const backLabel = selectedDoc
-    ? (currentFolder?.name ?? t("grid.library"))
+    ? (currentFolder?.name ?? t(`library.sections.${section}`))
     : currentFolderId
-      ? (parentFolder?.name ?? t("grid.library"))
+      ? (parentFolder?.name ?? t(`library.sections.${section}`))
       : t("grid.kioskFallbackName");
 
   if (loading) {
@@ -144,6 +160,25 @@ export function KioskLibrary({
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-5 py-5 space-y-3 pb-24">
+        {!selectedDoc && !currentFolderId && (
+          <div role="tablist" className="flex gap-1 p-1 rounded-xl bg-muted">
+            {(["library", "training"] as const).map(s => (
+              <button
+                key={s}
+                role="tab"
+                aria-selected={section === s}
+                data-testid={`infohub-tab-${s}`}
+                onClick={() => selectSection(s)}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
+                  section === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`library.sections.${s}`)}
+              </button>
+            ))}
+          </div>
+        )}
         {selectedDoc ? (
           <DocDetail doc={selectedDoc} />
         ) : currentFolderId ? (
@@ -155,6 +190,7 @@ export function KioskLibrary({
           />
         ) : (
           <RootFolders
+            section={section}
             folders={rootFolders}
             docsInFolder={docsInFolder}
             onFolderSelect={setCurrentFolderId}
@@ -174,11 +210,16 @@ export function KioskLibrary({
   );
 }
 
+// Folders and docs share one compact, square-ish tile so they sit in the same grid.
+const tileCls = "card-surface min-h-[120px] flex flex-col items-center justify-center gap-1.5 px-3 py-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]";
+
 function RootFolders({
+  section,
   folders,
   docsInFolder,
   onFolderSelect,
 }: {
+  section: Section;
   folders: KioskFolder[];
   docsInFolder: (id: string) => KioskDoc[];
   onFolderSelect: (id: string) => void;
@@ -188,12 +229,12 @@ function RootFolders({
     return (
       <div className="text-center py-12 space-y-2">
         <BookOpen size={32} className="text-muted-foreground mx-auto" />
-        <p className="text-sm text-muted-foreground">{t("library.noDocuments")}</p>
+        <p className="text-sm text-muted-foreground">{t(section === "training" ? "library.noTraining" : "library.noDocuments")}</p>
       </div>
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
       {folders.map(folder => {
         const count = docsInFolder(folder.id).length;
         return (
@@ -201,10 +242,10 @@ function RootFolders({
             key={folder.id}
             data-testid={`library-folder-${folder.id}`}
             onClick={() => onFolderSelect(folder.id)}
-            className="card-surface h-36 flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
+            className={tileCls}
           >
-            <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
-              <Folder size={20} className="text-sage-deep" />
+            <div className="w-9 h-9 rounded-lg bg-sage-light flex items-center justify-center shrink-0">
+              <Folder size={16} className="text-sage-deep" />
             </div>
             <div className="w-full">
               <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
@@ -235,43 +276,40 @@ function FolderContents({
     return <p className="text-sm text-muted-foreground text-center py-8">{t("library.noFolderDocuments")}</p>;
   }
   return (
-    <>
-      {subFolders.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {subFolders.map(folder => (
-            <button
-              key={folder.id}
-              data-testid={`library-folder-${folder.id}`}
-              onClick={() => onFolderSelect(folder.id)}
-              className="card-surface h-36 flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]"
-            >
-              <div className="w-12 h-12 rounded-xl bg-sage-light flex items-center justify-center shrink-0">
-                <Folder size={20} className="text-sage-deep" />
-              </div>
-              <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
-            </button>
-          ))}
-        </div>
-      )}
-      {docs.map(doc => (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+      {subFolders.map(folder => (
         <button
-          key={doc.id}
-          data-testid={`library-doc-${doc.id}`}
-          onClick={() => onDocSelect(doc)}
-          className="w-full text-left card-surface p-4 flex items-start gap-3 hover:border-sage/30 transition-colors active:scale-[0.99]"
+          key={folder.id}
+          data-testid={`library-folder-${folder.id}`}
+          onClick={() => onFolderSelect(folder.id)}
+          className={tileCls}
         >
-          <div className="w-10 h-10 rounded-xl bg-lavender-light flex items-center justify-center shrink-0 mt-0.5">
-            <FileText size={18} className="text-lavender-deep" />
+          <div className="w-9 h-9 rounded-lg bg-sage-light flex items-center justify-center shrink-0">
+            <Folder size={16} className="text-sage-deep" />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground leading-snug">{doc.title}</p>
-            {doc.summary && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{doc.summary}</p>
-            )}
-          </div>
+          <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
         </button>
       ))}
-    </>
+      {docs.map(doc => {
+        const isTraining = doc.section === "training";
+        return (
+          <button
+            key={doc.id}
+            data-testid={`library-doc-${doc.id}`}
+            onClick={() => onDocSelect(doc)}
+            className={tileCls}
+          >
+            <div className="w-9 h-9 rounded-lg bg-lavender-light flex items-center justify-center shrink-0">
+              {isTraining ? <GraduationCap size={16} className="text-lavender-deep" /> : <FileText size={16} className="text-lavender-deep" />}
+            </div>
+            <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{doc.title}</p>
+            {isTraining && doc.metadata?.duration && (
+              <p className="text-xs text-muted-foreground">{doc.metadata.duration}</p>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -290,6 +328,21 @@ function DocDetail({ doc }: { doc: KioskDoc }) {
             </span>
           ))}
         </div>
+      )}
+      {doc.section === "training" && doc.metadata?.duration && (
+        <p className="text-xs text-muted-foreground">{doc.metadata.duration}</p>
+      )}
+      {doc.section === "training" && doc.metadata?.steps && doc.metadata.steps.length > 0 && (
+        <ol className="space-y-3">
+          {doc.metadata.steps.map((step, i) => (
+            <li key={i} className="card-surface p-4 flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-sage-light text-sage-deep text-xs font-semibold flex items-center justify-center shrink-0">
+                {i + 1}
+              </span>
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{step}</p>
+            </li>
+          ))}
+        </ol>
       )}
       {doc.body && (
         <div className="space-y-3">

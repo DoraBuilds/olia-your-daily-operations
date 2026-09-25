@@ -8,7 +8,7 @@
     "adminTitle": "Admin PIN",
     "identifyTitle": "Who's there?",
     "identifySubtitle": "Enter your PIN:",
-    "staffLibraryTitle": "Staff Library",
+    "staffLibraryTitle": "Infohub",
     "checking": "Checking PIN…",
     "tryAgainIn": "Try again in <bold>{{seconds}}s</bold>",
     "forgotPin": "Forgot your PIN?",
@@ -30,16 +30,21 @@
     "pinNotRecognised": "PIN not recognised. Please try again."
   },
   "library": {
-    "title": "Staff Library",
-    "loading": "Loading library…",
-    "loadError": "Could not load library. Check your connection and try again.",
+    "title": "Infohub",
+    "loading": "Loading Infohub…",
+    "loadError": "Could not load Infohub. Check your connection and try again.",
     "backToKiosk": "Back to kiosk",
     "noDocuments": "No library documents available.",
+    "noTraining": "No training available.",
     "noFolderDocuments": "No documents in this folder.",
     "documentCount_one": "{{count}} document",
     "documentCount_other": "{{count}} documents",
     "attachmentFallback": "Attachment",
-    "openInAdminToDownload": "Open in admin panel to download"
+    "openInAdminToDownload": "Open in admin panel to download",
+    "sections": {
+      "library": "Library",
+      "training": "Training"
+    }
   },
   "runner": {
     "answeredCount": "{{answered}}/{{total}} answered",
@@ -69,7 +74,7 @@
     "kioskFallbackName": "Kiosk",
     "identifiedAs": "Hi, {{name}}",
     "notYou": "Not you?",
-    "library": "Library",
+    "library": "Infohub",
     "admin": "Admin",
     "stats": {
       "dueNow": "Due now",

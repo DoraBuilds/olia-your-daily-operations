@@ -875,14 +875,14 @@ describe("Kiosk — Identify Screen", () => {
     });
   });
 
-  it("Admin and Library stay reachable from the identify screen", async () => {
+  it("Admin and Infohub stay reachable from the identify screen", async () => {
     renderWithProviders(<Kiosk />);
     await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
 
     expect(document.getElementById("admin-btn")).not.toBeNull();
     fireEvent.click(document.getElementById("library-btn")!);
     await waitFor(() => {
-      expect(screen.getByText("Staff Library")).toBeInTheDocument();
+      expect(screen.getByText("Infohub", { selector: "h1, h2, h3" })).toBeInTheDocument();
     });
   });
 });
