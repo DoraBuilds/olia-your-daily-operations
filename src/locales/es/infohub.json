@@ -32,7 +32,7 @@
     "noFolders": "Aún no hay carpetas.",
     "tapToCreate": "Toca para crear una carpeta o documento."
   },
-  "archived": "Archivados ({{count}})",
+  "archived": "Archivados",
   "restore": "Restaurar",
   "actions": {
     "moveToFolder": "Mover a carpeta",

@@ -847,8 +847,8 @@ describe("Admin page", () => {
     mockTeam.push({ ...mockTeam[2], id: "tm9", name: "Bob FOH", department_ids: ["d1"] });
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("Departments (2)")).toBeInTheDocument());
-      expect(screen.getByText("1 staff member")).toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("1 staff member")).toBeInTheDocument());
+      expect(screen.queryByText(/Departments \(/)).not.toBeInTheDocument();
     } finally {
       mockTeam.pop();
     }
@@ -858,7 +858,7 @@ describe("Admin page", () => {
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      const header = screen.getByRole("button", { name: /Departments \(2\)/ });
+      const header = screen.getAllByRole("button", { name: /^Departments/ }).find(b => b.hasAttribute("aria-expanded"))!;
       expect(header).toHaveAttribute("aria-expanded", "true");
       fireEvent.click(header);
       expect(screen.queryByText("Front of House")).not.toBeInTheDocument();
@@ -925,7 +925,7 @@ describe("Admin page", () => {
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Host stand")).toBeInTheDocument());
-      expect(screen.getByText("Devices (1)")).toBeInTheDocument();
+      expect(screen.queryByText(/Devices \(/)).not.toBeInTheDocument();
       expect(screen.getByText("Waiting for device")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Manage" }));
       expect(mockNavigate).toHaveBeenCalledWith("/admin/kiosks?device=k1");
