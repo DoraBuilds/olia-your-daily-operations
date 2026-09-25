@@ -19,6 +19,7 @@ import {
   isKioskOverdue,
   isVisibleAtTime,
   dbToKioskChecklist,
+  buildRuntimeQuestions,
 } from "./kiosk/utils";
 import { AdminLoginModal, IdentifyModal, LibraryPinModal, ensureKioskToken, touchKioskDevice } from "./kiosk/PinEntryModal";
 import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, type KioskStaffSession } from "@/lib/kiosk-staff-session";
@@ -560,12 +561,14 @@ export default function Kiosk() {
         return v !== undefined && v !== "" && v !== null && v !== false;
       }).length;
       const score = scorable.length > 0 ? Math.round((answered / scorable.length) * 100) : 100;
-      const answerPayload = questions.map(q => ({
+      // Log every question the runner showed, including logic-rule follow-ups
+      // ("Photo required: …", "Note required: …", follow-up questions) — they
+      // aren't in checklist.questions, so mapping only those dropped their answers.
+      const answerPayload = buildRuntimeQuestions(questions, answers).map(q => ({
         label: q.text,
         type: q.type,
         answer: String(answers[q.id] ?? ""),
         hasPhoto: q.type === "media" ? Boolean(answers[q.id]) : undefined,
-        comment: q.id.startsWith("__trigger_note:") ? String(answers[q.id] ?? "") : undefined,
         answeredBy: attribution[q.id]?.by,
         answeredAt: attribution[q.id]?.at,
       }));
