@@ -22,7 +22,7 @@ import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useCompanyDepartments, useDepartments, useSaveDepartment } from "@/hooks/useDepartments";
 import { clearKioskDeviceState, touchKioskDevice } from "@/lib/kiosk-guard";
 import { useKioskDevices } from "@/hooks/useKioskDevices";
-import { ConfirmModal, type ConfirmState } from "./SharedUI";
+import { AddLink, ConfirmModal, type ConfirmState } from "./SharedUI";
 import { DepartmentModal } from "./DepartmentsTab";
 import { KioskDeviceRow, AddKioskModal, KioskCodeModal } from "./KiosksTab";
 import {
@@ -300,13 +300,7 @@ export function ConceptsTab({
         open={!collapsed.has("devices")}
         onToggle={() => toggleSection("devices")}
         actions={isOwner && (
-          <button
-            onClick={() => setAddingKiosk(true)}
-            aria-label={t("kiosksTab.addKiosk")}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> {t("conceptsTab.addKiosk")}
-          </button>
+          <AddLink onClick={() => setAddingKiosk(true)} ariaLabel={t("kiosksTab.addKiosk")} />
         )}
       >
         {locationKiosks.length === 0 ? (
@@ -331,12 +325,7 @@ export function ConceptsTab({
         open={!collapsed.has("team")}
         onToggle={() => toggleSection("team")}
         actions={isOwner && onAddTeamMember && (
-          <button
-            onClick={() => onAddTeamMember(currentLocation.id)}
-            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
-          >
-            <Plus size={12} /> {t("conceptsTab.addTeamMember")}
-          </button>
+          <AddLink onClick={() => onAddTeamMember(currentLocation.id)} ariaLabel={t("accountTab.addTeamMember")} />
         )}
       >
         <div className="px-4 pb-4">
@@ -398,7 +387,6 @@ export function ConceptsTab({
         <AddKioskModal
           locationId={currentLocation.id}
           locationName={currentLocation.name}
-          existingCount={locationKiosks.length}
           onClose={() => setAddingKiosk(false)}
           onCreated={deviceId => { setAddingKiosk(false); setCodeDeviceId(deviceId); }}
         />

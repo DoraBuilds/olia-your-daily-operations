@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Layers, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Building2, Layers, MapPin, Pencil, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import {
   type CompanyDepartment, type Concept, type DepartmentAssignment, type Location, type TeamMember,
@@ -15,7 +15,7 @@ import {
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useCompanyDepartments, useDeleteDepartment, useSaveDepartment } from "@/hooks/useDepartments";
 import {
-  BottomSheet, ConfirmModal, FormField, ModalHeader, SaveButton, inputCls, type ConfirmState,
+  AddLink, BottomSheet, ConfirmModal, FormField, ModalHeader, SaveButton, inputCls, type ConfirmState,
 } from "./SharedUI";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { assignmentsToSelection, departmentUnassignImpact, selectionToAssignments } from "./departments";
@@ -121,14 +121,9 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
     checklists: checklists.filter(c => (c.department_ids ?? []).includes(dep.id)).length,
   });
 
-  const header = departments.length > 0 && (
+  const header = !isLoading && (
     <div className="flex justify-end">
-      <button
-        onClick={() => setModal("new")}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sage text-primary-foreground text-xs font-semibold hover:bg-sage-deep transition-colors"
-      >
-        <Plus size={14} /> {t("departmentsTab.add")}
-      </button>
+      <AddLink onClick={() => setModal("new")} ariaLabel={t("departmentsTab.add")} />
     </div>
   );
 
@@ -145,12 +140,6 @@ export function DepartmentsTab({ concepts, locations, teamMembers, checklists }:
           <h2 className="font-display text-xl text-foreground">{t("departmentsTab.emptyHeading")}</h2>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">{t("departmentsTab.emptyBody")}</p>
         </div>
-        <button
-          onClick={() => setModal("new")}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-semibold hover:bg-sage-deep transition-colors"
-        >
-          <Plus size={15} /> {t("departmentsTab.add")}
-        </button>
       </div>
     );
   } else {

@@ -671,9 +671,9 @@ describe("Admin page", () => {
   it("clicking 'Add a team member' opens the unified team member form", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
     await waitFor(() => {
-      expect(screen.getByText("Add a team member")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByText("Add a team member"));
+    fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Add team member" })).toBeInTheDocument();
     });
@@ -681,8 +681,8 @@ describe("Admin page", () => {
 
   it("team member form has Full name, Email, Role, and Kiosk PIN fields", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
-    await waitFor(() => expect(screen.getByText("Add a team member")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Add a team member"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
     await waitFor(() => {
       expect(screen.getAllByText("Full name").length).toBeGreaterThan(0);
       expect(screen.getByText("Email (optional)")).toBeInTheDocument();
@@ -693,8 +693,8 @@ describe("Admin page", () => {
 
   it("team member form requires email and shows permissions only once manager role is enabled", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
-    await waitFor(() => expect(screen.getByText("Add a team member")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Add a team member"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
     await waitFor(() => expect(screen.getByText("Manager role")).toBeInTheDocument());
 
     expect(screen.queryByText("Permissions")).not.toBeInTheDocument();
@@ -893,7 +893,7 @@ describe("Admin page", () => {
     it("opens the add-member form from the location's Team members section", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Alice Smith")).toBeInTheDocument());
-      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[1]);
+      fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
       expect(screen.getAllByText("Add team member").length).toBeGreaterThan(0);
     });
 

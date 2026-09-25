@@ -169,8 +169,6 @@
     "kiosks": "Dispositivos",
     "kiosksWithCount": "Dispositivos ({{count}})",
     "noKiosks": "Aún no hay dispositivos en esta ubicación.",
-    "addKiosk": "Añadir",
-    "addTeamMember": "Añadir",
     "removeFromLocation": "Quitar de la ubicación",
     "removeTeamMemberAria": "Quitar a {{name}} de {{location}}",
     "locationLabel": "Ubicación",
@@ -306,7 +304,8 @@
       "phonePlaceholder": "p. ej. +33 4 78 00 11 22",
       "saveChanges": "Guardar cambios",
       "addLocation": "Agregar ubicación"
-    }
+    },
+    "add": "Añadir"
   },
   "accountTab": {
     "auditActions": {
@@ -438,9 +437,8 @@
   },
   "kiosksTab": {
     "loading": "Cargando…",
-    "heading": "Dispositivos",
     "emptyHeading": "Aún no hay dispositivos",
-    "emptyBody": "Añade un kiosco desde una ubicación en la pestaña Conceptos y aparecerá aquí.",
+    "emptyBody": "Pulsa Añadir para crear un kiosco en una de tus ubicaciones.",
     "activeNow": "Activo ahora",
     "neverCheckedIn": "Nunca se ha conectado",
     "lastSeenMinutes_one": "Visto hace {{count}} minuto",
@@ -479,6 +477,7 @@
     "newCode": "Nuevo código",
     "newCodeWarningPaired": "La tableta vinculada ahora se desconectará en menos de un minuto. Introduce el nuevo código en la tableta que deba usar este kiosco.",
     "newCodeWarningUnpaired": "El código actual dejará de funcionar.",
-    "newCodeFailed": "No se pudo crear un código nuevo: {{error}}"
+    "newCodeFailed": "No se pudo crear un código nuevo: {{error}}",
+    "locationLabel": "Ubicación"
   }
 }

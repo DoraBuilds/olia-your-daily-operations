@@ -169,8 +169,6 @@
     "kiosks": "Devices",
     "kiosksWithCount": "Devices ({{count}})",
     "noKiosks": "No devices at this location yet.",
-    "addKiosk": "Add",
-    "addTeamMember": "Add",
     "removeFromLocation": "Remove from location",
     "removeTeamMemberAria": "Remove {{name}} from {{location}}",
     "locationLabel": "Location",
@@ -306,7 +304,8 @@
       "phonePlaceholder": "e.g. +33 4 78 00 11 22",
       "saveChanges": "Save changes",
       "addLocation": "Add location"
-    }
+    },
+    "add": "Add"
   },
   "accountTab": {
     "auditActions": {
@@ -438,9 +437,8 @@
   },
   "kiosksTab": {
     "loading": "Loading…",
-    "heading": "Devices",
     "emptyHeading": "No devices yet",
-    "emptyBody": "Add a kiosk from a location in the Concepts tab and it will show up here.",
+    "emptyBody": "Tap Add to create a kiosk for one of your locations.",
     "activeNow": "Active now",
     "neverCheckedIn": "Never checked in",
     "lastSeenMinutes_one": "Last seen {{count}} minute ago",
@@ -479,6 +477,7 @@
     "newCode": "New code",
     "newCodeWarningPaired": "The tablet paired now will be disconnected within a minute. Enter the new code on whichever tablet should run this kiosk.",
     "newCodeWarningUnpaired": "The current code will stop working.",
-    "newCodeFailed": "Could not create a new code: {{error}}"
+    "newCodeFailed": "Could not create a new code: {{error}}",
+    "locationLabel": "Location"
   }
 }

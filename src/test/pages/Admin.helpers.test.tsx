@@ -339,8 +339,8 @@ describe("Admin — LocationModal add-new-location path", () => {
 describe("Admin — TeamMemberModal role field", () => {
   async function openAddTeamMemberForm() {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
-    await waitFor(() => expect(screen.getByText("Add a team member")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Add a team member"));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
     await waitFor(() => expect(screen.getByRole("heading", { name: "Add team member" })).toBeInTheDocument());
   }
 

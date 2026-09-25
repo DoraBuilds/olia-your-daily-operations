@@ -51,6 +51,14 @@ describe("KiosksTab", () => {
     expect(screen.getByText("No devices yet")).toBeInTheDocument();
   });
 
+  it("the quiet Add link opens the add-kiosk form", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add kiosk" }));
+    expect(screen.getByText("Kiosk name")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Downtown")).toBeInTheDocument();
+  });
+
   it("groups devices under their concept and location", () => {
     mockUseKioskDevices.mockReturnValue({
       data: [
@@ -210,18 +218,34 @@ describe("KioskCodeModal", () => {
 
 describe("AddKioskModal", () => {
   it("prefills the next kiosk number and creates it for the location", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device({ id: "d1" }), device({ id: "d2" })], isLoading: false });
     const onCreated = vi.fn();
-    render(<AddKioskModal locationId="l1" locationName="Downtown" existingCount={2} onClose={vi.fn()} onCreated={onCreated} />);
+    render(<AddKioskModal locationId="l1" locationName="Downtown" onClose={vi.fn()} onCreated={onCreated} />);
     const input = screen.getByDisplayValue("Kiosk 3");
     fireEvent.change(input, { target: { value: "Bar tablet" } });
     fireEvent.click(screen.getByText("Create kiosk"));
     expect(mockCreateMutate).toHaveBeenCalledWith({ locationId: "l1", label: "Bar tablet" }, expect.anything());
     mockCreateMutate.mock.calls[0][1].onSuccess({ device_id: "new-id" });
-    expect(onCreated).toHaveBeenCalledWith("new-id");
+    expect(onCreated).toHaveBeenCalledWith("new-id", "Downtown");
+  });
+
+  it("lets you pick the location when opened from the Devices tab", () => {
+    mockUseKioskDevices.mockReturnValue({ data: [device({ location_id: "l2" })], isLoading: false });
+    const twoLocations = [...locations, { ...locations[0], id: "l2", name: "Harbour" }];
+    const onCreated = vi.fn();
+    render(<AddKioskModal locationOptions={twoLocations} concepts={concepts} onClose={vi.fn()} onCreated={onCreated} />);
+    expect(screen.getByDisplayValue("Kiosk 1")).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue("Downtown"), { target: { value: "l2" } });
+    expect(screen.getByDisplayValue("Kiosk 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Create kiosk"));
+    expect(mockCreateMutate).toHaveBeenCalledWith({ locationId: "l2", label: "Kiosk 2" }, expect.anything());
+    mockCreateMutate.mock.calls[0][1].onSuccess({ device_id: "new-id" });
+    expect(onCreated).toHaveBeenCalledWith("new-id", "Harbour");
   });
 
   it("won't create a kiosk without a name", () => {
-    render(<AddKioskModal locationId="l1" locationName="Downtown" existingCount={0} onClose={vi.fn()} onCreated={vi.fn()} />);
+    mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
+    render(<AddKioskModal locationId="l1" locationName="Downtown" onClose={vi.fn()} onCreated={vi.fn()} />);
     fireEvent.change(screen.getByDisplayValue("Kiosk 1"), { target: { value: "  " } });
     fireEvent.click(screen.getByText("Create kiosk"));
     expect(mockCreateMutate).not.toHaveBeenCalled();
