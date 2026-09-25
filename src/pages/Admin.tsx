@@ -65,8 +65,9 @@ export default function Admin() {
     isGraceActive,
     isGraceExpired,
     effectiveActiveLocationIds,
+    isLoading: locationsLoading,
   } = useLocations();
-  const { data: concepts = [] } = useConcepts();
+  const { data: concepts = [], isLoading: conceptsLoading } = useConcepts();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: checklists = [] } = useChecklists();
   const saveActiveLocationsMut = useSaveActiveLocationsSelection();
@@ -412,6 +413,7 @@ export default function Admin() {
               <>
                 {activeTab === "location" && (
                   <ConceptsTab
+                    loading={conceptsLoading || locationsLoading}
                     concepts={concepts}
                     locations={locations}
                     allLocations={allLocations}
