@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
-import i18n, { type SupportedLanguage } from "@/lib/i18n";
+import i18n, { rememberDeviceLanguage, takePendingLanguageChoice, type SupportedLanguage } from "@/lib/i18n";
 import { identifyUser, captureEvent, resetPostHog } from "@/lib/posthog";
 
 interface TeamMemberProfile {
@@ -280,11 +280,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // below (which writes teamMember.language optimistically, then this
   // effect picks up the change rather than calling i18n directly, so
   // rollback-on-failure only needs to touch teamMember state).
+  // A language picked on Log in / Sign up wins once, and is saved to the
+  // profile so the app keeps opening in it.
   useEffect(() => {
-    if (teamMember?.language) {
-      i18n.changeLanguage(teamMember.language);
+    if (!teamMember) return;
+    const chosen = takePendingLanguageChoice();
+    if (chosen && chosen !== teamMember.language) {
+      updateLanguage(chosen).catch(() => {
+        // Rolled back to the saved language; this effect re-runs and applies it.
+      });
+      return;
     }
-  }, [teamMember?.language]);
+    if (teamMember.language) {
+      i18n.changeLanguage(teamMember.language);
+      rememberDeviceLanguage(teamMember.language);
+    }
+  // updateLanguage only closes over teamMember, which the deps cover.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamMember?.id, teamMember?.language]);
 
   const updateLanguage = async (language: SupportedLanguage) => {
     if (!teamMember) throw new Error("Not signed in");

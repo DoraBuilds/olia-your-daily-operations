@@ -1,4 +1,7 @@
-import { resolveSupportedLanguage, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "@/lib/i18n";
+import i18n, {
+  resolveSupportedLanguage, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE,
+  getDeviceLanguage, chooseSignedOutLanguage, takePendingLanguageChoice,
+} from "@/lib/i18n";
 
 describe("resolveSupportedLanguage", () => {
   it("returns the exact tag when directly supported", () => {
@@ -35,5 +38,23 @@ describe("SUPPORTED_LANGUAGES / DEFAULT_LANGUAGE", () => {
 
   it("defaults to English", () => {
     expect(DEFAULT_LANGUAGE).toBe("en");
+  });
+});
+
+describe("signed-out language choice", () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => i18n.changeLanguage("en"));
+
+  it("falls back to the browser language when nothing is remembered", () => {
+    expect(getDeviceLanguage()).toBe(resolveSupportedLanguage(navigator.language));
+  });
+
+  it("switches now, remembers it on the device, and hands it to the next sign-in once", () => {
+    chooseSignedOutLanguage("es");
+    expect(i18n.language).toBe("es");
+    expect(getDeviceLanguage()).toBe("es");
+    expect(takePendingLanguageChoice()).toBe("es");
+    expect(takePendingLanguageChoice()).toBeNull();
+    expect(getDeviceLanguage()).toBe("es");
   });
 });

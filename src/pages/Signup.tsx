@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { AuthLanguageSwitcher } from "@/components/AuthLanguageSwitcher";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 type Step = "form" | "code";
@@ -19,7 +20,8 @@ function isEmailRateLimited(message: string | null | undefined) {
 const DEFAULT_ADMIN_PIN_NOTICE_KEY = "olia_default_admin_pin_notice";
 
 function SignupHeader() {
-  return (
+  return (<>
+    <AuthLanguageSwitcher />
     <Link
       to="/"
       className="fixed top-6 left-6 flex items-center gap-2 text-lg hover:opacity-70 transition-opacity"
@@ -28,7 +30,7 @@ function SignupHeader() {
       <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-6 h-6" />
       Olia
     </Link>
-  );
+  </>);
 }
 
 export default function Signup() {

@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import i18n, { resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
+import i18n, { getDeviceLanguage, resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
 
 // ─── Sub-modules ──────────────────────────────────────────────────────────────
 import type { AnswerAttribution, KioskChecklist, KioskScreen } from "./kiosk/types";
@@ -169,10 +169,13 @@ export default function Kiosk() {
 
   // Device-scoped, not tied to any account: a kiosk isn't logged in, and per
   // #594 the last language a guest picked on this device should stick for
-  // the next guest rather than resetting on idle/session end.
-  const [kioskLanguage, setKioskLanguage] = useState<SupportedLanguage>(
-    () => resolveSupportedLanguage(localStorage.getItem("kiosk_language")),
-  );
+  // the next guest rather than resetting on idle/session end. Until a guest
+  // picks one, it opens in the device language (e.g. the one chosen on the
+  // Log in page when this kiosk was paired).
+  const [kioskLanguage, setKioskLanguage] = useState<SupportedLanguage>(() => {
+    const saved = localStorage.getItem("kiosk_language");
+    return saved ? resolveSupportedLanguage(saved) : getDeviceLanguage();
+  });
 
   useEffect(() => {
     i18n.changeLanguage(kioskLanguage);
@@ -189,7 +192,7 @@ export default function Kiosk() {
   }, [teamMember?.language]);
   useEffect(() => {
     return () => {
-      i18n.changeLanguage(teamMemberLanguageRef.current ?? resolveSupportedLanguage(navigator.language));
+      i18n.changeLanguage(teamMemberLanguageRef.current ?? getDeviceLanguage());
     };
   }, []);
 
