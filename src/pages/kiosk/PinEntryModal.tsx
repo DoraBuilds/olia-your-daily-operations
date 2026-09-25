@@ -487,9 +487,8 @@ export function IdentifyModal({
       </div>
       <div className="flex-1 flex items-center justify-center px-4 pb-10">
         <div className="w-full max-w-sm space-y-5">
-          <div className="text-center space-y-1">
+          <div className="text-center">
             <h1 className="font-display text-2xl text-foreground">{t("pin.identifyTitle")}</h1>
-            <p className="text-sm text-muted-foreground">{t("pin.identifySubtitle")}</p>
           </div>
 
           <PinDots count={pin.length} />

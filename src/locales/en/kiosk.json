@@ -6,8 +6,7 @@
   "stayButton": "Stay",
   "pin": {
     "adminTitle": "Admin PIN",
-    "identifyTitle": "Who's there?",
-    "identifySubtitle": "Enter your PIN:",
+    "identifyTitle": "Enter PIN:",
     "staffLibraryTitle": "Infohub",
     "checking": "Checking PIN…",
     "tryAgainIn": "Try again in <bold>{{seconds}}s</bold>",

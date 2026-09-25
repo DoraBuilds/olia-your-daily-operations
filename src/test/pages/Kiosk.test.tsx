@@ -757,7 +757,7 @@ describe("Kiosk — Identify Screen", () => {
   it("shows the identify PIN screen instead of the grid when no session exists", async () => {
     renderWithProviders(<Kiosk />);
     await waitFor(() => {
-      expect(screen.getByText("Who's there?")).toBeInTheDocument();
+      expect(screen.getByText("Enter PIN:")).toBeInTheDocument();
     });
     expect(screen.queryByTestId("kiosk-tab-due")).not.toBeInTheDocument();
   });
@@ -782,7 +782,7 @@ describe("Kiosk — Identify Screen", () => {
     });
 
     renderWithProviders(<Kiosk />);
-    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
 
     for (const d of ["1", "2", "3", "4"]) {
       fireEvent.click(screen.getByRole("button", { name: d }));
@@ -806,7 +806,7 @@ describe("Kiosk — Identify Screen", () => {
     });
 
     renderWithProviders(<Kiosk />);
-    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
 
     for (const d of ["9", "9", "9", "9"]) {
       fireEvent.click(screen.getByRole("button", { name: d }));
@@ -832,7 +832,7 @@ describe("Kiosk — Identify Screen", () => {
     });
 
     renderWithProviders(<Kiosk />);
-    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
 
     for (const d of ["5", "6", "7", "8"]) {
       fireEvent.click(screen.getByRole("button", { name: d }));
@@ -853,7 +853,7 @@ describe("Kiosk — Identify Screen", () => {
     });
 
     renderWithProviders(<Kiosk />);
-    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
 
     for (const d of ["1", "2", "3", "4"]) {
       fireEvent.click(screen.getByRole("button", { name: d }));
@@ -871,13 +871,13 @@ describe("Kiosk — Identify Screen", () => {
     fireEvent.click(screen.getByText("Not you?"));
 
     await waitFor(() => {
-      expect(screen.getByText("Who's there?")).toBeInTheDocument();
+      expect(screen.getByText("Enter PIN:")).toBeInTheDocument();
     });
   });
 
   it("Admin and Infohub stay reachable from the identify screen", async () => {
     renderWithProviders(<Kiosk />);
-    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
 
     expect(document.getElementById("admin-btn")).not.toBeNull();
     fireEvent.click(document.getElementById("library-btn")!);
