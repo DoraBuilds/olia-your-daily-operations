@@ -1,9 +1,7 @@
-// Tracks who's currently browsing the kiosk grid, purely so the grid can be
-// filtered to that person's department(s) (#780). This is NOT an attribution
-// or access-control mechanism — completing a checklist still requires its own
-// separate PIN entry (PinEntryModal), unchanged. A device left unlocked here
-// only changes which checklists are *listed*, nothing about what gets logged
-// or who's credited for it. See kiosk-admin-session.ts for the (much
+// Tracks who's currently signed in at the kiosk grid (#780). The grid is
+// filtered to that person's department(s), and since #869 it's also who a
+// checklist or the Library is opened as — one PIN per session, no second
+// prompt per checklist. Ends on the grid's 90s idle timeout. See kiosk-admin-session.ts for the (much
 // higher-stakes) full-app-access grant, which this deliberately does not
 // reuse or extend.
 
@@ -12,6 +10,7 @@ const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
 export interface KioskStaffSession {
   staffId: string | null;
+  memberId?: string | null;
   staffName: string;
   organizationId: string;
   departmentIds: string[];
@@ -19,7 +18,7 @@ export interface KioskStaffSession {
 }
 
 export function grantKioskStaffSession(
-  session: { staffId: string | null; staffName: string; organizationId: string; departmentIds: string[] },
+  session: { staffId: string | null; memberId?: string | null; staffName: string; organizationId: string; departmentIds: string[] },
   ttlMs = DEFAULT_TTL_MS,
 ): void {
   const stored: KioskStaffSession = { ...session, expiresAt: Date.now() + ttlMs };

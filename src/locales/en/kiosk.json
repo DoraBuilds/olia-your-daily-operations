@@ -6,7 +6,6 @@
   "stayButton": "Stay",
   "pin": {
     "adminTitle": "Admin PIN",
-    "insertTitle": "Insert PIN",
     "identifyTitle": "Who's there?",
     "identifySubtitle": "Enter your PIN:",
     "staffLibraryTitle": "Staff Library",
