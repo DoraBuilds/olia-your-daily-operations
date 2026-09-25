@@ -32,7 +32,7 @@
     "noFolders": "No folders yet.",
     "tapToCreate": "Tap to create a folder or document."
   },
-  "archived": "Archived ({{count}})",
+  "archived": "Archived",
   "restore": "Restore",
   "actions": {
     "moveToFolder": "Move to folder",

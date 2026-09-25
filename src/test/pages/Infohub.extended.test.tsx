@@ -205,13 +205,13 @@ describe("Infohub extended behavior", () => {
     const opened = openFirstDocMenu();
     if (!opened) return;
     fireEvent.click(screen.getByText("Archive file"));
-    expect(screen.getByText(/Archived \(/)).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/Archived \(/).closest("button")!);
+    fireEvent.click(screen.getByText("Archived").closest("button")!);
     expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /restore/i }));
-    expect(screen.queryByText(/Archived \(/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
   });
 
   it("lets a document be edited and saved", () => {

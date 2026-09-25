@@ -365,7 +365,7 @@ export function AccountTab({
       {show("account") && (
         <section>
           <div className="flex items-center justify-between mb-1">
-            <p className="section-label">{t("accountTab.concepts", { count: concepts.length })}</p>
+            <p className="section-label">{t("accountTab.concepts")}</p>
           </div>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
             {t("accountTab.conceptsNotice")}

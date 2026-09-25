@@ -233,7 +233,7 @@ export function ConceptsTab({
 
       {/* Departments — listed like Team members below */}
       <SectionCard
-        title={departments.length > 0 ? t("conceptsTab.departmentsWithCount", { count: departments.length }) : t("conceptsTab.departments")}
+        title={t("conceptsTab.departments")}
         open={!collapsed.has("departments")}
         onToggle={() => toggleSection("departments")}
       >
@@ -275,7 +275,7 @@ export function ConceptsTab({
 
       {/* Devices (kiosks) */}
       <SectionCard
-        title={locationKiosks.length > 0 ? t("conceptsTab.kiosksWithCount", { count: locationKiosks.length }) : t("conceptsTab.kiosks")}
+        title={t("conceptsTab.kiosks")}
         open={!collapsed.has("devices")}
         onToggle={() => toggleSection("devices")}
         actions={isOwner && (
@@ -300,7 +300,7 @@ export function ConceptsTab({
 
       {/* Team members */}
       <SectionCard
-        title={locationTeamMembers.length > 0 ? t("conceptsTab.teamMembersWithCount", { count: locationTeamMembers.length }) : t("conceptsTab.teamMembers")}
+        title={t("conceptsTab.teamMembers")}
         open={!collapsed.has("team")}
         onToggle={() => toggleSection("team")}
         actions={isOwner && onAddTeamMember && (

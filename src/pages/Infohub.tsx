@@ -727,7 +727,7 @@ export default function Infohub() {
                 className="flex items-center gap-1.5 section-label hover:text-foreground transition-colors w-full"
               >
                 <Archive size={12} />
-                {t("archived", { count: archivedLibDocs.length })}
+                {t("archived")}
                 <ChevronRight size={12} className={cn("ml-0.5 transition-transform", showArchived && "rotate-90")} />
               </button>
               {showArchived && (
