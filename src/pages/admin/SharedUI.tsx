@@ -22,6 +22,7 @@ import {
   getInitials, generatePin,
 } from "@/lib/admin-repository";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
+import { FilterMultiSelect } from "@/components/FiltersPopover";
 import {
   PERM_LABELS, ROLE_COLOR_MAP as _ROLE_COLOR_MAP, getPermLabel,
 } from "./shared";
@@ -151,9 +152,9 @@ export function ConfirmModal({
 // at signup.
 
 export function TeamMemberModal({
-  member, locations, onClose, onSave, isOwner, initialLocationIds,
+  member, concepts, locations, onClose, onSave, isOwner, initialLocationIds,
 }: {
-  member: TeamMember | null; locations: Location[];
+  member: TeamMember | null; concepts: Concept[]; locations: Location[];
   onClose: () => void; onSave: (m: TeamMember & { rawPin?: string }) => void;
   isOwner?: boolean;
   /** Pre-ticked locations for a new member (e.g. added from a location's page). */
@@ -164,6 +165,11 @@ export function TeamMemberModal({
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState(member?.role ?? "");
   const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? initialLocationIds ?? []);
+  // Concepts scope the location picker; seeded from the concepts of the
+  // member's (or pre-ticked) locations. Empty = all concepts.
+  const [conceptIds, setConceptIds] = useState<string[]>(() => [...new Set(
+    locations.filter(l => locationIds.includes(l.id) && l.concept_id).map(l => l.concept_id as string),
+  )]);
   const [isManager, setIsManager] = useState(member?.is_manager ?? false);
   const [departmentIds, setDepartmentIds] = useState<string[]>(member?.department_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
@@ -172,23 +178,47 @@ export function TeamMemberModal({
   const [showRevealedPin, setShowRevealedPin] = useState(false);
   const [revealLoading, setRevealLoading] = useState(false);
 
-  // Departments are company-wide (#838); offer every department that applies
-  // to at least one of the member's selected locations.
-  const { data: assignedDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(locationIds);
+  // Locations without a concept (legacy rows) are always offered.
+  const visibleLocations = conceptIds.length === 0
+    ? locations
+    : locations.filter(l => !l.concept_id || conceptIds.includes(l.concept_id));
 
-  // Drop any stale picks once we know they no longer belong to any currently
-  // selected location (e.g. that location was just deselected) — the toggle
-  // list would otherwise silently show fewer chips on screen while the old
-  // ids are still saved underneath it.
+  // Empty location_ids means "every location in the company". With concepts
+  // picked but no specific location, "All locations" means every location of
+  // those concepts, so that's what gets saved.
+  const savedLocationIds = locationIds.length === 0 && conceptIds.length > 0
+    ? visibleLocations.map(l => l.id)
+    : locationIds;
+  const departmentLocationIds = locationIds.length > 0 ? locationIds : visibleLocations.map(l => l.id);
+
+  // Departments are company-wide (#838); offer every department that applies
+  // to at least one of the member's locations.
+  const { data: assignedDepartments = [], isLoading: departmentsLoading } = useDepartmentsForLocations(departmentLocationIds);
+
+  // Drop any stale picks once we know they no longer belong to any of the
+  // member's locations (e.g. that location was just deselected) — otherwise
+  // the old ids would still be saved underneath the picker.
   useEffect(() => {
     if (!departmentsLoading && departmentIds.some(id => !assignedDepartments.some(d => d.id === id))) {
       setDepartmentIds(prev => prev.filter(id => assignedDepartments.some(d => d.id === id)));
     }
   }, [departmentIds, assignedDepartments, departmentsLoading]);
 
-  const toggleDepartment = (id: string) => {
-    setDepartmentIds(prev => prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]);
+  // Deselecting a concept also drops its locations, so nothing stays ticked
+  // that's no longer offered.
+  const changeConcepts = (ids: string[]) => {
+    setConceptIds(ids);
+    if (ids.length > 0) {
+      setLocationIds(prev => prev.filter(lid => {
+        const conceptId = locations.find(l => l.id === lid)?.concept_id;
+        return !conceptId || ids.includes(conceptId);
+      }));
+    }
   };
+
+  const pickerWidth = "w-[var(--radix-popover-trigger-width)]";
+  const conceptName = (id: string | null) => concepts.find(c => c.id === id)?.name;
+  const showConceptOnLocations = conceptIds.length !== 1 && concepts.length > 1;
 
   const handleRevealPin = async () => {
     if (!member?.id) return;
@@ -209,10 +239,6 @@ export function TeamMemberModal({
     }
   };
 
-  const toggleLocation = (id: string) => {
-    setLocationIds(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
-  };
-
   const canSave = name.trim().length > 0
     && (member?.id || pin.trim().length > 0)
     && (!isManager || email.trim().length > 0);
@@ -225,7 +251,7 @@ export function TeamMemberModal({
       name: name.trim(),
       email: email.trim() || null,
       role: role.trim(),
-      location_ids: locationIds,
+      location_ids: savedLocationIds,
       department_ids: departmentIds,
       is_manager: isManager,
       // is_owner is never set by this modal — passed through unchanged
@@ -259,60 +285,49 @@ export function TeamMemberModal({
             placeholder={t("sharedUI.teamMember.emailPlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label={t("sharedUI.teamMember.role")}>
-          <input
-            type="text" value={role}
-            onChange={e => setRole(e.target.value)}
-            placeholder={t("sharedUI.teamMember.rolePlaceholder")} className={inputCls}
+        {concepts.length > 0 && (
+          <FormField label={t("sharedUI.teamMember.concepts")}>
+            <FilterMultiSelect
+              testId="member-concepts"
+              icon={null}
+              contentClassName={pickerWidth}
+              options={concepts.map(c => ({ id: c.id, label: c.name }))}
+              selected={conceptIds}
+              onChange={changeConcepts}
+              allLabel={t("sharedUI.teamMember.allConcepts")}
+            />
+          </FormField>
+        )}
+        <FormField label={t("sharedUI.teamMember.locations")}>
+          <FilterMultiSelect
+            testId="member-locations"
+            icon={null}
+            contentClassName={pickerWidth}
+            options={visibleLocations.map(l => ({
+              id: l.id,
+              label: l.name,
+              sublabel: showConceptOnLocations ? conceptName(l.concept_id) : undefined,
+            }))}
+            selected={locationIds}
+            onChange={setLocationIds}
+            allLabel={conceptIds.length > 0
+              ? t("sharedUI.teamMember.allLocationsInConcepts")
+              : t("sharedUI.teamMember.allLocations")}
+            noOptionsLabel={t("sharedUI.teamMember.noLocationsInConcept")}
           />
         </FormField>
-        <FormField label={t("sharedUI.teamMember.locations")}>
-          <div className="flex gap-2 flex-wrap">
-            {locations.map(loc => (
-              <button
-                type="button" key={loc.id} onClick={() => toggleLocation(loc.id)}
-                className={cn(
-                  "py-2 px-3 text-xs rounded-lg border transition-colors",
-                  locationIds.includes(loc.id)
-                    ? "bg-sage text-primary-foreground border-sage"
-                    : "border-border text-muted-foreground hover:border-sage/40",
-                )}
-              >
-                {loc.name}
-              </button>
-            ))}
-          </div>
-        </FormField>
-        {locationIds.length > 0 && (
+        {departmentLocationIds.length > 0 && (
           <FormField label={t("sharedUI.teamMember.department")}>
             {assignedDepartments.length > 0 ? (
-              <>
-                <div className="flex gap-2 flex-wrap">
-                  {assignedDepartments.map(dep => (
-                    <button
-                      type="button" key={dep.id} onClick={() => toggleDepartment(dep.id)}
-                      className={cn(
-                        "py-2 px-3 text-xs rounded-lg border transition-colors",
-                        departmentIds.includes(dep.id)
-                          ? "bg-sage text-primary-foreground border-sage"
-                          : "border-border text-muted-foreground hover:border-sage/40",
-                      )}
-                    >
-                      {dep.name}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDepartmentIds(prev =>
-                    prev.length === assignedDepartments.length ? [] : assignedDepartments.map(d => d.id))}
-                  className="mt-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  {departmentIds.length === assignedDepartments.length
-                    ? t("sharedUI.teamMember.clearDepartments")
-                    : t("sharedUI.teamMember.selectAllDepartments")}
-                </button>
-              </>
+              <FilterMultiSelect
+                testId="member-departments"
+                icon={null}
+              contentClassName={pickerWidth}
+                options={assignedDepartments.map(d => ({ id: d.id, label: d.name }))}
+                selected={departmentIds}
+                onChange={setDepartmentIds}
+                allLabel={t("sharedUI.teamMember.noDepartmentSelected")}
+              />
             ) : (
               !departmentsLoading && (
                 <p className="text-xs text-muted-foreground">{t("sharedUI.teamMember.noDepartment")}</p>
@@ -320,32 +335,35 @@ export function TeamMemberModal({
             )}
           </FormField>
         )}
+        <FormField label={t("sharedUI.teamMember.roleOptional")}>
+          <input
+            type="text" value={role}
+            onChange={e => setRole(e.target.value)}
+            placeholder={t("sharedUI.teamMember.rolePlaceholder")} className={inputCls}
+          />
+        </FormField>
         <FormField label={t("sharedUI.teamMember.kioskPin")}>
-          {member?.id ? (
-            <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
-              {t("sharedUI.staffProfile.editPinHint")}
-            </p>
-          ) : (
-            <p className="text-xs status-warn rounded-lg px-3 py-2 mb-2 leading-relaxed">
-              {t("sharedUI.teamMember.newPinPlaceholder")}
-            </p>
-          )}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <input
               type="text"
+              inputMode="numeric"
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-              placeholder={member?.id ? t("sharedUI.staffProfile.newPinToChange") : t("sharedUI.staffProfile.fourDigitPin")}
-              className={cn(inputCls, "flex-1 text-center font-mono text-lg tracking-widest")}
+              placeholder={member?.id ? "••••" : t("sharedUI.staffProfile.fourDigitPin")}
+              aria-label={t("sharedUI.teamMember.kioskPin")}
+              className="w-24 shrink-0 border border-border rounded-lg px-2 py-1.5 bg-muted text-center font-mono text-sm tracking-widest focus:outline-none focus:ring-1 focus:ring-ring"
               maxLength={4}
             />
             <button
               type="button"
               onClick={() => setPin(generatePin())}
-              className="shrink-0 px-3 py-2 rounded-xl text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors"
+              className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-muted border border-border hover:bg-muted/60 transition-colors"
             >
               {t("sharedUI.staffProfile.generate")}
             </button>
+            <p className="min-w-0 text-xs text-muted-foreground leading-snug">
+              {member?.id ? t("sharedUI.teamMember.editPinHint") : t("sharedUI.teamMember.newPinHint")}
+            </p>
           </div>
           {member?.id && isOwner && (
             <div className="flex items-center gap-2 mt-1.5">

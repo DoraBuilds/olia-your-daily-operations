@@ -267,7 +267,16 @@
       "permissions": "Permissions",
       "inviteNotice": "An invitation email will be sent to this address so the team member can sign in to the Olia admin app.",
       "saveChanges": "Save changes",
-      "addTeamMember": "Add team member"
+      "addTeamMember": "Add team member",
+      "concepts": "Concept(s)",
+      "noLocationsInConcept": "No locations in the selected concepts yet.",
+      "roleOptional": "Role (optional)",
+      "newPinHint": "Share it with them for kiosk sign-in.",
+      "editPinHint": "Leave blank to keep the current PIN.",
+      "allConcepts": "All concepts",
+      "allLocations": "All locations",
+      "allLocationsInConcepts": "All locations in selected concepts",
+      "noDepartmentSelected": "No department"
     },
     "concept": {
       "editTitle": "Edit concept",

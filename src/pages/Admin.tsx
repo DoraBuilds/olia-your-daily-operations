@@ -545,6 +545,7 @@ export default function Admin() {
       {memberModal !== null && (
         <TeamMemberModal
           member={memberModal === "new" ? null : memberModal}
+          concepts={concepts}
           locations={locations}
           initialLocationIds={newMemberLocationId ? [newMemberLocationId] : undefined}
           onClose={() => { setMemberModal(null); setNewMemberLocationId(null); }}

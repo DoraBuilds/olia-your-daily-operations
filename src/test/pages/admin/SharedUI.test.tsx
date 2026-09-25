@@ -28,6 +28,7 @@ function renderModal(props: Partial<Parameters<typeof TeamMemberModal>[0]> = {})
     <QueryClientProvider client={qc}>
       <TeamMemberModal
         member={null}
+        concepts={[]}
         locations={[]}
         onClose={vi.fn()}
         onSave={vi.fn()}
@@ -80,6 +81,15 @@ describe("TeamMemberModal", () => {
     expect(screen.getByText("Permissions")).toBeInTheDocument();
   });
 
+  // Opens a picker's dropdown and toggles one option (#871 — searchable
+  // dropdowns replaced the chip rows so 20 concepts × 20 locations still fit).
+  const pick = (picker: string, optionId: string) => {
+    fireEvent.click(screen.getByTestId(`member-${picker}-trigger`));
+    fireEvent.click(screen.getByTestId(`member-${picker}-option-${optionId}`));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+  };
+  const trigger = (picker: string) => screen.getByTestId(`member-${picker}-trigger`);
+
   describe("Department picker with multiple locations (#776)", () => {
     const locations = [
       { id: "l1", name: "Main Branch" },
@@ -98,76 +108,50 @@ describe("TeamMemberModal", () => {
 
     it("keeps the department picker visible after a second location is selected", async () => {
       renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
-      await waitFor(() => expect(screen.getByText("Department(s)")).toBeInTheDocument());
+      pick("locations", "l1");
+      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
 
-      fireEvent.click(screen.getByText("City Centre"));
-      expect(screen.getByText("Department(s)")).toBeInTheDocument();
+      pick("locations", "l2");
+      expect(trigger("departments")).toBeInTheDocument();
     });
 
     it("lists departments from every selected location, once each by name", async () => {
       renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
-      fireEvent.click(screen.getByText("City Centre"));
+      pick("locations", "l1");
+      pick("locations", "l2");
 
-      await waitFor(() => {
-        expect(screen.getByText("Kitchen")).toBeInTheDocument();
-        expect(screen.getByText("Front of House")).toBeInTheDocument();
-      });
-    });
-
-    it("shows a plain department name (no location suffix) for a single selected location", async () => {
-      renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
-
-      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
-      expect(screen.queryByText("Kitchen — Main Branch")).not.toBeInTheDocument();
+      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
+      fireEvent.click(trigger("departments"));
+      expect(screen.getByTestId("member-departments-option-d1")).toHaveTextContent("Kitchen");
+      expect(screen.getByTestId("member-departments-option-d2")).toHaveTextContent("Front of House");
     });
 
     it("allows selecting more than one department at once", async () => {
-      renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
-      fireEvent.click(screen.getByText("City Centre"));
+      const onSave = vi.fn();
+      renderModal({ locations, onSave });
+      pick("locations", "l1");
+      pick("locations", "l2");
 
-      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
-      const kitchen = screen.getByText("Kitchen");
-      const foh = screen.getByText("Front of House");
+      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
+      pick("departments", "d1");
+      pick("departments", "d2");
+      expect(trigger("departments")).toHaveTextContent("2 selected");
 
-      fireEvent.click(kitchen);
-      fireEvent.click(foh);
-
-      expect(kitchen.closest("button")).toHaveClass("bg-sage");
-      expect(foh.closest("button")).toHaveClass("bg-sage");
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: "Ana" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ department_ids: ["d1", "d2"] }));
     });
 
     it("toggles a selected department off when clicked again", async () => {
       renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
+      pick("locations", "l1");
 
-      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
-      const kitchen = screen.getByText("Kitchen");
+      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
+      pick("departments", "d1");
+      expect(trigger("departments")).toHaveTextContent("Kitchen");
 
-      fireEvent.click(kitchen);
-      expect(kitchen.closest("button")).toHaveClass("bg-sage");
-
-      fireEvent.click(kitchen);
-      expect(kitchen.closest("button")).not.toHaveClass("bg-sage");
-    });
-
-    it("selects and clears every department via the Select all / Clear all toggle", async () => {
-      renderModal({ locations });
-      fireEvent.click(screen.getByText("Main Branch"));
-      fireEvent.click(screen.getByText("City Centre"));
-
-      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
-
-      fireEvent.click(screen.getByText("Select all"));
-      expect(screen.getByText("Kitchen").closest("button")).toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House").closest("button")).toHaveClass("bg-sage");
-
-      fireEvent.click(screen.getByText("Clear all"));
-      expect(screen.getByText("Kitchen").closest("button")).not.toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House").closest("button")).not.toHaveClass("bg-sage");
+      pick("departments", "d1");
+      expect(trigger("departments")).toHaveTextContent("No department");
     });
 
     it("pre-selects every department already assigned to the member being edited", async () => {
@@ -181,9 +165,70 @@ describe("TeamMemberModal", () => {
         } as Parameters<typeof TeamMemberModal>[0]["member"],
       });
 
-      await waitFor(() => expect(screen.getByText("Kitchen")).toBeInTheDocument());
-      expect(screen.getByText("Kitchen").closest("button")).toHaveClass("bg-sage");
-      expect(screen.getByText("Front of House").closest("button")).toHaveClass("bg-sage");
+      await waitFor(() => expect(trigger("departments")).toHaveTextContent("2 selected"));
+    });
+  });
+
+  describe("Concept picker (#871)", () => {
+    const concepts = [
+      { id: "c1", name: "Bistro" },
+      { id: "c2", name: "Bakery" },
+    ] as Parameters<typeof TeamMemberModal>[0]["concepts"];
+    const locations = [
+      { id: "l1", concept_id: "c1", name: "Bistro Soho" },
+      { id: "l2", concept_id: "c1", name: "Bistro Shoreditch" },
+      { id: "l3", concept_id: "c2", name: "Bakery Camden" },
+    ] as Parameters<typeof TeamMemberModal>[0]["locations"];
+
+    const saveAs = (name: string) => {
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: name } });
+      fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
+    };
+
+    it("offers every location under All concepts, and only the picked concept's after", () => {
+      renderModal({ concepts, locations });
+      fireEvent.click(trigger("locations"));
+      expect(screen.getByTestId("member-locations-option-l3")).toBeInTheDocument();
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+      pick("concepts", "c1");
+      fireEvent.click(trigger("locations"));
+      expect(screen.getByTestId("member-locations-option-l1")).toBeInTheDocument();
+      expect(screen.getByTestId("member-locations-option-l2")).toBeInTheDocument();
+      expect(screen.queryByTestId("member-locations-option-l3")).not.toBeInTheDocument();
+    });
+
+    it("derives selected concepts from the member's locations", () => {
+      renderModal({ concepts, locations, initialLocationIds: ["l3"] });
+      expect(trigger("concepts")).toHaveTextContent("Bakery");
+      expect(trigger("locations")).toHaveTextContent("Bakery Camden");
+    });
+
+    it("drops a concept's locations when the concept is deselected", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave, initialLocationIds: ["l1", "l3"] });
+      pick("concepts", "c1");
+      expect(trigger("locations")).toHaveTextContent("Bakery Camden");
+
+      saveAs("Ana");
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: ["l3"] }));
+    });
+
+    it("saves every location of the picked concepts when no specific location is chosen", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave });
+      pick("concepts", "c1");
+      expect(trigger("locations")).toHaveTextContent("All locations in selected concepts");
+
+      saveAs("Ana");
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: ["l1", "l2"] }));
+    });
+
+    it("saves an empty list (every location) when nothing is narrowed", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave });
+      saveAs("Ana");
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: [] }));
     });
   });
 });
