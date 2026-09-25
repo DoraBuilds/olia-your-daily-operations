@@ -269,7 +269,8 @@ describe("AuthContext", () => {
     });
 
     await waitFor(() => expect(result.current.teamMember?.organization_id).toBe("org-1"));
-    expect(mockRpc).not.toHaveBeenCalled();
+    // Only the platform-admin status check — no setup_new_organization / accept_invite.
+    expect(mockRpc.mock.calls.map(([name]) => name)).toEqual(["platform_admin_status"]);
     expect(mockQueryClientClear).toHaveBeenCalledTimes(2);
   });
 

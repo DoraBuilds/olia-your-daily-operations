@@ -4,6 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
 import i18n, { rememberDeviceLanguage, takePendingLanguageChoice, type SupportedLanguage } from "@/lib/i18n";
 import { identifyUser, captureEvent, resetPostHog } from "@/lib/posthog";
+import { DEFAULT_PERMISSIONS } from "@/lib/admin-repository";
+import { setSupportModeActive } from "@/lib/support-mode";
 
 interface TeamMemberProfile {
   id: string;
@@ -20,6 +22,43 @@ interface TeamMemberProfile {
   language: SupportedLanguage;
 }
 
+// Platform admins (Olia staff) can enter any org in "support mode" — see
+// 20260925000010_platform_admin_support_mode.sql. While viewing an org the
+// DB treats them as its owner, so teamMember becomes a synthetic owner
+// profile scoped to that org.
+export interface PlatformAdminState {
+  isAdmin: boolean;
+  viewingOrg: { id: string; name: string } | null;
+}
+
+const NOT_PLATFORM_ADMIN: PlatformAdminState = { isAdmin: false, viewingOrg: null };
+
+async function fetchPlatformAdminStatus(): Promise<PlatformAdminState> {
+  try {
+    const { data, error } = await supabase.rpc("platform_admin_status");
+    if (error || !data?.is_admin) return NOT_PLATFORM_ADMIN;
+    return { isAdmin: true, viewingOrg: data.viewing ?? null };
+  } catch {
+    return NOT_PLATFORM_ADMIN;
+  }
+}
+
+function supportProfile(userId: string, email: string | null, org: { id: string }): TeamMemberProfile {
+  return {
+    id: userId,
+    organization_id: org.id,
+    name: "Olia Support",
+    email,
+    role: "Owner",
+    is_owner: true,
+    is_manager: true,
+    department_ids: [],
+    location_ids: [],
+    permissions: { ...DEFAULT_PERMISSIONS },
+    language: i18n.language?.startsWith("es") ? "es" : "en",
+  };
+}
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
@@ -29,6 +68,9 @@ interface AuthContextValue {
   retrySetup: () => void;      // lets the UI offer a "Try again" button
   signOut: () => Promise<void>;
   updateLanguage: (language: SupportedLanguage) => Promise<void>;
+  platformAdmin: PlatformAdminState;
+  enterOrg: (orgId: string) => Promise<void>;
+  exitOrg: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -40,6 +82,9 @@ const AuthContext = createContext<AuthContextValue>({
   retrySetup: () => {},
   signOut: async () => {},
   updateLanguage: async () => {},
+  platformAdmin: NOT_PLATFORM_ADMIN,
+  enterOrg: async () => {},
+  exitOrg: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -48,14 +93,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [teamMember, setTeamMember] = useState<TeamMemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [platformAdmin, setPlatformAdmin] = useState<PlatformAdminState>(NOT_PLATFORM_ADMIN);
 
   // ── Fetch / create team_member for the authenticated user ─────────────────────
   // Setup data is sourced in priority order:
   //   1. localStorage "olia_pending_onboarding" — written by Signup.tsx on this device
   //   2. auth user metadata "business_name" — written during signUp(), cross-device safe
-  const fetchTeamMember = async (userId: string, userMeta?: Record<string, string>) => {
+  const fetchTeamMember = async (userId: string, userMeta?: Record<string, string>, email?: string | null) => {
     setLoading(true);
     setSetupError(null);
+
+    // Step 0: platform admin in support mode — act as the viewed org's owner.
+    const adminStatus = await fetchPlatformAdminStatus();
+    setPlatformAdmin(adminStatus);
+    setSupportModeActive(Boolean(adminStatus.viewingOrg));
+    if (adminStatus.viewingOrg) {
+      setTeamMember(supportProfile(userId, email ?? null, adminStatus.viewingOrg));
+      setLoading(false);
+      return;
+    }
 
     // Step 1: Check by id (existing owners — id is set to auth.uid() by setup_new_organization)
     const { data } = await supabase
@@ -87,6 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       identifyUser(userId, { org_id: (byAuthId as TeamMemberProfile).organization_id, role: (byAuthId as TeamMemberProfile).role });
       captureEvent("user_signed_in", { method: "email_otp" });
       supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
+      return;
+    }
+
+    // A platform admin with no org of their own lands on /super-admin
+    // (ProtectedRoute) — never auto-create an org or accept invites for them.
+    if (adminStatus.isAdmin) {
+      setTeamMember(null);
+      setLoading(false);
       return;
     }
 
@@ -259,6 +323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetchTeamMember(
             session.user.id,
             session.user.user_metadata as Record<string, string>,
+            session.user.email,
           );
         }
       } else {
@@ -267,6 +332,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         queryClient.clear();
         setTeamMember(null);
         setSetupError(null);
+        setPlatformAdmin(NOT_PLATFORM_ADMIN);
+        setSupportModeActive(false);
         setLoading(false);
       }
     });
@@ -317,7 +384,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchTeamMember(
       user.id,
       user.user_metadata as Record<string, string>,
+      user.email,
     );
+  };
+
+  // Switching org swaps every org-scoped query, so drop the whole cache
+  // (same reason as on SIGNED_IN) and re-resolve the profile.
+  const enterOrg = async (orgId: string) => {
+    const { error } = await supabase.rpc("platform_admin_enter_org", { p_org_id: orgId });
+    if (error) throw error;
+    queryClient.clear();
+    if (user) await fetchTeamMember(user.id, user.user_metadata as Record<string, string>, user.email);
+  };
+
+  const exitOrg = async () => {
+    const { error } = await supabase.rpc("platform_admin_exit_org");
+    if (error) throw error;
+    queryClient.clear();
+    if (user) await fetchTeamMember(user.id, user.user_metadata as Record<string, string>, user.email);
   };
 
   const signOut = async () => {
@@ -327,7 +411,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut, updateLanguage }}>
+    <AuthContext.Provider value={{ user, session, teamMember, loading, setupError, retrySetup, signOut, updateLanguage, platformAdmin, enterOrg, exitOrg }}>
       {children}
     </AuthContext.Provider>
   );

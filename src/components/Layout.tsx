@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { MobileMenu, MobileRouteTitle } from "./MobileNav";
 import { SidebarNav } from "./SidebarNav";
+import { SupportModeBanner } from "./SupportModeBanner";
 import {
   hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
 } from "@/lib/kiosk-admin-session";
@@ -83,6 +84,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
   return (
     <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
+      <SupportModeBanner />
       {/* Header — the "Olia" + owner-name banner that used to live here for
           every page is gone; "Olia" branding lives only in SidebarNav now,
           and Log out/Delete account moved into Admin > Account (AccountTab).
