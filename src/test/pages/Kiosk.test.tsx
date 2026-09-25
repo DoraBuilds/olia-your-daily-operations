@@ -1383,6 +1383,15 @@ describe("Kiosk — Checklist Runner", () => {
     expect(shell.className).toContain("mx-auto");
   });
 
+  it("does not show a status circle next to the open question's text", async () => {
+    await openRunnerWithQuestions([
+      { id: "q-open-checkbox", text: "Fridge checked", responseType: "checkbox", required: true },
+    ]);
+
+    const headerRow = screen.getByText("Fridge checked").parentElement;
+    expect(headerRow?.querySelector(".rounded-full")).toBeNull();
+  });
+
   it("stays on a question after it is answered until the user taps Next", async () => {
     await openRunnerWithQuestions([
       { id: "q-required-checkbox", text: "Fridge checked", responseType: "checkbox", required: true },
