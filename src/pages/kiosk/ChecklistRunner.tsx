@@ -256,10 +256,6 @@ export function ChecklistRunner({
                   >
                     {!isInstruction && (
                       <div className="flex items-start gap-2.5 mb-3">
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 shrink-0 mt-0.5",
-                          q.required ? "border-sage/50" : "border-muted-foreground/30",
-                        )} />
                         <p className="text-sm font-normal text-foreground leading-snug flex-1">
                           {q.text}
                           {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
@@ -270,7 +266,7 @@ export function ChecklistRunner({
                       </div>
                     )}
 
-                    <div className={cn(!isInstruction && "ml-7")}>
+                    <div>
                       <QuestionInput
                         question={q}
                         value={answers[q.id]}
@@ -289,7 +285,7 @@ export function ChecklistRunner({
                     </div>
 
                     {needsNextBtn && (
-                      <div className={cn("mt-3 flex justify-end", !isInstruction && "ml-7")}>
+                      <div className="mt-3 flex justify-end">
                         <button
                           onClick={() => {
                             if (isInstruction) {
