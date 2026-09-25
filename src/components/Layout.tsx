@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
-import { BottomNav } from "./BottomNav";
+import { MobileMenu, MobileRouteTitle } from "./MobileNav";
 import { SidebarNav } from "./SidebarNav";
 import {
   hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
@@ -86,64 +86,75 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
       {/* Header — the "Olia" + owner-name banner that used to live here for
           every page is gone; "Olia" branding lives only in SidebarNav now,
           and Log out/Delete account moved into Admin > Account (AccountTab).
-          What's left: (a) the full title/subtitle bar, kept only for pages
-          that still pass a distinct `title` (e.g. Maintenance, SOP Library,
-          Training), and (b) a title-less "Back to Kiosk" strip so a kiosk
-          PIN grant (see kiosk-admin-session.ts) always has an exit, even on
-          pages that dropped their title — that control is unrelated to the
-          removed Log out button and would otherwise strand a shared kiosk
-          device unlocked. */}
-      {(title || isKioskAdminSession) && (
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-          <div className={cn(shellWidthClass, "flex items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8 xl:px-10")}>
-            {title ? (
-              <>
-                {headerLeft ? (
-                  <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
-                ) : <div className="w-8" />}
-                <div className="flex-1 min-w-0 text-center">
-                  <h1 className="font-display text-lg text-foreground leading-tight truncate">{title}</h1>
-                  {subtitle && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {headerRight && (
-                    <div className="flex items-center gap-2">{headerRight}</div>
-                  )}
-                  {isKioskAdminSession ? (
-                    <button
-                      onClick={handleBackToKiosk}
-                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
-                    >
-                      <ArrowLeft size={14} /> {t("layout.backToKiosk")}
-                    </button>
-                  ) : (
-                    /* spacer keeps header balanced when no right content exists */
-                    !headerRight && <div className="w-8" />
-                  )}
-                </div>
-              </>
-            ) : (
-              <button
-                onClick={handleBackToKiosk}
-                className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
-              >
-                <ArrowLeft size={14} /> {t("layout.backToKiosk")}
-              </button>
-            )}
-          </div>
-        </header>
-      )}
+          From md up it shows only for (a) pages that still pass a distinct
+          `title` (e.g. Maintenance, SOP Library, Training), and (b) a
+          title-less "Back to Kiosk" strip so a kiosk PIN grant (see
+          kiosk-admin-session.ts) always has an exit, even on pages that
+          dropped their title. On phones it's always there: MobileMenu's
+          burger (the whole app nav — SidebarNav is hidden below md) plus the
+          page's title, or its route-derived name for title-less pages. */}
+      <header
+        className={cn(
+          "sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border safe-area-pt",
+          !(title || isKioskAdminSession) && "md:hidden",
+        )}
+      >
+        <div className={cn(shellWidthClass, "flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3 lg:px-8 xl:px-10")}>
+          <MobileMenu isKioskAdminSession={isKioskAdminSession} onBackToKiosk={handleBackToKiosk} />
+          {title ? (
+            <>
+              {headerLeft ? (
+                <div className="flex items-center gap-2 shrink-0">{headerLeft}</div>
+              ) : <div className="hidden md:block w-8" />}
+              <div className="flex-1 min-w-0 text-left md:text-center">
+                <h1 className="font-display text-lg text-foreground leading-tight truncate">{title}</h1>
+                {subtitle && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{subtitle}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {headerRight && (
+                  <div className="flex items-center gap-2">{headerRight}</div>
+                )}
+                {isKioskAdminSession ? (
+                  <button
+                    onClick={handleBackToKiosk}
+                    className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                  >
+                    <ArrowLeft size={14} /> {t("layout.backToKiosk")}
+                  </button>
+                ) : (
+                  /* spacer keeps header balanced when no right content exists */
+                  !headerRight && <div className="hidden md:block w-8" />
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="md:hidden flex flex-1 min-w-0"><MobileRouteTitle /></div>
+              {isKioskAdminSession ? (
+                <button
+                  onClick={handleBackToKiosk}
+                  className="ml-auto flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
+                >
+                  <ArrowLeft size={14} /> {t("layout.backToKiosk")}
+                </button>
+              ) : (
+                <img src="/brand/logo/olia-mark-dark.svg" alt="" className="md:hidden w-7 h-7 shrink-0 mr-1" />
+              )}
+            </>
+          )}
+        </div>
+      </header>
 
       {/* Body: sidebar is fixed, only the content column scrolls */}
       <div className="flex flex-1 overflow-hidden">
-        <div className={cn(shellWidthClass, "flex flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
+        <div className={cn(shellWidthClass, "flex flex-1 px-5 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
           {/* Sidebar: outside the scroll container so it never scrolls */}
           <SidebarNav />
 
           {/* Only this column scrolls */}
-          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-24 pt-5 animate-fade-in md:pb-8 flex flex-col">
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col">
             {/* portrait:my-auto centers content vertically only on tall/narrow
                 (portrait) viewports, e.g. a short list on a tablet-portrait
                 screen — auto margins collapse to 0 once content overflows, so
@@ -151,15 +162,16 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
                 to portrait only (not applied unconditionally) so a short page
                 viewed in landscape/desktop — e.g. the Admin Billing tab —
                 stays anchored under the header instead of drifting to the
-                vertical middle of the pane (#regression from #642). */}
-            <div className={cn(contentWidthClass, "min-w-0 space-y-4 portrait:my-auto")}>
+                vertical middle of the pane (#regression from #642). Also md+
+                only: on phones a short page (Checklists, Admin > Devices…)
+                floated a third of the way down the screen. */}
+            <div className={cn(contentWidthClass, "min-w-0 space-y-4 md:portrait:my-auto")}>
               {children}
             </div>
           </main>
         </div>
       </div>
 
-      <BottomNav />
     </div>
   );
 }

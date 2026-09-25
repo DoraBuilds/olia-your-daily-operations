@@ -39,7 +39,8 @@ describe("Reporting page", () => {
   it("renders the top-level Reporting page", () => {
     renderWithProviders(<Reporting />, { initialEntries: ["/reporting"] });
     // No more "Olia" + subtitle header — the page renders straight into ReportingTab.
-    expect(document.querySelector("header")).toBeNull();
+    // Only the phone-width header (burger + page name); no md+ title bar.
+    expect(document.querySelector("header")).toHaveClass("md:hidden");
     expect(screen.getByText("Reporting Tab all status:none")).toBeInTheDocument();
   });
 

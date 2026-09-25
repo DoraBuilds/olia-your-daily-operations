@@ -1,4 +1,4 @@
-import { screen, fireEvent, act } from "@testing-library/react";
+import { screen, fireEvent, act, within } from "@testing-library/react";
 import { Layout } from "@/components/Layout";
 import { grantKioskAdminSession, hasActiveKioskAdminSession, clearKioskAdminSession } from "@/lib/kiosk-admin-session";
 import { grantKioskStaffSession, readKioskStaffSession } from "@/lib/kiosk-staff-session";
@@ -61,11 +61,6 @@ describe("Layout", () => {
     expect(screen.getByText("My Subtitle")).toBeInTheDocument();
   });
 
-  it("does NOT render a header element when title is omitted", () => {
-    renderWithProviders(<Layout><p>no title</p></Layout>);
-    expect(document.querySelector("header")).toBeNull();
-  });
-
   it("renders headerLeft content when provided", () => {
     renderWithProviders(
       <Layout title="T" headerLeft={<button>Left Btn</button>}><span /></Layout>
@@ -92,19 +87,30 @@ describe("Layout", () => {
     // short page in portrait orientation — landscape/desktop pages (e.g.
     // the Admin Billing tab) stay anchored under the header instead of
     // drifting to the vertical middle of the pane.
-    expect(contentText.parentElement).toHaveClass("portrait:my-auto");
+    expect(contentText.parentElement).toHaveClass("md:portrait:my-auto");
+    // Phones never center: a short page there floated a third of the way
+    // down the screen under the top bar.
+    expect(contentText.parentElement).not.toHaveClass("portrait:my-auto");
   });
 
-  it("renders the BottomNav", () => {
+  it("renders the mobile top bar with a menu button (no bottom tab bar any more)", () => {
     renderWithProviders(<Layout title="T"><span /></Layout>);
+    expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument();
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Checklists").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Reporting").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("does NOT render a header at all for a title-less page with no kiosk session (Log out lives in Admin > Account now)", () => {
-    renderWithProviders(<Layout><p>no title</p></Layout>);
-    expect(document.querySelector("header")).toBeNull();
+  it("keeps the header phone-only for a title-less page with no kiosk session, naming the page from the route", () => {
+    renderWithProviders(<Layout><p>no title</p></Layout>, { initialEntries: ["/checklists"] });
+    const headers = document.querySelectorAll("header");
+    expect(headers).toHaveLength(1);
+    expect(headers[0]).toHaveClass("md:hidden");
+    expect(within(headers[0] as HTMLElement).getByText("Checklists")).toBeInTheDocument();
+  });
+
+  it("shows a titled page's header at every width, with the title rendered once", () => {
+    renderWithProviders(<Layout title="Maintenance"><span /></Layout>);
+    expect(document.querySelector("header")).not.toHaveClass("md:hidden");
+    expect(screen.getAllByText("Maintenance")).toHaveLength(1);
   });
 
   describe("with a live kiosk-PIN admin session", () => {

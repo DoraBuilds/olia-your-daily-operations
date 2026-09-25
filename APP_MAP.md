@@ -24,7 +24,7 @@
 |-------|-------|---------|
 | Auth | `src/contexts/AuthContext.tsx` | `useAuth()` → user, teamMember, signOut |
 | Data hooks | `src/hooks/use*.ts` | React Query wrappers for every Supabase table |
-| Layout | `src/components/Layout.tsx`, `src/components/BottomNav.tsx` | Page shell, 4-tab nav |
+| Layout | `src/components/Layout.tsx`, `src/components/SidebarNav.tsx`, `src/components/MobileNav.tsx` | Page shell; sidebar nav (md+), burger drawer nav (phones) |
 | Supabase client | `src/lib/supabase.ts` | Single `createClient` instance |
 | Offline queue | `src/lib/submission-queue.ts` | localStorage retry queue for kiosk submissions |
 | Security | `src/lib/sanitize.ts` | Image URL allowlist (XSS guard) |

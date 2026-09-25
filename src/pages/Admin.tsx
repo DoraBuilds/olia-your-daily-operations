@@ -346,8 +346,9 @@ export default function Admin() {
     <>
       <Layout>
         <div className="mx-auto w-full max-w-[1040px] space-y-4 xl:max-w-[980px]">
-          {/* Sub-tab pill toggle */}
-          <div className="flex gap-1 bg-muted rounded-2xl p-1">
+          {/* Sub-tab pill toggle — md+ only; on phones the sections live
+              under Admin in MobileNav's drawer (six tabs don't fit). */}
+          <div className="hidden md:flex gap-1 bg-muted rounded-2xl p-1">
             {TABS.map(({ key, label }) => (
               <button
                 key={key}

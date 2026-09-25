@@ -12,7 +12,11 @@
   "layout": {
     "backToKiosk": "Kiosco",
     "expandSidebar": "Expandir barra lateral",
-    "collapseSidebar": "Contraer barra lateral"
+    "collapseSidebar": "Contraer barra lateral",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "menu": "Menú",
+    "logOut": "Cerrar sesión"
   },
   "filters": {
     "button": "Filtros",

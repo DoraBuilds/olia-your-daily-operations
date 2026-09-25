@@ -82,7 +82,8 @@ describe("Checklists page", () => {
   it("Checklists tab is active by default", () => {
     renderWithProviders(<Checklists />);
     // No more Layout header/subtitle — ChecklistsTab renders straight in.
-    expect(document.querySelector("header")).toBeNull();
+    // Only the phone-width header (burger + page name); no md+ title bar.
+    expect(document.querySelector("header")).toHaveClass("md:hidden");
     expect(screen.getByPlaceholderText("Search checklists…")).toBeInTheDocument();
   });
 
@@ -130,7 +131,8 @@ describe("Checklists page", () => {
 
   it("does not render a Layout header", () => {
     renderWithProviders(<Checklists />);
-    expect(document.querySelector("header")).toBeNull();
+    // Only the phone-width header (burger + page name); no md+ title bar.
+    expect(document.querySelector("header")).toHaveClass("md:hidden");
   });
 });
 
