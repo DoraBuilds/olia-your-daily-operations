@@ -201,7 +201,11 @@
     "noPhotoAttached": "No photo attached",
     "noAnswerEntered": "No answer entered",
     "noAnswerDetail": "No answer detail recorded for this submission.",
-    "readOnlyNotice": "This is a read-only report. Submitted responses cannot be edited."
+    "readOnlyNotice": "This is a read-only report. Submitted responses cannot be edited.",
+    "viewPhoto": "View photo",
+    "downloadPhoto": "Download",
+    "photoUnavailable": "Photo unavailable",
+    "photoExpired": "Photo deleted after 2 years"
   },
   "responseTypes": {
     "checkbox": "Checkbox",
