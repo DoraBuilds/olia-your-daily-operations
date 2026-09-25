@@ -302,10 +302,10 @@ export function ConceptsTab({
         actions={isOwner && (
           <button
             onClick={() => setAddingKiosk(true)}
-            className="rounded-xl text-xs font-bold tracking-wider uppercase bg-sage text-white hover:bg-sage-deep transition-colors flex items-center gap-1.5 px-3 py-2"
+            aria-label={t("kiosksTab.addKiosk")}
+            className="flex items-center gap-1 text-xs text-sage font-medium hover:underline"
           >
-            <Plus size={13} />
-            {t("kiosksTab.addKiosk")}
+            <Plus size={12} /> {t("conceptsTab.addKiosk")}
           </button>
         )}
       >
