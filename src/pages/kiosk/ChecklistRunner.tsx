@@ -255,14 +255,14 @@ export function ChecklistRunner({
                     )}
                   >
                     {!isInstruction && (
-                      <div className="flex items-start gap-2.5 mb-3">
+                      <div className="flex items-start gap-1.5 mb-3">
+                        <span className="text-sm font-normal text-foreground tabular-nums shrink-0 leading-snug">
+                          {qi + 1}.
+                        </span>
                         <p className="text-sm font-normal text-foreground leading-snug flex-1">
                           {q.text}
                           {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
                         </p>
-                        <span className="text-xs text-sage/70 font-medium shrink-0 mt-0.5">
-                          {qi + 1}/{questions.length}
-                        </span>
                       </div>
                     )}
 
@@ -351,6 +351,7 @@ export function ChecklistRunner({
                       "text-sm font-medium truncate flex-1",
                       isPast ? "text-foreground" : "text-muted-foreground",
                     )}>
+                      <span className="tabular-nums mr-1.5">{qi + 1}.</span>
                       {isInstruction ? (q.instructionText ?? q.text ?? t("runner.noteFallback")) : q.text}
                       {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
                     </p>

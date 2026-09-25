@@ -1392,6 +1392,16 @@ describe("Kiosk — Checklist Runner", () => {
     expect(headerRow?.querySelector(".rounded-full")).toBeNull();
   });
 
+  it("numbers the open question and the collapsed questions", async () => {
+    await openRunnerWithQuestions([
+      { id: "q-first", text: "First check", responseType: "checkbox", required: true },
+      { id: "q-second", text: "Second check", responseType: "checkbox", required: true },
+    ]);
+
+    expect(document.getElementById("question-q-first")?.textContent).toContain("1.First check");
+    expect(document.getElementById("question-q-second")?.textContent).toContain("2.Second check");
+  });
+
   it("stays on a question after it is answered until the user taps Next", async () => {
     await openRunnerWithQuestions([
       { id: "q-required-checkbox", text: "Fridge checked", responseType: "checkbox", required: true },
