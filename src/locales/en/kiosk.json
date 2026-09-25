@@ -8,7 +8,7 @@
     "adminTitle": "Admin PIN",
     "insertTitle": "Insert PIN",
     "identifyTitle": "Who's there?",
-    "identifySubtitle": "Enter your PIN to see your checklists.",
+    "identifySubtitle": "Enter your PIN:",
     "staffLibraryTitle": "Staff Library",
     "checking": "Checking PIN…",
     "tryAgainIn": "Try again in <bold>{{seconds}}s</bold>",
