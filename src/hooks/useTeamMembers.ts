@@ -17,7 +17,7 @@ export function useTeamMembers() {
       // below is the filtered view for the archive/restore UI).
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .select("id, organization_id, name, first_name, last_name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
         .is("archived_at", null)
         .order("name");
       if (error) throw error;
@@ -48,7 +48,7 @@ export function useArchivedTeamMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("team_members")
-        .select("id, organization_id, name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
+        .select("id, organization_id, name, first_name, last_name, email, role, is_owner, is_manager, department_ids, location_ids, permissions, pin_reset_required, last_seen_at, archived_at")
         .not("archived_at", "is", null)
         .order("name");
       if (error) throw error;
@@ -117,6 +117,13 @@ export function useRestoreTeamMember() {
   });
 }
 
+// Only sent when the caller split the name — otherwise the DB trigger derives
+// first/last from `name`.
+function nameFields(tm: Partial<TeamMember>) {
+  if (tm.first_name === undefined) return {};
+  return { first_name: tm.first_name, last_name: tm.last_name || null };
+}
+
 export function useSaveTeamMember() {
   const qc = useQueryClient();
   const { teamMember } = useAuth();
@@ -133,6 +140,7 @@ export function useSaveTeamMember() {
       if (tm.id) {
         const updatePayload: Record<string, unknown> = {
           name: tm.name,
+          ...nameFields(tm),
           email: tm.email?.trim() || null,
           role: tm.role ?? "",
           is_manager: tm.is_manager ?? false,
@@ -171,6 +179,7 @@ export function useSaveTeamMember() {
       const insertPayload: Record<string, unknown> = {
         organization_id: teamMember.organization_id,
         name: tm.name,
+        ...nameFields(tm),
         email: tm.email?.trim() || null,
         role: tm.role ?? "",
         is_manager: tm.is_manager ?? false,

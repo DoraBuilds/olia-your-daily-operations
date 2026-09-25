@@ -242,8 +242,10 @@
     "teamMember": {
       "editTitle": "Edit team member",
       "addTitle": "Add team member",
-      "fullName": "Full name",
-      "fullNamePlaceholder": "e.g. Marc Devaux",
+      "firstName": "First name",
+      "firstNamePlaceholder": "e.g. Marc",
+      "lastNameOptional": "Last name (optional)",
+      "lastNamePlaceholder": "e.g. Devaux",
       "emailRequired": "Email (required for manager access)",
       "emailOptional": "Email (optional)",
       "emailPlaceholder": "e.g. marc@example.com",

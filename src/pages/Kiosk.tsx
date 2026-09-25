@@ -788,7 +788,7 @@ export default function Kiosk() {
         </h1>
 
         <p className="text-center text-xs text-muted-foreground mt-1">
-          <span>{t("grid.identifiedAs", { name: staffIdentity.staffName })}</span>
+          <span>{t("grid.identifiedAs", { name: staffIdentity.firstName || staffIdentity.staffName.split(" ")[0] })}</span>
           {" · "}
           <button
             id="switch-identity-btn"

@@ -301,6 +301,8 @@ export interface KioskIdentity {
   // lets the grid open the Library for this person without a second PIN.
   memberId?: string | null;
   staffName: string;
+  /** Greeting name ("Hi, Dora"). */
+  firstName: string;
   organizationId: string;
   departmentIds: string[];
 }
@@ -367,6 +369,7 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
         staffId: null,
         memberId: member.id,
         staffName: member.name,
+        firstName: member.first_name || member.name.split(" ")[0],
         organizationId: member.organization_id ?? "",
         departmentIds: member.department_ids ?? [],
       });
@@ -399,6 +402,7 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
         staffId: staff.id,
         memberId: null,
         staffName: `${staff.first_name} ${staff.last_name}`.trim(),
+        firstName: staff.first_name,
         organizationId: staff.organization_id ?? "",
         // Legacy staff_profiles has no department concept — unrestricted.
         departmentIds: [],

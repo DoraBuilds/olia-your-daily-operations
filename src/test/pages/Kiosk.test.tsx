@@ -774,7 +774,7 @@ describe("Kiosk — Identify Screen", () => {
       if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
       if (fn === "validate_kiosk_member_pin") {
         return Promise.resolve({
-          data: [{ id: "tm-2", name: "Priya GM", organization_id: "org-1", role: "Manager", location_ids: [], department_ids: ["dep-1", "dep-2"] }],
+          data: [{ id: "tm-2", name: "Priya GM", first_name: "Priya", organization_id: "org-1", role: "Manager", location_ids: [], department_ids: ["dep-1", "dep-2"] }],
           error: null,
         });
       }
@@ -789,7 +789,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await screen.findByTestId("kiosk-tab-due");
-    expect(screen.getByText("Hi, Priya GM")).toBeInTheDocument();
+    expect(screen.getByText("Hi, Priya")).toBeInTheDocument();
     expect(supabase.rpc).toHaveBeenCalledWith("get_kiosk_checklists", expect.objectContaining({
       p_location_id: "00000000-0000-0000-0000-000000000011",
       p_department_ids: ["dep-1", "dep-2"],
@@ -839,7 +839,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText("Hi, Jay Chen")).toBeInTheDocument();
+      expect(screen.getByText("Hi, Jay")).toBeInTheDocument();
     });
   });
 
