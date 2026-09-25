@@ -4,10 +4,10 @@
 // the tablet with a one-time code (Login -> Kiosk, #861); this tab is for
 // visibility ("what's running, and where"), codes, and remote deactivation.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
-import { Tablet, Building2, UtensilsCrossed, Copy } from "lucide-react";
+import { Tablet, Building2, UtensilsCrossed, Copy, Search, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Location, type Concept } from "@/lib/admin-repository";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/hooks/useKioskDevices";
 import { formatPairingCode } from "@/lib/kiosk-pairing";
 import { toast } from "@/components/ui/sonner";
+import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { AddLink, BottomSheet, ModalHeader, FormField, SaveButton, ConfirmModal, inputCls, type ConfirmState } from "./SharedUI";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 
@@ -37,6 +38,14 @@ export function kioskStatus(device: KioskDevice, t: (key: string, opts?: Record<
   return { label: t("kiosksTab.lastSeenDays", { count: days }), online: false, waiting: false };
 }
 
+/** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
+interface DeviceFilters {
+  conceptIds: string[];
+  locationIds: string[];
+}
+
+const DEFAULT_DEVICE_FILTERS: DeviceFilters = { conceptIds: [], locationIds: [] };
+
 export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProps) {
   const { t } = useTranslation("admin");
   const { data: devices = [], isLoading } = useKioskDevices();
@@ -49,18 +58,59 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
   const [searchParams] = useSearchParams();
   const focusDeviceId = searchParams.get("device");
 
-  const groups = concepts
+  const [search, setSearch] = useState("");
+  // Applied filters, plus the staged copy the Filters popover edits —
+  // committed on Apply, discarded if the popover is dismissed.
+  const [filters, setFilters] = useState<DeviceFilters>(DEFAULT_DEVICE_FILTERS);
+  const [draft, setDraft] = useState<DeviceFilters>(DEFAULT_DEVICE_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // The popover's location list narrows to the draft concept(s).
+  const draftConceptScopedLocations = useMemo(
+    () => draft.conceptIds.length === 0 ? locations : locations.filter(l => l.concept_id && draft.conceptIds.includes(l.concept_id)),
+    [locations, draft.conceptIds],
+  );
+
+  // Drop draft locations a concept change put out of scope — keeps the same
+  // object when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    setDraft(prev => {
+      const next = prev.locationIds.filter(id => draftConceptScopedLocations.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [draftConceptScopedLocations]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const locationMatches = (location: Location) =>
+    (filters.conceptIds.length === 0 || (!!location.concept_id && filters.conceptIds.includes(location.concept_id))) &&
+    (filters.locationIds.length === 0 || filters.locationIds.includes(location.id));
+  // Search matches the device name, or its location / concept name.
+  const deviceMatches = (device: KioskDevice, location: Location, concept: Concept) =>
+    !normalizedSearch ||
+    [device.label, location.name, concept.name].some(s => s.toLowerCase().includes(normalizedSearch));
+
+  const groupsFor = (applyFilters: boolean) => concepts
     .map(concept => ({
       concept,
       locationGroups: locations
-        .filter(l => l.concept_id === concept.id)
+        .filter(l => l.concept_id === concept.id && (!applyFilters || locationMatches(l)))
         .map(location => ({
           location,
-          devices: devices.filter(d => d.location_id === location.id),
+          devices: devices.filter(d => d.location_id === location.id && (!applyFilters || deviceMatches(d, location, concept))),
         }))
         .filter(g => g.devices.length > 0),
     }))
     .filter(g => g.locationGroups.length > 0);
+  const hasAnyDevices = groupsFor(false).length > 0;
+  const groups = groupsFor(true);
+
+  const activeFilterCount = [filters.conceptIds.length > 0, filters.locationIds.length > 0].filter(Boolean).length;
+  const removeFrom = (key: keyof DeviceFilters, id: string) =>
+    setFilters(prev => ({ ...prev, [key]: prev[key].filter(x => x !== id) }));
+  const filterChips: ActiveFilterChip[] = [
+    ...filters.conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => removeFrom("conceptIds", id) })),
+    ...filters.locationIds.map(id => ({ key: `l-${id}`, label: locations.find(l => l.id === id)?.name ?? id, onRemove: () => removeFrom("locationIds", id) })),
+  ];
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground py-8 text-center">{t("kiosksTab.loading")}</p>;
@@ -100,7 +150,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
     </>
   );
 
-  if (groups.length === 0) {
+  if (!hasAnyDevices) {
     return (
       <div className="space-y-4">
       {header}
@@ -120,7 +170,55 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
 
   return (
     <div className="space-y-6">
+      <div className="space-y-3">
+        <FiltersPopover
+          testIdPrefix="devices"
+          open={filtersOpen}
+          onOpenChange={o => { if (o) setDraft(filters); setFiltersOpen(o); }}
+          activeCount={activeFilterCount}
+          onClear={() => setDraft(DEFAULT_DEVICE_FILTERS)}
+          onApply={() => { setFilters(draft); setFiltersOpen(false); }}
+          search={<>
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              data-testid="devices-search"
+              placeholder={t("kiosksTab.searchPlaceholder")}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </>}
+        >
+          <FilterField label={t("kiosksTab.conceptFilter")}>
+            <FilterMultiSelect
+              testId="devices-concept-filter"
+              icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+              options={concepts.map(c => ({ id: c.id, label: c.name }))}
+              selected={draft.conceptIds}
+              onChange={ids => setDraft(prev => ({ ...prev, conceptIds: ids }))}
+              allLabel={t("kiosksTab.allConcepts")}
+            />
+          </FilterField>
+          <FilterField label={t("kiosksTab.locationLabel")}>
+            <FilterMultiSelect
+              testId="devices-location-filter"
+              icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+              options={draftConceptScopedLocations.map(l => ({ id: l.id, label: l.name }))}
+              selected={draft.locationIds}
+              onChange={ids => setDraft(prev => ({ ...prev, locationIds: ids }))}
+              allLabel={t("kiosksTab.allLocations")}
+            />
+          </FilterField>
+        </FiltersPopover>
+        <ActiveFilterChips testIdPrefix="devices" chips={filterChips} onClearAll={() => setFilters(DEFAULT_DEVICE_FILTERS)} />
+      </div>
+
       {header}
+
+      {groups.length === 0 && (
+        <p data-testid="devices-no-results" className="text-sm text-muted-foreground py-8 text-center">{t("kiosksTab.noResults")}</p>
+      )}
 
       {groups.map(({ concept, locationGroups }) => (
         <div key={concept.id} className="space-y-3">

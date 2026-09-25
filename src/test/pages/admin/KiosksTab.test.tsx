@@ -45,6 +45,77 @@ beforeEach(() => {
 });
 
 describe("KiosksTab", () => {
+  describe("search and filters", () => {
+    const multiConcepts = [
+      { id: "c1", organization_id: "org1", name: "Trattoria Sole" },
+      { id: "c2", organization_id: "org1", name: "Burger Bar" },
+    ];
+    const multiLocations = [
+      ...locations,
+      { ...locations[0], id: "l2", concept_id: "c1", name: "Harbour" },
+      { ...locations[0], id: "l3", concept_id: "c2", name: "Airport" },
+    ];
+    const fleet = [
+      device({ id: "d1", location_id: "l1", label: "Host stand" }),
+      device({ id: "d2", location_id: "l2", label: "Bar tablet" }),
+      device({ id: "d3", location_id: "l3", label: "Kitchen iPad" }),
+    ];
+
+    const pick = (filterTestId: string, optionId: string) => {
+      fireEvent.click(screen.getByTestId(`${filterTestId}-trigger`));
+      fireEvent.click(screen.getByTestId(`${filterTestId}-option-${optionId}`));
+    };
+
+    beforeEach(() => mockUseKioskDevices.mockReturnValue({ data: fleet, isLoading: false }));
+
+    it("search narrows devices by name", () => {
+      render(<KiosksTab concepts={multiConcepts} locations={multiLocations} />);
+      fireEvent.change(screen.getByTestId("devices-search"), { target: { value: "kitchen" } });
+      expect(screen.getByText("Kitchen iPad")).toBeInTheDocument();
+      expect(screen.queryByText("Host stand")).not.toBeInTheDocument();
+      expect(screen.queryByText("Trattoria Sole")).not.toBeInTheDocument();
+    });
+
+    it("search matches the location name too", () => {
+      render(<KiosksTab concepts={multiConcepts} locations={multiLocations} />);
+      fireEvent.change(screen.getByTestId("devices-search"), { target: { value: "harb" } });
+      expect(screen.getByText("Bar tablet")).toBeInTheDocument();
+      expect(screen.queryByText("Host stand")).not.toBeInTheDocument();
+    });
+
+    it("shows a no-results message, not the empty state, when nothing matches", () => {
+      render(<KiosksTab concepts={multiConcepts} locations={multiLocations} />);
+      fireEvent.change(screen.getByTestId("devices-search"), { target: { value: "zzz" } });
+      expect(screen.getByTestId("devices-no-results")).toBeInTheDocument();
+      expect(screen.queryByText("No devices yet")).not.toBeInTheDocument();
+    });
+
+    it("concept filter applies on Apply and shows a removable chip", async () => {
+      render(<KiosksTab concepts={multiConcepts} locations={multiLocations} />);
+      fireEvent.click(screen.getByTestId("devices-filters-toggle"));
+      pick("devices-concept-filter", "c2");
+      // Staged only — nothing hidden until Apply.
+      expect(screen.getByText("Host stand")).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("devices-apply-filters"));
+      await waitFor(() => expect(screen.queryByText("Host stand")).not.toBeInTheDocument());
+      expect(screen.getByText("Kitchen iPad")).toBeInTheDocument();
+      expect(screen.getByTestId("devices-filters-count")).toHaveTextContent("1");
+
+      fireEvent.click(screen.getByRole("button", { name: "Remove filter: Burger Bar" }));
+      expect(screen.getByText("Host stand")).toBeInTheDocument();
+    });
+
+    it("location filter keeps only that location's devices", async () => {
+      render(<KiosksTab concepts={multiConcepts} locations={multiLocations} />);
+      fireEvent.click(screen.getByTestId("devices-filters-toggle"));
+      pick("devices-location-filter", "l2");
+      fireEvent.click(screen.getByTestId("devices-apply-filters"));
+      await waitFor(() => expect(screen.queryByText("Host stand")).not.toBeInTheDocument());
+      expect(screen.getByText("Bar tablet")).toBeInTheDocument();
+      expect(screen.queryByText("Kitchen iPad")).not.toBeInTheDocument();
+    });
+  });
+
   it("shows the empty state when there are no devices", () => {
     mockUseKioskDevices.mockReturnValue({ data: [], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);

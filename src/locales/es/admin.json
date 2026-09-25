@@ -470,6 +470,11 @@
     "newCodeWarningPaired": "La tableta vinculada ahora se desconectará en menos de un minuto. Introduce el nuevo código en la tableta que deba usar este kiosco.",
     "newCodeWarningUnpaired": "El código actual dejará de funcionar.",
     "newCodeFailed": "No se pudo crear un código nuevo: {{error}}",
-    "locationLabel": "Ubicación"
+    "locationLabel": "Ubicación",
+    "searchPlaceholder": "Buscar dispositivos…",
+    "conceptFilter": "Concepto",
+    "allConcepts": "Todos los conceptos",
+    "allLocations": "Todas las ubicaciones",
+    "noResults": "Ningún dispositivo coincide con tu búsqueda o filtros."
   }
 }

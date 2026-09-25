@@ -470,6 +470,11 @@
     "newCodeWarningPaired": "The tablet paired now will be disconnected within a minute. Enter the new code on whichever tablet should run this kiosk.",
     "newCodeWarningUnpaired": "The current code will stop working.",
     "newCodeFailed": "Could not create a new code: {{error}}",
-    "locationLabel": "Location"
+    "locationLabel": "Location",
+    "searchPlaceholder": "Search devices…",
+    "conceptFilter": "Concept",
+    "allConcepts": "All concepts",
+    "allLocations": "All locations",
+    "noResults": "No devices match your search or filters."
   }
 }
