@@ -53,7 +53,8 @@
     "completeButton": "Complete Checklist",
     "missingRequired_one": "{{count}} required question still needs an answer.",
     "missingRequired_other": "{{count}} required questions still need an answer.",
-    "cancelConfirmTitle": "Cancel checklist?",
+    "exit": "Exit",
+    "cancelConfirmTitle": "Exit checklist?",
     "cancelConfirmBody": "Your answers are saved as a draft. You can pick up where you left off next time.",
     "keepGoing": "Keep going",
     "closeLinkedResource": "Close linked resource"

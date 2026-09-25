@@ -172,7 +172,7 @@ export function ChecklistRunner({
               onClick={() => setShowCancelConfirm(true)}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-1"
             >
-              {t("cancel")}
+              {t("runner.exit")}
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -464,7 +464,7 @@ export function ChecklistRunner({
           );
         })()}
 
-        {/* ── Cancel confirm ── */}
+        {/* ── Exit confirm ── */}
         {showCancelConfirm && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
             <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4">
@@ -483,7 +483,7 @@ export function ChecklistRunner({
                   onClick={onCancel}
                   className="flex-1 py-3 rounded-xl text-sm font-medium bg-status-error text-primary-foreground hover:opacity-90 transition-colors"
                 >
-                  {t("cancel")}
+                  {t("runner.exit")}
                 </button>
               </div>
             </div>
