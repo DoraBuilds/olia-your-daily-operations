@@ -105,10 +105,10 @@ describe("MultiSelectFilter", () => {
     expect(screen.getByTestId("test-filter-trigger")).toBeDisabled();
   });
 
-  it("has no footer in filter mode — the All row already resets (#877)", () => {
+  it("keeps the All label on the top row in filter mode (#877)", () => {
     renderFilter({ selected: ["a"] });
     fireEvent.click(screen.getByTestId("test-filter-trigger"));
-    expect(screen.queryByTestId("test-filter-deselect-all")).not.toBeInTheDocument();
+    expect(screen.getByTestId("test-filter-option-all")).toHaveTextContent("All items");
   });
 
   describe("pick mode (#877)", () => {
@@ -124,7 +124,7 @@ describe("MultiSelectFilter", () => {
       expect(screen.getByTestId("test-filter-trigger")).toHaveTextContent("All items");
       fireEvent.click(screen.getByTestId("test-filter-trigger"));
       const allRow = screen.getByTestId("test-filter-option-all");
-      expect(allRow).toHaveTextContent("Select all");
+      expect(allRow).toHaveTextContent("Deselect all");
       expect(allRow.querySelector("svg")).not.toBeNull();
     });
 
@@ -142,11 +142,11 @@ describe("MultiSelectFilter", () => {
       expect(onChange).toHaveBeenCalledWith([]);
     });
 
-    it("Deselect all clears the selection, and is hidden when nothing is picked", () => {
-      const { onChange } = renderFilter({ ...pickProps, selected: ["a"] });
+    it("the top row reads Select all until everything is ticked (#891)", () => {
+      renderFilter({ ...pickProps, selected: ["a"] });
       fireEvent.click(screen.getByTestId("test-filter-trigger"));
-      fireEvent.click(screen.getByTestId("test-filter-deselect-all"));
-      expect(onChange).toHaveBeenCalledWith([]);
+      expect(screen.getByTestId("test-filter-option-all")).toHaveTextContent("Select all");
+      expect(screen.queryByText("Deselect all")).not.toBeInTheDocument();
     });
   });
 
