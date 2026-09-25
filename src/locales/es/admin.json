@@ -277,7 +277,10 @@
       "allConcepts": "Todos los conceptos",
       "allLocations": "Todos los locales",
       "allLocationsInConcepts": "Todos los locales de los conceptos elegidos",
-      "noDepartmentSelected": "Sin departamento"
+      "noDepartmentSelected": "Sin departamento",
+      "selectConcepts": "Elige conceptos",
+      "selectLocations": "Elige al menos un local",
+      "allDepartments": "Todos los departamentos"
     },
     "concept": {
       "editTitle": "Editar concepto",

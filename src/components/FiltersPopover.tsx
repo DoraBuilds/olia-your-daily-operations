@@ -106,7 +106,7 @@ export function FilterField({ label, className, children }: { label: string; cla
 
 /** MultiSelectFilter preconfigured with the shared summary/search/no-match copy. */
 export function FilterMultiSelect({
-  testId, icon, options, selected, onChange, allLabel, noOptionsLabel, contentClassName,
+  testId, icon, options, selected, onChange, allLabel, noOptionsLabel, contentClassName, mode, noneLabel,
 }: {
   testId: string;
   icon: ReactNode;
@@ -116,11 +116,17 @@ export function FilterMultiSelect({
   allLabel: string;
   noOptionsLabel?: string;
   contentClassName?: string;
+  /** See MultiSelectFilter — "pick" makes All tick every option and adds Deselect all. */
+  mode?: "filter" | "pick";
+  noneLabel?: string;
 }) {
   const { t } = useTranslation("common");
   return (
     <MultiSelectFilter
       contentClassName={contentClassName}
+      mode={mode}
+      noneLabel={noneLabel}
+      deselectAllLabel={t("filters.deselectAll")}
       testId={testId}
       icon={icon}
       options={options}

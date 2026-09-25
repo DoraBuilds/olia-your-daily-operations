@@ -104,4 +104,47 @@ describe("MultiSelectFilter", () => {
     renderFilter({ disabled: true });
     expect(screen.getByTestId("test-filter-trigger")).toBeDisabled();
   });
+
+  it("has no footer in filter mode — the All row already resets (#877)", () => {
+    renderFilter({ selected: ["a"] });
+    fireEvent.click(screen.getByTestId("test-filter-trigger"));
+    expect(screen.queryByTestId("test-filter-deselect-all")).not.toBeInTheDocument();
+  });
+
+  describe("pick mode (#877)", () => {
+    const pickProps = { mode: "pick" as const, noneLabel: "None picked", deselectAllLabel: "Deselect all" };
+
+    it("shows noneLabel when nothing is picked and allLabel when everything is", () => {
+      renderFilter({ ...pickProps });
+      expect(screen.getByTestId("test-filter-trigger")).toHaveTextContent("None picked");
+    });
+
+    it("shows allLabel and a ticked All row when every option is picked", () => {
+      renderFilter({ ...pickProps, selected: ["a", "b", "c"] });
+      expect(screen.getByTestId("test-filter-trigger")).toHaveTextContent("All items");
+      fireEvent.click(screen.getByTestId("test-filter-trigger"));
+      expect(screen.getByTestId("test-filter-option-all")).toHaveClass("bg-sage-light");
+    });
+
+    it("All ticks every option", () => {
+      const { onChange } = renderFilter({ ...pickProps, selected: ["b"] });
+      fireEvent.click(screen.getByTestId("test-filter-trigger"));
+      fireEvent.click(screen.getByTestId("test-filter-option-all"));
+      expect(onChange).toHaveBeenCalledWith(["a", "b", "c"]);
+    });
+
+    it("All unticks everything when every option is already ticked", () => {
+      const { onChange } = renderFilter({ ...pickProps, selected: ["a", "b", "c"] });
+      fireEvent.click(screen.getByTestId("test-filter-trigger"));
+      fireEvent.click(screen.getByTestId("test-filter-option-all"));
+      expect(onChange).toHaveBeenCalledWith([]);
+    });
+
+    it("Deselect all clears the selection, and is hidden when nothing is picked", () => {
+      const { onChange } = renderFilter({ ...pickProps, selected: ["a"] });
+      fireEvent.click(screen.getByTestId("test-filter-trigger"));
+      fireEvent.click(screen.getByTestId("test-filter-deselect-all"));
+      expect(onChange).toHaveBeenCalledWith([]);
+    });
+  });
 });

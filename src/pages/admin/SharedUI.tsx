@@ -164,12 +164,18 @@ export function TeamMemberModal({
   const [name, setName] = useState(member?.name ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState(member?.role ?? "");
-  const [locationIds, setLocationIds] = useState<string[]>(member?.location_ids ?? initialLocationIds ?? []);
-  // Concepts scope the location picker; seeded from the concepts of the
-  // member's (or pre-ticked) locations. Empty = all concepts.
-  const [conceptIds, setConceptIds] = useState<string[]>(() => [...new Set(
-    locations.filter(l => locationIds.includes(l.id) && l.concept_id).map(l => l.concept_id as string),
-  )]);
+  // Stored empty location_ids means "every location in the company", so it
+  // opens with every concept and location ticked; otherwise concepts are
+  // seeded from the member's (or pre-ticked) locations.
+  const initialLocations = member?.location_ids ?? initialLocationIds ?? [];
+  const [locationIds, setLocationIds] = useState<string[]>(
+    () => initialLocations.length === 0 ? locations.map(l => l.id) : initialLocations,
+  );
+  const [conceptIds, setConceptIds] = useState<string[]>(() => initialLocations.length === 0
+    ? concepts.map(c => c.id)
+    : [...new Set(
+      locations.filter(l => initialLocations.includes(l.id) && l.concept_id).map(l => l.concept_id as string),
+    )]);
   const [isManager, setIsManager] = useState(member?.is_manager ?? false);
   const [departmentIds, setDepartmentIds] = useState<string[]>(member?.department_ids ?? []);
   const [perms, setPerms] = useState<ManagerPermissions>(member?.permissions ?? { ...DEFAULT_PERMISSIONS });
@@ -179,17 +185,15 @@ export function TeamMemberModal({
   const [revealLoading, setRevealLoading] = useState(false);
 
   // Locations without a concept (legacy rows) are always offered.
-  const visibleLocations = conceptIds.length === 0
-    ? locations
-    : locations.filter(l => !l.concept_id || conceptIds.includes(l.concept_id));
+  const visibleLocations = locations.filter(l => !l.concept_id || conceptIds.includes(l.concept_id));
 
-  // Empty location_ids means "every location in the company". With concepts
-  // picked but no specific location, "All locations" means every location of
-  // those concepts, so that's what gets saved.
-  const savedLocationIds = locationIds.length === 0 && conceptIds.length > 0
-    ? visibleLocations.map(l => l.id)
-    : locationIds;
-  const departmentLocationIds = locationIds.length > 0 ? locationIds : visibleLocations.map(l => l.id);
+  // Every location ticked is saved as empty — "every location in the
+  // company", which also covers locations added later.
+  const pickedLocationIds = locationIds.filter(id => locations.some(l => l.id === id));
+  const savedLocationIds = locations.length > 0 && pickedLocationIds.length === locations.length
+    ? []
+    : pickedLocationIds;
+  const departmentLocationIds = pickedLocationIds;
 
   // Departments are company-wide (#838); offer every department that applies
   // to at least one of the member's locations.
@@ -204,21 +208,24 @@ export function TeamMemberModal({
     }
   }, [departmentIds, assignedDepartments, departmentsLoading]);
 
-  // Deselecting a concept also drops its locations, so nothing stays ticked
-  // that's no longer offered.
+  // Ticking a concept ticks its locations; unticking one drops them, so
+  // nothing stays ticked that's no longer offered.
   const changeConcepts = (ids: string[]) => {
+    const added = ids.filter(id => !conceptIds.includes(id));
     setConceptIds(ids);
-    if (ids.length > 0) {
-      setLocationIds(prev => prev.filter(lid => {
+    setLocationIds(prev => [
+      ...prev.filter(lid => {
         const conceptId = locations.find(l => l.id === lid)?.concept_id;
         return !conceptId || ids.includes(conceptId);
-      }));
-    }
+      }),
+      ...locations.filter(l => l.concept_id && added.includes(l.concept_id) && !prev.includes(l.id)).map(l => l.id),
+    ]);
   };
 
   const pickerWidth = "w-[var(--radix-popover-trigger-width)]";
   const conceptName = (id: string | null) => concepts.find(c => c.id === id)?.name;
-  const showConceptOnLocations = conceptIds.length !== 1 && concepts.length > 1;
+  const showConceptOnLocations = conceptIds.length > 1;
+  const allConceptsPicked = conceptIds.length === concepts.length;
 
   const handleRevealPin = async () => {
     if (!member?.id) return;
@@ -241,7 +248,8 @@ export function TeamMemberModal({
 
   const canSave = name.trim().length > 0
     && (member?.id || pin.trim().length > 0)
-    && (!isManager || email.trim().length > 0);
+    && (!isManager || email.trim().length > 0)
+    && (locations.length === 0 || pickedLocationIds.length > 0);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,7 +302,9 @@ export function TeamMemberModal({
               options={concepts.map(c => ({ id: c.id, label: c.name }))}
               selected={conceptIds}
               onChange={changeConcepts}
+              mode="pick"
               allLabel={t("sharedUI.teamMember.allConcepts")}
+              noneLabel={t("sharedUI.teamMember.selectConcepts")}
             />
           </FormField>
         )}
@@ -310,9 +320,11 @@ export function TeamMemberModal({
             }))}
             selected={locationIds}
             onChange={setLocationIds}
-            allLabel={conceptIds.length > 0
-              ? t("sharedUI.teamMember.allLocationsInConcepts")
-              : t("sharedUI.teamMember.allLocations")}
+            mode="pick"
+            allLabel={allConceptsPicked
+              ? t("sharedUI.teamMember.allLocations")
+              : t("sharedUI.teamMember.allLocationsInConcepts")}
+            noneLabel={t("sharedUI.teamMember.selectLocations")}
             noOptionsLabel={t("sharedUI.teamMember.noLocationsInConcept")}
           />
         </FormField>
@@ -322,11 +334,13 @@ export function TeamMemberModal({
               <FilterMultiSelect
                 testId="member-departments"
                 icon={null}
-              contentClassName={pickerWidth}
+                contentClassName={pickerWidth}
                 options={assignedDepartments.map(d => ({ id: d.id, label: d.name }))}
                 selected={departmentIds}
                 onChange={setDepartmentIds}
-                allLabel={t("sharedUI.teamMember.noDepartmentSelected")}
+                mode="pick"
+                allLabel={t("sharedUI.teamMember.allDepartments")}
+                noneLabel={t("sharedUI.teamMember.noDepartmentSelected")}
               />
             ) : (
               !departmentsLoading && (
