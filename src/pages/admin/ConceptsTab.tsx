@@ -29,6 +29,8 @@ import {
 } from "./departments";
 
 export interface ConceptsTabProps {
+  /** Concepts/locations are still loading — show a skeleton, not the empty-state onboarding. */
+  loading?: boolean;
   concepts: Concept[];
   locations: Location[];
   /** Includes plan-inactive locations — department assignment edits must keep covering them. */
@@ -57,7 +59,7 @@ export interface ConceptsTabProps {
 }
 
 export function ConceptsTab({
-  concepts, locations, allLocations = locations, teamMembers, checklists,
+  loading = false, concepts, locations, allLocations = locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
   onAddLocation, onEditLocation, onDeleteLocation, onManageKiosk,
@@ -106,6 +108,10 @@ export function ConceptsTab({
   const [addingKiosk, setAddingKiosk] = useState(false);
   const [codeDeviceId, setCodeDeviceId] = useState<string | null>(null);
   const [collapsed, toggleSection] = useCollapsedSections();
+
+  // ── Still loading → skeleton, so the onboarding empty state below doesn't
+  // flash for a moment on every login before the real data arrives ──────────
+  if (loading) return <ConceptsTabSkeleton isOwner={isOwner} />;
 
   // ── No concepts yet → onboarding empty state ──────────────────────────────
   if (concepts.length === 0) {
@@ -420,6 +426,26 @@ function SectionCard({
 // ─── ConceptTiles ─────────────────────────────────────────────────────────────
 // Small rounded tiles with the name underneath; the selected one carries the
 // edit/delete menu.
+
+function ConceptsTabSkeleton({ isOwner }: { isOwner: boolean }) {
+  return (
+    <div className="space-y-4 animate-pulse" aria-busy="true">
+      {isOwner && (
+        <div className="flex gap-3 pb-1 pt-1">
+          {[0, 1].map(i => (
+            <div key={i} className="flex w-20 flex-col items-center gap-1.5">
+              <div className="h-20 w-20 rounded-[22px] bg-muted" />
+              <div className="h-3 w-14 rounded bg-muted" />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="h-12 rounded-xl bg-muted" />
+      <div className="h-28 rounded-2xl bg-muted" />
+      <div className="h-28 rounded-2xl bg-muted" />
+    </div>
+  );
+}
 
 function ConceptTiles({
   concepts, currentConceptId, onChange, onAddConcept, onEditConcept, onDeleteConcept,

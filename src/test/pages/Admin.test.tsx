@@ -976,6 +976,17 @@ describe("Admin page", () => {
     expect(addressMenu?.textContent).not.toContain("09:00");
   });
 
+  it("Concepts tab shows a skeleton, not the onboarding empty state, while concepts are loading", () => {
+    mockUseConcepts.mockReturnValue({ data: undefined, isLoading: true });
+    try {
+      const { container } = renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
+      expect(screen.queryByText("Add your first concept")).not.toBeInTheDocument();
+      expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    } finally {
+      mockUseConcepts.mockReturnValue({ data: mockConcepts, isLoading: false });
+    }
+  });
+
   it("Concepts tab shows onboarding empty state when the org has no concepts yet", async () => {
     mockUseConcepts.mockReturnValueOnce({ data: [], isLoading: false });
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
