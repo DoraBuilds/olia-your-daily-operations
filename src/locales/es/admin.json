@@ -160,8 +160,6 @@
     "teamMembersWithCount": "Miembros del equipo ({{count}})",
     "noTeamMembers": "Aún no hay miembros del equipo asignados a este local.",
     "kioskActive": "Kiosco activo",
-    "addDepartment": "Añadir",
-    "manageAllDepartments": "Gestionar todos los departamentos",
     "removeDepartmentAria": "Quitar {{name}} de esta ubicación",
     "removeDepartmentTitle": "Quitar departamento de esta ubicación",
     "removeDepartmentMessage": "{{name}} dejará de aplicarse en {{location}}. Se mantiene en el resto de sitios donde está asignado.",

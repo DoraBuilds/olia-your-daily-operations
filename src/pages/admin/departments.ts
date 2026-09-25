@@ -100,16 +100,6 @@ export function assignmentsToSelection(
   return { conceptIds, locationIds };
 }
 
-/** Adds one location to a department's assignments (no-op if it's already covered). */
-export function addLocationToAssignments(
-  assignments: DepartmentAssignment[],
-  location: Pick<Location, "id" | "concept_id">,
-  locations: Pick<Location, "id" | "concept_id">[],
-): DepartmentAssignment[] {
-  if (!location.concept_id || resolveDepartmentLocationIds(assignments, locations).has(location.id)) return assignments;
-  return [...assignments, { concept_id: location.concept_id, location_id: location.id }];
-}
-
 /**
  * Takes one location out of a department's assignments. A company-wide or
  * whole-concept assignment covering it is split so everything else it covered

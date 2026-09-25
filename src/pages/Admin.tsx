@@ -430,7 +430,6 @@ export default function Admin() {
                     onEditLocation={loc => setLocationModal(loc)}
                     onDeleteLocation={deleteLocation}
                     onManageKiosk={deviceId => navigate(`/admin/kiosks?device=${deviceId}`)}
-                    onManageDepartments={isOwner ? () => navigate("/admin/departments") : undefined}
                     onAddTeamMember={locationId => { setNewMemberLocationId(locationId); setMemberModal("new"); }}
                     onEditTeamMember={m => setMemberModal(m)}
                     onRemoveTeamMember={removeMemberFromLocation}

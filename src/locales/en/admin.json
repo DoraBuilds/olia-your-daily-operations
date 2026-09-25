@@ -160,8 +160,6 @@
     "teamMembersWithCount": "Team members ({{count}})",
     "noTeamMembers": "No team members assigned to this location yet.",
     "kioskActive": "Kiosk active",
-    "addDepartment": "Add",
-    "manageAllDepartments": "Manage all departments",
     "removeDepartmentAria": "Remove {{name}} from this location",
     "removeDepartmentTitle": "Remove department from this location",
     "removeDepartmentMessage": "{{name}} will no longer apply at {{location}}. It stays everywhere else it’s assigned.",
