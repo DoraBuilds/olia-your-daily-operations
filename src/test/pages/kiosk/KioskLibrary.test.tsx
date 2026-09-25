@@ -65,13 +65,13 @@ describe("KioskLibrary loading and error", () => {
   it("shows loading state initially", () => {
     mockGetKioskLibrary.mockReturnValue(new Promise(() => {}));
     renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
-    expect(screen.getByText("Loading library…")).toBeInTheDocument();
+    expect(screen.getByText("Loading Infohub…")).toBeInTheDocument();
   });
 
   it("shows error message on RPC failure", async () => {
     mockGetKioskLibrary.mockResolvedValue(ERROR_RESPONSE);
     renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
-    await waitFor(() => expect(screen.getByText(/Could not load library/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Could not load Infohub/)).toBeInTheDocument());
   });
 
   it("back link on error screen calls onBack", async () => {
@@ -111,10 +111,10 @@ describe("KioskLibrary root folder list", () => {
     await waitFor(() => expect(screen.getByText("Jay Crichton")).toBeInTheDocument());
   });
 
-  it("shows Staff Library heading at root", async () => {
+  it("shows Infohub heading at root", async () => {
     mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
     renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
-    await waitFor(() => expect(screen.getByText("Staff Library")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Infohub" })).toBeInTheDocument());
   });
 });
 
@@ -136,14 +136,14 @@ describe("KioskLibrary folder navigation", () => {
     await waitFor(() => screen.getByText("Safety Procedures"));
     fireEvent.click(screen.getByTestId("library-folder-f1"));
     fireEvent.click(screen.getByTestId("library-back-btn"));
-    expect(screen.getByText("Staff Library")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Infohub" })).toBeInTheDocument();
     expect(screen.getByText("Safety Procedures")).toBeInTheDocument();
   });
 
   it("back button at root calls onBack", async () => {
     mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
     renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
-    await waitFor(() => screen.getByText("Staff Library"));
+    await waitFor(() => screen.getByRole("heading", { name: "Infohub" }));
     fireEvent.click(screen.getByTestId("library-back-btn"));
     expect(DEFAULT_PROPS.onBack).toHaveBeenCalledTimes(1);
   });
@@ -239,5 +239,62 @@ describe("KioskLibrary with null memberId", () => {
     );
     await waitFor(() => expect(screen.getByText("Safety Procedures")).toBeInTheDocument());
     expect(screen.getByText("Staff Member")).toBeInTheDocument();
+  });
+});
+
+// ─── Library / Training sections ─────────────────────────────────────────────
+
+describe("KioskLibrary Library/Training sections", () => {
+  const MIXED_RESPONSE = {
+    data: {
+      folders: [
+        { id: "f1", name: "Safety Procedures", parent_id: null, section: "library" },
+        { id: "t1", name: "Onboarding", parent_id: null, section: "training" },
+      ],
+      documents: [
+        { id: "d1", title: "Allergen Handling", summary: "How to handle allergens.", body: "", folder_id: "f1", section: "library", metadata: {} },
+        { id: "td1", title: "Opening the bar", summary: "", body: "", folder_id: "t1", section: "training", metadata: { duration: "10 min", steps: ["Unlock the shutters", "Check the fridges"] } },
+      ],
+    },
+    error: null,
+  };
+
+  it("shows Library by default and switches to Training, keeping sections apart", async () => {
+    mockGetKioskLibrary.mockResolvedValue(MIXED_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await waitFor(() => expect(screen.getByText("Safety Procedures")).toBeInTheDocument());
+    expect(screen.queryByText("Onboarding")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("infohub-tab-training"));
+    expect(screen.getByText("Onboarding")).toBeInTheDocument();
+    expect(screen.queryByText("Safety Procedures")).not.toBeInTheDocument();
+    expect(screen.getByTestId("infohub-tab-training")).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("opens a training doc with its duration and numbered steps", async () => {
+    mockGetKioskLibrary.mockResolvedValue(MIXED_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await waitFor(() => screen.getByText("Safety Procedures"));
+    fireEvent.click(screen.getByTestId("infohub-tab-training"));
+    fireEvent.click(screen.getByTestId("library-folder-t1"));
+    expect(screen.getByText("10 min")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("library-doc-td1"));
+    expect(screen.getByRole("heading", { name: "Opening the bar" })).toBeInTheDocument();
+    expect(screen.getByText("Unlock the shutters")).toBeInTheDocument();
+    expect(screen.getByText("Check the fridges")).toBeInTheDocument();
+    expect(screen.queryByTestId("infohub-tab-training")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("library-back-btn"));
+    fireEvent.click(screen.getByTestId("library-back-btn"));
+    expect(screen.getByTestId("library-folder-t1")).toBeInTheDocument();
+    expect(screen.getByTestId("infohub-tab-training")).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows a training empty state when nothing is shared with this member", async () => {
+    mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await waitFor(() => screen.getByText("Safety Procedures"));
+    fireEvent.click(screen.getByTestId("infohub-tab-training"));
+    expect(screen.getByText("No training available.")).toBeInTheDocument();
   });
 });
