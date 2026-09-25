@@ -1,5 +1,5 @@
 import {
-  addLocationToAssignments, removeLocationFromAssignments,
+  removeLocationFromAssignments,
   assignmentsToSelection, departmentUnassignImpact, resolveDepartmentLocationIds, selectionToAssignments,
 } from "@/pages/admin/departments";
 
@@ -95,17 +95,6 @@ describe("assignmentsToSelection", () => {
     );
     expect(sel.locationIds.sort()).toEqual(["a1", "a2", "b1"]);
     expect(sel.conceptIds.sort()).toEqual(["A", "B"]);
-  });
-});
-
-describe("addLocationToAssignments", () => {
-  it("adds a specific location assignment", () => {
-    expect(addLocationToAssignments([], locations[0], locations)).toEqual([{ concept_id: "A", location_id: "a1" }]);
-  });
-
-  it("is a no-op when the location is already covered", () => {
-    const whole = [{ concept_id: "A", location_id: null }];
-    expect(addLocationToAssignments(whole, locations[0], locations)).toBe(whole);
   });
 });
 

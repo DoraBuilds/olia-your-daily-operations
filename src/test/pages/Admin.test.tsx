@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import Admin, { parseGoogleOpeningHours } from "@/pages/Admin";
 import { renderWithProviders } from "../test-utils";
 
@@ -376,14 +376,6 @@ describe("Admin page", () => {
       mockNavigate.mockClear();
     });
 
-    it("lists the location's departments in Concepts, with a link to the Departments tab in the Add menu", async () => {
-      renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
-      await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
-      fireEvent.click(screen.getByRole("button", { name: "Manage all departments" }));
-      expect(mockNavigate).toHaveBeenCalledWith("/admin/departments");
-    });
-
     it("removes a whole-concept department from just this location, keeping the concept's other locations", async () => {
       mockSaveDepartment.mutate.mockClear();
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
@@ -397,12 +389,11 @@ describe("Admin page", () => {
       );
     });
 
-    it("doesn't offer creating a department from the location's Add menu — that lives in the Departments tab", async () => {
+    it("lists the location's departments in Concepts with no Add action — departments are assigned in the Departments tab", async () => {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
       await waitFor(() => expect(screen.getByText("Front of House")).toBeInTheDocument());
-      fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
-      expect(screen.getByRole("button", { name: "Manage all departments" })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "New department" })).not.toBeInTheDocument();
+      const header = screen.getByRole("button", { name: /^Departments/, expanded: true }).parentElement!;
+      expect(within(header).queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
     });
 
     it("shows a Departments tab right after Concepts for the Owner", () => {

@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import {
   type Location, type Concept, type TeamMember, type ManagerPermissions,
-  type CompanyDepartment, type DepartmentAssignment, getInitials,
+  type DepartmentAssignment, getInitials,
 } from "@/lib/admin-repository";
 import { type ChecklistItem } from "@/hooks/useChecklists";
 import { useCompanyDepartments, useDepartments, useSaveDepartment } from "@/hooks/useDepartments";
@@ -25,7 +25,7 @@ import { useKioskDevices } from "@/hooks/useKioskDevices";
 import { AddLink, ConfirmModal, type ConfirmState } from "./SharedUI";
 import { KioskDeviceRow, AddKioskModal, KioskCodeModal } from "./KiosksTab";
 import {
-  addLocationToAssignments, departmentUnassignImpact, removeLocationFromAssignments,
+  departmentUnassignImpact, removeLocationFromAssignments,
 } from "./departments";
 
 export interface ConceptsTabProps {
@@ -51,8 +51,6 @@ export interface ConceptsTabProps {
   onDeleteLocation: (id: string) => void;
   /** Opens Admin -> Devices focused on this kiosk. */
   onManageKiosk: (deviceId: string) => void;
-  /** Opens Admin → Departments. Omitted for managers, who can't manage departments. */
-  onManageDepartments?: () => void;
   onAddTeamMember?: (locationId: string) => void;
   onEditTeamMember?: (m: TeamMember) => void;
   onRemoveTeamMember?: (m: TeamMember, locationId: string) => void;
@@ -62,7 +60,7 @@ export function ConceptsTab({
   concepts, locations, allLocations = locations, teamMembers, checklists,
   currentConceptId, setCurrentConceptId, currentLocationId, setCurrentLocationId,
   isOwner, permissions, onAddConcept, onEditConcept, onDeleteConcept,
-  onAddLocation, onEditLocation, onDeleteLocation, onManageKiosk, onManageDepartments,
+  onAddLocation, onEditLocation, onDeleteLocation, onManageKiosk,
   onAddTeamMember, onEditTeamMember, onRemoveTeamMember,
 }: ConceptsTabProps) {
   const { t } = useTranslation("admin");
@@ -174,21 +172,15 @@ export function ConceptsTab({
   const locationTeamMembers = teamMembers.filter(m => m.location_ids.includes(currentLocation.id));
   const locationKiosks = kioskDevices.filter(d => d.location_id === currentLocation.id);
 
-  // Departments are company-wide; adding one here assigns it to this
-  // location, removing one takes just this location out of its assignments.
+  // Departments are company-wide and assigned in the Departments tab;
+  // removing one here takes just this location out of its assignments.
   const conceptIds = concepts.map(c => c.id);
-  const locationDepartmentIds = new Set(departments.map(d => d.id));
-  const addableDepartments = companyDepartments.filter(d => !locationDepartmentIds.has(d.id));
 
   const saveDepartment = (dep: { id: string; name: string; assignments: DepartmentAssignment[] }) => {
     saveDepartmentMut.mutate(dep, {
       onSuccess: () => toast.success(t("departmentsTab.saved")),
       onError: (err: Error) => toast.error(t("departmentsTab.saveFailed", { error: err.message })),
     });
-  };
-
-  const addDepartment = (dep: CompanyDepartment) => {
-    saveDepartment({ id: dep.id, name: dep.name, assignments: addLocationToAssignments(dep.assignments, currentLocation, allLocations) });
   };
 
   const confirmRemoveDepartment = (depId: string) => {
@@ -244,13 +236,6 @@ export function ConceptsTab({
         title={departments.length > 0 ? t("conceptsTab.departmentsWithCount", { count: departments.length }) : t("conceptsTab.departments")}
         open={!collapsed.has("departments")}
         onToggle={() => toggleSection("departments")}
-        actions={isOwner && (
-          <AddDepartmentMenu
-            options={addableDepartments}
-            onPick={addDepartment}
-            onManage={onManageDepartments}
-          />
-        )}
       >
         <div className="px-4 pb-4">
           {departments.length === 0 ? (
@@ -620,38 +605,3 @@ function LocationPicker({
   );
 }
 
-// ─── AddDepartmentMenu ────────────────────────────────────────────────────────
-
-function AddDepartmentMenu({
-  options, onPick, onManage,
-}: {
-  options: CompanyDepartment[];
-  onPick: (dep: CompanyDepartment) => void;
-  onManage?: () => void;
-}) {
-  const { t } = useTranslation("admin");
-  const { open, setOpen, ref } = useMenu();
-  const item = menuItemCls;
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)} className="flex items-center gap-1 text-xs text-sage font-medium hover:underline">
-        <Plus size={12} /> {t("conceptsTab.addDepartment")}
-      </button>
-      {open && (
-        <div className={cn(menuPanelCls, "max-h-72 overflow-y-auto")}>
-          {options.map(dep => (
-            <button key={dep.id} onClick={() => { setOpen(false); onPick(dep); }} className={cn(item, "text-foreground")}>
-              {dep.name}
-            </button>
-          ))}
-          {options.length > 0 && onManage && <div className="my-1 border-t border-border" />}
-          {onManage && (
-            <button onClick={() => { setOpen(false); onManage(); }} className={cn(item, "text-muted-foreground")}>
-              {t("conceptsTab.manageAllDepartments")}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
