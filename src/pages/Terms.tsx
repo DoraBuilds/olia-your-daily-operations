@@ -29,7 +29,7 @@ export default function Terms() {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="font-display text-4xl text-foreground">Terms of Service</h1>
-          <p className="text-sm text-muted-foreground">Last updated: 21 July 2026 (Section 9 updated 6 August 2026)</p>
+          <p className="text-sm text-muted-foreground">Last updated: 21 July 2026 (Section 9 updated 6 August 2026; Section 6 updated 25 September 2026)</p>
         </div>
 
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -100,7 +100,26 @@ export default function Terms() {
           </p>
           <p>
             You can export your checklist data at any time from within the app. On account deletion,
-            all your data is permanently removed from our systems.
+            all your data — including checklist photos and uploaded files — is permanently removed
+            from our systems within 30 days.
+          </p>
+          <p>
+            <strong className="text-foreground">Photo retention.</strong> Photos taken while completing
+            checklists are stored for 2 years from the date they are taken and are then automatically
+            and permanently deleted. The checklist record itself is kept and still shows that a photo
+            was attached. Photos that are taken but never saved to a submitted checklist (for example,
+            a retaken photo) are automatically deleted after a few days. If you need to keep photos for
+            longer — for example for inspections, audits, or legal claims — you are responsible for
+            keeping your own copies before they are deleted.
+          </p>
+          <p>
+            We may resize and compress images you upload or capture so that they are stored
+            efficiently. Documents such as PDFs are stored as uploaded.
+          </p>
+          <p>
+            You are responsible for having a lawful basis for any photos taken or uploaded through
+            Olia, including photos that show staff, customers, or other people, and for informing them
+            where the law requires it.
           </p>
         </Section>
 

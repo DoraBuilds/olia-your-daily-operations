@@ -3,6 +3,7 @@ import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { supabase } from "@/lib/supabase";
+import { fitWithin, KIOSK_PHOTO_MAX_DIMENSION } from "@/lib/image-resize";
 import type { Question } from "./types";
 
 // ─── Checkbox ─────────────────────────────────────────────────────────────────
@@ -396,7 +397,14 @@ export function MediaInput({
     if (!mediaDevices?.getUserMedia) { setError("Camera access is not available on this device."); return; }
     let cancelled = false;
     setIsLoading(true);
-    mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
+    mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: KIOSK_PHOTO_MAX_DIMENSION },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    })
       .then(nextStream => {
         if (cancelled) { nextStream.getTracks().forEach(track => track.stop()); return; }
         streamRef.current = nextStream;
@@ -423,8 +431,10 @@ export function MediaInput({
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    // Cap the stored size regardless of what resolution the camera streams at.
+    const { width, height } = fitWithin(video.videoWidth || 1280, video.videoHeight || 720, KIOSK_PHOTO_MAX_DIMENSION);
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
