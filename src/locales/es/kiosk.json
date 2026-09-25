@@ -6,8 +6,7 @@
   "stayButton": "Quedarme",
   "pin": {
     "adminTitle": "PIN de administrador",
-    "identifyTitle": "¿Quién eres?",
-    "identifySubtitle": "Introduce tu PIN:",
+    "identifyTitle": "Introduce el PIN:",
     "staffLibraryTitle": "Infohub",
     "checking": "Comprobando PIN…",
     "tryAgainIn": "Vuelve a intentarlo en <bold>{{seconds}}s</bold>",
