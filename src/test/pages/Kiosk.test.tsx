@@ -281,14 +281,6 @@ async function openRunnerWithQuestions(questions: any[]) {
   fireEvent.click(checklistBtn!);
 
   await waitFor(() => {
-    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-  });
-
-  for (const digit of ["1", "2", "3", "4"]) {
-    fireEvent.click(screen.getByRole("button", { name: digit }));
-  }
-
-  await waitFor(() => {
     expect(screen.getByRole("button", { name: /complete checklist/i })).toBeInTheDocument();
   });
 }
@@ -632,22 +624,7 @@ describe("Kiosk — Grid Screen", () => {
     }
   });
 
-  it("clicking a checklist card opens PIN modal", async () => {
-    await renderGridScreen();
-    // Find a checklist card button
-    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
-    if (checklistBtn) {
-      fireEvent.click(checklistBtn);
-      await waitFor(() => {
-        expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-      });
-    } else {
-      // No checklists for this time of day — test still passes
-      expect(true).toBe(true);
-    }
-  });
-
-  it("uses the kiosk member PIN validation path when starting a checklist", async () => {
+  it("opens a checklist as the signed-in person without asking for a second PIN (#869)", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {
       if (fn === "get_kiosk_checklists") {
@@ -659,46 +636,44 @@ describe("Kiosk — Grid Screen", () => {
               location_id: "00000000-0000-0000-0000-000000000011",
               time_of_day: "anytime",
               due_time: null,
-              sections: [{ name: "Main", questions: [] }],
+              sections: [{ name: "Main", questions: [{ id: "q1", text: "Check done?", responseType: "checkbox", required: false, config: {} }] }],
             },
           ],
           error: null,
         });
       }
-
-      if (fn === "verify_kiosk_token") {
-        return Promise.resolve({ data: true, error: null });
-      }
-
-      if (fn === "validate_kiosk_member_pin") {
-        return Promise.resolve({
-          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1" }],
-          error: null,
-        });
-      }
-
       return Promise.resolve({ data: [], error: null });
     });
 
     await renderGridScreen();
-    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
-    expect(checklistBtn).not.toBeNull();
+    const checklistBtn = await waitFor(() => {
+      const btn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement | null;
+      expect(btn).not.toBeNull();
+      return btn!;
+    });
     fireEvent.click(checklistBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Insert PIN")).toBeInTheDocument();
+      expect(screen.getByText("Check done?")).toBeInTheDocument();
     });
+    // Runner is attributed to the identified person (seeded in beforeEach).
+    expect(screen.getByText(/Sarah Owner/)).toBeInTheDocument();
+    expect(screen.queryByText("Insert PIN")).not.toBeInTheDocument();
+    expect(supabase.rpc).not.toHaveBeenCalledWith("validate_kiosk_member_pin", expect.anything());
+    expect(supabase.rpc).not.toHaveBeenCalledWith("validate_staff_pin", expect.anything());
+  });
 
-    for (const digit of ["1", "2", "3", "4"]) {
-      fireEvent.click(screen.getByRole("button", { name: digit }));
-    }
+  it("opens the Library as the signed-in person without asking for a second PIN (#869)", async () => {
+    grantKioskStaffSession({ staffId: null, memberId: "tm-1", staffName: "Sarah Owner", organizationId: "org-1", departmentIds: [] });
+    const { supabase } = await import("@/lib/supabase");
+    await renderGridScreen();
+
+    fireEvent.click(document.getElementById("library-btn")!);
 
     await waitFor(() => {
-      expect(supabase.rpc).toHaveBeenCalledWith("validate_kiosk_member_pin", {
-        p_pin: "1234",
-        p_location_id: "00000000-0000-0000-0000-000000000011",
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith("get_kiosk_library", expect.objectContaining({ p_team_member_id: "tm-1" }));
     });
+    expect(supabase.rpc).not.toHaveBeenCalledWith("validate_kiosk_member_pin", expect.anything());
   });
 
   it("lets staff move past an optional checkbox question in the runner", async () => {
@@ -749,15 +724,6 @@ describe("Kiosk — Grid Screen", () => {
     fireEvent.click(checklistBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "1" }));
-    fireEvent.click(screen.getByRole("button", { name: "2" }));
-    fireEvent.click(screen.getByRole("button", { name: "3" }));
-    fireEvent.click(screen.getByRole("button", { name: "4" }));
-
-    await waitFor(() => {
       expect(screen.getByText("Optional confirm")).toBeInTheDocument();
     });
 
@@ -769,185 +735,6 @@ describe("Kiosk — Grid Screen", () => {
     await waitFor(() => {
       expect(screen.getByText("Required confirm")).toBeInTheDocument();
     });
-  });
-});
-
-// ─── PIN Entry Modal tests ────────────────────────────────────────────────────
-
-describe("Kiosk — PIN Entry Modal", () => {
-  /** Helper: click the first checklist card to open PIN modal. */
-  async function openPinModal() {
-    await renderGridScreen();
-    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
-    if (!checklistBtn) return false;
-    fireEvent.click(checklistBtn);
-    await waitFor(() => {
-      expect(screen.queryByText("Insert PIN")).toBeInTheDocument();
-    });
-    return true;
-  }
-
-  it("PIN modal shows 'Insert PIN' text", async () => {
-    const opened = await openPinModal();
-    if (!opened) return; // skip if no checklists visible at this time
-    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-  });
-
-  it("PIN modal uses unified shell style with no subtitle", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    expect(screen.queryByText(/You're doing great/i)).not.toBeInTheDocument();
-    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-  });
-
-  it("PIN modal shows numpad with digit '1'", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    const btn = screen.getByRole("button", { name: "1" });
-    expect(btn).toBeInTheDocument();
-  });
-
-  it("PIN modal shows numpad with digits 0-9", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    for (const d of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]) {
-      expect(screen.getByRole("button", { name: d })).toBeInTheDocument();
-    }
-  });
-
-  it("PIN modal shows backspace (⌫) button", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    const backspaceBtns = screen.getAllByRole("button", { name: "⌫" });
-    expect(backspaceBtns.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("PIN modal has 'START' button", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    const startBtn = document.getElementById("pin-start-btn");
-    expect(startBtn).not.toBeNull();
-    expect(startBtn?.textContent).toMatch(/START/i);
-  });
-
-  it("tapping numpad digits updates PIN display (dots fill)", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    const btn1 = screen.getByRole("button", { name: "1" });
-    fireEvent.click(btn1);
-    // After one tap, one dot should be filled (has bg-sage class)
-    const dots = document.querySelectorAll(".w-4.h-4.rounded-full");
-    const filledDots = Array.from(dots).filter(d => d.classList.contains("bg-sage"));
-    expect(filledDots.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("backspace button clears last digit from PIN", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    fireEvent.click(screen.getByRole("button", { name: "5" }));
-    fireEvent.click(screen.getByRole("button", { name: "⌫" }));
-    const dots = document.querySelectorAll(".w-4.h-4.rounded-full");
-    const filledDots = Array.from(dots).filter(d => d.classList.contains("bg-sage"));
-    expect(filledDots.length).toBe(0);
-  });
-
-  it("'START' button stays disabled until 4 digits are entered", async () => {
-    const opened = await openPinModal();
-    if (!opened) return;
-    const startBtn = document.getElementById("pin-start-btn") as HTMLButtonElement;
-    expect(startBtn.disabled).toBe(true);
-    expect(screen.getByText("Insert PIN")).toBeInTheDocument();
-  });
-
-  it("entering 4 digits triggers validation — shows error for wrong PIN (no match)", async () => {
-    const { supabase } = await import("@/lib/supabase");
-    supabase.rpc.mockImplementation((fn: string) => {
-      if (fn === "get_kiosk_checklists") {
-        return Promise.resolve({
-          data: [{ id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] }],
-          error: null,
-        });
-      }
-      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
-      // Both admin and staff PIN return no match → should show error
-      return Promise.resolve({ data: [], error: null });
-    });
-
-    const opened = await openPinModal();
-    if (!opened) return;
-    for (const d of ["9", "9", "9", "9"]) {
-      fireEvent.click(screen.getByRole("button", { name: d }));
-    }
-    await waitFor(() => {
-      expect(screen.queryByText(/PIN not recognised/i)).not.toBeNull();
-    }, { timeout: 3000 });
-  });
-
-  it("staff PIN: valid staff PIN opens the runner with staff name", async () => {
-    const { supabase } = await import("@/lib/supabase");
-    supabase.rpc.mockImplementation((fn: string) => {
-      if (fn === "get_kiosk_checklists") {
-        return Promise.resolve({
-          data: [{
-            id: "ck-test-1",
-            title: "Table Setup Check",
-            location_id: "00000000-0000-0000-0000-000000000011",
-            sections: [{ name: "Main", questions: [{ id: "q1", text: "Check done?", responseType: "checkbox", required: false, config: {} }] }],
-          }],
-          error: null,
-        });
-      }
-      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
-      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
-      if (fn === "validate_staff_pin") {
-        return Promise.resolve({
-          data: [{ id: "sp-1", first_name: "Jay", last_name: "Chen", role: "Waiter", organization_id: "org-1" }],
-          error: null,
-        });
-      }
-      return Promise.resolve({ data: [], error: null });
-    });
-
-    const opened = await openPinModal();
-    if (!opened) return;
-
-    for (const d of ["5", "6", "7", "8"]) {
-      fireEvent.click(screen.getByRole("button", { name: d }));
-    }
-
-    await waitFor(() => {
-      // Runner opens — staff name appears in the header (alongside a time string)
-      expect(screen.getByText(/Jay Chen/)).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
-
-  it("staff PIN: RPC error shows connection error message", async () => {
-    const { supabase } = await import("@/lib/supabase");
-    supabase.rpc.mockImplementation((fn: string) => {
-      if (fn === "get_kiosk_checklists") {
-        return Promise.resolve({
-          data: [{ id: "ck-test-1", title: "Table Setup Check", location_id: "00000000-0000-0000-0000-000000000011", sections: [] }],
-          error: null,
-        });
-      }
-      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
-      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
-      if (fn === "validate_staff_pin") {
-        return Promise.resolve({ data: null, error: { message: "network error" } });
-      }
-      return Promise.resolve({ data: [], error: null });
-    });
-
-    const opened = await openPinModal();
-    if (!opened) return;
-
-    for (const d of ["1", "2", "3", "4"]) {
-      fireEvent.click(screen.getByRole("button", { name: d }));
-    }
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Connection error/i)).not.toBeNull();
-    }, { timeout: 3000 });
   });
 });
 
@@ -1009,7 +796,7 @@ describe("Kiosk — Identify Screen", () => {
     }));
   });
 
-  it("shows the same 'not recognised' error as the per-checklist PIN modal for an unknown PIN", async () => {
+  it("shows a 'not recognised' error for an unknown PIN", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {
       if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
@@ -1027,6 +814,53 @@ describe("Kiosk — Identify Screen", () => {
 
     await waitFor(() => {
       expect(screen.getByText("PIN not recognised. Please try again.")).toBeInTheDocument();
+    });
+  });
+
+  it("signs in a legacy staff-profile PIN when no team member matches", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_staff_pin") {
+        return Promise.resolve({
+          data: [{ id: "sp-1", first_name: "Jay", last_name: "Chen", role: "Waiter", organization_id: "org-1" }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+
+    for (const d of ["5", "6", "7", "8"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText("Hi, Jay Chen")).toBeInTheDocument();
+    });
+  });
+
+  it("shows a connection error when the staff PIN check fails", async () => {
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_kiosk_member_pin") return Promise.resolve({ data: [], error: null });
+      if (fn === "validate_staff_pin") return Promise.resolve({ data: null, error: { message: "network error" } });
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    renderWithProviders(<Kiosk />);
+    await waitFor(() => expect(screen.getByText("Who's there?")).toBeInTheDocument());
+
+    for (const d of ["1", "2", "3", "4"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Connection error/i)).not.toBeNull();
     });
   });
 
@@ -1097,35 +931,6 @@ describe("Kiosk — Grid Screen (Grand Ballroom)", () => {
 // ─── Completion Screen ────────────────────────────────────────────────────────
 
 describe("Kiosk — Completion Screen", () => {
-  it("returns to the grid after closing the PIN modal", async () => {
-    mockUseAuth.mockReturnValue({ user: { id: "u1" }, teamMember: { organization_id: "org-1" }, session: null, loading: false, signOut: vi.fn() });
-    localStorage.setItem("kiosk_location_id", "00000000-0000-0000-0000-000000000011");
-    localStorage.setItem("kiosk_location_name", "Terrace");
-    localStorage.setItem("kiosk_owner_user_id", "u1");
-    localStorage.setItem("kiosk_owner_org_id", "org-1");
-    // Store a test kiosk_token so verify_kiosk_token RPC check passes (SEQ-009).
-    localStorage.setItem("kiosk_token", "test-kiosk-token-uuid");
-    renderWithProviders(<Kiosk />);
-    await screen.findByTestId("kiosk-tab-due");
-
-    // Open PIN modal
-    const checklistBtn = document.querySelector("[id^='checklist-card-']") as HTMLButtonElement;
-    if (!checklistBtn) {
-      expect(true).toBe(true);
-      return;
-    }
-    fireEvent.click(checklistBtn);
-    await waitFor(() => expect(screen.getByText("Insert PIN")).toBeInTheDocument());
-
-    const closeBtn = screen.getByRole("button", { name: /close/i });
-    fireEvent.click(closeBtn);
-    await waitFor(() => {
-      expect(screen.queryByText("Insert PIN")).not.toBeInTheDocument();
-    });
-    // Back on grid screen
-    expect(screen.getByTestId("kiosk-tab-due")).toBeInTheDocument();
-  });
-
   it("renders in Spanish when the active language is es", async () => {
     await i18n.changeLanguage("es");
     try {

@@ -20,7 +20,7 @@ import {
   isVisibleAtTime,
   dbToKioskChecklist,
 } from "./kiosk/utils";
-import { AdminLoginModal, PinEntryModal, IdentifyModal, LibraryPinModal, ensureKioskToken, touchKioskDevice } from "./kiosk/PinEntryModal";
+import { AdminLoginModal, IdentifyModal, LibraryPinModal, ensureKioskToken, touchKioskDevice } from "./kiosk/PinEntryModal";
 import { grantKioskStaffSession, readKioskStaffSession, clearKioskStaffSession, type KioskStaffSession } from "@/lib/kiosk-staff-session";
 import { clearKioskDeviceState } from "@/lib/kiosk-guard";
 import { clearKioskAdminSession, hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
@@ -324,9 +324,9 @@ export default function Kiosk() {
   const [checklistsLoading, setChecklistsLoading] = useState(false);
   const [checklistsError, setChecklistsError] = useState<string | null>(null);
 
-  // Who's currently browsing the grid (#780) — filters which checklists show,
-  // separate from the per-checklist PIN in PinEntryModal (attribution,
-  // unchanged). null means "not identified yet", gated below the setup screen.
+  // Who's signed in at the grid (#780) — filters which checklists show and,
+  // since #869, is who checklists/Library are opened as (no second PIN).
+  // null means "not identified yet", gated below the setup screen.
   const [staffIdentity, setStaffIdentity] = useState<KioskStaffSession | null>(() => readKioskStaffSession());
 
   // The identify-PIN grant above has no expiry of its own beyond a generous
@@ -490,8 +490,18 @@ export default function Kiosk() {
     setScreen("runner");
   };
 
+  // Whoever signed in on the identify screen is who runs the checklist or
+  // opens the Library (#869) — one PIN per kiosk session, not one per tap.
+  // Both are only reachable from the grid, which requires staffIdentity.
   const handleChecklistSelect = (checklist: KioskChecklist) => {
+    if (!staffIdentity) return;
     setSelectedChecklist(checklist);
+    handleStart(staffIdentity.staffId, staffIdentity.staffName, staffIdentity.organizationId);
+  };
+
+  const handleGridLibraryClick = () => {
+    if (!staffIdentity) return;
+    handleLibraryPinSuccess(staffIdentity.memberId ?? null, staffIdentity.staffName, staffIdentity.organizationId);
   };
 
   const handleAdminButtonClick = () => {
@@ -756,7 +766,7 @@ export default function Kiosk() {
           <LanguageSwitcher variant="pill" value={kioskLanguage} onChange={handleKioskLanguageChange} />
           <button
             id="library-btn"
-            onClick={() => setShowLibraryPin(true)}
+            onClick={handleGridLibraryClick}
             className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
           >
             {t("grid.library")}
@@ -1001,15 +1011,6 @@ export default function Kiosk() {
         </div>
       )}
 
-      {/* PinEntryModal (Screen 2) */}
-      {selectedChecklist && screen === "grid" && (
-        <PinEntryModal
-          checklist={selectedChecklist}
-          locationId={locationId}
-          onSuccess={handleStart}
-          onCancel={() => setSelectedChecklist(null)}
-        />
-      )}
 
       {/* AdminLoginModal */}
       {showAdminLogin && <AdminLoginModal onClose={() => setShowAdminLogin(false)} kioskLocationId={locationId} />}

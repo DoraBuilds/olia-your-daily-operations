@@ -5,14 +5,10 @@
  *
  * Covered:
  *
- * A. Kiosk PIN flow (no real Supabase calls — all routes mocked)
+ * A. Kiosk checklist flow (no real Supabase calls — all routes mocked)
  *    1. Checklist grid loads and shows a checklist card
- *    2. Clicking a checklist card opens the PIN entry modal
- *    3. PIN modal shows "Insert PIN" heading
- *    4. PIN modal shows a numeric numpad (digits 1–9 + 0)
- *    5. Tapping digits advances the pin-dot indicator
- *    6. Backspace removes the last digit
- *    7. Closing the modal (X button) returns to the grid
+ *    2. Tapping a checklist opens it straight away — the identify PIN is the
+ *       only PIN in a kiosk session, no second per-checklist PIN (#869)
  *
  * B. Manager login flow (Admin login modal)
  *    1. Admin button is visible on the kiosk grid
@@ -75,6 +71,11 @@ async function gotoGrid(page: import("@playwright/test").Page) {
     ({ id, name }) => {
       localStorage.setItem("kiosk_location_id",  id);
       localStorage.setItem("kiosk_location_name", name);
+      // Already signed in on the identify screen (#780).
+      sessionStorage.setItem("kiosk_staff_session", JSON.stringify({
+        staffId: null, memberId: "tm-e2e", staffName: "E2E Staff", organizationId: "org-e2e",
+        departmentIds: [], expiresAt: Date.now() + 30 * 60 * 1000,
+      }));
     },
     { id: LOCATION_ID, name: LOCATION_NAME },
   );
@@ -82,102 +83,20 @@ async function gotoGrid(page: import("@playwright/test").Page) {
   await page.goto("/kiosk");
 }
 
-// ─── A. Kiosk PIN flow ────────────────────────────────────────────────────────
+// ─── A. Kiosk checklist flow───────────────────────────────────────────────────────
 
-test.describe("Kiosk — PIN entry flow", () => {
+test.describe("Kiosk — checklist flow", () => {
   test("checklist grid loads and shows mock checklist cards", async ({ page }) => {
     await gotoGrid(page);
     await expect(page.getByText("Opening Checklist")).toBeVisible();
     await expect(page.getByText("Closing Checklist")).toBeVisible();
   });
 
-  test("clicking a checklist card opens the PIN entry modal", async ({ page }) => {
+  test("tapping a checklist opens it without a second PIN", async ({ page }) => {
     await gotoGrid(page);
     // Each checklist card has id="checklist-card-{id}"
     await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-  });
-
-  test("PIN modal shows the 'Insert PIN' heading in italic serif", async ({ page }) => {
-    await gotoGrid(page);
-    await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    const heading = page.locator("h2", { hasText: "Insert PIN" });
-    await expect(heading).toBeVisible();
-  });
-
-  test("PIN modal shows a numeric numpad with digit buttons", async ({ page }) => {
-    await gotoGrid(page);
-    await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-
-    // Numpad renders digit buttons 1–9 plus 0.
-    // Each digit is a <button> containing just that number.
-    for (const digit of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]) {
-      await expect(
-        page.locator("button", { hasText: new RegExp(`^${digit}$`) }).first(),
-      ).toBeVisible();
-    }
-  });
-
-  test("tapping digits updates the PIN indicator (START button becomes active after 4 digits)", async ({ page }) => {
-    await gotoGrid(page);
-    await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-
-    // START is disabled before any digits
-    const startBtn = page.locator("#pin-start-btn");
-    await expect(startBtn).toBeDisabled();
-
-    // Enter 4 digits — auto-validates after the 4th, so just click 3 to keep
-    // the button visible and in an enabled state without triggering validation.
-    await page.locator("button", { hasText: /^1$/ }).first().click();
-    await page.locator("button", { hasText: /^2$/ }).first().click();
-    await page.locator("button", { hasText: /^3$/ }).first().click();
-    // START is still disabled until 4 digits
-    await expect(startBtn).toBeDisabled();
-
-    // 4th digit — button becomes enabled (briefly, before auto-validation fires)
-    await page.locator("button", { hasText: /^4$/ }).first().click();
-    // After 4 digits the modal auto-validates (mocked to return invalid).
-    // The modal stays open with an error rather than navigating away.
-    // Confirm we remain on the PIN screen.
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-  });
-
-  test("backspace button removes the last digit", async ({ page }) => {
-    await gotoGrid(page);
-    await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-
-    // Enter 2 digits
-    await page.locator("button", { hasText: /^1$/ }).first().click();
-    await page.locator("button", { hasText: /^2$/ }).first().click();
-
-    // The backspace button contains the lucide Delete icon (aria-label or ⌫ symbol).
-    // In the Kiosk source it is rendered as the last button in the numpad grid.
-    const backspaceBtn = page.locator("button[aria-label='Backspace']");
-    if (await backspaceBtn.count() > 0) {
-      await backspaceBtn.click();
-    } else {
-      // Fall back: last button in the numpad container
-      const numpadButtons = page.locator(
-        "div.grid button, div[class*='grid'] button",
-      );
-      await numpadButtons.last().click();
-    }
-    // Modal stays open — PIN entry is still active
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-  });
-
-  test("closing the PIN modal (X button) returns to the grid", async ({ page }) => {
-    await gotoGrid(page);
-    await page.locator(`#checklist-card-${MOCK_CHECKLISTS[0].id}`).click();
-    await expect(page.getByText("Insert PIN")).toBeVisible();
-
-    // Close button has aria-label="Close"
-    await page.getByRole("button", { name: "Close" }).click();
-    // Grid is visible again
-    await expect(page.getByText(/what's on the agenda/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /complete checklist/i })).toBeVisible();
     await expect(page.getByText("Insert PIN")).not.toBeVisible();
   });
 });

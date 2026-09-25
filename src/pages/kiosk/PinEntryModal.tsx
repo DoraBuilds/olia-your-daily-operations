@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { kioskAdminLogin } from "@/lib/kiosk-pairing";
 import { captureEvent } from "@/lib/posthog";
-import type { KioskChecklist } from "./types";
 import { useInactivityTimer } from "./hooks";
 
 // Re-exported so Kiosk.tsx's existing import site doesn't need to change —
@@ -292,13 +291,15 @@ export function NumberPad({
 
 // ─── Shared kiosk PIN identity check ───────────────────────────────────────────
 // Tries a team member PIN (org-wide, any device physically at the location),
-// then falls back to a legacy staff_profiles PIN. Shared by PinEntryModal
-// (identifies who's completing ONE checklist — attribution, unchanged) and
-// IdentifyModal (identifies who's browsing the grid — visibility filtering
-// only, see kiosk-staff-session.ts). Both hand this the location and get back
+// then falls back to a legacy staff_profiles PIN. Used by IdentifyModal (the
+// kiosk sign-in — see kiosk-staff-session.ts), which hands this the location
+// and gets back the hand this the location and get back
 // the same lockout/attempts/error state machine.
 export interface KioskIdentity {
   staffId: string | null;
+  // team_members.id for a team-member PIN (null for a legacy staff PIN) —
+  // lets the grid open the Library for this person without a second PIN.
+  memberId?: string | null;
   staffName: string;
   organizationId: string;
   departmentIds: string[];
@@ -364,6 +365,7 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
       captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false });
       onSuccess({
         staffId: null,
+        memberId: member.id,
         staffName: member.name,
         organizationId: member.organization_id ?? "",
         departmentIds: member.department_ids ?? [],
@@ -395,6 +397,7 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
       captureEvent("kiosk_pin_unlocked", { location_id: locationId, is_library_pin: false, staff_profile_id: staff.id });
       onSuccess({
         staffId: staff.id,
+        memberId: null,
         staffName: `${staff.first_name} ${staff.last_name}`.trim(),
         organizationId: staff.organization_id ?? "",
         // Legacy staff_profiles has no department concept — unrestricted.
@@ -442,46 +445,10 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
   return { pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate };
 }
 
-// ─── PinEntryModal (Screen 2) ─────────────────────────────────────────────────
-export function PinEntryModal({
-  checklist, locationId, onSuccess, onCancel,
-}: {
-  checklist: KioskChecklist;
-  locationId: string;
-  onSuccess: (staffId: string | null, staffName: string, orgId: string) => void;
-  onCancel: () => void;
-}) {
-  const { t } = useTranslation("kiosk");
-  const { secondsLeft, cancelCountdown } = useInactivityTimer(true, onCancel);
-  const {
-    pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate,
-  } = useKioskPinValidator(locationId, identity => onSuccess(identity.staffId, identity.staffName, identity.organizationId));
-
-  return (
-    <KioskPinShell
-      title={t("pin.insertTitle")}
-      onClose={onCancel}
-      pin={pin}
-      error={error}
-      validating={validating}
-      lockedUntil={lockedUntil}
-      lockSecondsLeft={lockSecondsLeft}
-      onDigit={handleDigit}
-      onBackspace={handleBackspace}
-      ctaLabel={t("pin.startButton")}
-      ctaId="pin-start-btn"
-      ctaDisabled={!canStart}
-      onCta={() => canStart && validate(pin)}
-      secondsLeft={secondsLeft}
-      onCancelCountdown={cancelCountdown}
-    />
-  );
-}
-
 // ─── IdentifyModal (Screen 0) ───────────────────────────────────────────────────
-// Shown before the grid on every kiosk boot (#780). Identifies who's about to
-// browse so the grid can filter to their department(s) — NOT an attribution
-// step (PinEntryModal above still runs per-checklist, unchanged). No idle
+// Shown before the grid on every kiosk boot (#780). Signs in who's about to
+// use the kiosk: the grid filters to their department(s) and checklists they
+// open are attributed to them without another PIN (#869). No idle
 // timer: unlike PinEntryModal there's no other screen to fall back to.
 export function IdentifyModal({
   locationId, onSuccess, onAdminClick, onLibraryClick,
