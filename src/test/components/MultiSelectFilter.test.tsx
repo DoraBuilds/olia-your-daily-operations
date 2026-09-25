@@ -112,7 +112,7 @@ describe("MultiSelectFilter", () => {
   });
 
   describe("pick mode (#877)", () => {
-    const pickProps = { mode: "pick" as const, noneLabel: "None picked", deselectAllLabel: "Deselect all" };
+    const pickProps = { mode: "pick" as const, noneLabel: "None picked", selectAllLabel: "Select all", deselectAllLabel: "Deselect all" };
 
     it("shows noneLabel when nothing is picked and allLabel when everything is", () => {
       renderFilter({ ...pickProps });
@@ -123,7 +123,9 @@ describe("MultiSelectFilter", () => {
       renderFilter({ ...pickProps, selected: ["a", "b", "c"] });
       expect(screen.getByTestId("test-filter-trigger")).toHaveTextContent("All items");
       fireEvent.click(screen.getByTestId("test-filter-trigger"));
-      expect(screen.getByTestId("test-filter-option-all")).toHaveClass("bg-sage-light");
+      const allRow = screen.getByTestId("test-filter-option-all");
+      expect(allRow).toHaveTextContent("Select all");
+      expect(allRow.querySelector("svg")).not.toBeNull();
     });
 
     it("All ticks every option", () => {
@@ -146,5 +148,13 @@ describe("MultiSelectFilter", () => {
       fireEvent.click(screen.getByTestId("test-filter-deselect-all"));
       expect(onChange).toHaveBeenCalledWith([]);
     });
+  });
+
+  it("marks selected rows with a tick only — no highlighted row background (#887)", () => {
+    renderFilter({ selected: ["a"] });
+    fireEvent.click(screen.getByTestId("test-filter-trigger"));
+    const row = screen.getByTestId("test-filter-option-a");
+    expect(row.querySelector("svg")).not.toBeNull();
+    expect(row).not.toHaveClass("bg-sage-light");
   });
 });
