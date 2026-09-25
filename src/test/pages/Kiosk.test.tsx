@@ -1680,6 +1680,31 @@ describe("Kiosk — Checklist Runner", () => {
 
     invalidateSpy.mockRestore();
   });
+
+  it("saves logic-rule follow-up answers (e.g. a required note) in the submitted log", async () => {
+    await openRunnerWithQuestions([
+      {
+        id: "q-temp",
+        text: "Fridge OK?",
+        responseType: "checkbox",
+        required: true,
+        config: {
+          logicRules: [{ id: "lr-1", comparator: "is", value: "Yes", triggers: [{ type: "require_note" }] }],
+        },
+      },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(screen.getByText(/note required/i)).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "Door was ajar" } });
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
+
+    await waitFor(() => expect(mockSubmitKioskLog).toHaveBeenCalled());
+    const answers = mockSubmitKioskLog.mock.calls.at(-1)[0].p_answers;
+    expect(answers.map((a: { label: string }) => a.label)).toEqual(["Fridge OK?", "Note required: Fridge OK?"]);
+    expect(answers[1]).toMatchObject({ type: "text", answer: "Door was ajar" });
+  });
 });
 
 describe("Kiosk — survives a transient locations-fetch error", () => {
