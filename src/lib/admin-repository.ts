@@ -125,7 +125,11 @@ export interface StaffProfile {
 
 export interface TeamMember {
   id: string;
+  /** Full display name — kept in sync with first_name/last_name by a DB trigger. */
   name: string;
+  first_name?: string | null;
+  /** Optional. */
+  last_name?: string | null;
   email: string | null;
   /** Free-text job title (e.g. "Head Chef") — not a permission tier. See is_owner/is_manager. */
   role: string;

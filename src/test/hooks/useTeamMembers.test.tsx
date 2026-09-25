@@ -150,6 +150,33 @@ describe("useSaveTeamMember", () => {
     );
   });
 
+  it("sends first and last name alongside the full name, blank last name as null", async () => {
+    const select = vi.fn().mockResolvedValue({ data: [{ id: "tm-2" }], error: null });
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ select }) });
+    mockFrom.mockReturnValue({ update });
+
+    const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({ id: "tm-2", name: "Dora", first_name: "Dora", last_name: "" } as any);
+    });
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ name: "Dora", first_name: "Dora", last_name: null }));
+  });
+
+  it("leaves first/last name to the DB when the caller only has a full name", async () => {
+    const select = vi.fn().mockResolvedValue({ data: [{ id: "tm-2" }], error: null });
+    const update = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ select }) });
+    mockFrom.mockReturnValue({ update });
+
+    const { result } = renderHook(() => useSaveTeamMember(), { wrapper: makeWrapper() });
+    await act(async () => {
+      await result.current.mutateAsync({ id: "tm-2", name: "Dora Angelov" } as any);
+    });
+
+    expect(update.mock.calls[0][0]).not.toHaveProperty("first_name");
+    expect(update.mock.calls[0][0]).not.toHaveProperty("last_name");
+  });
+
   it("never marks a newly created member's PIN as needing a reset — is_owner is never settable through this flow", async () => {
     const insertSingle = vi.fn().mockResolvedValue({ data: { id: "new-uuid" }, error: null });
     const insertSelect = vi.fn().mockReturnValue({ single: insertSingle });

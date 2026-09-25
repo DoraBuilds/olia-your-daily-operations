@@ -242,8 +242,10 @@
     "teamMember": {
       "editTitle": "Editar miembro del equipo",
       "addTitle": "Agregar miembro del equipo",
-      "fullName": "Nombre completo",
-      "fullNamePlaceholder": "p. ej. Marc Devaux",
+      "firstName": "Nombre",
+      "firstNamePlaceholder": "p. ej. Marc",
+      "lastNameOptional": "Apellido (opcional)",
+      "lastNamePlaceholder": "p. ej. Devaux",
       "emailRequired": "Correo (requerido para acceso de gerente)",
       "emailOptional": "Correo (opcional)",
       "emailPlaceholder": "p. ej. marc@example.com",

@@ -75,6 +75,55 @@ describe("TeamMemberModal", () => {
     expect(pinInput.value).toMatch(/^\d{4}$/);
   });
 
+  it("shows first and last name side by side and saves them with the joined full name", () => {
+    const onSave = vi.fn();
+    renderModal({ onSave });
+    const first = screen.getByPlaceholderText("e.g. Marc");
+    const last = screen.getByPlaceholderText("e.g. Devaux");
+    expect(first.closest(".grid")).toBe(last.closest(".grid"));
+
+    fireEvent.change(first, { target: { value: " Dora " } });
+    fireEvent.change(last, { target: { value: "Angelov" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Dora Angelov", first_name: "Dora", last_name: "Angelov", initials: "DA",
+    }));
+  });
+
+  it("lets the last name be left blank but requires a first name", () => {
+    const onSave = vi.fn();
+    renderModal({ onSave });
+    expect(screen.getByText("Last name (optional)")).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Add team member" });
+    fireEvent.change(screen.getByPlaceholderText("e.g. Devaux"), { target: { value: "Angelov" } });
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText("e.g. Devaux"), { target: { value: "" } });
+    fireEvent.change(screen.getByPlaceholderText("e.g. Marc"), { target: { value: "Dora" } });
+    fireEvent.click(save);
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "Dora", first_name: "Dora", last_name: null }));
+  });
+
+  it("prefills an existing member's first and last name", () => {
+    const member = {
+      id: "tm-9", name: "Mary Ann Lee", first_name: "Mary Ann", last_name: "Lee", email: null, role: "",
+      is_owner: false, is_manager: false, location_ids: [], department_ids: [], initials: "ML", permissions: {},
+    } as unknown as Parameters<typeof TeamMemberModal>[0]["member"];
+    renderModal({ member });
+    expect(screen.getByPlaceholderText("e.g. Marc")).toHaveValue("Mary Ann");
+    expect(screen.getByPlaceholderText("e.g. Devaux")).toHaveValue("Lee");
+  });
+
+  it("splits the full name when a member has no first name stored yet", () => {
+    const member = {
+      id: "tm-9", name: "Jay van Dijk", email: null, role: "",
+      is_owner: false, is_manager: false, location_ids: [], department_ids: [], initials: "JV", permissions: {},
+    } as unknown as Parameters<typeof TeamMemberModal>[0]["member"];
+    renderModal({ member });
+    expect(screen.getByPlaceholderText("e.g. Marc")).toHaveValue("Jay");
+    expect(screen.getByPlaceholderText("e.g. Devaux")).toHaveValue("van Dijk");
+  });
+
   it("only shows the permissions list once manager role is enabled", () => {
     renderModal();
     expect(screen.queryByText("Permissions")).not.toBeInTheDocument();
@@ -149,7 +198,7 @@ describe("TeamMemberModal", () => {
       pick("departments", "d2");
       expect(trigger("departments")).toHaveTextContent("All departments");
 
-      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: "Ana" } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc"), { target: { value: "Ana" } });
       fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ department_ids: ["d1", "d2"] }));
     });
@@ -191,7 +240,7 @@ describe("TeamMemberModal", () => {
     ] as Parameters<typeof TeamMemberModal>[0]["locations"];
 
     const saveAs = (name: string) => {
-      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: name } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc"), { target: { value: name } });
       fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
     };
 
@@ -241,7 +290,7 @@ describe("TeamMemberModal", () => {
       expect(trigger("concepts")).toHaveTextContent("Select concepts");
       expect(trigger("locations")).toHaveTextContent("Select at least one location");
 
-      fireEvent.change(screen.getByPlaceholderText("e.g. Marc Devaux"), { target: { value: "Ana" } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. Marc"), { target: { value: "Ana" } });
       expect(screen.getByRole("button", { name: "Add team member" })).toBeDisabled();
     });
   });

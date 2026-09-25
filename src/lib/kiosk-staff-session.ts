@@ -12,13 +12,15 @@ export interface KioskStaffSession {
   staffId: string | null;
   memberId?: string | null;
   staffName: string;
+  /** For the grid greeting; missing on sessions granted before it existed. */
+  firstName?: string;
   organizationId: string;
   departmentIds: string[];
   expiresAt: number;
 }
 
 export function grantKioskStaffSession(
-  session: { staffId: string | null; memberId?: string | null; staffName: string; organizationId: string; departmentIds: string[] },
+  session: { staffId: string | null; memberId?: string | null; staffName: string; firstName?: string; organizationId: string; departmentIds: string[] },
   ttlMs = DEFAULT_TTL_MS,
 ): void {
   const stored: KioskStaffSession = { ...session, expiresAt: Date.now() + ttlMs };

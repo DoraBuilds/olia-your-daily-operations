@@ -670,12 +670,13 @@ describe("Admin page", () => {
     });
   });
 
-  it("team member form has Full name, Email, Role, and Kiosk PIN fields", async () => {
+  it("team member form has First name, Last name, Email, Role, and Kiosk PIN fields", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
     await waitFor(() => expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
     await waitFor(() => {
-      expect(screen.getAllByText("Full name").length).toBeGreaterThan(0);
+      expect(screen.getByText("First name")).toBeInTheDocument();
+      expect(screen.getByText("Last name (optional)")).toBeInTheDocument();
       expect(screen.getByText("Email (optional)")).toBeInTheDocument();
       expect(screen.getAllByText("Role").length).toBeGreaterThan(0);
       expect(screen.getByText("Kiosk PIN")).toBeInTheDocument();

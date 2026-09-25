@@ -199,7 +199,15 @@ export function TeamMemberModal({
   initialLocationIds?: string[];
 }) {
   const { t } = useTranslation("admin");
-  const [name, setName] = useState(member?.name ?? "");
+  // Members saved before the split have first_name backfilled by the DB;
+  // fall back to splitting `name` just in case.
+  const [firstName, setFirstName] = useState(
+    () => member?.first_name ?? member?.name?.trim().split(/\s+/)[0] ?? "",
+  );
+  const [lastName, setLastName] = useState(
+    () => member?.last_name ?? (member?.first_name ? "" : member?.name?.trim().split(/\s+/).slice(1).join(" ")) ?? "",
+  );
+  const name = `${firstName.trim()} ${lastName.trim()}`.trim();
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState(member?.role ?? "");
   // Stored empty location_ids means "every location in the company", so it
@@ -284,7 +292,7 @@ export function TeamMemberModal({
     }
   };
 
-  const canSave = name.trim().length > 0
+  const canSave = firstName.trim().length > 0
     && (member?.id || pin.trim().length > 0)
     && (!isManager || email.trim().length > 0)
     && (locations.length === 0 || pickedLocationIds.length > 0);
@@ -294,7 +302,9 @@ export function TeamMemberModal({
     if (!canSave) return;
     onSave({
       id: member?.id ?? "",
-      name: name.trim(),
+      name,
+      first_name: firstName.trim(),
+      last_name: lastName.trim() || null,
       email: email.trim() || null,
       role: role.trim(),
       location_ids: savedLocationIds,
@@ -317,13 +327,22 @@ export function TeamMemberModal({
     <BottomSheet onClose={onClose}>
       <ModalHeader title={member ? t("sharedUI.teamMember.editTitle") : t("sharedUI.teamMember.addTitle")} onClose={onClose} />
       <form onSubmit={handleSave} className="space-y-3">
-        <FormField label={t("sharedUI.teamMember.fullName")}>
-          <input
-            autoFocus type="text" value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder={t("sharedUI.teamMember.fullNamePlaceholder")} className={inputCls}
-          />
-        </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label={t("sharedUI.teamMember.firstName")}>
+            <input
+              autoFocus type="text" value={firstName}
+              onChange={e => setFirstName(e.target.value)}
+              placeholder={t("sharedUI.teamMember.firstNamePlaceholder")} className={inputCls}
+            />
+          </FormField>
+          <FormField label={t("sharedUI.teamMember.lastNameOptional")}>
+            <input
+              type="text" value={lastName}
+              onChange={e => setLastName(e.target.value)}
+              placeholder={t("sharedUI.teamMember.lastNamePlaceholder")} className={inputCls}
+            />
+          </FormField>
+        </div>
         <FormField label={isManager ? t("sharedUI.teamMember.emailRequired") : t("sharedUI.teamMember.emailOptional")}>
           <input
             type="email" value={email}
