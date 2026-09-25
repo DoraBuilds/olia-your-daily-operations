@@ -106,7 +106,7 @@ export function FilterField({ label, className, children }: { label: string; cla
 
 /** MultiSelectFilter preconfigured with the shared summary/search/no-match copy. */
 export function FilterMultiSelect({
-  testId, icon, options, selected, onChange, allLabel, noOptionsLabel,
+  testId, icon, options, selected, onChange, allLabel, noOptionsLabel, contentClassName,
 }: {
   testId: string;
   icon: ReactNode;
@@ -115,10 +115,12 @@ export function FilterMultiSelect({
   onChange: (ids: string[]) => void;
   allLabel: string;
   noOptionsLabel?: string;
+  contentClassName?: string;
 }) {
   const { t } = useTranslation("common");
   return (
     <MultiSelectFilter
+      contentClassName={contentClassName}
       testId={testId}
       icon={icon}
       options={options}

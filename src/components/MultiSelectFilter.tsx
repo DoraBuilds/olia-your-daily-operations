@@ -22,12 +22,14 @@ interface MultiSelectFilterProps {
   noOptionsLabel: string;
   disabled?: boolean;
   testId: string;
+  /** Extra classes for the dropdown panel, e.g. to match the trigger's width. */
+  contentClassName?: string;
 }
 
 /** Compact popover-based multi-select (checkbox list + "All" option), replacing long native <select> dropdowns in filter toolbars. */
 export function MultiSelectFilter({
   icon, options, selected, onChange, allLabel, renderSelectedSummary,
-  searchPlaceholder, noMatchLabel, noOptionsLabel, disabled, testId,
+  searchPlaceholder, noMatchLabel, noOptionsLabel, disabled, testId, contentClassName,
 }: MultiSelectFilterProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,7 +70,7 @@ export function MultiSelectFilter({
           <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0 z-[60]" align="start">
+      <PopoverContent className={cn("w-72 p-0 z-[60]", contentClassName)} align="start">
         {options.length > 6 && (
           <div className="relative border-b border-border">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

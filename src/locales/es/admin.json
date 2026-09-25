@@ -267,7 +267,16 @@
       "permissions": "Permisos",
       "inviteNotice": "Se enviará un correo de invitación a esta dirección para que el miembro del equipo pueda iniciar sesión en la app de administración de Olia.",
       "saveChanges": "Guardar cambios",
-      "addTeamMember": "Agregar miembro del equipo"
+      "addTeamMember": "Agregar miembro del equipo",
+      "concepts": "Concepto(s)",
+      "noLocationsInConcept": "Aún no hay locales en los conceptos elegidos.",
+      "roleOptional": "Rol (opcional)",
+      "newPinHint": "Compártelo para que inicie sesión en el kiosco.",
+      "editPinHint": "Déjalo en blanco para mantener el PIN actual.",
+      "allConcepts": "Todos los conceptos",
+      "allLocations": "Todos los locales",
+      "allLocationsInConcepts": "Todos los locales de los conceptos elegidos",
+      "noDepartmentSelected": "Sin departamento"
     },
     "concept": {
       "editTitle": "Editar concepto",
