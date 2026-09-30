@@ -89,6 +89,8 @@ vi.mock("@/hooks/usePlan", () => ({
   }),
 }));
 
+const listState = vi.hoisted(() => ({ loading: false }));
+
 vi.mock("@/hooks/useChecklists", () => {
   // Use stable references — a fresh [] on every call causes useEffect([dbFolders])
   // to fire infinitely, hanging the test runner inside act().
@@ -105,8 +107,8 @@ vi.mock("@/hooks/useChecklists", () => {
     created_at: "2026-01-02", updated_at: "2026-01-02",
   }];
   return {
-    useFolders: () => ({ data: FOLDERS, isLoading: false }),
-    useChecklists: () => ({ data: CHECKLISTS, isLoading: false }),
+    useFolders: () => (listState.loading ? { data: undefined, isLoading: true } : { data: FOLDERS, isLoading: false }),
+    useChecklists: () => (listState.loading ? { data: undefined, isLoading: true } : { data: CHECKLISTS, isLoading: false }),
     useSaveFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteFolder: () => ({ mutate: vi.fn() }),
     useReorderFolders: () => ({ mutate: vi.fn() }),
@@ -127,6 +129,19 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("ChecklistsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listState.loading = false;
+  });
+
+  it("shows a skeleton, not the empty state, while the lists are loading", () => {
+    listState.loading = true;
+    const { rerender } = render(<ChecklistsTab />, { wrapper });
+    expect(screen.getByTestId("checklists-loading")).toBeInTheDocument();
+    expect(screen.queryByText(/No checklists yet/i)).not.toBeInTheDocument();
+
+    listState.loading = false;
+    rerender(<ChecklistsTab />);
+    expect(screen.queryByTestId("checklists-loading")).not.toBeInTheDocument();
+    expect(screen.getByText("Daily Operations")).toBeInTheDocument();
   });
 
   it("renders without crashing", () => {

@@ -158,6 +158,32 @@ describe("AuthContext", () => {
     expect(result.current.teamMember).toBeNull();
   });
 
+  it("keeps the cache and the loaded profile when SIGNED_IN re-fires for the same user (tab refocus)", async () => {
+    teamMemberRow = { id: "user-1", organization_id: "org-1", name: "Sarah", email: null, role: "Owner", location_ids: [], permissions: {} };
+    mockTeamMemberSingle.mockImplementation(() => Promise.resolve({ data: teamMemberRow, error: null }));
+    const session = { user: { id: "user-1", user_metadata: {} } };
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => { authStateCallback?.("SIGNED_IN", session); });
+    await waitFor(() => expect(result.current.teamMember?.organization_id).toBe("org-1"));
+    const clearsAfterLogin = mockQueryClientClear.mock.calls.length;
+    const lookupsAfterLogin = mockTeamMemberSingle.mock.calls.length;
+
+    // Supabase announces the same session again when the tab regains focus.
+    await act(async () => { authStateCallback?.("SIGNED_IN", session); });
+
+    expect(mockQueryClientClear).toHaveBeenCalledTimes(clearsAfterLogin);
+    expect(mockTeamMemberSingle).toHaveBeenCalledTimes(lookupsAfterLogin);
+    expect(result.current.loading).toBe(false);
+
+    // A different account signing in is still a fresh login.
+    await act(async () => { authStateCallback?.("SIGNED_IN", { user: { id: "user-2", user_metadata: {} } }); });
+    expect(mockQueryClientClear).toHaveBeenCalledTimes(clearsAfterLogin + 1);
+    expect(mockTeamMemberSingle.mock.calls.length).toBeGreaterThan(lookupsAfterLogin);
+  });
+
   it("fails closed when onboarding data is missing instead of creating an org from fallback data", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 
