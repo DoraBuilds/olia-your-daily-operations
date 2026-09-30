@@ -935,9 +935,11 @@ export function ChecklistBuilderModal({
                       <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
                     )}
                     <span className="text-xs text-muted-foreground mt-2.5 shrink-0">{t("builder.question.label", { n: qi + 1 })}</span>
-                    <input type="text" placeholder={q.responseType === "instruction" ? t("builder.question.instructionTitlePlaceholder") : t("builder.question.textPlaceholder")} value={q.text}
-                      onChange={e => updateQuestion(si, qi, { text: e.target.value })}
-                      className="flex-1 border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
+                    <textarea rows={1} placeholder={q.responseType === "instruction" ? t("builder.question.instructionTitlePlaceholder") : t("builder.question.textPlaceholder")} value={q.text}
+                      ref={el => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+                      onChange={e => updateQuestion(si, qi, { text: e.target.value.replace(/\n/g, " ") })}
+                      onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }}
+                      className="flex-1 min-w-0 resize-none overflow-hidden border border-border rounded-xl px-3 py-2 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
                     <button onClick={() => removeQuestion(si, qi)} className="p-1 mt-1 text-muted-foreground hover:text-status-error transition-colors">
                       <X size={14} />
                     </button>
