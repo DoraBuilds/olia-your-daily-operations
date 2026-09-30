@@ -597,10 +597,40 @@ export function ChecklistBuilderModal({
     <>
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
       <div className="p-5 space-y-5">
+        {/* Page-mode action bar — sticks to the top of the scroll area so Publish
+            never floats over the form controls underneath it */}
         {asPage && (
-          <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft size={16} /> {t("builder.exit")}
-          </button>
+          <div
+            data-testid="builder-action-bar"
+            className="sticky top-0 z-30 -mx-5 -mt-5 flex items-center justify-between gap-3 bg-background px-5 py-3"
+          >
+            <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft size={16} /> {t("builder.exit")}
+            </button>
+            <div className={cn(
+              "flex flex-row items-center gap-2 transition-all duration-150",
+              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+            )}>
+              {lastPublishedAt && (
+                <span className="text-[10px] text-muted-foreground px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
+                  {t("builder.footer.savedAt", { time: format(lastPublishedAt, "h:mm a") })}
+                </span>
+              )}
+              <button
+                data-testid="checklist-save-button"
+                disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+                onClick={handleCreate}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+                  !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
+                    ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                {primaryActionLabel}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Kiosk visibility (Draft/Live) */}
@@ -1524,32 +1554,6 @@ export function ChecklistBuilderModal({
         </div>
         {subModals}
         {discardConfirmDialog}
-        {createPortal(
-          <div className={cn(
-            "fixed top-20 right-4 z-30 flex flex-row items-center gap-2 transition-all duration-150",
-            footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
-          )}>
-            {lastPublishedAt && (
-              <span className="text-[10px] text-muted-foreground bg-card/90 backdrop-blur-sm px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
-                {t("builder.footer.savedAt", { time: format(lastPublishedAt, "h:mm a") })}
-              </span>
-            )}
-            <button
-              data-testid="checklist-save-button"
-              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-              onClick={handleCreate}
-              className={cn(
-                "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
-                !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              {primaryActionLabel}
-            </button>
-          </div>,
-          document.body
-        )}
       </>
     );
   }
