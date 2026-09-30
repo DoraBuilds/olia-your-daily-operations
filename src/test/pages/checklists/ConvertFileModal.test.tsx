@@ -137,6 +137,8 @@ describe("ConvertFileModal", () => {
     fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
     fireEvent.click(screen.getByText("Convert to checklist").closest("button")!);
     await waitFor(() => expect(onConvert).toHaveBeenCalled());
+    // The file name (minus extension) becomes the checklist title.
+    expect(onConvert).toHaveBeenCalledWith(expect.any(Array), "checklist");
     expect(onClose).toHaveBeenCalled();
   });
 
