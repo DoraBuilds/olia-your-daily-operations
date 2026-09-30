@@ -58,6 +58,10 @@ function formatDate(date = new Date()) {
   });
 }
 
+export function getInfohubMockState() {
+  return mockContentState;
+}
+
 export function resetInfohubMockState() {
   mockContentState = defaultContent();
   mockTrainingProgressState = [];

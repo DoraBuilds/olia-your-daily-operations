@@ -271,6 +271,59 @@ export function RenameFolderModal({
   );
 }
 
+export function EditDocInfoModal({
+  currentTitle,
+  currentTags,
+  onClose,
+  onSave,
+}: {
+  currentTitle: string;
+  /** Omit for documents that don't carry tags (training modules). */
+  currentTags?: string[];
+  onClose: () => void;
+  onSave: (title: string, tags?: string[]) => void;
+}) {
+  const { t } = useTranslation("infohub");
+  const [title, setTitle] = useState(currentTitle);
+  const [tagsInput, setTagsInput] = useState((currentTags ?? []).join(", "));
+  return (
+    <CenteredModalShell onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-base text-foreground">{t("shared.editDetails.heading")}</h3>
+          <button onClick={onClose} className="btn-icon" aria-label={t("close")}>
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">{t("shared.newDocument.titleLabel")}</label>
+          <Input data-testid="edit-doc-title-input" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        {currentTags && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">{t("shared.newDocument.tagsLabel")} <span className="text-muted-foreground/60">{t("shared.newDocument.tagsHint")}</span></label>
+            <Input data-testid="edit-doc-tags-input" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder={t("shared.newDocument.tagsPlaceholder")} />
+          </div>
+        )}
+        <button
+          data-testid="edit-doc-submit"
+          disabled={!title.trim()}
+          onClick={() => {
+            onSave(title.trim(), currentTags ? tagsInput.split(",").map((tag) => tag.trim()).filter(Boolean) : undefined);
+            onClose();
+          }}
+          className={cn(
+            "w-full py-3 rounded-xl text-sm font-medium transition-colors",
+            title.trim() ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground",
+          )}
+        >
+          {t("shared.editDetails.save")}
+        </button>
+      </div>
+    </CenteredModalShell>
+  );
+}
+
 export function CreateDocModal({
   folderId,
   folders,

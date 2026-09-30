@@ -41,6 +41,7 @@
     "message": "\"{{title}}\" se eliminará para siempre, incluido cualquier archivo subido. Esta acción no se puede deshacer."
   },
   "actions": {
+    "editDetails": "Editar detalles",
     "moveToFolder": "Mover a carpeta",
     "renameFolder": "Renombrar carpeta",
     "manageAccess": "Gestionar acceso",
@@ -92,6 +93,10 @@
       "heading": "Renombrar carpeta",
       "nameLabel": "Nombre de la carpeta",
       "save": "Renombrar"
+    },
+    "editDetails": {
+      "heading": "Editar detalles",
+      "save": "Guardar"
     },
     "newDocument": {
       "heading": "Nuevo documento",
