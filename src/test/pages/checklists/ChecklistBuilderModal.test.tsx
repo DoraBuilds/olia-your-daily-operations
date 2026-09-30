@@ -367,7 +367,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
   it("reveals visibility window inputs when enabled", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    fireEvent.click(screen.getByRole("button", { name: /Visibility window/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /Visibility window/i }));
     expect(screen.getByDisplayValue("09:00")).toBeInTheDocument();
     expect(screen.getByDisplayValue("10:00")).toBeInTheDocument();
   });
@@ -629,7 +629,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
   it("stores the visibility window on save when enabled", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Visibility window/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /Visibility window/i }));
     fireEvent.change(screen.getByDisplayValue("09:00"), { target: { value: "08:30" } });
     fireEvent.change(screen.getByDisplayValue("10:00"), { target: { value: "10:15" } });
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
