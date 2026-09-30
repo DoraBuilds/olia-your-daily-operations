@@ -564,3 +564,53 @@ describe("Infohub — Download file action", () => {
     }
   });
 });
+
+// ─── Edit details (title + tags after a document exists) ──────────────────────
+
+describe("Infohub — Edit details", () => {
+  function openDocMenu(title: string) {
+    const docRow = screen.getByText(title).closest("div[class*='cursor-pointer']") as HTMLElement;
+    const menuBtns = within(docRow).getAllByRole("button");
+    fireEvent.click(menuBtns[menuBtns.length - 1]);
+  }
+
+  it("edits a library document's title and tags from the context menu", async () => {
+    const { getInfohubMockState } = await import("../mocks/infohub-hooks");
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
+    fireEvent.click(screen.getByText("Service Standards"));
+    openDocMenu("How to serve a customer");
+    fireEvent.click(screen.getByText("Edit details"));
+
+    expect(screen.getByTestId("edit-doc-title-input")).toHaveValue("How to serve a customer");
+    expect(screen.getByTestId("edit-doc-tags-input")).toHaveValue("Service, Front of house, Standards");
+
+    fireEvent.change(screen.getByTestId("edit-doc-title-input"), { target: { value: "Guest service guide" } });
+    fireEvent.change(screen.getByTestId("edit-doc-tags-input"), { target: { value: "Service, VIP" } });
+    fireEvent.click(screen.getByTestId("edit-doc-submit"));
+
+    expect(screen.getByText("Guest service guide")).toBeInTheDocument();
+    expect(screen.queryByTestId("edit-doc-submit")).not.toBeInTheDocument();
+    expect(getInfohubMockState().libraryDocs.find((doc) => doc.id === "s1")?.tags).toEqual(["Service", "VIP"]);
+  });
+
+  it("does not save an empty title", () => {
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
+    fireEvent.click(screen.getByText("Service Standards"));
+    openDocMenu("How to serve a customer");
+    fireEvent.click(screen.getByText("Edit details"));
+    fireEvent.change(screen.getByTestId("edit-doc-title-input"), { target: { value: "  " } });
+    expect(screen.getByTestId("edit-doc-submit")).toBeDisabled();
+  });
+
+  it("renames a training module without offering tags", () => {
+    renderWithProviders(<Infohub />, { initialEntries: ["/infohub/training"] });
+    navigateIntoTrainingFolder("Onboarding");
+    openDocMenu("How to make a latte");
+    fireEvent.click(screen.getByText("Edit details"));
+
+    expect(screen.queryByTestId("edit-doc-tags-input")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("edit-doc-title-input"), { target: { value: "Latte basics" } });
+    fireEvent.click(screen.getByTestId("edit-doc-submit"));
+    expect(screen.getByText("Latte basics")).toBeInTheDocument();
+  });
+});

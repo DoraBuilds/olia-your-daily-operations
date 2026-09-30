@@ -45,7 +45,7 @@ import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessCont
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
-import { AIActionsSheet, CreateDocModal, CreateFolderModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
+import { AIActionsSheet, CreateDocModal, CreateFolderModal, EditDocInfoModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
 import { ConfirmModal } from "./admin/SharedUI";
 
@@ -108,6 +108,7 @@ export default function Infohub() {
   const [aiSheetDocTitle, setAiSheetDocTitle] = useState<string | null>(null);
   const [moveTarget, setMoveTarget] = useState<{ type: "folder" | "doc"; id: string; section: "library" | "training" } | null>(null);
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string; section: "library" | "training" } | null>(null);
+  const [editDocTarget, setEditDocTarget] = useState<{ id: string; title: string; section: "library" | "training"; tags?: string[] } | null>(null);
   const [accessTarget, setAccessTarget] = useState<AccessTarget | null>(null);
 
   useEffect(() => {
@@ -395,6 +396,11 @@ export default function Infohub() {
 
   const docActions = (doc: DocItem | TrainingDoc, section: "library" | "training") => {
     const actions = [
+      {
+        label: t("actions.editDetails"),
+        icon: <Pencil size={16} className="text-muted-foreground" />,
+        onClick: () => setEditDocTarget({ id: doc.id, title: doc.title, section, tags: section === "library" ? (doc as DocItem).tags : undefined }),
+      },
       { label: t("actions.moveToFolder"), icon: <FolderInput size={16} className="text-muted-foreground" />, onClick: () => setMoveTarget({ type: "doc", id: doc.id, section }) },
       {
         label: t("actions.downloadFile"),
@@ -998,6 +1004,16 @@ export default function Infohub() {
           onSave={(newName) => {
             handleRenameFolder(renameTarget.id, newName, renameTarget.section);
             setRenameTarget(null);
+          }}
+        />
+      )}
+      {editDocTarget && (
+        <EditDocInfoModal
+          currentTitle={editDocTarget.title}
+          currentTags={editDocTarget.tags}
+          onClose={() => setEditDocTarget(null)}
+          onSave={(title, tags) => {
+            updateDocument.mutate({ id: editDocTarget.id, section: editDocTarget.section, title, ...(tags ? { tags } : {}) });
           }}
         />
       )}

@@ -323,6 +323,14 @@ function applyAccessFields(access: InfohubAccessControl) {
   };
 }
 
+// metadata is replaced wholesale on update, so an uploaded file's pointer has to travel with the new tags.
+export function libraryMetadataWithTags(tags: string[], existing?: { filePath?: string; fileType?: string }) {
+  return {
+    tags,
+    ...(existing?.filePath ? { filePath: existing.filePath, fileType: existing.fileType } : {}),
+  };
+}
+
 export function useInfohubContent() {
   const qc = useQueryClient();
   const { teamMember } = useAuth();
@@ -521,7 +529,8 @@ export function useInfohubContent() {
       if (input.body !== undefined) patch.body = input.body;
       if (input.access) Object.assign(patch, applyAccessFields(input.access));
       if (input.section === "library" && input.tags !== undefined) {
-        patch.metadata = { tags: input.tags };
+        const existing = qc.getQueryData<InfohubContentData>(queryKey)?.libraryDocs.find((doc) => doc.id === input.id);
+        patch.metadata = libraryMetadataWithTags(input.tags, existing);
       }
       if (input.section === "training" && (input.duration !== undefined || input.steps !== undefined)) {
         patch.metadata = {

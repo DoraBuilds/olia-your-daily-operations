@@ -41,6 +41,7 @@
     "message": "\"{{title}}\" will be deleted for good, including any uploaded file. This can't be undone."
   },
   "actions": {
+    "editDetails": "Edit details",
     "moveToFolder": "Move to folder",
     "renameFolder": "Rename folder",
     "manageAccess": "Manage access",
@@ -92,6 +93,10 @@
       "heading": "Rename folder",
       "nameLabel": "Folder name",
       "save": "Rename"
+    },
+    "editDetails": {
+      "heading": "Edit details",
+      "save": "Save"
     },
     "newDocument": {
       "heading": "New document",
