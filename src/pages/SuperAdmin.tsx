@@ -30,7 +30,7 @@ interface AccessLogRow {
   admin_email: string;
   organization_id: string | null;
   organization_name: string | null;
-  action: "enter" | "exit" | "reveal_pin";
+  action: "enter" | "exit" | "reveal_pin" | "edge_function";
   created_at: string;
 }
 
@@ -38,6 +38,7 @@ const ACTION_LABEL: Record<AccessLogRow["action"], string> = {
   enter: "Entered",
   exit: "Exited",
   reveal_pin: "Revealed a PIN in",
+  edge_function: "Acted in",
 };
 
 export function filterOrgs(orgs: PlatformOrg[], query: string): PlatformOrg[] {

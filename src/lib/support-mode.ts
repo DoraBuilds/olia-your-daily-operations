@@ -1,19 +1,17 @@
 // Platform-admin "support mode" (see 20260925000010_platform_admin_support_mode.sql).
 //
 // While a platform admin is viewing a customer org, the database treats
-// them as that org's owner. Edge functions don't: they resolve the org
-// from the caller's own team_members row, so billing, invites, account
-// deletion etc. would silently act on the admin's own org instead. Those
-// calls are refused here, in one place, for as long as support mode is on.
+// them as that org's owner, and most edge functions act on the viewed org
+// too (supabase/functions/_shared/support-mode.ts). Billing decisions and
+// account deletion stay with the customer: the functions below refuse
+// server-side in support mode, and are refused here as well so the call
+// never leaves the browser.
 
 export const SUPPORT_MODE_BLOCKED_FUNCTIONS = new Set([
   "delete-my-account",
   "manage-subscription",
   "create-checkout-session",
   "confirm-checkout-session",
-  "sync-location-quantity",
-  "invite-team-member",
-  "check-checklist-alerts",
 ]);
 
 export const SUPPORT_MODE_BLOCKED_MESSAGE = "Not available in support mode";

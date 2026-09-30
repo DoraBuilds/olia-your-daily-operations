@@ -17,6 +17,11 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  logSupportModeAction,
+  resolveSupportMode,
+  SUPPORT_MODE_CHECK_FAILED_MESSAGE,
+} from "../_shared/support-mode.ts";
 
 const SUPABASE_URL              = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -78,19 +83,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // team_members row — e.g. they run their own org AND were separately
   // invited into a partner's org. An unscoped `.single()` lookup would find
   // both rows and throw, failing the invite for that caller only.
-  const { data: caller, error: callerError } = await supabase
-    .from("team_members")
-    .select("organization_id, role")
-    .eq("organization_id", member.organization_id)
-    .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
-    .single();
+  //
+  // A platform admin in support mode acts as the Owner of the org they are
+  // viewing, and only that org.
+  const support = await resolveSupportMode(supabase, user.id);
+  if (support.failed) return err(SUPPORT_MODE_CHECK_FAILED_MESSAGE);
 
-  if (callerError || !caller) return err("Caller is not a team member of this organisation");
+  if (support.orgId) {
+    if (member.organization_id !== support.orgId) {
+      return err("Caller is not a team member of this organisation");
+    }
+  } else {
+    const { data: caller, error: callerError } = await supabase
+      .from("team_members")
+      .select("organization_id, role")
+      .eq("organization_id", member.organization_id)
+      .or(`id.eq.${user.id},auth_user_id.eq.${user.id}`)
+      .single();
 
-  // Only Owners manage the team (the Admin UI already hides the Users tab
-  // from Managers) — enforce it here too so a direct function call can't
-  // let a Manager send invites on behalf of the organisation.
-  if (caller.role !== "Owner") return err("Only an Owner can invite team members");
+    if (callerError || !caller) return err("Caller is not a team member of this organisation");
+
+    // Only Owners manage the team (the Admin UI already hides the Users tab
+    // from Managers) — enforce it here too so a direct function call can't
+    // let a Manager send invites on behalf of the organisation.
+    if (caller.role !== "Owner") return err("Only an Owner can invite team members");
+  }
 
   const { data: org, error: orgError } = await supabase
     .from("organizations")
@@ -198,6 +215,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!resendRes.ok) {
     console.error(`invite-team-member: Resend error ${resendRes.status}`, JSON.stringify(resendBody));
     return err("Failed to send invitation email");
+  }
+
+  if (support.orgId) {
+    await logSupportModeAction(supabase, user.id, support.orgId, "invite-team-member", { team_member_id });
   }
 
   console.log(`invite-team-member: sent invite for team_member ${team_member_id} → ${member.email}, resend_id=${resendBody?.id}`);
