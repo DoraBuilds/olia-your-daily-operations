@@ -473,7 +473,7 @@
     },
     "number": {
       "heading": "Number response",
-      "description": "Enable temperature mode to set an acceptable range and show a slider in kiosk.",
+      "description": "Enable temperature mode to set an acceptable range and show a keypad in kiosk.",
       "modeNumber": "Number",
       "modeTemperature": "Temperature",
       "singleModeNotice": "Staff will enter one number. Use logic rules below to trigger actions based on the value.",
