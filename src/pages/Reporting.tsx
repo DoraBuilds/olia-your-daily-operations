@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { ClipboardCheck, GraduationCap } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
@@ -34,30 +35,36 @@ export default function Reporting() {
     setSearchParams(params, { replace: true });
   };
 
+  // Rendered by each tab just below its search/filters row, like Infohub's Library|Training switch.
+  const viewSwitcher: ReactNode = canViewTraining ? (
+    <div role="tablist" className="flex gap-1 bg-muted rounded-xl p-1">
+      {([
+        { key: "checklists" as const, icon: ClipboardCheck },
+        { key: "training" as const, icon: GraduationCap },
+      ]).map(({ key, icon: Icon }) => (
+        <button
+          key={key}
+          role="tab"
+          aria-selected={view === key}
+          data-testid={`reporting-view-${key}`}
+          onClick={() => selectView(key)}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors",
+            view === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Icon size={13} />
+          {t(`reporting.views.${key}`)}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <Layout>
-      {canViewTraining && (
-        <div role="tablist" className="flex gap-1 p-1 rounded-xl bg-muted max-w-xs mb-3">
-          {(["checklists", "training"] as const).map(v => (
-            <button
-              key={v}
-              role="tab"
-              aria-selected={view === v}
-              data-testid={`reporting-view-${v}`}
-              onClick={() => selectView(v)}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
-                view === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(`reporting.views.${v}`)}
-            </button>
-          ))}
-        </div>
-      )}
       {view === "training"
-        ? <TrainingReportTab />
-        : <ReportingTab initialLocationId={initialLocationId} initialStatus={initialStatus} />}
+        ? <TrainingReportTab viewSwitcher={viewSwitcher} />
+        : <ReportingTab viewSwitcher={viewSwitcher} initialLocationId={initialLocationId} initialStatus={initialStatus} />}
     </Layout>
   );
 }

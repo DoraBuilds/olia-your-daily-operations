@@ -3,7 +3,7 @@
 // shared with have completed it, with a per-doc breakdown. Company-wide like
 // the checklist report, narrowed by Concept / Location / Department filters.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { Building2, ChevronDown, Download, GraduationCap, Layers, MapPin, Search } from "lucide-react";
@@ -24,7 +24,7 @@ import { buildTrainingReport, type TrainingReportRow } from "./training-report";
 interface ScopeFilters { conceptIds: string[]; locationIds: string[]; departmentIds: string[] }
 const NO_FILTERS: ScopeFilters = { conceptIds: [], locationIds: [], departmentIds: [] };
 
-export function TrainingReportTab() {
+export function TrainingReportTab({ viewSwitcher }: { viewSwitcher?: ReactNode }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
   const [filters, setFilters] = useState<ScopeFilters>(NO_FILTERS);
@@ -142,6 +142,7 @@ export function TrainingReportTab() {
             />
           </FilterField>
         </FiltersPopover>
+        {viewSwitcher}
         <ActiveFilterChips testIdPrefix="training-report" chips={chips} onClearAll={() => setFilters(NO_FILTERS)} />
 
         <div className="flex items-center justify-between gap-2">
