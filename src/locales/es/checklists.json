@@ -473,7 +473,7 @@
     },
     "number": {
       "heading": "Respuesta numérica",
-      "description": "Activa el modo temperatura para fijar un rango aceptable y mostrar un control deslizante en el kiosco.",
+      "description": "Activa el modo temperatura para fijar un rango aceptable y mostrar un teclado numérico en el kiosco.",
       "modeNumber": "Número",
       "modeTemperature": "Temperatura",
       "singleModeNotice": "El personal ingresará un número. Usa las reglas de lógica de abajo para activar acciones según el valor.",

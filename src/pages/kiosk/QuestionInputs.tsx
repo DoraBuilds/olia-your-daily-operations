@@ -84,9 +84,26 @@ export function NumberInput({
   );
 }
 
-// ─── Temperature slider ────────────────────────────────────────────────────────
+// ─── Temperature keypad ───────────────────────────────────────────────────────
+// The sign is a toggle, not a character: "−" flips the reading at any point, so
+// typing "18" for a freezer is fixed with one tap. Readings stop at one decimal.
 
-export function TemperatureSliderInput({
+const TEMPERATURE_MAX_INTEGER_DIGITS = 3;
+
+function splitTemperature(value: number | "") {
+  if (value === "" || value == null || !Number.isFinite(Number(value))) return { digits: "", negative: false };
+  const rounded = Math.round(Number(value) * 10) / 10;
+  return { digits: String(Math.abs(rounded)), negative: rounded < 0 };
+}
+
+function joinTemperature(digits: string, negative: boolean): number | "" {
+  if (digits === "") return "";
+  const magnitude = Number(digits);
+  // Avoid storing -0 while "−0" is still being typed towards "−0.5".
+  return negative && magnitude !== 0 ? -magnitude : magnitude;
+}
+
+export function TemperatureKeypadInput({
   value, onChange, acceptableMin, acceptableMax, unit = "C",
 }: {
   value: number | "";
@@ -95,24 +112,57 @@ export function TemperatureSliderInput({
   acceptableMax?: number;
   unit?: "C" | "F";
 }) {
-  const sliderMin = acceptableMin != null ? acceptableMin : (unit === "F" ? 32 : 0);
-  const sliderMax = acceptableMax != null ? acceptableMax : (unit === "F" ? 104 : 40);
-  const displayValue = value === "" ? sliderMin : Math.round(Number(value) * 10) / 10;
+  // What's been typed lives here: "18." and a lone "−" can't round-trip through a number.
+  const [entry, setEntry] = useState(() => splitTemperature(value));
+  const { digits, negative } = entry;
 
+  // Follow the answer when it changes from outside (draft restore, reset).
+  useEffect(() => {
+    setEntry(current => (
+      joinTemperature(current.digits, current.negative) === value ? current : splitTemperature(value)
+    ));
+  }, [value]);
+
+  const update = (nextDigits: string, nextNegative: boolean) => {
+    setEntry({ digits: nextDigits, negative: nextNegative });
+    const next = joinTemperature(nextDigits, nextNegative);
+    if (next !== value) onChange(next);
+  };
+
+  const pressDigit = (digit: string) => {
+    const [whole, decimal] = digits.split(".");
+    if (decimal !== undefined) {
+      if (decimal.length >= 1) return;
+      update(digits + digit, negative);
+      return;
+    }
+    if (whole === "0" || whole === "") { update(digit, negative); return; }
+    if (whole.length >= TEMPERATURE_MAX_INTEGER_DIGITS) return;
+    update(digits + digit, negative);
+  };
+
+  const pressDecimal = () => {
+    if (digits.includes(".")) return;
+    update(digits === "" ? "0." : `${digits}.`, negative);
+  };
+
+  const current = joinTemperature(digits, negative);
   const hasAcceptableRange = acceptableMin != null || acceptableMax != null;
-  const outOfRange = hasAcceptableRange && value !== "" && (
-    (acceptableMin != null && displayValue < acceptableMin) ||
-    (acceptableMax != null && displayValue > acceptableMax)
+  const outOfRange = hasAcceptableRange && current !== "" && (
+    (acceptableMin != null && current < acceptableMin) ||
+    (acceptableMax != null && current > acceptableMax)
   );
+
+  const keyClass = "h-14 rounded-2xl bg-white border border-border text-2xl font-light text-foreground flex items-center justify-center transition-all shadow-card active:scale-95 active:shadow-inset active:bg-muted";
 
   return (
     <div className="space-y-3 px-1">
-      <div className="flex items-end justify-center gap-1 py-2">
+      <div className="flex items-end justify-center gap-1 py-2" data-testid="temperature-reading">
         <span className={cn(
           "text-6xl font-bold tabular-nums leading-none",
           outOfRange ? "text-status-error" : "text-foreground",
         )}>
-          {value === "" ? "—" : displayValue}
+          {negative && "−"}{digits === "" ? (negative ? "" : "—") : digits}
         </span>
         <span className={cn(
           "text-2xl font-medium pb-1",
@@ -121,19 +171,36 @@ export function TemperatureSliderInput({
           °{unit}
         </span>
       </div>
-      <input
-        type="range"
-        min={sliderMin}
-        max={sliderMax}
-        step={0.1}
-        value={displayValue}
-        onChange={e => onChange(Math.round(Number(e.target.value) * 10) / 10)}
-        className="w-full cursor-pointer"
-        style={{ accentColor: outOfRange ? "var(--status-error)" : "var(--sage)" }}
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{sliderMin}°{unit}</span>
-        <span>{sliderMax}°{unit}</span>
+      <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+        {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(digit => (
+          <button key={digit} type="button" onClick={() => pressDigit(digit)} className={keyClass}>
+            {digit}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => update(digits, !negative)}
+          aria-label="Negative"
+          aria-pressed={negative}
+          className={cn(keyClass, negative && "bg-sage border-sage text-primary-foreground active:bg-sage")}
+        >
+          +/−
+        </button>
+        <button type="button" onClick={() => pressDigit("0")} className={keyClass}>0</button>
+        <button type="button" onClick={pressDecimal} aria-label="Decimal point" className={cn(keyClass, "font-semibold")}>
+          .
+        </button>
+      </div>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={() => update(digits.slice(0, -1), negative)}
+          disabled={digits === ""}
+          aria-label="Delete last digit"
+          className="min-h-[44px] px-5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+        >
+          ⌫ Delete
+        </button>
       </div>
       {hasAcceptableRange && (
         <p className={cn(
@@ -622,7 +689,7 @@ export function QuestionInput({
     case "number":
       if (question.temperatureUnit) {
         return (
-          <TemperatureSliderInput
+          <TemperatureKeypadInput
             value={value ?? ""}
             onChange={onChange}
             acceptableMin={question.min}
