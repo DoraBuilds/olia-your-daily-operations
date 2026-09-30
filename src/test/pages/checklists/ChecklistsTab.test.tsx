@@ -90,6 +90,7 @@ vi.mock("@/hooks/usePlan", () => ({
 }));
 
 const listState = vi.hoisted(() => ({ loading: false }));
+const loadedIds = vi.hoisted(() => [] as string[]);
 
 vi.mock("@/hooks/useChecklists", () => {
   // Use stable references — a fresh [] on every call causes useEffect([dbFolders])
@@ -102,7 +103,7 @@ vi.mock("@/hooks/useChecklists", () => {
     created_at: "2026-01-01", updated_at: "2026-01-01",
   }, {
     id: "cl-2", title: "Unfinished Checklist", folder_id: null,
-    location_id: null, schedule: null, sections: [],
+    location_id: null, schedule: null, sections: [], question_count: 7,
     is_published: false,
     created_at: "2026-01-02", updated_at: "2026-01-02",
   }];
@@ -114,6 +115,12 @@ vi.mock("@/hooks/useChecklists", () => {
     useReorderFolders: () => ({ mutate: vi.fn() }),
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
+    // The list carries no questions; opening one loads it with them.
+    useLoadChecklist: () => async (id: string) => {
+      loadedIds.push(id);
+      const base = CHECKLISTS.find(c => c.id === id)!;
+      return { ...base, sections: [{ id: "s1", name: "Prep", questions: [{ id: "q1", text: "Fridge temp?", responseType: "temperature", required: true }] }] };
+    },
   };
 });
 
@@ -130,6 +137,18 @@ describe("ChecklistsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listState.loading = false;
+    loadedIds.length = 0;
+  });
+
+  it("shows each checklist's question count from the list, without its questions", () => {
+    render(<ChecklistsTab />, { wrapper });
+    expect(screen.getByText(/7 questions/)).toBeInTheDocument();
+  });
+
+  it("loads the full checklist (with its questions) when a row is opened", async () => {
+    render(<ChecklistsTab />, { wrapper });
+    fireEvent.click(screen.getByText("Unfinished Checklist"));
+    await waitFor(() => expect(loadedIds).toEqual(["cl-2"]));
   });
 
   it("shows a skeleton, not the empty state, while the lists are loading", () => {

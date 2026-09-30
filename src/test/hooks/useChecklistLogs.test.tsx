@@ -59,6 +59,36 @@ beforeEach(() => {
   });
 });
 
+describe("useChecklistLogs answers", () => {
+  function selectSpy() {
+    const select = vi.fn().mockReturnThis();
+    mockFrom.mockReturnValue({
+      select,
+      order: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockResolvedValue({ data: [], error: null }),
+      then: vi.fn().mockImplementation((cb) => Promise.resolve(cb({ data: [], error: null }))),
+    });
+    return select;
+  }
+
+  it("includes answers by default (Reporting needs them)", async () => {
+    const select = selectSpy();
+    const { result } = renderHook(() => useChecklistLogs({ from: "2026-09-01T00:00:00" }), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(select.mock.calls[0][0]).toMatch(/\banswers\b/);
+  });
+
+  it("withAnswers: false leaves the answers out and caches separately", async () => {
+    const select = selectSpy();
+    const { result } = renderHook(
+      () => useChecklistLogs({ from: "2026-09-01T00:00:00" }, { withAnswers: false }),
+      { wrapper: makeWrapper() },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(select.mock.calls[0][0]).not.toMatch(/\banswers\b/);
+  });
+});
+
 describe("useChecklistLogs", () => {
   it("returns isLoading property", () => {
     const { result } = renderHook(() => useChecklistLogs(), { wrapper: makeWrapper() });

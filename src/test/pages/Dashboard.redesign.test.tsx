@@ -136,6 +136,22 @@ describe("Dashboard redesign — shift completion gauge", () => {
     expect(screen.getByText("2/3 checklists done today")).toBeInTheDocument();
   });
 
+  it("asks for only the current week/month of logs, and without answers", () => {
+    mockUseLocations.mockReturnValue({ data: [{ id: "loc-1", name: "Main Kitchen" }] });
+    mockUseChecklists.mockReturnValue({ data: [] });
+    mockUseChecklistLogs.mockReturnValue({ data: [] });
+
+    renderWithProviders(<Dashboard />);
+
+    const [filters, options] = mockUseChecklistLogs.mock.calls[0];
+    expect(options).toEqual({ withAnswers: false });
+    // Bounded: from is a recent date, never undefined (= whole history).
+    const from = new Date(filters.from).getTime();
+    const now = new Date(`${TODAY_STR}T14:00:00`).getTime();
+    expect(from).toBeLessThanOrEqual(now);
+    expect(now - from).toBeLessThan(40 * 24 * 60 * 60 * 1000);
+  });
+
   it("does not render the gauge when no checklists are assigned today", () => {
     mockUseLocations.mockReturnValue({ data: [{ id: "loc-1", name: "Main Kitchen" }] });
     mockUseChecklists.mockReturnValue({ data: [] });

@@ -9,6 +9,7 @@ import {
   useChecklists,
   useSaveChecklist,
   useDeleteChecklist,
+  useLoadChecklist,
 } from "@/hooks/useChecklists";
 
 const mockFrom = vi.fn();
@@ -327,5 +328,80 @@ describe("useDeleteChecklist", () => {
   it("is not pending by default", () => {
     const { result } = renderHook(() => useDeleteChecklist(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+});
+
+describe("checklist questions are not part of the list (payload), but are never lost", () => {
+  const STORED = [{ id: "s1", name: "Prep", questions: [{ id: "q1", text: "Fridge temp?" }] }];
+
+  function stubSingleRow(row: unknown) {
+    const select = vi.fn().mockReturnThis();
+    mockFrom.mockReturnValue({
+      select,
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: row, error: null }),
+    });
+    return select;
+  }
+
+  it("the list query does not ask for sections", async () => {
+    const select = vi.fn().mockReturnThis();
+    mockFrom.mockReturnValue({
+      select,
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+    const { result } = renderHook(() => useChecklists(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const columns = select.mock.calls[0][0] as string;
+    expect(columns).not.toMatch(/\bsections\b/);
+    expect(columns).toMatch(/\bquestion_count\b/);
+  });
+
+  it("saving a list item (no sections — rename, move to folder) re-sends the STORED questions, not []", async () => {
+    stubSingleRow({ id: "cl-1", sections: STORED });
+    mockRpc.mockResolvedValueOnce({ data: "cl-1", error: null });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({ id: "cl-1", title: "Renamed", folder_id: "f2" } as any);
+
+    expect(mockRpc).toHaveBeenCalledWith("save_checklist", expect.objectContaining({
+      p_id: "cl-1",
+      p_sections: STORED,
+    }));
+  });
+
+  it("saving with explicit sections uses them and does not fetch", async () => {
+    mockFrom.mockClear();
+    mockRpc.mockResolvedValueOnce({ data: "cl-1", error: null });
+    const edited = [{ id: "s1", name: "Prep", questions: [] }];
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await result.current.mutateAsync({ id: "cl-1", title: "T", sections: edited } as any);
+
+    expect(mockRpc).toHaveBeenCalledWith("save_checklist", expect.objectContaining({ p_sections: edited }));
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it("does not save at all if the stored questions can't be read", async () => {
+    mockRpc.mockClear();
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: { message: "network" } }),
+    });
+
+    const { result } = renderHook(() => useSaveChecklist(), { wrapper: makeWrapper() });
+    await expect(result.current.mutateAsync({ id: "cl-1", title: "T" } as any)).rejects.toBeTruthy();
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("useLoadChecklist returns the full checklist including sections", async () => {
+    const select = stubSingleRow({ id: "cl-1", title: "T", sections: STORED });
+    const { result } = renderHook(() => useLoadChecklist(), { wrapper: makeWrapper() });
+    const full = await result.current("cl-1");
+
+    expect(full.sections).toEqual(STORED);
+    expect(select.mock.calls[0][0]).toMatch(/\bsections\b/);
   });
 });

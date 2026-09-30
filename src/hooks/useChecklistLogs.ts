@@ -11,7 +11,8 @@ export interface ChecklistLog {
   staff_profile_id: string | null;
   score: number | null;
   type: string | null;
-  answers: any[];
+  /** Absent on summary reads (`withAnswers: false`). */
+  answers?: any[];
   created_at: string;
   location_id: string | null;  // added by migration 20260312000001
   started_at: string | null;   // added by migration 20260326000001_checklist_logs_started_at
@@ -28,13 +29,24 @@ export interface CreateLogPayload {
   organization_id: string;
 }
 
-export function useChecklistLogs(filters?: { from?: string; to?: string; location_id?: string }) {
+const LOG_SUMMARY_COLUMNS =
+  "id, checklist_id, checklist_title, completed_by, staff_profile_id, score, type, created_at, location_id, started_at";
+
+/**
+ * `withAnswers: false` skips the per-question answers — by far the largest
+ * part of a log. Use it wherever only scores/dates/who are shown.
+ */
+export function useChecklistLogs(
+  filters?: { from?: string; to?: string; location_id?: string },
+  options: { withAnswers?: boolean } = {},
+) {
+  const withAnswers = options.withAnswers ?? true;
   return useQuery({
-    queryKey: ["checklist_logs", filters],
+    queryKey: withAnswers ? ["checklist_logs", filters] : ["checklist_logs", "summary", filters],
     queryFn: async () => {
       let q = supabase
         .from("checklist_logs")
-        .select("id, checklist_id, checklist_title, completed_by, staff_profile_id, score, type, answers, created_at, location_id, started_at")
+        .select(withAnswers ? `${LOG_SUMMARY_COLUMNS}, answers` : LOG_SUMMARY_COLUMNS)
         .order("created_at", { ascending: false });
       if (filters?.from) q = q.gte("created_at", filters.from);
       if (filters?.to) q = q.lte("created_at", filters.to);
