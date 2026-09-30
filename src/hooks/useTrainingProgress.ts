@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { isSupportModeActive, teamMemberRefId } from "@/lib/support-mode";
 
 export interface TrainingProgressRow {
   id: string;
@@ -38,7 +39,10 @@ export function useTrainingProgress() {
   // the kiosk, where PIN-only members complete training too (#905).
   const { user, teamMember } = useAuth();
   const organizationId = teamMember?.organization_id ?? null;
-  const teamMemberId = teamMember?.id ?? null;
+  // Support mode has no team member of its own in the viewed org, so
+  // progress is kept on screen only and never saved.
+  const inSupportMode = isSupportModeActive();
+  const teamMemberId = teamMemberRefId(teamMember?.id);
   const userId = user?.id ?? null;
   const queryKey = ["training-progress", organizationId, teamMemberId] as const;
 
@@ -59,6 +63,7 @@ export function useTrainingProgress() {
 
   const saveProgress = useMutation({
     mutationFn: async (input: SaveTrainingProgressInput) => {
+      if (inSupportMode) return;
       if (!organizationId || !teamMemberId) throw new Error("Missing training progress context");
 
       const completedStepIndices = normalizeStepIndices(input.completedStepIndices);

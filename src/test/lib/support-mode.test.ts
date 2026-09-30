@@ -3,6 +3,7 @@ import {
   setSupportModeActive,
   supportModeFetch,
   SUPPORT_MODE_BLOCKED_MESSAGE,
+  teamMemberRefId,
 } from "@/lib/support-mode";
 
 const FN_URL = "https://abc.supabase.co/functions/v1";
@@ -63,5 +64,12 @@ describe("support-mode fetch guard", () => {
     await supportModeFetch("https://abc.supabase.co/rest/v1/checklists?select=*");
     await supportModeFetch("https://abc.supabase.co/rest/v1/rpc/delete_my_account");
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("never hands out the support profile's id as a team member reference", () => {
+    expect(teamMemberRefId("tm-1")).toBe("tm-1");
+    expect(teamMemberRefId(undefined)).toBeNull();
+    setSupportModeActive(true);
+    expect(teamMemberRefId("admin-login-id")).toBeNull();
   });
 });

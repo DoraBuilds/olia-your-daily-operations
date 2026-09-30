@@ -26,6 +26,15 @@ export function isSupportModeActive() {
   return supportModeActive;
 }
 
+// In support mode teamMember is a synthetic owner profile whose id is the
+// admin's own login, not a team_members row in the viewed org. Anything
+// written to a team_members foreign key (created_by, performed_by,
+// team_member_id) must go through this, or the insert fails on the FK —
+// or, for an admin who also runs their own org, credits a stranger.
+export function teamMemberRefId(id: string | null | undefined): string | null {
+  return supportModeActive ? null : id ?? null;
+}
+
 export function isBlockedInSupportMode(functionName: string) {
   return supportModeActive && SUPPORT_MODE_BLOCKED_FUNCTIONS.has(functionName);
 }

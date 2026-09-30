@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { teamMemberRefId } from "@/lib/support-mode";
 import {
   DEFAULT_INFOHUB_ACCESS,
   canManageInfohubAccess,
@@ -349,7 +350,7 @@ export function useInfohubContent() {
           trainingDocs: [],
         } satisfies InfohubContentData;
       }
-      return fetchInfohubContent(organizationId, canBootstrap, teamMember?.id);
+      return fetchInfohubContent(organizationId, canBootstrap, teamMemberRefId(teamMember?.id));
     },
   });
 
@@ -363,7 +364,7 @@ export function useInfohubContent() {
         name: input.name,
         sort_order: null,
         ...applyAccessFields(DEFAULT_INFOHUB_ACCESS),
-        created_by: teamMember?.id ?? null,
+        created_by: teamMemberRefId(teamMember?.id),
       });
       if (error) throw error;
     },
@@ -406,7 +407,7 @@ export function useInfohubContent() {
               ...(input.filePath ? { filePath: input.filePath, fileType: input.fileType } : {}),
             },
             ...applyAccessFields(DEFAULT_INFOHUB_ACCESS),
-            created_by: teamMember?.id ?? null,
+            created_by: teamMemberRefId(teamMember?.id),
           }
         : {
             organization_id: organizationId,
@@ -417,7 +418,7 @@ export function useInfohubContent() {
             body: "",
             metadata: { duration: "5 min", steps: [] as string[] },
             ...applyAccessFields(DEFAULT_INFOHUB_ACCESS),
-            created_by: teamMember?.id ?? null,
+            created_by: teamMemberRefId(teamMember?.id),
           };
       const { error } = await supabase.from("infohub_documents").insert(payload);
       if (error) throw error;
