@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import { sanitizeImageUrl } from "@/lib/sanitize";
-import { cn } from "@/lib/utils";
+import { cn, blurOnWheel } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1012,6 +1012,7 @@ export function ChecklistBuilderModal({
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
+                              onWheel={blurOnWheel}
                               placeholder={t("builder.number.min")}
                               value={cfg.numberMin ?? ""}
                               onChange={e => updateQuestion(si, qi, {
@@ -1026,6 +1027,7 @@ export function ChecklistBuilderModal({
                             <span className="text-xs text-muted-foreground">{t("builder.number.to")}</span>
                             <input
                               type="number"
+                              onWheel={blurOnWheel}
                               placeholder={t("builder.number.max")}
                               value={cfg.numberMax ?? ""}
                               onChange={e => updateQuestion(si, qi, {

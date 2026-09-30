@@ -15,7 +15,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, blurOnWheel } from "@/lib/utils";
 import type {
   LogicComparator,
   LogicRule,
@@ -153,6 +153,7 @@ export function FollowUpQuestionEditor({
               <div className="flex items-center gap-2">
                 <input
                   type="number"
+                  onWheel={blurOnWheel}
                   placeholder={t("followUpEditor.number.min")}
                   value={cfg.numberMin ?? ""}
                   onChange={e => updateConfig({
@@ -164,6 +165,7 @@ export function FollowUpQuestionEditor({
                 <span className="text-xs text-muted-foreground">{t("followUpEditor.number.to")}</span>
                 <input
                   type="number"
+                  onWheel={blurOnWheel}
                   placeholder={t("followUpEditor.number.max")}
                   value={cfg.numberMax ?? ""}
                   onChange={e => updateConfig({
@@ -660,6 +662,7 @@ function LogicRulesEditor({
                         <span className="text-xs text-muted-foreground">{t("logicRules.and")}</span>
                         <input
                           type="number"
+                          onWheel={blurOnWheel}
                           value={rule.valueTo ?? ""}
                           onChange={e => updateRule(ri, { valueTo: e.target.value })}
                           placeholder={t("logicRules.valuePlaceholder")}

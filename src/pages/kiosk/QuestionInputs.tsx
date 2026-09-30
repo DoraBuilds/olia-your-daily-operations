@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, blurOnWheel } from "@/lib/utils";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import { supabase } from "@/lib/supabase";
 import { fitWithin, KIOSK_PHOTO_MAX_DIMENSION } from "@/lib/image-resize";
@@ -57,6 +57,7 @@ export function NumberInput({
         </button>
         <input
           type="number"
+          onWheel={blurOnWheel}
           value={value}
           onChange={e => onChange(e.target.value === "" ? "" : Number(e.target.value))}
           className={cn(

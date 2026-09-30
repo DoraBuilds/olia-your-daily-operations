@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, blurOnWheel } from "@/lib/utils";
 import type { CustomRecurrence } from "./types";
 
 export function CustomRecurrencePicker({ value, onChange, onClose }: {
@@ -22,7 +22,7 @@ export function CustomRecurrencePicker({ value, onChange, onClose }: {
         {/* Repeat every */}
         <div className="flex items-center gap-3">
           <span className="text-sm text-foreground">{t("customRecurrence.repeatEvery")}</span>
-          <input type="number" min={1} value={value.interval}
+          <input type="number" onWheel={blurOnWheel} min={1} value={value.interval}
             onChange={e => onChange({ ...value, interval: Math.max(1, parseInt(e.target.value) || 1) })}
             className="w-16 text-sm border border-border rounded-lg px-3 py-2 bg-muted text-center focus:outline-none focus:ring-1 focus:ring-ring"
           />
@@ -85,7 +85,7 @@ export function CustomRecurrencePicker({ value, onChange, onClose }: {
                 {value.ends === "after" && <div className="w-2.5 h-2.5 rounded-full bg-sage" />}
               </div>
               <button onClick={() => onChange({ ...value, ends: "after" })} className="text-sm text-foreground">{t("customRecurrence.after")}</button>
-              <input type="number" min={1} value={value.occurrences || 13}
+              <input type="number" onWheel={blurOnWheel} min={1} value={value.occurrences || 13}
                 onChange={e => onChange({ ...value, ends: "after", occurrences: parseInt(e.target.value) || 1 })}
                 className="w-16 text-sm border border-border rounded-lg px-3 py-1.5 bg-muted text-center focus:outline-none focus:ring-1 focus:ring-ring" />
               <span className="text-sm text-muted-foreground">{t("customRecurrence.occurrences")}</span>
