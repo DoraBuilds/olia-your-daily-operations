@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, ChevronRight, FileText, Download, TrendingUp, TrendingDown, Minus, Search, User, X, Plus, ChevronDown, CheckCircle2, Clock, Circle, AlertTriangle, Building2, MapPin, Layers } from "lucide-react";
@@ -227,7 +227,7 @@ function ContributorsCell({ completedBy }: { completedBy: string }) {
   );
 }
 
-export function ReportingTab({ initialLocationId, initialStatus }: { initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
+export function ReportingTab({ initialLocationId, initialStatus, viewSwitcher }: { viewSwitcher?: ReactNode; initialLocationId?: string; initialStatus?: "all" | "completed" | "unfinished" | "unstarted" }) {
   const { t } = useTranslation("checklists");
   const { can } = usePlan();
   const [period, setPeriod] = useState<Period>("week");
@@ -695,6 +695,7 @@ export function ReportingTab({ initialLocationId, initialStatus }: { initialLoca
           </div>
         </FilterField>
       </FiltersPopover>
+      {viewSwitcher}
       <ActiveFilterChips
         testIdPrefix="reporting"
         chips={filterChips}

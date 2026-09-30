@@ -22,7 +22,7 @@ vi.mock("@/contexts/AuthContext", () => ({
   AuthProvider: ({ children }: any) => children,
 }));
 
-vi.mock("@/pages/checklists/ReportingTab", () => ({ ReportingTab: () => <div>Checklist report</div> }));
+vi.mock("@/pages/checklists/ReportingTab", () => ({ ReportingTab: ({ viewSwitcher }: any) => <div><input placeholder="search" />{viewSwitcher}<span>Checklist report</span></div> }));
 
 const open = { accessScope: "org", allowedTeamMemberIds: [], allowedConceptIds: [], allowedLocationIds: [], allowedDepartmentIds: [] };
 vi.mock("@/hooks/useInfohubContent", () => ({
@@ -74,6 +74,13 @@ describe("Reporting → Training", () => {
     renderWithProviders(<Reporting />, { initialEntries: ["/reporting"] });
     expect(screen.getByTestId("reporting-view-checklists")).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Checklist report")).toBeInTheDocument();
+  });
+
+  it("puts the switch below the search row, as in Infohub (#974)", () => {
+    renderWithProviders(<Reporting />, { initialEntries: ["/reporting"] });
+    const search = screen.getByPlaceholderText("search");
+    const tabs = screen.getByTestId("reporting-view-checklists");
+    expect(search.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("shows it to managers with View reporting, but not without it", () => {
