@@ -1,4 +1,4 @@
-import { canAccessInfohubContent, type InfohubAccessControl } from "@/lib/infohub-access";
+import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 
 export type DocKind = "all" | "written" | "file";
 export type Progress = "all" | "completed" | "incomplete";
@@ -7,7 +7,7 @@ export type Progress = "all" | "completed" | "incomplete";
 export interface InfohubFilters {
   conceptIds: string[];
   locationIds: string[];
-  roles: string[];
+  departmentIds: string[];
   memberIds: string[];
   tags: string[];
   kind: DocKind;
@@ -15,59 +15,57 @@ export interface InfohubFilters {
 }
 
 export const DEFAULT_INFOHUB_FILTERS: InfohubFilters = {
-  conceptIds: [], locationIds: [], roles: [], memberIds: [], tags: [], kind: "all", progress: "all",
+  conceptIds: [], locationIds: [], departmentIds: [], memberIds: [], tags: [], kind: "all", progress: "all",
 };
 
 export function activeInfohubFilterCount(f: InfohubFilters): number {
-  return [f.conceptIds.length > 0, f.locationIds.length > 0, f.roles.length > 0, f.memberIds.length > 0,
+  return [f.conceptIds.length > 0, f.locationIds.length > 0, f.departmentIds.length > 0, f.memberIds.length > 0,
     f.tags.length > 0, f.kind !== "all", f.progress !== "all"].filter(Boolean).length;
-}
-
-export interface FilterMember {
-  id: string;
-  role: string | null;
-  location_ids: string[] | null;
-  is_owner?: boolean;
 }
 
 export interface AccessFilterContext {
   /** Locations picked directly, or every location of the picked concept(s); null = no location/concept filter. */
   locationIds: string[] | null;
-  roles: string[];
-  members: FilterMember[];
+  /** The concepts those locations belong to. */
+  conceptIds: string[];
+  departmentIds: string[];
+  members: InfohubPrincipal[];
 }
 
 /**
  * Whether content with this access could be seen by the people the filters
  * describe. Content visible to everyone always matches. Restricted content
- * (visible via a listed person OR role OR location) matches when someone at
- * the filtered location(s) with the filtered role(s) could see it; a Team
- * member filter additionally requires one of those members to see it.
+ * (shared with a place + departments, or with named people) matches when
+ * someone at the filtered location(s) in the filtered department(s) could
+ * see it; a Team member filter additionally requires one of those members
+ * to see it.
  */
 export function accessMatchesFilters(access: InfohubAccessControl, ctx: AccessFilterContext): boolean {
   if (access.accessScope === "org") return true;
 
-  if (ctx.members.length > 0 && !ctx.members.some(m => canAccessInfohubContent(access, {
-    teamMemberId: m.id, role: m.role, locationIds: m.location_ids ?? [], isOwner: m.is_owner,
-  }))) return false;
+  if (ctx.members.length > 0 && !ctx.members.some(m => canAccessInfohubContent(access, m))) return false;
 
-  if (ctx.locationIds === null && ctx.roles.length === 0) return true;
-  const viaLocation = ctx.locationIds === null
-    ? access.allowedLocationIds.length > 0
-    : access.allowedLocationIds.some(id => ctx.locationIds.includes(id));
-  const viaRole = ctx.roles.length === 0
-    ? access.allowedRoles.length > 0
-    : access.allowedRoles.some(r => ctx.roles.includes(r));
-  // Named people count only if one of them fits the location/role filters.
+  if (ctx.locationIds === null && ctx.departmentIds.length === 0) return true;
+  const hasPlace = access.allowedConceptIds.length > 0 || access.allowedLocationIds.length > 0;
+  const hasDepartments = access.allowedDepartmentIds.length > 0;
+  const viaTaxonomy = (hasPlace || hasDepartments)
+    && (!hasPlace || ctx.locationIds === null
+      || ctx.locationIds.some(id => access.allowedLocationIds.includes(id))
+      || ctx.conceptIds.some(id => access.allowedConceptIds.includes(id)))
+    && (!hasDepartments || ctx.departmentIds.length === 0
+      || ctx.departmentIds.some(id => access.allowedDepartmentIds.includes(id)));
+  // Named people count only if one of them fits the location/department filters.
   const viaMember = ctx.members.length > 0
-    ? ctx.members.some(m => access.allowedTeamMemberIds.includes(m.id) && memberFits(m, ctx))
+    ? ctx.members.some(m => !!m.teamMemberId && access.allowedTeamMemberIds.includes(m.teamMemberId) && memberFits(m, ctx))
     : access.allowedTeamMemberIds.length > 0;
-  return viaLocation || viaRole || viaMember;
+  return viaTaxonomy || viaMember;
 }
 
-function memberFits(m: FilterMember, ctx: AccessFilterContext): boolean {
-  if (ctx.roles.length > 0 && !(m.role && ctx.roles.includes(m.role))) return false;
-  if (ctx.locationIds !== null && !(m.location_ids ?? []).some(id => ctx.locationIds.includes(id))) return false;
+function memberFits(m: InfohubPrincipal, ctx: AccessFilterContext): boolean {
+  if (ctx.departmentIds.length > 0 && !(m.departmentIds ?? []).some(id => ctx.departmentIds.includes(id))) return false;
+  const locationIds = m.locationIds ?? [];
+  // No specific locations = every location.
+  if (ctx.locationIds !== null && locationIds.length > 0 && !locationIds.some(id => ctx.locationIds!.includes(id))) return false;
   return true;
 }
 

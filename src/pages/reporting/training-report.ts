@@ -2,7 +2,7 @@
 // to (everyone it's shared with, per the Info Hub sharing rules) and who has
 // completed it. Owners are left out — they can see every training.
 
-import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
+import { canAccessInfohubContent, infohubPrincipalForMember, type InfohubAccessControl } from "@/lib/infohub-access";
 import type { TeamMember } from "@/lib/admin-repository";
 import type { TrainingProgressRow } from "@/hooks/useTrainingProgress";
 import { reachableFolderIds } from "@/pages/infohub/infohub-filters";
@@ -42,13 +42,15 @@ export function buildTrainingReport(
   members: TeamMember[],
   progress: TrainingProgressRow[],
   scope: TrainingReportScope,
+  /** Resolves each member's concepts, for content shared with a whole concept. */
+  locations: { id: string; concept_id?: string | null }[] = [],
 ): TrainingReportRow[] {
   const folderName = new Map(folders.map(f => [f.id, f.name]));
   const done = new Map(
     progress.filter(p => p.is_completed).map(p => [`${p.team_member_id}:${p.module_id}`, p.completed_at]),
   );
   const people = members.filter(m => memberInScope(m, scope)).map(m => {
-    const principal: InfohubPrincipal = { teamMemberId: m.id, role: m.role, locationIds: m.location_ids, isOwner: false };
+    const principal = infohubPrincipalForMember(m, locations);
     return {
       member: m,
       principal,

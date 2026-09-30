@@ -166,8 +166,14 @@ describe("Infohub extended behavior", () => {
     fireEvent.click(screen.getByText("Manage access"));
 
     fireEvent.click(screen.getByRole("button", { name: /restricted access/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Jay Manager/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Terrace" }));
+    expect(screen.getByTestId("access-summary")).toHaveTextContent(/only to the owners/i);
+    // Concept → Locations → Departments, plus named people. No roles.
+    expect(screen.queryByText("Roles")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("access-location-select-trigger"));
+    fireEvent.click(screen.getByTestId("access-location-select-option-loc-2"));
+    fireEvent.click(screen.getByTestId("access-member-select-trigger"));
+    fireEvent.click(screen.getByTestId("access-member-select-option-u2"));
+    expect(screen.getByTestId("access-summary")).toHaveTextContent("Visible to: Every department at Terrace. Also shared with 1 team member.");
     fireEvent.click(screen.getByRole("button", { name: /save access/i }));
 
     expect(screen.getByText("Restricted")).toBeInTheDocument();

@@ -11,9 +11,11 @@ import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincip
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import {
   Archive,
   BookOpen,
+  Building2,
   ChevronRight,
   Download,
   FileText,
@@ -23,8 +25,10 @@ import {
   GraduationCap,
   GripVertical,
   HelpCircle,
+  Layers,
   Lock,
   Loader2,
+  MapPin,
   MoreVertical,
   Pencil,
   Plus,
@@ -32,6 +36,7 @@ import {
   Shield,
   Sparkles,
   Upload,
+  User,
   X,
   ListChecks,
   Brain,
@@ -666,30 +671,76 @@ export function PlusMenu({ onClose, onAction }: { onClose: () => void; onAction:
 export function ManageAccessModal({
   target,
   teamMembers,
+  concepts,
   locations,
-  roleOptions,
+  departments,
   onClose,
   onSave,
 }: {
   target: AccessTarget;
-  teamMembers: { id: string; name: string; role: string }[];
-  locations: { id: string; name: string }[];
-  roleOptions: string[];
+  teamMembers: { id: string; name: string }[];
+  concepts: { id: string; name: string }[];
+  locations: { id: string; name: string; concept_id: string | null }[];
+  departments: { id: string; name: string }[];
   onClose: () => void;
   onSave: (access: InfohubAccessControl) => void;
 }) {
   const { t } = useTranslation("infohub");
   const [accessScope, setAccessScope] = useState<InfohubAccessControl["accessScope"]>(target.access.accessScope);
   const [allowedTeamMemberIds, setAllowedTeamMemberIds] = useState<string[]>(target.access.allowedTeamMemberIds);
-  const [allowedRoles, setAllowedRoles] = useState<string[]>(target.access.allowedRoles);
-  const [allowedLocationIds, setAllowedLocationIds] = useState<string[]>(target.access.allowedLocationIds);
+  const [locationIds, setLocationIds] = useState<string[]>(target.access.allowedLocationIds);
+  const [departmentIds, setDepartmentIds] = useState<string[]>(target.access.allowedDepartmentIds);
+  // Concept → Locations → Departments, like a checklist's "Applies to". A
+  // concept with none of its locations picked means every location in it
+  // (saved as a concept, so locations added later are covered); picked
+  // locations are saved on their own and show their concept here.
+  const [conceptIds, setConceptIds] = useState<string[]>(() => Array.from(new Set([
+    ...target.access.allowedConceptIds,
+    ...locations.filter(l => l.concept_id && target.access.allowedLocationIds.includes(l.id)).map(l => l.concept_id as string),
+  ])));
 
-  const toggleValue = (value: string, selected: string[], setSelected: (next: string[]) => void) => {
-    setSelected(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+  const locationOptions = conceptIds.length === 0
+    ? locations
+    : locations.filter(l => l.concept_id && conceptIds.includes(l.concept_id));
+  const pickedLocations = locationOptions.filter(l => locationIds.includes(l.id));
+  const wholeConcepts = concepts.filter(c => conceptIds.includes(c.id) && !pickedLocations.some(l => l.concept_id === c.id));
+  const pickedDepartments = departments.filter(d => departmentIds.includes(d.id));
+  const pickedMembers = teamMembers.filter(m => allowedTeamMemberIds.includes(m.id));
+  const hasPlace = wholeConcepts.length > 0 || pickedLocations.length > 0;
+  const hasTaxonomy = hasPlace || pickedDepartments.length > 0;
+
+  const changeConcepts = (ids: string[]) => {
+    setConceptIds(ids);
+    // Drop locations a concept change put out of scope.
+    if (ids.length > 0) {
+      setLocationIds(prev => prev.filter(id => locations.some(l => l.id === id && l.concept_id && ids.includes(l.concept_id))));
+    }
+  };
+
+  const names = (items: { name: string }[]) => items.map(item => item.name).join(", ");
+  const summary = () => {
+    if (accessScope === "org") return t("shared.manageAccess.summaryEveryone");
+    const people = pickedMembers.length > 0 ? t("shared.manageAccess.summaryPeople", { count: pickedMembers.length }) : "";
+    if (!hasTaxonomy) {
+      return pickedMembers.length > 0
+        ? t("shared.manageAccess.summaryPeopleOnly", { people })
+        : t("shared.manageAccess.summaryOwnersOnly");
+    }
+    const base = t("shared.manageAccess.summary", {
+      who: pickedDepartments.length > 0 ? names(pickedDepartments) : t("shared.manageAccess.everyDepartment"),
+      where: hasPlace ? names([...wholeConcepts, ...pickedLocations]) : t("shared.manageAccess.everyLocation"),
+    });
+    return people ? t("shared.manageAccess.summaryPlusPeople", { base, people }) : base;
   };
 
   const save = () => {
-    onSave({ accessScope, allowedTeamMemberIds, allowedRoles, allowedLocationIds });
+    onSave({
+      accessScope,
+      allowedTeamMemberIds: pickedMembers.map(m => m.id),
+      allowedConceptIds: wholeConcepts.map(c => c.id),
+      allowedLocationIds: pickedLocations.map(l => l.id),
+      allowedDepartmentIds: pickedDepartments.map(d => d.id),
+    });
     onClose();
   };
 
@@ -708,6 +759,7 @@ export function ManageAccessModal({
         <div className="grid gap-2 sm:grid-cols-2">
           <button
             type="button"
+            data-testid="access-scope-org"
             onClick={() => setAccessScope("org")}
             className={cn("rounded-xl border px-4 py-3 text-left transition-colors", accessScope === "org" ? "border-sage bg-sage-light" : "border-border hover:border-sage/40")}
           >
@@ -716,6 +768,7 @@ export function ManageAccessModal({
           </button>
           <button
             type="button"
+            data-testid="access-scope-restricted"
             onClick={() => setAccessScope("restricted")}
             className={cn("rounded-xl border px-4 py-3 text-left transition-colors", accessScope === "restricted" ? "border-sage bg-sage-light" : "border-border hover:border-sage/40")}
           >
@@ -724,66 +777,56 @@ export function ManageAccessModal({
           </button>
         </div>
         {accessScope === "restricted" && (
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">{t("shared.manageAccess.teamMembers")}</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {teamMembers.map((member) => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => toggleValue(member.id, allowedTeamMemberIds, setAllowedTeamMemberIds)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2 text-left transition-colors",
-                      allowedTeamMemberIds.includes(member.id) ? "border-sage bg-sage-light" : "border-border hover:border-sage/40",
-                    )}
-                  >
-                    <p className="text-sm font-medium text-foreground">{member.name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{member.role}</p>
-                  </button>
-                ))}
-              </div>
+          <div data-testid="access-taxonomy" className="rounded-[20px] border border-border bg-card p-4 space-y-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <FilterField label={t("shared.manageAccess.concept")}>
+                <FilterMultiSelect
+                  testId="access-concept-select"
+                  icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+                  options={concepts.map(c => ({ id: c.id, label: c.name }))}
+                  selected={conceptIds}
+                  onChange={changeConcepts}
+                  allLabel={t("shared.manageAccess.allConcepts")}
+                />
+              </FilterField>
+              <FilterField label={t("shared.manageAccess.locations")}>
+                <FilterMultiSelect
+                  testId="access-location-select"
+                  icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+                  options={locationOptions.map(l => ({ id: l.id, label: l.name }))}
+                  selected={pickedLocations.map(l => l.id)}
+                  onChange={setLocationIds}
+                  allLabel={t("shared.manageAccess.allLocations")}
+                />
+              </FilterField>
+              <FilterField label={t("shared.manageAccess.departments")}>
+                <FilterMultiSelect
+                  testId="access-department-select"
+                  icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+                  options={departments.map(d => ({ id: d.id, label: d.name }))}
+                  selected={pickedDepartments.map(d => d.id)}
+                  onChange={setDepartmentIds}
+                  allLabel={t("shared.manageAccess.allDepartments")}
+                  noOptionsLabel={t("shared.manageAccess.noDepartments")}
+                />
+              </FilterField>
             </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">{t("shared.manageAccess.roles")}</p>
-              <div className="flex flex-wrap gap-2">
-                {roleOptions.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => toggleValue(role, allowedRoles, setAllowedRoles)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                      allowedRoles.includes(role) ? "border-sage bg-sage-light text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
-                    )}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">{t("shared.manageAccess.locations")}</p>
-              <div className="flex flex-wrap gap-2">
-                {locations.map((location) => (
-                  <button
-                    key={location.id}
-                    type="button"
-                    onClick={() => toggleValue(location.id, allowedLocationIds, setAllowedLocationIds)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                      allowedLocationIds.includes(location.id) ? "border-sage bg-sage-light text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
-                    )}
-                  >
-                    {location.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <FilterField label={t("shared.manageAccess.teamMembers")}>
+              <FilterMultiSelect
+                testId="access-member-select"
+                icon={<User size={14} className="text-muted-foreground shrink-0" />}
+                options={[...teamMembers].sort((a, b) => a.name.localeCompare(b.name)).map(m => ({ id: m.id, label: m.name }))}
+                selected={pickedMembers.map(m => m.id)}
+                onChange={setAllowedTeamMemberIds}
+                allLabel={t("shared.manageAccess.noTeamMembers")}
+              />
+            </FilterField>
           </div>
         )}
+        <p data-testid="access-summary" className="text-xs text-muted-foreground">{summary()}</p>
         <button
           type="button"
+          data-testid="access-save"
           onClick={save}
           className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
         >

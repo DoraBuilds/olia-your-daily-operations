@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConcepts } from "@/hooks/useConcepts";
+import { useCompanyDepartments } from "@/hooks/useDepartments";
 import { useInfohubContent } from "@/hooks/useInfohubContent";
 import { supabase } from "@/lib/supabase";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
@@ -31,7 +32,7 @@ import {
   FileText,
   Building2,
   MapPin,
-  UserRound,
+  Layers,
   User,
   Tag,
   Files,
@@ -41,7 +42,7 @@ import {
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { accessMatchesFilters, activeInfohubFilterCount, DEFAULT_INFOHUB_FILTERS, reachableFolderIds, type AccessFilterContext, type DocKind, type InfohubFilters, type Progress } from "./infohub/infohub-filters";
 import { cn } from "@/lib/utils";
-import { canAccessInfohubContent, canManageInfohubAccess, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
+import { canAccessInfohubContent, canManageInfohubAccess, conceptIdsForLocations, infohubPrincipalForMember, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
@@ -59,6 +60,7 @@ export default function Infohub() {
   const { data: concepts = [] } = useConcepts();
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: locations = [] } = useLocations();
+  const { data: departments = [] } = useCompanyDepartments();
   const {
     data: infohubData,
     createFolder,
@@ -117,16 +119,13 @@ export default function Infohub() {
 
   const currentPrincipal: InfohubPrincipal = {
     teamMemberId: teamMember?.id ?? null,
-    role: teamMember?.role ?? null,
     locationIds: teamMember?.location_ids ?? [],
+    conceptIds: conceptIdsForLocations(teamMember?.location_ids ?? [], locations),
+    departmentIds: teamMember?.department_ids ?? [],
     permissions: teamMember?.permissions ?? null,
     isOwner: teamMember?.is_owner ?? false,
   };
   const canManageAccess = canManageInfohubAccess(currentPrincipal);
-  const roleOptions = useMemo(
-    () => Array.from(new Set(teamMembers.map(member => member.role).filter(Boolean))).sort(),
-    [teamMembers],
-  );
   const trainCompletionMap = useMemo(
     () => new Map(trainingProgress.map((row) => [row.module_id, row])),
     [trainingProgress],
@@ -153,13 +152,17 @@ export default function Infohub() {
     });
   }, [draftLocationOptions]);
 
-  const accessContext = (f: InfohubFilters): AccessFilterContext => ({
-    locationIds: f.locationIds.length > 0
+  const accessContext = (f: InfohubFilters): AccessFilterContext => {
+    const locationIds = f.locationIds.length > 0
       ? f.locationIds
-      : f.conceptIds.length > 0 ? locations.filter(l => l.concept_id && f.conceptIds.includes(l.concept_id)).map(l => l.id) : null,
-    roles: f.roles,
-    members: teamMembers.filter(m => f.memberIds.includes(m.id)),
-  });
+      : f.conceptIds.length > 0 ? locations.filter(l => l.concept_id && f.conceptIds.includes(l.concept_id)).map(l => l.id) : null;
+    return {
+      locationIds,
+      conceptIds: locationIds ? conceptIdsForLocations(locationIds, locations) : [],
+      departmentIds: f.departmentIds,
+      members: teamMembers.filter(m => f.memberIds.includes(m.id)).map(m => infohubPrincipalForMember(m, locations)),
+    };
+  };
   const isLibFiltering = activeInfohubFilterCount(libFilters) > 0;
   const isTrainFiltering = activeInfohubFilterCount(trainFilters) > 0;
   const currentFilters = subTab === "library" ? libFilters : trainFilters;
@@ -259,12 +262,12 @@ export default function Infohub() {
   };
 
   // The current tab's applied filters as removable chips — shown at every folder level.
-  const removeFrom = (key: "conceptIds" | "locationIds" | "roles" | "memberIds" | "tags", value: string) =>
+  const removeFrom = (key: "conceptIds" | "locationIds" | "departmentIds" | "memberIds" | "tags", value: string) =>
     setCurrentFilters(prev => ({ ...prev, [key]: prev[key].filter(x => x !== value) }));
   const filterChips: ActiveFilterChip[] = [
     ...currentFilters.conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => removeFrom("conceptIds", id) })),
     ...currentFilters.locationIds.map(id => ({ key: `l-${id}`, label: locations.find(l => l.id === id)?.name ?? id, onRemove: () => removeFrom("locationIds", id) })),
-    ...currentFilters.roles.map(role => ({ key: `r-${role}`, label: role, onRemove: () => removeFrom("roles", role) })),
+    ...currentFilters.departmentIds.map(id => ({ key: `d-${id}`, label: departments.find(d => d.id === id)?.name ?? id, onRemove: () => removeFrom("departmentIds", id) })),
     ...currentFilters.memberIds.map(id => ({ key: `m-${id}`, label: teamMembers.find(m => m.id === id)?.name ?? id, onRemove: () => removeFrom("memberIds", id) })),
     ...currentFilters.tags.map(tag => ({ key: `t-${tag}`, label: `#${tag}`, onRemove: () => removeFrom("tags", tag) })),
     ...(currentFilters.kind === "all" ? [] : [{
@@ -505,14 +508,14 @@ export default function Infohub() {
             allLabel={t("filters.allLocations")}
           />
         </FilterField>
-        <FilterField label={t("filters.role")}>
+        <FilterField label={t("filters.department")}>
           <FilterMultiSelect
-            testId="infohub-role-filter"
-            icon={<UserRound size={14} className="text-muted-foreground shrink-0" />}
-            options={roleOptions.map(role => ({ id: role, label: role }))}
-            selected={draft.roles}
-            onChange={roles => updateDraft({ roles })}
-            allLabel={t("filters.allRoles")}
+            testId="infohub-department-filter"
+            icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+            options={departments.map(d => ({ id: d.id, label: d.name }))}
+            selected={draft.departmentIds}
+            onChange={ids => updateDraft({ departmentIds: ids })}
+            allLabel={t("filters.allDepartments")}
           />
         </FilterField>
         <FilterField label={t("filters.member")}>
@@ -963,9 +966,10 @@ export default function Infohub() {
       {accessTarget && (
         <ManageAccessModal
           target={accessTarget}
-          teamMembers={teamMembers.map(member => ({ id: member.id, name: member.name, role: member.role }))}
-          locations={locations.map(location => ({ id: location.id, name: location.name }))}
-          roleOptions={roleOptions}
+          teamMembers={teamMembers.filter(member => !member.is_owner).map(member => ({ id: member.id, name: member.name }))}
+          concepts={concepts}
+          departments={departments}
+          locations={locations.map(location => ({ id: location.id, name: location.name, concept_id: location.concept_id ?? null }))}
           onClose={() => setAccessTarget(null)}
           onSave={(access) => handleSaveAccess(accessTarget, access)}
         />

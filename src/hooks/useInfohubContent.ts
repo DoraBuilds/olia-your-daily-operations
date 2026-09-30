@@ -28,7 +28,8 @@ interface InfohubFolderRow {
   sort_order: number | null;
   access_scope: InfohubAccessControl["accessScope"];
   allowed_team_member_ids: string[] | null;
-  allowed_roles: string[] | null;
+  allowed_concept_ids: string[] | null;
+  allowed_department_ids: string[] | null;
   allowed_location_ids: string[] | null;
   created_by?: string | null;
 }
@@ -51,7 +52,8 @@ interface InfohubDocumentRow {
   archived_at: string | null;
   access_scope: InfohubAccessControl["accessScope"];
   allowed_team_member_ids: string[] | null;
-  allowed_roles: string[] | null;
+  allowed_concept_ids: string[] | null;
+  allowed_department_ids: string[] | null;
   allowed_location_ids: string[] | null;
   created_by?: string | null;
   updated_at: string;
@@ -114,12 +116,13 @@ function formatDate(date: string) {
   });
 }
 
-function mapAccess(row: Pick<InfohubFolderRow, "access_scope" | "allowed_team_member_ids" | "allowed_roles" | "allowed_location_ids">): InfohubAccessControl {
+function mapAccess(row: Pick<InfohubFolderRow, "access_scope" | "allowed_team_member_ids" | "allowed_concept_ids" | "allowed_location_ids" | "allowed_department_ids">): InfohubAccessControl {
   return {
     accessScope: row.access_scope ?? "org",
     allowedTeamMemberIds: row.allowed_team_member_ids ?? [],
-    allowedRoles: row.allowed_roles ?? [],
+    allowedConceptIds: row.allowed_concept_ids ?? [],
     allowedLocationIds: row.allowed_location_ids ?? [],
+    allowedDepartmentIds: row.allowed_department_ids ?? [],
   };
 }
 
@@ -178,8 +181,9 @@ function buildSeedPayload(organizationId: string, teamMemberId?: string | null):
       sort_order: folder.sortOrder ?? index,
       access_scope: folder.access.accessScope,
       allowed_team_member_ids: folder.access.allowedTeamMemberIds,
-      allowed_roles: folder.access.allowedRoles,
+      allowed_concept_ids: folder.access.allowedConceptIds,
       allowed_location_ids: folder.access.allowedLocationIds,
+      allowed_department_ids: folder.access.allowedDepartmentIds,
       created_by: teamMemberId ?? null,
     })),
     ...initialTrainingFolders.map((folder, index) => ({
@@ -191,8 +195,9 @@ function buildSeedPayload(organizationId: string, teamMemberId?: string | null):
       sort_order: folder.sortOrder ?? index,
       access_scope: folder.access.accessScope,
       allowed_team_member_ids: folder.access.allowedTeamMemberIds,
-      allowed_roles: folder.access.allowedRoles,
+      allowed_concept_ids: folder.access.allowedConceptIds,
       allowed_location_ids: folder.access.allowedLocationIds,
+      allowed_department_ids: folder.access.allowedDepartmentIds,
       created_by: teamMemberId ?? null,
     })),
   ];
@@ -211,8 +216,9 @@ function buildSeedPayload(organizationId: string, teamMemberId?: string | null):
       },
       access_scope: doc.access.accessScope,
       allowed_team_member_ids: doc.access.allowedTeamMemberIds,
-      allowed_roles: doc.access.allowedRoles,
+      allowed_concept_ids: doc.access.allowedConceptIds,
       allowed_location_ids: doc.access.allowedLocationIds,
+      allowed_department_ids: doc.access.allowedDepartmentIds,
       created_by: teamMemberId ?? null,
     })),
     ...initialTrainingDocs.map((doc) => ({
@@ -229,8 +235,9 @@ function buildSeedPayload(organizationId: string, teamMemberId?: string | null):
       },
       access_scope: doc.access.accessScope,
       allowed_team_member_ids: doc.access.allowedTeamMemberIds,
-      allowed_roles: doc.access.allowedRoles,
+      allowed_concept_ids: doc.access.allowedConceptIds,
       allowed_location_ids: doc.access.allowedLocationIds,
+      allowed_department_ids: doc.access.allowedDepartmentIds,
       created_by: teamMemberId ?? null,
     })),
   ];
@@ -268,8 +275,8 @@ async function fetchInfohubContent(
   canBootstrap: boolean,
   teamMemberId?: string | null,
 ): Promise<InfohubContentData> {
-  const folderSelect = "id, organization_id, section, parent_id, name, sort_order, access_scope, allowed_team_member_ids, allowed_roles, allowed_location_ids";
-  const docSelect = "id, organization_id, section, folder_id, title, summary, body, metadata, archived_at, access_scope, allowed_team_member_ids, allowed_roles, allowed_location_ids, updated_at";
+  const folderSelect = "id, organization_id, section, parent_id, name, sort_order, access_scope, allowed_team_member_ids, allowed_concept_ids, allowed_location_ids, allowed_department_ids";
+  const docSelect = "id, organization_id, section, folder_id, title, summary, body, metadata, archived_at, access_scope, allowed_team_member_ids, allowed_concept_ids, allowed_location_ids, allowed_department_ids, updated_at";
 
   const [foldersRes, docsRes] = await Promise.all([
     supabase.from("infohub_folders").select(folderSelect).order("sort_order", { ascending: true }).order("name", { ascending: true }),
@@ -318,8 +325,9 @@ function applyAccessFields(access: InfohubAccessControl) {
   return {
     access_scope: access.accessScope,
     allowed_team_member_ids: access.allowedTeamMemberIds,
-    allowed_roles: access.allowedRoles,
+    allowed_concept_ids: access.allowedConceptIds,
     allowed_location_ids: access.allowedLocationIds,
+    allowed_department_ids: access.allowedDepartmentIds,
   };
 }
 
@@ -337,7 +345,6 @@ export function useInfohubContent() {
   const organizationId = teamMember?.organization_id ?? null;
   const canBootstrap = canManageInfohubAccess({
     teamMemberId: teamMember?.id ?? null,
-    role: teamMember?.role ?? null,
     locationIds: teamMember?.location_ids ?? [],
     permissions: teamMember?.permissions ?? null,
     isOwner: teamMember?.is_owner ?? false,
