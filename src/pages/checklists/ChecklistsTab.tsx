@@ -656,8 +656,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       )}
 
       <Suspense fallback={null}>
-        {showConvertFile && <ConvertFileModal onClose={() => setShowConvertFile(false)} onConvert={(sections) => {
-          setPrefillTitle("Converted checklist");
+        {showConvertFile && <ConvertFileModal onClose={() => setShowConvertFile(false)} onConvert={(sections, fileName) => {
+          setPrefillTitle(fileName || "Converted checklist");
           setPrefillSections(sections);
           setShowBuilder(true);
           onBuilderTitleChange?.("");

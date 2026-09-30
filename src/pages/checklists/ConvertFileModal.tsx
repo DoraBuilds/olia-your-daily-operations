@@ -95,7 +95,7 @@ function humanizeConvertError(msg: string): string {
   return msg;
 }
 
-export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[]) => void }) {
+export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; onConvert: (sections: SectionDef[], fileName: string) => void }) {
   const { t } = useTranslation("checklists");
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -132,7 +132,7 @@ export function ConvertFileModal({ onClose, onConvert }: { onClose: () => void; 
 
       const { sections } = data as { sections: SectionDef[] };
       if (!Array.isArray(sections)) throw new Error(t("convertFile.unexpectedFromAI"));
-      onConvert(sections);
+      onConvert(sections, file.name.replace(/\.[^.]+$/, "").trim());
       onClose();
     } catch (e: any) {
       setError(humanizeConvertError(e?.message ?? ""));
