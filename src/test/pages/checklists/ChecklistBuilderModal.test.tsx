@@ -884,3 +884,21 @@ describe("ChecklistBuilderModal - edit mode", () => {
     }));
   });
 });
+
+describe("ChecklistBuilderModal - page mode action bar", () => {
+  it("keeps the top Publish button inside the sticky action bar, not floating over the form", () => {
+    renderWithClient(
+      <ChecklistBuilderModal asPage onClose={vi.fn()} onAdd={vi.fn()} initialTitle="Morning Opening" initialIsPublished />
+    );
+
+    const bar = screen.getByTestId("builder-action-bar");
+    expect(bar.className).toContain("sticky");
+    expect(within(bar).getByTestId("checklist-save-button")).toHaveTextContent("Publish");
+    expect(within(bar).getByText("Exit")).toBeInTheDocument();
+    // The kiosk visibility switch sits below the bar, never underneath the button
+    expect(bar.contains(screen.getByTestId("checklist-published-toggle"))).toBe(false);
+    screen.getAllByTestId("checklist-save-button").forEach(btn => {
+      expect(btn.closest(".fixed")).toBeNull();
+    });
+  });
+});
