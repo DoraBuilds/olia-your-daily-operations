@@ -42,18 +42,6 @@ if (shouldRedirectToKiosk(window.location.pathname, Boolean(localStorage.getItem
   window.history.replaceState(null, "", `${import.meta.env.BASE_URL}kiosk`.replace(/\/{2,}/g, "/"));
 }
 
-// Returning user (saved session, not a kiosk): fetch the page code now, in
-// parallel with the auth round trips, rather than after them.
-if (hasStoredSession() && !localStorage.getItem("kiosk_location_id")) {
-  preloadPages(window.location.pathname, [
-    { prefix: "/dashboard", load: loadDashboard },
-    { prefix: "/checklists", load: loadChecklists },
-    { prefix: "/reporting", load: loadReporting },
-    { prefix: "/infohub", load: loadInfohub },
-    { prefix: "/admin", load: loadAdmin },
-  ]);
-}
-
 const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
 const loadDashboard = () => import("./pages/Dashboard");
 const loadChecklists = () => import("./pages/Checklists");
@@ -65,6 +53,18 @@ const Checklists = lazy(loadChecklists);
 const Reporting = lazy(loadReporting);
 const Infohub = lazy(loadInfohub);
 const Admin = lazy(loadAdmin);
+
+// Returning user (saved session, not a kiosk): fetch the page code now, in
+// parallel with the auth round trips, rather than after them.
+if (hasStoredSession() && !localStorage.getItem("kiosk_location_id")) {
+  preloadPages(window.location.pathname, [
+    { prefix: "/dashboard", load: loadDashboard },
+    { prefix: "/checklists", load: loadChecklists },
+    { prefix: "/reporting", load: loadReporting },
+    { prefix: "/infohub", load: loadInfohub },
+    { prefix: "/admin", load: loadAdmin },
+  ]);
+}
 const Kiosk = lazy(() => import("./pages/Kiosk"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Billing = lazy(() => import("./pages/Billing"));
