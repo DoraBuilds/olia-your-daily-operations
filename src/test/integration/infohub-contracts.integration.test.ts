@@ -200,7 +200,8 @@ describe.sequential("infohub_folders contracts", () => {
       name: "Restricted Folder",
       access_scope: "restricted",
       allowed_team_member_ids: [],
-      allowed_roles: [],
+      allowed_concept_ids: [],
+      allowed_department_ids: [],
       allowed_location_ids: [],
       created_by: seeded.userId,
     });

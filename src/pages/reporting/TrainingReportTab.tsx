@@ -59,8 +59,9 @@ export function TrainingReportTab() {
       teamMembers,
       progress,
       { locationIds: effectiveLocationIds, departmentIds: filters.departmentIds.length > 0 ? filters.departmentIds : null, search },
+      locations,
     ),
-    [content, teamMembers, progress, effectiveLocationIds, filters.departmentIds, search],
+    [content, teamMembers, progress, effectiveLocationIds, filters.departmentIds, search, locations],
   );
 
   const activeCount = [filters.conceptIds, filters.locationIds, filters.departmentIds].filter(ids => ids.length > 0).length;

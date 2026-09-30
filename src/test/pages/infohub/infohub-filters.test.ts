@@ -2,37 +2,49 @@ import { accessMatchesFilters, activeInfohubFilterCount, DEFAULT_INFOHUB_FILTERS
 import { DEFAULT_INFOHUB_ACCESS, type InfohubAccessControl } from "@/lib/infohub-access";
 
 const restricted = (patch: Partial<InfohubAccessControl>): InfohubAccessControl => ({ ...DEFAULT_INFOHUB_ACCESS, accessScope: "restricted", ...patch });
-const ctx = (patch: Partial<AccessFilterContext> = {}): AccessFilterContext => ({ locationIds: null, roles: [], members: [], ...patch });
-const maria = { id: "m1", role: "Chef", location_ids: ["loc-1"] };
-const jordi = { id: "m2", role: "Waiter", location_ids: ["loc-2"] };
+const ctx = (patch: Partial<AccessFilterContext> = {}): AccessFilterContext => ({ locationIds: null, conceptIds: [], departmentIds: [], members: [], ...patch });
+const maria = { teamMemberId: "m1", locationIds: ["loc-1"], conceptIds: ["c1"], departmentIds: ["kitchen"] };
+const jordi = { teamMemberId: "m2", locationIds: ["loc-2"], conceptIds: ["c2"], departmentIds: ["floor"] };
 
 describe("accessMatchesFilters", () => {
   it("always matches content visible to everyone", () => {
-    expect(accessMatchesFilters(DEFAULT_INFOHUB_ACCESS, ctx({ locationIds: ["loc-9"], roles: ["Nobody"], members: [jordi] }))).toBe(true);
+    expect(accessMatchesFilters(DEFAULT_INFOHUB_ACCESS, ctx({ locationIds: ["loc-9"], departmentIds: ["nobody"], members: [jordi] }))).toBe(true);
   });
 
   it("matches restricted content when no filters are set", () => {
-    expect(accessMatchesFilters(restricted({ allowedRoles: ["Chef"] }), ctx())).toBe(true);
+    expect(accessMatchesFilters(restricted({ allowedDepartmentIds: ["kitchen"] }), ctx())).toBe(true);
   });
 
   it("matches a location-restricted doc only for overlapping locations", () => {
     const access = restricted({ allowedLocationIds: ["loc-1"] });
-    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"] }))).toBe(true);
-    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-2"] }))).toBe(false);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], conceptIds: ["c1"] }))).toBe(true);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-2"], conceptIds: ["c2"] }))).toBe(false);
   });
 
-  it("matches a role-restricted doc for any location, since that role may work there", () => {
-    expect(accessMatchesFilters(restricted({ allowedRoles: ["Chef"] }), ctx({ locationIds: ["loc-2"] }))).toBe(true);
+  it("matches a concept-restricted doc for any location of that concept", () => {
+    const access = restricted({ allowedConceptIds: ["c1"] });
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], conceptIds: ["c1"] }))).toBe(true);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-2"], conceptIds: ["c2"] }))).toBe(false);
   });
 
-  it("matches a role-restricted doc only for that role", () => {
-    const access = restricted({ allowedRoles: ["Chef"] });
-    expect(accessMatchesFilters(access, ctx({ roles: ["Chef"] }))).toBe(true);
-    expect(accessMatchesFilters(access, ctx({ roles: ["Waiter"] }))).toBe(false);
+  it("matches a department-restricted doc for any location, since that department may work there", () => {
+    expect(accessMatchesFilters(restricted({ allowedDepartmentIds: ["kitchen"] }), ctx({ locationIds: ["loc-2"], conceptIds: ["c2"] }))).toBe(true);
   });
 
-  it("matches a location-restricted doc for any role at that location", () => {
-    expect(accessMatchesFilters(restricted({ allowedLocationIds: ["loc-1"] }), ctx({ roles: ["Waiter"] }))).toBe(true);
+  it("matches a department-restricted doc only for that department", () => {
+    const access = restricted({ allowedDepartmentIds: ["kitchen"] });
+    expect(accessMatchesFilters(access, ctx({ departmentIds: ["kitchen"] }))).toBe(true);
+    expect(accessMatchesFilters(access, ctx({ departmentIds: ["floor"] }))).toBe(false);
+  });
+
+  it("matches a location-restricted doc for any department at that location", () => {
+    expect(accessMatchesFilters(restricted({ allowedLocationIds: ["loc-1"] }), ctx({ departmentIds: ["floor"] }))).toBe(true);
+  });
+
+  it("needs both the place and the department to fit when both are set", () => {
+    const access = restricted({ allowedLocationIds: ["loc-1"], allowedDepartmentIds: ["kitchen"] });
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], conceptIds: ["c1"], departmentIds: ["kitchen"] }))).toBe(true);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], conceptIds: ["c1"], departmentIds: ["floor"] }))).toBe(false);
   });
 
   it("matches a person-restricted doc only when a selected member can see it", () => {
@@ -41,19 +53,19 @@ describe("accessMatchesFilters", () => {
     expect(accessMatchesFilters(access, ctx({ members: [jordi] }))).toBe(false);
   });
 
-  it("uses a member's role and locations for the Team member filter", () => {
+  it("uses a member's department and locations for the Team member filter", () => {
     expect(accessMatchesFilters(restricted({ allowedLocationIds: ["loc-2"] }), ctx({ members: [jordi] }))).toBe(true);
-    expect(accessMatchesFilters(restricted({ allowedRoles: ["Chef"] }), ctx({ members: [jordi] }))).toBe(false);
+    expect(accessMatchesFilters(restricted({ allowedDepartmentIds: ["kitchen"] }), ctx({ members: [jordi] }))).toBe(false);
   });
 
   it("treats owners as seeing everything", () => {
-    expect(accessMatchesFilters(restricted({ allowedRoles: ["Chef"] }), ctx({ members: [{ id: "o", role: "Owner", location_ids: [], is_owner: true }] }))).toBe(true);
+    expect(accessMatchesFilters(restricted({ allowedDepartmentIds: ["kitchen"] }), ctx({ members: [{ teamMemberId: "o", locationIds: [], isOwner: true }] }))).toBe(true);
   });
 
   it("counts a named person only if they fit the location filter", () => {
     const access = restricted({ allowedTeamMemberIds: ["m1"] });
-    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], members: [maria] }))).toBe(true);
-    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-2"], members: [maria] }))).toBe(false);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-1"], conceptIds: ["c1"], members: [maria] }))).toBe(true);
+    expect(accessMatchesFilters(access, ctx({ locationIds: ["loc-2"], conceptIds: ["c2"], members: [maria] }))).toBe(false);
   });
 });
 

@@ -3,7 +3,7 @@ import { buildTrainingReport, type ReportDoc, type ReportFolder } from "@/pages/
 import { DEFAULT_PERMISSIONS, type TeamMember } from "@/lib/admin-repository";
 import type { TrainingProgressRow } from "@/hooks/useTrainingProgress";
 
-const open = { accessScope: "org" as const, allowedTeamMemberIds: [], allowedRoles: [], allowedLocationIds: [] };
+const open = { accessScope: "org" as const, allowedTeamMemberIds: [], allowedConceptIds: [], allowedLocationIds: [], allowedDepartmentIds: [] };
 const restricted = (patch: Partial<typeof open>) => ({ ...open, accessScope: "restricted" as const, ...patch });
 
 const member = (id: string, patch: Partial<TeamMember> = {}): TeamMember => ({

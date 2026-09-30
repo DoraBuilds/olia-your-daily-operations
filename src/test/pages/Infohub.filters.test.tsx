@@ -12,6 +12,10 @@ vi.mock("@/hooks/useConcepts", () => ({
   useConcepts: () => ({ data: [{ id: "c1", name: "Bistro" }, { id: "c2", name: "Beach" }] }),
 }));
 
+vi.mock("@/hooks/useDepartments", () => ({
+  useCompanyDepartments: () => ({ data: [{ id: "dep-kitchen", name: "Kitchen team", assignments: [] }, { id: "dep-floor", name: "Floor", assignments: [] }] }),
+}));
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return { ...actual, useNavigate: () => vi.fn() };
@@ -49,8 +53,8 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/hooks/useTeamMembers", () => ({
   useTeamMembers: () => ({ data: [
     { id: "u1", name: "Sarah", role: "Owner", is_owner: true, location_ids: [] },
-    { id: "m1", name: "Maria", role: "Chef", is_owner: false, location_ids: ["loc-1"] },
-    { id: "m2", name: "Jordi", role: "Waiter", is_owner: false, location_ids: ["loc-2"] },
+    { id: "m1", name: "Maria", role: "Chef", is_owner: false, location_ids: ["loc-1"], department_ids: ["dep-kitchen"] },
+    { id: "m2", name: "Jordi", role: "Waiter", is_owner: false, location_ids: ["loc-2"], department_ids: ["dep-floor"] },
   ] }),
 }));
 
@@ -73,7 +77,7 @@ const LIB_FOLDERS = [
 const LIB_DOCS = [
   { id: "d1", title: "Allergen guide", summary: "", content: "", tags: ["safety"], lastUpdated: "1 Sep", folderId: "f1", access: org },
   { id: "d2", title: "Main Branch fridge rota", summary: "", content: "", tags: ["rota"], lastUpdated: "1 Sep", folderId: "f1", access: restricted({ allowedLocationIds: ["loc-1"] }) },
-  { id: "d3", title: "Chef knife policy", summary: "", content: "", tags: [], lastUpdated: "1 Sep", folderId: "f1", access: restricted({ allowedRoles: ["Chef"] }), filePath: "x.pdf", fileType: "application/pdf" },
+  { id: "d3", title: "Chef knife policy", summary: "", content: "", tags: [], lastUpdated: "1 Sep", folderId: "f1", access: restricted({ allowedDepartmentIds: ["dep-kitchen"] }), filePath: "x.pdf", fileType: "application/pdf" },
   { id: "d4", title: "Terrace opening", summary: "", content: "", tags: [], lastUpdated: "1 Sep", folderId: "f2", access: org },
 ];
 const TRAIN_FOLDERS = [{ id: "t1", name: "Onboarding", parentId: null, sortOrder: 0, access: org }];
@@ -169,10 +173,10 @@ describe("Infohub Library filters", () => {
     expect(screen.queryByText("Main Branch fridge rota")).not.toBeInTheDocument();
   });
 
-  it("filters by role, tag and type", () => {
+  it("filters by department, tag and type", () => {
     renderWithProviders(<Infohub />, { initialEntries: ["/infohub/library"] });
     openFilters();
-    pick("role", "Waiter");
+    pick("department", "dep-floor");
     applyFilters();
     fireEvent.click(screen.getByText("Kitchen"));
     expect(screen.queryByText("Chef knife policy")).not.toBeInTheDocument();

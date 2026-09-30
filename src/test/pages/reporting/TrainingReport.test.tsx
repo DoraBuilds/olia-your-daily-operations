@@ -24,7 +24,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 vi.mock("@/pages/checklists/ReportingTab", () => ({ ReportingTab: () => <div>Checklist report</div> }));
 
-const open = { accessScope: "org", allowedTeamMemberIds: [], allowedRoles: [], allowedLocationIds: [] };
+const open = { accessScope: "org", allowedTeamMemberIds: [], allowedConceptIds: [], allowedLocationIds: [], allowedDepartmentIds: [] };
 vi.mock("@/hooks/useInfohubContent", () => ({
   useInfohubContent: () => ({
     isLoading: false,
