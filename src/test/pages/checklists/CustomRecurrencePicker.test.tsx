@@ -139,4 +139,14 @@ describe("CustomRecurrencePicker", () => {
       expect(onChange).toHaveBeenCalled();
     }
   });
+
+  it("scrolling over a focused number field drops focus instead of changing the value", () => {
+    render(<CustomRecurrencePicker value={defaultValue} onChange={onChange} onClose={onClose} />);
+    const interval = screen.getAllByRole("spinbutton")[0];
+    interval.focus();
+    expect(interval).toHaveFocus();
+    fireEvent.wheel(interval, { deltaY: 100 });
+    expect(interval).not.toHaveFocus();
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

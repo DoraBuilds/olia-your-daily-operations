@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, AlertTriangle, Mail, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, blurOnWheel } from "@/lib/utils";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import type { LogicRule, LogicComparator, LogicTrigger, LogicTriggerType, ResponseType } from "./types";
 
@@ -228,6 +228,7 @@ export function LogicRulesEditor({
                         <span className="text-xs text-muted-foreground">{t("logicRules.and")}</span>
                         <input
                           type="number"
+                          onWheel={blurOnWheel}
                           value={rule.valueTo ?? ""}
                           onChange={e => updateRule(ri, { valueTo: e.target.value })}
                           placeholder={t("logicRules.valuePlaceholder")}
