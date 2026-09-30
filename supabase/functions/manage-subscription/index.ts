@@ -15,6 +15,11 @@
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  resolveSupportMode,
+  SUPPORT_MODE_CHECK_FAILED_MESSAGE,
+  SUPPORT_MODE_REFUSED_MESSAGE,
+} from "../_shared/support-mode.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -48,6 +53,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const jwt = authHeader.replace("Bearer ", "");
   const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
   if (authError || !user) return err("Invalid session");
+
+  // Billing decisions stay with the customer — refused in support mode.
+  const support = await resolveSupportMode(supabase, user.id);
+  if (support.failed) return err(SUPPORT_MODE_CHECK_FAILED_MESSAGE);
+  if (support.orgId) return err(SUPPORT_MODE_REFUSED_MESSAGE);
 
   let body: { action?: string };
   try {

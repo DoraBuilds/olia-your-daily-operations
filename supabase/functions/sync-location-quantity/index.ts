@@ -12,6 +12,11 @@
 
 import Stripe from "https://esm.sh/stripe@14.21.0?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
+import {
+  logSupportModeAction,
+  resolveSupportMode,
+  SUPPORT_MODE_CHECK_FAILED_MESSAGE,
+} from "../_shared/support-mode.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -50,17 +55,26 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
     if (authError || !user) return err("Invalid session");
 
-    const { data: member, error: memberError } = await supabase
-      .from("team_members")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
-    if (memberError || !member) return err("Team member not found");
+    // A platform admin in support mode syncs the org they are viewing —
+    // they may have just added or removed one of its locations.
+    const support = await resolveSupportMode(supabase, user.id);
+    if (support.failed) return err(SUPPORT_MODE_CHECK_FAILED_MESSAGE);
+
+    let organizationId = support.orgId;
+    if (!organizationId) {
+      const { data: member, error: memberError } = await supabase
+        .from("team_members")
+        .select("organization_id")
+        .eq("id", user.id)
+        .single();
+      if (memberError || !member) return err("Team member not found");
+      organizationId = member.organization_id;
+    }
 
     const { data: org, error: orgError } = await supabase
       .from("organizations")
       .select("id, plan, stripe_subscription_id")
-      .eq("id", member.organization_id)
+      .eq("id", organizationId)
       .single();
     if (orgError || !org) return err("Organization not found");
 
@@ -101,6 +115,12 @@ Deno.serve(async (req) => {
       quantity: targetQuantity,
       proration_behavior: "create_prorations",
     });
+
+    if (support.orgId) {
+      await logSupportModeAction(supabase, user.id, support.orgId, "sync-location-quantity", {
+        quantity: targetQuantity,
+      });
+    }
 
     return ok({ synced: true, quantity: targetQuantity });
   } catch (e: unknown) {

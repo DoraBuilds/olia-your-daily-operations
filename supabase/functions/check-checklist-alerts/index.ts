@@ -26,6 +26,7 @@
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildDigestEmail, computeUnfinished, computeUnstarted } from "./digest.ts";
+import { logSupportModeAction, resolveSupportMode } from "../_shared/support-mode.ts";
 
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -78,19 +79,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const { data: memberRow, error: memberErr } = await admin
-    .from("team_members")
-    .select("organization_id, role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (memberErr || !memberRow) {
-    return json({ error: "No team_members row found for caller" }, 403);
-  }
-  if (memberRow.role !== "Owner") {
-    return json({ error: "Only Owners can trigger checklist notifications" }, 403);
+  // A platform admin in support mode acts as the Owner of the org they
+  // are viewing.
+  const support = await resolveSupportMode(admin, user.id);
+  if (support.failed) {
+    return json({ error: "Could not verify support mode" }, 500);
   }
 
-  const orgId = memberRow.organization_id;
+  let orgId: string;
+  if (support.orgId) {
+    orgId = support.orgId;
+  } else {
+    const { data: memberRow, error: memberErr } = await admin
+      .from("team_members")
+      .select("organization_id, role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (memberErr || !memberRow) {
+      return json({ error: "No team_members row found for caller" }, 403);
+    }
+    if (memberRow.role !== "Owner") {
+      return json({ error: "Only Owners can trigger checklist notifications" }, 403);
+    }
+    orgId = memberRow.organization_id;
+  }
 
   let body: { recipient_email?: string; test?: boolean } = {};
   try {
@@ -121,6 +133,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     notifyUnfinished: rules?.notify_unfinished ?? true,
     isTest,
   });
+
+  if (support.orgId && result.sent) {
+    await logSupportModeAction(admin, user.id, support.orgId, "check-checklist-alerts", {
+      recipient,
+      test: isTest,
+    });
+  }
 
   return json(result, result.status);
 });

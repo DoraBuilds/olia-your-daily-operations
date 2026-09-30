@@ -5,6 +5,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "./cors.ts";
+import { resolveSupportMode } from "./support-mode.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -48,10 +49,26 @@ export async function enforcePaidPlan(
       );
     }
 
+    // A platform admin in support mode is held to the plan and daily limit
+    // of the org they are viewing, not their own.
+    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+    const support = await resolveSupportMode(serviceClient, user.id);
+    if (support.failed) {
+      return new Response(
+        JSON.stringify({ error: "Could not verify plan." }),
+        { status: 502, headers: { "Content-Type": "application/json", ...CORS } }
+      );
+    }
+
     // Fetch the org plan and ID via the service role (bypasses RLS safely).
     // user.id is now verified — it cannot be spoofed via a crafted JWT payload.
+    const planQuery = support.orgId
+      ? `organizations?select=organization_id:id,plan&id=eq.${support.orgId}&limit=1`
+      : `team_members?select=organization_id,organizations(plan)&id=eq.${user.id}&limit=1`;
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/team_members?select=organization_id,organizations(plan)&id=eq.${user.id}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/${planQuery}`,
       {
         headers: {
           "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -70,7 +87,7 @@ export async function enforcePaidPlan(
 
     const rows = await res.json();
     const orgId: string | undefined = rows[0]?.organization_id;
-    const plan: string = rows[0]?.organizations?.plan ?? "starter";
+    const plan: string = (support.orgId ? rows[0]?.plan : rows[0]?.organizations?.plan) ?? "starter";
 
     if (plan === "starter") {
       return new Response(
