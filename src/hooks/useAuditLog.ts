@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { isSupportModeActive, teamMemberRefId } from "@/lib/support-mode";
 
 export interface AuditLogRow {
   id: string;
@@ -30,7 +31,7 @@ export function useAuditLog() {
         entity_id: (row.entity_id ?? null) as string | null,
         details: (row.details ?? null) as Record<string, any> | null,
         created_at: row.created_at as string,
-        actor_name: (row.performed_by?.name ?? null) as string | null,
+        actor_name: (row.performed_by?.name ?? (row.details?.by_support ? "Olia Support" : null)) as string | null,
       })) as AuditLogRow[];
     },
     enabled: !!teamMember?.organization_id,
@@ -43,13 +44,16 @@ export function writeAuditLog(
   member: { id: string; organization_id: string },
 ) {
   try {
+    // Support-mode actions have no team member to credit: the actor is
+    // left empty and the entry is flagged instead.
+    const bySupport = isSupportModeActive();
     void supabase.from("audit_log").insert({
       organization_id: member.organization_id,
-      performed_by: member.id,
+      performed_by: teamMemberRefId(member.id),
       action: entry.action,
       entity_type: entry.entity_type,
       entity_id: entry.entity_id ?? null,
-      details: entry.details ?? null,
+      details: bySupport ? { ...entry.details, by_support: true } : entry.details ?? null,
     });
   } catch { /* audit writes are non-critical and must not break any caller */ }
 }

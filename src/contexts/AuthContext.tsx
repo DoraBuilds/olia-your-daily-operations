@@ -5,7 +5,7 @@ import { queryClient } from "@/lib/query-client";
 import i18n, { rememberDeviceLanguage, takePendingLanguageChoice, type SupportedLanguage } from "@/lib/i18n";
 import { identifyUser, captureEvent, resetPostHog } from "@/lib/posthog";
 import { DEFAULT_PERMISSIONS } from "@/lib/admin-repository";
-import { setSupportModeActive } from "@/lib/support-mode";
+import { isSupportModeActive, setSupportModeActive } from "@/lib/support-mode";
 
 interface TeamMemberProfile {
   id: string;
@@ -370,6 +370,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!teamMember) throw new Error("Not signed in");
     const previous = teamMember.language;
     setTeamMember((current) => (current ? { ...current, language } : current));
+
+    // The support profile isn't a team_members row — nothing to persist.
+    if (isSupportModeActive()) return;
 
     const { error } = await supabase.from("team_members").update({ language }).eq("id", teamMember.id);
     if (error) {
