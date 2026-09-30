@@ -123,7 +123,9 @@ describe("AuthContext — platform admin support mode", () => {
     expect(Object.values(result.current.teamMember!.permissions).every(Boolean)).toBe(true);
     expect(result.current.platformAdmin.viewingOrg).toEqual(CUSTOMER);
     expect(isSupportModeActive()).toBe(true);
-    expect(mockTeamMemberSingle).not.toHaveBeenCalled();
+    // The admin's own row is looked up alongside the status check (one round
+    // trip instead of two) but must never win over the support profile.
+    expect(result.current.teamMember?.name).not.toBe(ownRow?.name);
   });
 
   it("an admin with no org of their own is never auto-onboarded or invite-accepted", async () => {

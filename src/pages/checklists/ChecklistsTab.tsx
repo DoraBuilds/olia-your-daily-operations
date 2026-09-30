@@ -8,7 +8,7 @@ import { type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
-import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist } from "@/hooks/useChecklists";
+import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useConcepts } from "@/hooks/useConcepts";
@@ -49,6 +49,11 @@ interface PanelFilters {
   status: PublishStatus;
 }
 
+// Stable "nothing loaded yet" defaults — a fresh [] per render would re-fire
+// the folder-order effect on every render while the lists are loading.
+const NO_FOLDERS: DbFolder[] = [];
+const NO_CHECKLISTS: DbChecklist[] = [];
+
 const DEFAULT_PANEL_FILTERS: PanelFilters = { conceptIds: [], locationIds: [], departmentIds: [], status: "all" };
 
 export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?: (title: string | null) => void }) {
@@ -60,8 +65,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const { data: concepts = [] } = useConcepts();
 
   // DB data
-  const { data: dbFolders = [] } = useFolders();
-  const { data: dbChecklists = [] } = useChecklists();
+  const { data: dbFolders = NO_FOLDERS, isLoading: foldersLoading } = useFolders();
+  const { data: dbChecklists = NO_CHECKLISTS, isLoading: checklistsLoading } = useChecklists();
+  const listLoading = foldersLoading || checklistsLoading;
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
   const reorderFoldersMut = useReorderFolders();
@@ -536,8 +542,21 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       {/* Breadcrumb */}
       <FolderBreadcrumb folders={folders} currentId={currentFolder} onNavigate={setCurrentFolder} />
 
-      {/* Empty state */}
-      {noResults ? (
+      {/* Still loading → skeleton rows, so the "no checklists yet" empty state
+          doesn't flash before the list arrives. */}
+      {listLoading ? (
+        <div data-testid="checklists-loading" aria-busy="true" className="card-surface divide-y divide-border overflow-hidden animate-pulse">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+              <div className="h-9 w-9 rounded-xl bg-muted shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-1/2 rounded bg-muted" />
+                <div className="h-3 w-1/4 rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : noResults ? (
         <div className="card-surface p-8 text-center">
           <p data-testid="checklists-no-results" className="text-sm text-muted-foreground">{t("filters.noResults")}</p>
         </div>

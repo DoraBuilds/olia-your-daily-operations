@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
@@ -94,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [platformAdmin, setPlatformAdmin] = useState<PlatformAdminState>(NOT_PLATFORM_ADMIN);
+  // The user whose profile is loaded (or loading) — tells a real login apart
+  // from Supabase re-announcing the same session.
+  const loadedUserId = useRef<string | null>(null);
 
   // ── Fetch / create team_member for the authenticated user ─────────────────────
   // Setup data is sourced in priority order:
@@ -104,7 +107,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSetupError(null);
 
     // Step 0: platform admin in support mode — act as the viewed org's owner.
-    const adminStatus = await fetchPlatformAdminStatus();
+    // Step 1: Check by id (existing owners — id is set to auth.uid() by setup_new_organization)
+    // Both are needed on almost every load and neither depends on the other,
+    // so they go out together rather than one round trip after the other.
+    const [adminStatus, { data }] = await Promise.all([
+      fetchPlatformAdminStatus(),
+      supabase.from("team_members").select("*").eq("id", userId).single(),
+    ]);
     setPlatformAdmin(adminStatus);
     setSupportModeActive(Boolean(adminStatus.viewingOrg));
     if (adminStatus.viewingOrg) {
@@ -112,13 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
-
-    // Step 1: Check by id (existing owners — id is set to auth.uid() by setup_new_organization)
-    const { data } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("id", userId)
-      .single();
 
     if (data) {
       setTeamMember(data as TeamMemberProfile);
@@ -311,7 +313,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        if (event === "SIGNED_IN") {
+        // Supabase re-fires SIGNED_IN for the session it already has every
+        // time the browser tab regains focus. That is not a login: clearing
+        // the cache there threw away every loaded list, so each return to
+        // the tab re-downloaded the whole page from scratch.
+        const sameUser = loadedUserId.current === session.user.id;
+        const isRepeat = event === "SIGNED_IN" && sameUser;
+
+        if (event === "SIGNED_IN" && !sameUser) {
           // Fresh login — clear any org-scoped cache from a previously signed-in account.
           queryClient.clear();
         }
@@ -319,7 +328,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // TOKEN_REFRESHED is a silent hourly JWT rotation for the same user/org.
         // Re-fetching team_members on every refresh is wasteful and, if the row
         // was ever missing, would silently create a second organization.
-        if (event !== "TOKEN_REFRESHED") {
+        if (event !== "TOKEN_REFRESHED" && !isRepeat) {
+          loadedUserId.current = session.user.id;
           fetchTeamMember(
             session.user.id,
             session.user.user_metadata as Record<string, string>,
@@ -329,6 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // User signed out — clear all org-scoped React Query cache so a
         // subsequent login never sees the previous account's data.
+        loadedUserId.current = null;
         queryClient.clear();
         setTeamMember(null);
         setSetupError(null);
