@@ -7,6 +7,7 @@ import { createBrowserRouter, RouterProvider, Navigate, Outlet, useLocation, use
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { hasStoredSession, preloadPages } from "@/lib/preload-pages";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { routerFutureFlags } from "@/lib/router-future-flags";
@@ -41,12 +42,29 @@ if (shouldRedirectToKiosk(window.location.pathname, Boolean(localStorage.getItem
   window.history.replaceState(null, "", `${import.meta.env.BASE_URL}kiosk`.replace(/\/{2,}/g, "/"));
 }
 
+// Returning user (saved session, not a kiosk): fetch the page code now, in
+// parallel with the auth round trips, rather than after them.
+if (hasStoredSession() && !localStorage.getItem("kiosk_location_id")) {
+  preloadPages(window.location.pathname, [
+    { prefix: "/dashboard", load: loadDashboard },
+    { prefix: "/checklists", load: loadChecklists },
+    { prefix: "/reporting", load: loadReporting },
+    { prefix: "/infohub", load: loadInfohub },
+    { prefix: "/admin", load: loadAdmin },
+  ]);
+}
+
 const SundayRemixSite = lazy(() => import("./pages/experiments/SundayRemixSite"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Checklists = lazy(() => import("./pages/Checklists"));
-const Reporting = lazy(() => import("./pages/Reporting"));
-const Infohub = lazy(() => import("./pages/Infohub"));
-const Admin = lazy(() => import("./pages/Admin"));
+const loadDashboard = () => import("./pages/Dashboard");
+const loadChecklists = () => import("./pages/Checklists");
+const loadReporting = () => import("./pages/Reporting");
+const loadInfohub = () => import("./pages/Infohub");
+const loadAdmin = () => import("./pages/Admin");
+const Dashboard = lazy(loadDashboard);
+const Checklists = lazy(loadChecklists);
+const Reporting = lazy(loadReporting);
+const Infohub = lazy(loadInfohub);
+const Admin = lazy(loadAdmin);
 const Kiosk = lazy(() => import("./pages/Kiosk"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Billing = lazy(() => import("./pages/Billing"));

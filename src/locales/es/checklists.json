@@ -37,6 +37,7 @@
     "itemCount_other": "{{count}} elementos"
   },
   "checklist": {
+    "loadFailed": "No se pudo cargar esta lista. Inténtalo de nuevo.",
     "questionsCount_one": "{{count}} pregunta",
     "questionsCount_other": "{{count}} preguntas",
     "previewTooltip": "Vista previa de la lista",

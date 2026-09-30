@@ -37,6 +37,7 @@
     "itemCount_other": "{{count}} items"
   },
   "checklist": {
+    "loadFailed": "Couldn't load this checklist. Please try again.",
     "questionsCount_one": "{{count}} question",
     "questionsCount_other": "{{count}} questions",
     "previewTooltip": "Preview checklist",

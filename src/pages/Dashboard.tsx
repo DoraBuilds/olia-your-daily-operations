@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { endOfMonth, endOfWeek, endOfDay, isWithinInterval, startOfDay, startOfMonth, startOfWeek } from "date-fns";
+import { endOfMonth, endOfWeek, endOfDay, format, isWithinInterval, startOfDay, startOfMonth, startOfWeek, subDays } from "date-fns";
 import { Layout } from "@/components/Layout";
 import { AlertCircle, TrendingUp, ChevronRight, ChevronLeft, Bell, ClipboardCheck, Clock, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -169,7 +169,6 @@ export default function Dashboard() {
 
   // ── Data hooks ── the Dashboard is always the all-locations overview.
   const { data: allAlerts = [] }    = useAlerts();
-  const { data: logs      = [] }    = useChecklistLogs();
   const { data: actions   = [] }    = useActions();
   const { data: checklists = [] }   = useChecklists();
   const { data: locations = [] }    = useLocations();
@@ -178,6 +177,17 @@ export default function Dashboard() {
   const pad = (n: number) => String(n).padStart(2, "0");
   const localDateStr = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayStr     = localDateStr(today);
+
+  // Only this week/month is ever shown, and never the answers — asking for
+  // the whole history made the Dashboard slower with every checklist done.
+  const logsFrom = useMemo(() => {
+    const earliest = startOfMonth(today) < startOfWeek(today, { weekStartsOn: 1 })
+      ? startOfMonth(today) : startOfWeek(today, { weekStartsOn: 1 });
+    // A day of slack so a timezone offset can't drop a boundary log.
+    return format(subDays(earliest, 1), "yyyy-MM-dd'T'00:00:00");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayStr]);
+  const { data: logs      = [] }    = useChecklistLogs({ from: logsFrom }, { withAnswers: false });
 
   const periodRange = useMemo(() => {
     if (complianceTab === "today") {

@@ -24,7 +24,11 @@ export interface ChecklistItem {
   concept_id?: string | null;
   start_date: string | null;
   schedule: any;
-  sections: any[];
+  /** Full question content. NOT loaded by the list (see useChecklists) — use
+   *  useLoadChecklist() when a checklist is opened, edited, previewed or exported. */
+  sections?: any[];
+  /** Top-level question count, kept by a DB trigger so the list can skip `sections`. */
+  question_count?: number;
   time_of_day: "morning" | "afternoon" | "evening" | "anytime";
   due_time: string | null;   // HH:MM — when checklist is due (drives kiosk visibility)
   visibility_from: string | null;
@@ -100,6 +104,12 @@ export function useDeleteFolder() {
   });
 }
 
+const LIST_COLUMNS =
+  "id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, question_count, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at";
+const FULL_COLUMNS = `${LIST_COLUMNS}, sections`;
+
+/** The list of checklists WITHOUT their questions — that content is the bulk
+ *  of the payload and the list only needs a count. */
 export function useChecklists() {
   const { teamMember } = useAuth();
   return useQuery({
@@ -107,7 +117,7 @@ export function useChecklists() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("checklists")
-        .select("id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, sections, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at")
+        .select(LIST_COLUMNS)
         .order("title");
       if (error) throw error;
       return ((data ?? []) as ChecklistItem[]).filter(
@@ -118,10 +128,31 @@ export function useChecklists() {
   });
 }
 
+async function fetchFullChecklist(id: string): Promise<ChecklistItem> {
+  const { data, error } = await supabase.from("checklists").select(FULL_COLUMNS).eq("id", id).single();
+  if (error) throw error;
+  return data as ChecklistItem;
+}
+
+/** Returns a loader for one checklist WITH its sections. Always reads fresh —
+ *  an editor must never start from a stale copy of the questions. */
+export function useLoadChecklist() {
+  const qc = useQueryClient();
+  return (id: string) =>
+    qc.fetchQuery({ queryKey: ["checklist", id], queryFn: () => fetchFullChecklist(id), staleTime: 0 });
+}
+
 export function useSaveChecklist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (checklist: Partial<ChecklistItem> & { id?: string }) => {
+      // The list doesn't carry `sections`, and save_checklist replaces them
+      // wholesale — so a save built from a list item (rename, move to folder,
+      // …) would wipe the checklist's questions. Take the stored ones instead.
+      let sections = checklist.sections;
+      if (sections === undefined && checklist.id) {
+        sections = (await fetchFullChecklist(checklist.id)).sections ?? [];
+      }
       const { data, error } = await supabase.rpc("save_checklist", {
         p_id:               checklist.id || null,
         p_title:            checklist.title ?? "",
@@ -133,7 +164,7 @@ export function useSaveChecklist() {
         p_concept_id:       checklist.concept_id ?? null,
         p_start_date:       checklist.start_date ?? null,
         p_schedule:         checklist.schedule ?? null,
-        p_sections:         checklist.sections ?? [],
+        p_sections:         sections ?? [],
         p_time_of_day:      "anytime",
         p_due_time:         checklist.due_time ?? null,
         p_visibility_from:  checklist.visibility_from ?? null,
@@ -150,14 +181,20 @@ export function useSaveChecklist() {
       // Without this, opening the edit modal immediately after saving reads
       // stale cache data and shows "All locations" even though the save succeeded.
       if (variables.id) {
+        // The list holds no `sections`; keep it that way and just refresh the count.
+        const { sections, ...listFields } = variables;
+        const count = sections ? sections.flatMap((s: any) => s?.questions ?? []).length : undefined;
         qc.setQueriesData<ChecklistItem[]>(
           { queryKey: ["checklists"] },
-          (old) => old?.map((c) => c.id === variables.id ? { ...c, ...variables } : c),
+          (old) => old?.map((c) => c.id === variables.id
+            ? { ...c, ...listFields, ...(count !== undefined ? { question_count: count } : {}) }
+            : c),
         );
       } else {
         captureEvent("checklist_created", { checklist_id: data as string | undefined });
       }
       qc.invalidateQueries({ queryKey: ["checklists"] });
+      qc.invalidateQueries({ queryKey: ["checklist"] });
     },
   });
 }

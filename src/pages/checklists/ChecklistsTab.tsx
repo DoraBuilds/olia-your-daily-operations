@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } fro
 import { createPortal } from "react-dom";
 import { useSearchParams, useBlocker, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Plus, Search, ChevronDown, X, GripVertical, MoreVertical, FolderPlus, ClipboardList, Eye, Trash2, Building2, MapPin, Layers, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
-import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
+import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useConcepts } from "@/hooks/useConcepts";
@@ -73,6 +74,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const reorderFoldersMut = useReorderFolders();
   const saveChecklistMut = useSaveChecklist();
   const deleteChecklistMut = useDeleteChecklist();
+  const loadChecklist = useLoadChecklist();
 
   // Map DB → UI types
   const folders: FolderItem[] = dbFolders.map(f => ({
@@ -86,7 +88,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     id: c.id,
     title: c.title,
     type: "checklist" as const,
-    questionsCount: (c.sections as SectionDef[] ?? []).flatMap(s => s.questions).length,
+    questionsCount: c.question_count ?? (c.sections as SectionDef[] ?? []).flatMap(s => s.questions).length,
     schedule: typeof c.schedule === "string" ? c.schedule : undefined,
     folderId: c.folder_id,
     location_id: c.location_id,
@@ -95,7 +97,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     concept_id: c.concept_id ?? null,
     start_date: c.start_date ?? null,
     createdAt: c.created_at,
-    sections: c.sections as SectionDef[],
     due_time: c.due_time ?? null,
     visibility_from: c.visibility_from ?? null,
     visibility_until: c.visibility_until ?? null,
@@ -103,7 +104,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   }));
 
   // PDF download helper — dynamically imports export-utils (pulls in jsPDF) only on demand
-  const downloadChecklistPdf = async (cl: typeof dbChecklists[0]) => {
+  const downloadChecklistPdf = async (cl: DbChecklist) => {
     const { exportChecklistTemplatePdf } = await import("@/lib/export-utils");
     exportChecklistTemplatePdf({
       title: cl.title,
@@ -338,20 +339,54 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     reorderFoldersMut.mutate(newOrder.map((id, idx) => ({ id, sort_order: idx })));
   };
 
+  // The list carries no questions — fetch the stored ones whenever a checklist
+  // is opened, previewed, exported or copied, so none of those can ever run on
+  // a stale or empty copy.
+  const withFullChecklist = async (id: string, onLoaded: (full: DbChecklist) => void) => {
+    try {
+      onLoaded(await loadChecklist(id));
+    } catch {
+      toast.error(t("checklist.loadFailed"));
+    }
+  };
+
+  const openEditor = (id: string) => withFullChecklist(id, cl => {
+    setEditingChecklistId(cl.id);
+    setPrefillTitle(cl.title);
+    setPrefillSections(cl.sections as SectionDef[]);
+    setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
+    setPrefillDepartmentIds(cl.department_ids ?? null);
+    setPrefillConceptId(cl.concept_id ?? null);
+    setShowBuilder(true);
+    onBuilderTitleChange?.(cl.title);
+  });
+
+  const openPreview = (id: string) => withFullChecklist(id, cl => {
+    setPreviewChecklist({
+      id: cl.id,
+      title: cl.title,
+      type: "checklist",
+      questionsCount: cl.question_count ?? 0,
+      schedule: typeof cl.schedule === "string" ? cl.schedule : undefined,
+      folderId: cl.folder_id,
+      location_id: cl.location_id,
+      location_ids: cl.location_ids ?? (cl.location_id ? [cl.location_id] : null),
+      department_ids: cl.department_ids ?? null,
+      concept_id: cl.concept_id ?? null,
+      start_date: cl.start_date ?? null,
+      createdAt: cl.created_at,
+      sections: cl.sections as SectionDef[],
+      due_time: cl.due_time ?? null,
+      visibility_from: cl.visibility_from ?? null,
+      visibility_until: cl.visibility_until ?? null,
+      is_published: cl.is_published,
+    });
+  });
+
   const handleContextAction = (action: string) => {
     if (!contextMenu) return;
     if (action === "edit" && contextMenu.type === "checklist") {
-      const cl = checklists.find(c => c.id === contextMenu.id);
-      if (cl) {
-        setEditingChecklistId(cl.id);
-        setPrefillTitle(cl.title);
-        setPrefillSections(cl.sections);
-        setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
-        setPrefillDepartmentIds(cl.department_ids ?? null);
-        setPrefillConceptId(cl.concept_id ?? null);
-        setShowBuilder(true);
-        onBuilderTitleChange?.(cl.title);
-      }
+      void openEditor(contextMenu.id);
     } else if (action === "move") {
       setMoveTarget(contextMenu);
     } else if (action === "rename" && contextMenu.type === "folder") {
@@ -364,11 +399,10 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       setDeleteConfirm({ id: contextMenu.id, type: contextMenu.type, name });
       setDeleteConfirmText("");
     } else if (action === "duplicate" && contextMenu.type === "checklist") {
-      const orig = dbChecklists.find(c => c.id === contextMenu.id);
-      if (orig) saveChecklistMut.mutate({ ...orig, id: "", title: `${orig.title} (copy)` });
+      void withFullChecklist(contextMenu.id, orig =>
+        saveChecklistMut.mutate({ ...orig, id: "", title: `${orig.title} (copy)` }));
     } else if (action === "download" && contextMenu.type === "checklist") {
-      const orig = dbChecklists.find(c => c.id === contextMenu.id);
-      if (orig) downloadChecklistPdf(orig);
+      void withFullChecklist(contextMenu.id, downloadChecklistPdf);
     }
   };
 
@@ -612,15 +646,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           {/* Checklists */}
           {visibleChecklists.map(cl => (
             <div key={cl.id} className="flex items-center">
-              <button onClick={() => {
-                setEditingChecklistId(cl.id);
-                setPrefillTitle(cl.title);
-                setPrefillSections(cl.sections);
-                setPrefillLocationIds(cl.location_ids ?? (cl.location_id ? [cl.location_id] : null));
-                setPrefillDepartmentIds(cl.department_ids ?? null);
-                setShowBuilder(true);
-                onBuilderTitleChange?.(cl.title);
-              }}
+              <button onClick={() => { void openEditor(cl.id); }}
                 className="flex-1 flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
                   <ClipboardList size={16} className="text-lavender-deep" />
@@ -639,7 +665,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                   </p>
                 </div>
               </button>
-              <button onClick={e => { e.stopPropagation(); setPreviewChecklist(cl); }}
+              <button onClick={e => { e.stopPropagation(); void openPreview(cl.id); }}
                 className="p-2 text-muted-foreground hover:text-sage transition-colors shrink-0"
                 title={t("checklist.previewTooltip")}>
                 <Eye size={16} />
