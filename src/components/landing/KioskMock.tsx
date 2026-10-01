@@ -35,7 +35,7 @@ export function KioskMock() {
             <p className="text-white/50 text-xs font-semibold tracking-widest uppercase mb-1">
               The Anchor · Morning
             </p>
-            <h3 className="font-display text-white text-[22px] italic leading-tight">
+            <h3 className="font-display text-white text-[22px] leading-tight">
               Opening Checklist
             </h3>
           </div>

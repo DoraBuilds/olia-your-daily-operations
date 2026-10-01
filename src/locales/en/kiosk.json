@@ -68,6 +68,10 @@
     "keepGoing": "Keep going",
     "closeLinkedResource": "Close linked resource"
   },
+  "preview": {
+    "banner": "Test mode · nothing is paired",
+    "exit": "Exit test mode"
+  },
   "completion": {
     "title": "Well done!",
     "subtitle": "Every completed checklist keeps the team running smoothly.",

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { enqueueLog, drainQueue } from "@/lib/submission-queue";
+import { isKioskPreviewActive, endKioskPreview } from "@/lib/kiosk-preview";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import i18n, { getDeviceLanguage, resolveSupportedLanguage, type SupportedLanguage } from "@/lib/i18n";
 
@@ -137,7 +138,35 @@ function ChecklistCardSkeleton() {
 }
 
 // ─── Kiosk Page ───────────────────────────────────────────────────────────────
+// Admin -> Devices -> "Test kiosk": a floating way out that puts this browser
+// back exactly as it was (see kiosk-preview.ts).
+function KioskPreviewBar() {
+  const { t } = useTranslation("kiosk");
+  const navigate = useNavigate();
+  if (!isKioskPreviewActive()) return null;
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 rounded-full bg-foreground text-background pl-4 pr-1.5 py-1.5 shadow-lg">
+      <span className="text-xs">{t("preview.banner")}</span>
+      <button
+        onClick={() => { endKioskPreview(); navigate("/admin/kiosks", { replace: true }); }}
+        className="rounded-full bg-background text-foreground px-3 py-1.5 text-xs font-semibold"
+      >
+        {t("preview.exit")}
+      </button>
+    </div>
+  );
+}
+
 export default function Kiosk() {
+  return (
+    <>
+      <KioskScreen />
+      <KioskPreviewBar />
+    </>
+  );
+}
+
+function KioskScreen() {
   const { t } = useTranslation("kiosk");
   const { user, teamMember, loading } = useAuth();
   const queryClient = useQueryClient();
@@ -209,7 +238,7 @@ export default function Kiosk() {
   // account signed in. Also cleans up the owner session that devices set
   // up the old way (signed in on the tablet) were left with.
   useEffect(() => {
-    if (loading || !user?.id || !locationId || hasActiveKioskAdminSession()) return;
+    if (loading || !user?.id || !locationId || hasActiveKioskAdminSession() || isKioskPreviewActive()) return;
     void supabase.auth.signOut({ scope: "local" });
   }, [loading, user?.id, locationId]);
 

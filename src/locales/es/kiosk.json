@@ -68,6 +68,10 @@
     "keepGoing": "Continuar",
     "closeLinkedResource": "Cerrar recurso vinculado"
   },
+  "preview": {
+    "banner": "Modo de prueba · no se vincula nada",
+    "exit": "Salir del modo de prueba"
+  },
   "completion": {
     "title": "¡Muy bien!",
     "subtitle": "Cada lista de verificación completada mantiene al equipo funcionando sin problemas.",

@@ -13,7 +13,8 @@ import { type Location, type Concept } from "@/lib/admin-repository";
 import {
   useKioskDevices, useRevokeKioskDevice, useCreateKioskDevice, useRegenerateKioskCode, useRenameKioskDevice, type KioskDevice,
 } from "@/hooks/useKioskDevices";
-import { formatPairingCode, launchKioskDevice } from "@/lib/kiosk-pairing";
+import { formatPairingCode } from "@/lib/kiosk-pairing";
+import { startKioskPreview } from "@/lib/kiosk-preview";
 import { toast } from "@/components/ui/sonner";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import {
@@ -55,7 +56,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
   const [codeDevice, setCodeDevice] = useState<{ id: string; locationName: string } | null>(null);
   const [renamingDevice, setRenamingDevice] = useState<KioskDevice | null>(null);
   const confirmDeactivate = useConfirmDeactivateKiosk(setConfirmModal);
-  const confirmLaunch = useConfirmLaunchKiosk(setConfirmModal);
+  const testKiosk = useTestKiosk();
   const [addingTo, setAddingTo] = useState<Location | null>(null);
 
   // "Manage" on a location's Devices card links here with ?device=<id>.
@@ -210,7 +211,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
                       device={device}
                       highlighted={device.id === focusDeviceId}
                       menu={isOwner ? {
-                        onLaunch: () => confirmLaunch(device, location.name),
+                        onTest: () => void testKiosk(device),
                         onRename: () => setRenamingDevice(device),
                         onShowCode: () => setCodeDevice({ id: device.id, locationName: location.name }),
                         onDeactivate: () => confirmDeactivate(device, location.name),
@@ -289,28 +290,19 @@ export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState)
 }
 
 /**
- * "Open kiosk here": confirms, then turns this browser into the chosen kiosk
- * and goes to /kiosk. Confirmed first because it replaces whatever kiosk
- * this browser was and ends the owner's own session here.
+ * "Test kiosk": opens the kiosk screens in this browser for a quick try. It
+ * doesn't pair anything or touch the device (see kiosk-preview.ts).
  */
-export function useConfirmLaunchKiosk(setConfirmModal: (state: ConfirmState) => void) {
+export function useTestKiosk() {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  return (device: KioskDevice, locationName: string) => {
-    setConfirmModal({
-      title: t("kiosksTab.launchConfirmTitle"),
-      message: t("kiosksTab.launchConfirmMessage", { label: device.label, location: locationName }),
-      actionLabel: t("kiosksTab.launchConfirmCta"),
-      onConfirm: async () => {
-        setConfirmModal(null);
-        const result = await launchKioskDevice(device.id);
-        if (!result.ok) {
-          toast.error(t("kiosksTab.launchFailed"));
-          return;
-        }
-        navigate("/kiosk");
-      },
-    });
+  return async (device: KioskDevice) => {
+    const result = await startKioskPreview(device.id);
+    if (!result.ok) {
+      toast.error(t("kiosksTab.testFailed"));
+      return;
+    }
+    navigate("/kiosk");
   };
 }
 
@@ -324,7 +316,7 @@ export function KioskDeviceRow({
   onManage?: () => void;
   onDeactivate?: () => void;
   /** Devices tab: every action lives in a 3-dot menu instead of inline links. */
-  menu?: { onLaunch: () => void; onRename: () => void; onShowCode: () => void; onDeactivate: () => void };
+  menu?: { onTest: () => void; onRename: () => void; onShowCode: () => void; onDeactivate: () => void };
   highlighted?: boolean;
 }) {
   const { t } = useTranslation("admin");
@@ -381,10 +373,10 @@ export function KioskDeviceRow({
 }
 
 function KioskDeviceMenu({
-  label, onLaunch, onRename, onShowCode, onDeactivate,
+  label, onTest, onRename, onShowCode, onDeactivate,
 }: {
   label: string;
-  onLaunch: () => void;
+  onTest: () => void;
   onRename: () => void;
   onShowCode: () => void;
   onDeactivate: () => void;
@@ -403,8 +395,8 @@ function KioskDeviceMenu({
       </button>
       {menu.open && (
         <div className={cn(menuPanelCls, "min-w-[180px]")}>
-          <button onClick={item(onLaunch)} className={cn(menuItemCls, "text-foreground")}>
-            <Play size={14} /> {t("kiosksTab.openHere")}
+          <button onClick={item(onTest)} className={cn(menuItemCls, "text-foreground")}>
+            <Play size={14} /> {t("kiosksTab.testKiosk")}
           </button>
           <button onClick={item(onRename)} className={cn(menuItemCls, "text-foreground")}>
             <Pencil size={14} /> {t("kiosksTab.rename")}

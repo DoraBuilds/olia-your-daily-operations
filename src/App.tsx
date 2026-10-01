@@ -14,6 +14,7 @@ import { routerFutureFlags } from "@/lib/router-future-flags";
 import { CookieBanner } from "@/components/CookieBanner";
 import { isNewDesignPath } from "@/lib/legal-theme";
 import { shouldRedirectToKiosk } from "@/lib/kiosk-guard";
+import { recoverAbandonedKioskPreview } from "@/lib/kiosk-preview";
 import { restoreGitHubPagesRoute } from "@/lib/github-pages-routing";
 import "@/lib/i18n";
 
@@ -38,6 +39,10 @@ if (restoredGitHubPagesPath) {
 // loading and paint before Kiosk's own lazy chunk has loaded — the URL flips
 // to /kiosk immediately, but the old page stays on screen until Kiosk's
 // chunk arrives, which can take a moment on a slow connection (#631).
+// An abandoned "Test kiosk" (closed tab mid-test) must not leave this browser
+// looking like a kiosk — undo it before anything reads kiosk_location_id.
+recoverAbandonedKioskPreview();
+
 if (shouldRedirectToKiosk(window.location.pathname, Boolean(localStorage.getItem("kiosk_location_id")))) {
   window.history.replaceState(null, "", `${import.meta.env.BASE_URL}kiosk`.replace(/\/{2,}/g, "/"));
 }

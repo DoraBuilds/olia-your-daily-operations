@@ -60,7 +60,7 @@ const css = `
   .rx-nav-inner { display: flex; align-items: center; width: 100%; max-width: 1180px; margin: 0 auto; }
   .rx-logo {
     display: flex; align-items: center; gap: 9px;
-    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal;
     font-size: 22px; font-weight: 600; color: var(--ink); text-decoration: none; margin-right: 48px;
   }
   .rx-logo-mark { width: 26px; height: 26px; display: block; flex-shrink: 0; }
@@ -116,7 +116,7 @@ const css = `
   @keyframes rx-shine-spin { to { transform: rotate(360deg); } }
 
   .rx-hl {
-    font-style: italic; color: var(--ink);
+    font-style: normal; color: var(--ink);
     background: rgba(0,229,204,0.6);
     padding: 0 4px; margin: 0 -4px; line-height: 0.86;
     box-decoration-break: clone; -webkit-box-decoration-break: clone;
@@ -262,7 +262,7 @@ const css = `
     margin-top: auto; padding-top: 16px; border-top: 1px dashed var(--line-mid);
   }
   .rx-founder-offclock-label { font-size: 12px; font-weight: 700; color: var(--ink-faint); margin-bottom: 8px; }
-  .rx-founder-offclock p { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.5; }
+  .rx-founder-offclock p { font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal; font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.5; }
   .rx-founder-link { align-self: flex-start; margin-top: 16px; font-size: 12.5px; font-weight: 600; color: var(--ink); text-decoration: none; border-bottom: 1.5px solid var(--neon); padding-bottom: 1px; }
 
   /* VALUES */
@@ -275,7 +275,7 @@ const css = `
   /* CLOSING NOTE */
   .rx-note { background: var(--white); text-align: center; }
   .rx-note-inner { max-width: 780px; margin: 0 auto; }
-  .rx-note p { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: clamp(20px, 2.6vw, 28px); font-weight: 500; color: var(--ink); line-height: 1.5; }
+  .rx-note p { font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal; font-size: clamp(20px, 2.6vw, 28px); font-weight: 500; color: var(--ink); line-height: 1.5; }
 
   /* MANIFESTO */
   .rx-manifesto { background: var(--black-panel); position: relative; overflow: hidden; }
@@ -296,7 +296,7 @@ const css = `
     font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; color: var(--neon);
     flex-shrink: 0; width: 34px; padding-top: 2px;
   }
-  .rx-manifesto-item h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 22px; font-weight: 500; color: var(--white); margin-bottom: 6px; }
+  .rx-manifesto-item h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal; font-size: 22px; font-weight: 500; color: var(--white); margin-bottom: 6px; }
   .rx-manifesto-item p { font-size: 14px; font-weight: 300; color: rgba(255,255,255,0.55); line-height: 1.7; }
 
   /* PRICING */
@@ -360,7 +360,7 @@ const css = `
   .rx-faq-item:last-child { border-bottom: none; padding-bottom: 0; }
   .rx-faq-item summary {
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
-    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal;
     font-size: 20px; font-weight: 500; color: var(--ink);
     cursor: pointer; list-style: none;
   }
@@ -381,7 +381,7 @@ const css = `
   /* FOOTER */
   .rx-footer { background: var(--white); border-top: 1px solid var(--line); padding: 36px 0 28px; }
   .rx-footer-inner { display: grid; grid-template-columns: 220px 1fr auto; gap: 32px; align-items: center; max-width: 1180px; margin: 0 auto; padding: 0 40px; }
-  .rx-footer-logo { display: flex; align-items: center; gap: 9px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-size: 21px; font-weight: 600; color: var(--ink); text-decoration: none; margin-bottom: 6px; }
+  .rx-footer-logo { display: flex; align-items: center; gap: 9px; font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal; font-size: 21px; font-weight: 600; color: var(--ink); text-decoration: none; margin-bottom: 6px; }
   .rx-footer-logo-mark { width: 26px; height: 26px; display: block; flex-shrink: 0; }
   .rx-footer-tagline { font-size: 11.5px; font-weight: 300; color: var(--ink-faint); line-height: 1.5; }
   .rx-footer-links { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
