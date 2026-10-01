@@ -777,6 +777,9 @@ function KioskScreen() {
     );
   }
 
+  const currentTabHasCards =
+    (kioskTab === "due" ? dueChecklists : kioskTab === "overdue" ? overdueChecklists : kioskTab === "upcoming" ? upcomingChecklists : doneChecklists).length > 0;
+
   // ── Grid screen (Screen 1) ────────────────────────────────────────────────
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -901,11 +904,11 @@ function KioskScreen() {
 
       {/* Checklist grid */}
       <div data-testid="kiosk-checklist-grid" className="px-5 sm:px-6 lg:px-8 flex-1 pb-6 mt-2 flex flex-col">
-        {/* my-auto centers a short state (loading/empty/"nothing due") within
-            the available space on a tall tablet screen; once real checklist
-            cards overflow that space, the margin collapses to 0 and the list
-            starts at the top and scrolls normally. */}
-        <div className="my-auto">
+        {/* my-auto centers a short message ("nothing due", empty, error) in the
+            space on a tall tablet. Whenever the current tab has real cards (or
+            is loading them) they list from the top, right under the stats —
+            centering two cards left a huge gap above them. */}
+        <div className={cn(!checklistsLoading && !currentTabHasCards && "my-auto")}>
         {checklistsLoading ? (
           <div aria-label={t("grid.loadingChecklists")} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => <ChecklistCardSkeleton key={i} />)}
