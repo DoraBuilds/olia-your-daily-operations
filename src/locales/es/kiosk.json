@@ -22,6 +22,7 @@
     "tooManyAttempts": "Demasiados intentos fallidos. Espera 5 minutos antes de volver a intentarlo.",
     "couldNotVerifyAdminPin": "No se pudo verificar el PIN de administrador. Vuelve a intentarlo.",
     "couldNotVerifyPin": "No se pudo verificar el PIN. Vuelve a intentarlo.",
+    "adminNoLogin": "Este PIN es correcto, pero aún no has configurado tu acceso a Olia. Acepta primero el correo de invitación.",
     "invalidPin": "PIN no válido.",
     "pleaseTryAgain": "Vuelve a intentarlo.",
     "connectionError": "Error de conexión. Revisa tu red y vuelve a intentarlo.",

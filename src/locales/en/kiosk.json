@@ -23,6 +23,7 @@
     "couldNotVerifyAdminPin": "Could not verify the admin PIN. Please try again.",
     "couldNotVerifyPin": "Could not verify PIN. Please try again.",
     "invalidPin": "Invalid PIN.",
+    "adminNoLogin": "This PIN is right, but you haven't set up your Olia login yet. Accept your invite email first.",
     "pleaseTryAgain": "Please try again.",
     "connectionError": "Connection error. Check your network and try again.",
     "askManagerForHelp": "Please ask your manager for help.",

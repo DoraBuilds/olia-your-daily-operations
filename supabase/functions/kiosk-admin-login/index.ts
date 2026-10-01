@@ -3,7 +3,7 @@
  *
  * The in-kiosk "Admin" PIN on a code-paired tablet (#861). The tablet never
  * holds account credentials — it only has its kiosk device token. This
- * function trades (device token + owner Admin PIN) for a regular Supabase
+ * function trades (device token + an owner's or manager's Admin PIN) for a regular Supabase
  * session for that owner, which the kiosk then uses until "Back to Kiosk"
  * or the idle timeout signs it out again (see Kiosk.tsx).
  *

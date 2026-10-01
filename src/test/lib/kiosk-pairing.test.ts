@@ -104,7 +104,7 @@ describe("kioskAdminLogin", () => {
     expect(result).toEqual({ ok: true, teamMemberId: "owner-1" });
   });
 
-  it.each(["invalid_pin", "rate_limited", "device_inactive"])("passes through %s", async (reason) => {
+  it.each(["invalid_pin", "rate_limited", "device_inactive", "no_login"])("passes through %s", async (reason) => {
     mockInvoke.mockResolvedValue({ data: { error: reason }, error: null });
     await expect(kioskAdminLogin("1234", "l1")).resolves.toEqual({ ok: false, reason });
     expect(mockSetSession).not.toHaveBeenCalled();
