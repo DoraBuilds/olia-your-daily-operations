@@ -164,9 +164,9 @@ export function KioskPinShell({
 }
 
 // ─── AdminLoginModal ───────────────────────────────────────────────────────────
-// A paired kiosk has no account signed in (#861). An owner's Admin PIN is
-// exchanged, together with this device's token, for a session for that
-// owner (kioskAdminLogin -> kiosk-admin-login edge function), which lasts
+// A paired kiosk has no account signed in (#861). An owner's or manager's
+// Admin PIN is exchanged, together with this device's token, for a session
+// for that person (kioskAdminLogin -> kiosk-admin-login edge function), which lasts
 // until "Back to Kiosk" / the idle timeout (Layout.tsx, Kiosk.tsx).
 export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => void; kioskLocationId?: string | null }) {
   const { t } = useTranslation("kiosk");
@@ -193,6 +193,7 @@ export function AdminLoginModal({ onClose, kioskLocationId }: { onClose: () => v
     }
     setPin("");
     if (result.reason === "invalid_pin") setError(t("pin.invalidPin"));
+    else if (result.reason === "no_login") setError(t("pin.adminNoLogin"));
     else if (result.reason === "rate_limited") setError(t("pin.tooManyAttempts"));
     else if (result.reason === "device_inactive" || result.reason === "not_paired") setError(t("pin.kioskSetupRequired"));
     else setError(t("pin.couldNotVerifyPin"));
