@@ -345,13 +345,20 @@ describe("Kiosk — Grid Screen", () => {
     expect(screen.getByRole("heading", { name: "Terrace" })).toBeInTheDocument();
   });
 
-  it("vertically centers a short checklist state (e.g. 'nothing due') via a flex column + auto-margin wrapper, so it isn't stranded at the top with a large empty gap below on a tall tablet screen", async () => {
+  it("vertically centers a short checklist state (e.g. 'nothing done yet') via a flex column + auto-margin wrapper, so it isn't stranded at the top with a large empty gap below on a tall tablet screen", async () => {
     await renderGridScreen();
     const grid = screen.getByTestId("kiosk-checklist-grid");
     expect(grid).toHaveClass("flex", "flex-col");
-    // my-auto's margin collapses to 0 once real checklist cards overflow
-    // the pane, so a busy kiosk still lists from the top and scrolls.
-    expect(grid.firstElementChild).toHaveClass("my-auto");
+    // Nothing is done yet, so the Done tab shows only a short message.
+    fireEvent.click(screen.getByTestId("kiosk-tab-done"));
+    await waitFor(() => expect(grid.firstElementChild).toHaveClass("my-auto"));
+  });
+
+  it("lists checklist cards right under the stats instead of centering them in the free space", async () => {
+    await renderGridScreen();
+    await waitFor(() => expect(document.querySelector("[id^='checklist-card-']")).not.toBeNull());
+    const grid = screen.getByTestId("kiosk-checklist-grid");
+    expect(grid.firstElementChild).not.toHaveClass("my-auto");
   });
 
   it("shows a device-scoped language picker defaulting to English", async () => {
