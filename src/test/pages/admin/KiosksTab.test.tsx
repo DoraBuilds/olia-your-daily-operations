@@ -35,11 +35,10 @@ function device(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const mockLaunch = vi.fn();
+const mockStartPreview = vi.fn();
 const mockNavigate = vi.fn();
-vi.mock("@/lib/kiosk-pairing", async importOriginal => ({
-  ...(await importOriginal<typeof import("@/lib/kiosk-pairing")>()),
-  launchKioskDevice: (...args: any[]) => mockLaunch(...args),
+vi.mock("@/lib/kiosk-preview", () => ({
+  startKioskPreview: (...args: any[]) => mockStartPreview(...args),
 }));
 vi.mock("react-router-dom", async importOriginal => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
@@ -60,7 +59,7 @@ beforeEach(() => {
   mockCreateMutate.mockReset();
   mockRegenerateMutate.mockReset();
   mockRenameMutate.mockReset();
-  mockLaunch.mockReset();
+  mockStartPreview.mockReset();
   mockNavigate.mockReset();
   localStorage.clear();
 });
@@ -275,26 +274,23 @@ describe("KiosksTab", () => {
     expect(screen.getByText("Open the Kiosk tab and enter this code.")).toBeInTheDocument();
   });
 
-  it("opens a device as the kiosk on this browser after confirming", async () => {
-    mockLaunch.mockResolvedValue({ ok: true });
+  it("tests a kiosk in this browser without pairing it", async () => {
+    mockStartPreview.mockResolvedValue({ ok: true });
     mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
     openDeviceMenu();
-    fireEvent.click(screen.getByText("Open kiosk here"));
-    expect(mockLaunch).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText("Open kiosk"));
-    await waitFor(() => expect(mockLaunch).toHaveBeenCalledWith("d1"));
+    fireEvent.click(screen.getByText("Test kiosk"));
+    await waitFor(() => expect(mockStartPreview).toHaveBeenCalledWith("d1"));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/kiosk"));
   });
 
   it("stays in Admin when the kiosk can't be opened", async () => {
-    mockLaunch.mockResolvedValue({ ok: false, reason: "network" });
+    mockStartPreview.mockResolvedValue({ ok: false });
     mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
     render(<KiosksTab concepts={concepts} locations={locations} />);
     openDeviceMenu();
-    fireEvent.click(screen.getByText("Open kiosk here"));
-    fireEvent.click(screen.getByText("Open kiosk"));
-    await waitFor(() => expect(mockLaunch).toHaveBeenCalled());
+    fireEvent.click(screen.getByText("Test kiosk"));
+    await waitFor(() => expect(mockStartPreview).toHaveBeenCalled());
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

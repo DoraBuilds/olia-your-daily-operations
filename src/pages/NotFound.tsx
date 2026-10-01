@@ -19,7 +19,7 @@ const NotFound = () => {
     >
       <style>{legalLinkStyle}</style>
       <div className="text-center px-6">
-        <h1 className="mb-4 font-display italic text-6xl text-foreground">404</h1>
+        <h1 className="mb-4 font-display text-6xl text-foreground">404</h1>
         <p className="mb-6 text-lg text-muted-foreground">Oops! Page not found</p>
         <Link to="/" className="text-sm underline underline-offset-2 transition-colors">
           Return to Home

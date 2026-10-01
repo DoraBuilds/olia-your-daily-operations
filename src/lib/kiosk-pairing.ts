@@ -45,22 +45,6 @@ export async function pairKioskDevice(code: string): Promise<PairKioskResult> {
   return { ok: true, locationId: row.location_id, locationName: row.location_name ?? "" };
 }
 
-/**
- * Admin -> Devices -> "Open kiosk here" (owner-only RPC): turns THIS browser
- * into the given kiosk without its pairing code. Stores the same identity
- * pairKioskDevice does; the caller navigates to /kiosk, where the owner's
- * own session is signed out again (Kiosk.tsx) and the Admin PIN is the way
- * back into the app.
- */
-export async function launchKioskDevice(deviceId: string): Promise<PairKioskResult> {
-  const { data, error } = await supabase.rpc("launch_kiosk_device", { p_device_id: deviceId });
-  if (error) return { ok: false, reason: "network" };
-  const row = Array.isArray(data) ? data[0] : null;
-  if (!row) return { ok: false, reason: "invalid_code" };
-  storeKioskIdentity(row);
-  return { ok: true, locationId: row.location_id, locationName: row.location_name ?? "" };
-}
-
 function storeKioskIdentity(row: {
   device_id: string;
   device_token: string;

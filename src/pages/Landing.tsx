@@ -64,7 +64,7 @@ const css = `
   .ol-nav-inner { display: flex; align-items: center; width: 100%; max-width: 1140px; margin: 0 auto; }
   .ol-logo {
     display: flex; align-items: center; gap: 9px;
-    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal;
     font-size: 22px; font-weight: 600; color: var(--navy);
     text-decoration: none; margin-right: 48px;
   }
@@ -111,7 +111,7 @@ const css = `
     font-size: clamp(42px, 5.2vw, 64px); font-weight: 400;
     line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 18px;
   }
-  .ol-hero h1 em { font-style: italic; color: var(--gold); }
+  .ol-hero h1 em { font-style: normal; color: var(--gold); }
   .ol-hero-sub {
     font-size: 17px; font-weight: 300; color: var(--text-mid);
     line-height: 1.65; max-width: 460px; margin-bottom: 28px;
@@ -424,7 +424,7 @@ const css = `
   }
   .ol-footer-logo {
     display: flex; align-items: center; gap: 9px;
-    font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic;
+    font-family: 'Cormorant Garamond', Georgia, serif; font-style: normal;
     font-size: 21px; font-weight: 600; color: var(--cream); text-decoration: none; margin-bottom: 6px;
   }
   .ol-footer-logo-mark { width: 26px; height: 26px; display: block; flex-shrink: 0; }

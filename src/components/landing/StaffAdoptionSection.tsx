@@ -56,7 +56,7 @@ export function StaffAdoptionSection() {
                 ))}
 
                 <div className="mt-6 pt-5 border-t border-white/10">
-                  <p className="font-display text-white/80 text-sm italic">
+                  <p className="font-display text-white/80 text-sm">
                     "Done in 2 minutes. Back to the floor."
                   </p>
                 </div>
