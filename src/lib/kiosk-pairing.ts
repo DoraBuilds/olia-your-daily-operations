@@ -41,7 +41,33 @@ export async function pairKioskDevice(code: string): Promise<PairKioskResult> {
   if (error) return { ok: false, reason: "network" };
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) return { ok: false, reason: "invalid_code" };
+  storeKioskIdentity(row);
+  return { ok: true, locationId: row.location_id, locationName: row.location_name ?? "" };
+}
 
+/**
+ * Admin -> Devices -> "Open kiosk here" (owner-only RPC): turns THIS browser
+ * into the given kiosk without its pairing code. Stores the same identity
+ * pairKioskDevice does; the caller navigates to /kiosk, where the owner's
+ * own session is signed out again (Kiosk.tsx) and the Admin PIN is the way
+ * back into the app.
+ */
+export async function launchKioskDevice(deviceId: string): Promise<PairKioskResult> {
+  const { data, error } = await supabase.rpc("launch_kiosk_device", { p_device_id: deviceId });
+  if (error) return { ok: false, reason: "network" };
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return { ok: false, reason: "invalid_code" };
+  storeKioskIdentity(row);
+  return { ok: true, locationId: row.location_id, locationName: row.location_name ?? "" };
+}
+
+function storeKioskIdentity(row: {
+  device_id: string;
+  device_token: string;
+  location_id: string;
+  location_name: string | null;
+  kiosk_token: string | null;
+}): void {
   localStorage.setItem("kiosk_location_id", row.location_id);
   localStorage.setItem("kiosk_location_name", row.location_name ?? "");
   if (row.kiosk_token) localStorage.setItem("kiosk_token", row.kiosk_token);
@@ -52,7 +78,6 @@ export async function pairKioskDevice(code: string): Promise<PairKioskResult> {
   // Left over from the old "set up while signed in" flow — meaningless now.
   localStorage.removeItem("kiosk_owner_user_id");
   localStorage.removeItem("kiosk_owner_org_id");
-  return { ok: true, locationId: row.location_id, locationName: row.location_name ?? "" };
 }
 
 export interface KioskAdminLoginResult {
