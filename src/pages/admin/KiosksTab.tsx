@@ -6,14 +6,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
-import { Tablet, Building2, UtensilsCrossed, Copy, Search, MapPin, MoreVertical, Pencil, KeyRound, Power } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Tablet, Building2, UtensilsCrossed, Copy, Search, MapPin, MoreVertical, Pencil, KeyRound, Power, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Location, type Concept } from "@/lib/admin-repository";
 import {
   useKioskDevices, useRevokeKioskDevice, useCreateKioskDevice, useRegenerateKioskCode, useRenameKioskDevice, type KioskDevice,
 } from "@/hooks/useKioskDevices";
-import { formatPairingCode } from "@/lib/kiosk-pairing";
+import { formatPairingCode, launchKioskDevice } from "@/lib/kiosk-pairing";
 import { toast } from "@/components/ui/sonner";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import {
@@ -55,6 +55,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
   const [codeDevice, setCodeDevice] = useState<{ id: string; locationName: string } | null>(null);
   const [renamingDevice, setRenamingDevice] = useState<KioskDevice | null>(null);
   const confirmDeactivate = useConfirmDeactivateKiosk(setConfirmModal);
+  const confirmLaunch = useConfirmLaunchKiosk(setConfirmModal);
   const [addingTo, setAddingTo] = useState<Location | null>(null);
 
   // "Manage" on a location's Devices card links here with ?device=<id>.
@@ -209,6 +210,7 @@ export function KiosksTab({ concepts, locations, isOwner = true }: KiosksTabProp
                       device={device}
                       highlighted={device.id === focusDeviceId}
                       menu={isOwner ? {
+                        onLaunch: () => confirmLaunch(device, location.name),
                         onRename: () => setRenamingDevice(device),
                         onShowCode: () => setCodeDevice({ id: device.id, locationName: location.name }),
                         onDeactivate: () => confirmDeactivate(device, location.name),
@@ -286,6 +288,32 @@ export function useConfirmDeactivateKiosk(setConfirmModal: (state: ConfirmState)
   };
 }
 
+/**
+ * "Open kiosk here": confirms, then turns this browser into the chosen kiosk
+ * and goes to /kiosk. Confirmed first because it replaces whatever kiosk
+ * this browser was and ends the owner's own session here.
+ */
+export function useConfirmLaunchKiosk(setConfirmModal: (state: ConfirmState) => void) {
+  const { t } = useTranslation("admin");
+  const navigate = useNavigate();
+  return (device: KioskDevice, locationName: string) => {
+    setConfirmModal({
+      title: t("kiosksTab.launchConfirmTitle"),
+      message: t("kiosksTab.launchConfirmMessage", { label: device.label, location: locationName }),
+      actionLabel: t("kiosksTab.launchConfirmCta"),
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const result = await launchKioskDevice(device.id);
+        if (!result.ok) {
+          toast.error(t("kiosksTab.launchFailed"));
+          return;
+        }
+        navigate("/kiosk");
+      },
+    });
+  };
+}
+
 const rowActionCls = "text-xs font-semibold hover:underline shrink-0";
 
 export function KioskDeviceRow({
@@ -296,7 +324,7 @@ export function KioskDeviceRow({
   onManage?: () => void;
   onDeactivate?: () => void;
   /** Devices tab: every action lives in a 3-dot menu instead of inline links. */
-  menu?: { onRename: () => void; onShowCode: () => void; onDeactivate: () => void };
+  menu?: { onLaunch: () => void; onRename: () => void; onShowCode: () => void; onDeactivate: () => void };
   highlighted?: boolean;
 }) {
   const { t } = useTranslation("admin");
@@ -353,9 +381,10 @@ export function KioskDeviceRow({
 }
 
 function KioskDeviceMenu({
-  label, onRename, onShowCode, onDeactivate,
+  label, onLaunch, onRename, onShowCode, onDeactivate,
 }: {
   label: string;
+  onLaunch: () => void;
   onRename: () => void;
   onShowCode: () => void;
   onDeactivate: () => void;
@@ -374,6 +403,9 @@ function KioskDeviceMenu({
       </button>
       {menu.open && (
         <div className={cn(menuPanelCls, "min-w-[180px]")}>
+          <button onClick={item(onLaunch)} className={cn(menuItemCls, "text-foreground")}>
+            <Play size={14} /> {t("kiosksTab.openHere")}
+          </button>
           <button onClick={item(onRename)} className={cn(menuItemCls, "text-foreground")}>
             <Pencil size={14} /> {t("kiosksTab.rename")}
           </button>

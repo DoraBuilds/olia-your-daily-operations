@@ -1,5 +1,5 @@
 import {
-  normalizePairingCode, formatPairingCode, pairKioskDevice, kioskAdminLogin,
+  normalizePairingCode, formatPairingCode, pairKioskDevice, launchKioskDevice, kioskAdminLogin,
 } from "@/lib/kiosk-pairing";
 import { readKioskAdminSession } from "@/lib/kiosk-admin-session";
 
@@ -35,6 +35,29 @@ describe("pairing code formatting", () => {
     expect(formatPairingCode("ABCD2345")).toBe("ABCD-2345");
     expect(formatPairingCode("abc")).toBe("ABC");
     expect(formatPairingCode("ABCD2")).toBe("ABCD-2");
+  });
+});
+
+describe("launchKioskDevice", () => {
+  it("stores the device's identity without needing a pairing code", async () => {
+    mockRpc.mockResolvedValue({
+      data: [{ device_id: "d1", device_token: "t1", device_label: "Bar", location_id: "l1", location_name: "Downtown", kiosk_token: null }],
+      error: null,
+    });
+
+    const result = await launchKioskDevice("d1");
+
+    expect(mockRpc).toHaveBeenCalledWith("launch_kiosk_device", { p_device_id: "d1" });
+    expect(result).toEqual({ ok: true, locationId: "l1", locationName: "Downtown" });
+    expect(localStorage.getItem("kiosk_device_id")).toBe("d1");
+    expect(localStorage.getItem("kiosk_device_token")).toBe("t1");
+    expect(localStorage.getItem("kiosk_location_id")).toBe("l1");
+  });
+
+  it("leaves the browser alone when the RPC fails", async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { message: "only the account owner" } });
+    expect(await launchKioskDevice("d1")).toEqual({ ok: false, reason: "network" });
+    expect(localStorage.getItem("kiosk_device_id")).toBeNull();
   });
 });
 

@@ -35,6 +35,17 @@ function device(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const mockLaunch = vi.fn();
+const mockNavigate = vi.fn();
+vi.mock("@/lib/kiosk-pairing", async importOriginal => ({
+  ...(await importOriginal<typeof import("@/lib/kiosk-pairing")>()),
+  launchKioskDevice: (...args: any[]) => mockLaunch(...args),
+}));
+vi.mock("react-router-dom", async importOriginal => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => mockNavigate,
+}));
+
 vi.mock("@/components/ui/sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -49,6 +60,8 @@ beforeEach(() => {
   mockCreateMutate.mockReset();
   mockRegenerateMutate.mockReset();
   mockRenameMutate.mockReset();
+  mockLaunch.mockReset();
+  mockNavigate.mockReset();
   localStorage.clear();
 });
 
@@ -260,6 +273,29 @@ describe("KiosksTab", () => {
     fireEvent.click(screen.getByText("Show code"));
     expect(screen.getByText("ABCD-2345")).toBeInTheDocument();
     expect(screen.getByText("Open the Kiosk tab and enter this code.")).toBeInTheDocument();
+  });
+
+  it("opens a device as the kiosk on this browser after confirming", async () => {
+    mockLaunch.mockResolvedValue({ ok: true });
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
+    fireEvent.click(screen.getByText("Open kiosk here"));
+    expect(mockLaunch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Open kiosk"));
+    await waitFor(() => expect(mockLaunch).toHaveBeenCalledWith("d1"));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/kiosk"));
+  });
+
+  it("stays in Admin when the kiosk can't be opened", async () => {
+    mockLaunch.mockResolvedValue({ ok: false, reason: "network" });
+    mockUseKioskDevices.mockReturnValue({ data: [device()], isLoading: false });
+    render(<KiosksTab concepts={concepts} locations={locations} />);
+    openDeviceMenu();
+    fireEvent.click(screen.getByText("Open kiosk here"));
+    fireEvent.click(screen.getByText("Open kiosk"));
+    await waitFor(() => expect(mockLaunch).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("renames a device from the row's menu", () => {
