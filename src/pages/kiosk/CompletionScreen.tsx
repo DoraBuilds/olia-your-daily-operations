@@ -36,8 +36,8 @@ export function CompletionScreen({
       <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center mb-6">
         <Check size={36} className="text-sage" />
       </div>
-      <h2 className="font-display text-4xl italic text-foreground mb-1">{t("completion.title")}</h2>
-      <p className="text-sm italic text-muted-foreground mb-5">{t("completion.subtitle")}</p>
+      <h2 className="font-display text-4xl text-foreground mb-1">{t("completion.title")}</h2>
+      <p className="text-sm text-muted-foreground mb-5">{t("completion.subtitle")}</p>
       <p className="text-base font-medium text-foreground mb-1">{checklist.title}</p>
       <p className="text-sm text-muted-foreground mb-1">{staffName}</p>
       <p className="text-xs text-muted-foreground/70 mb-8">{dateStr} · {timeStr}</p>
