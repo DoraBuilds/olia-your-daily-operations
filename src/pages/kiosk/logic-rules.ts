@@ -159,6 +159,9 @@ export function collectNotifyAlerts(
 
 // ─── Require-action extraction ────────────────────────────────────────────────
 
+/** Separates the "why" from the assignee name inside an action alert message. */
+export const ASSIGNEE_SEPARATOR = " · Assigned to: ";
+
 export interface ActionAlert {
   /** The action the manager asked for, e.g. "Call maintenance" */
   actionTitle: string;
@@ -195,12 +198,13 @@ export function collectActionAlerts(
         if (!actionTitle) continue;
         if (alerts.some(a => a.actionTitle === actionTitle && a.questionText === question.text)) continue;
 
+        const assignee = trigger.config?.actionAssignee?.trim();
         const isBlank = answer === undefined || answer === null || answer === "" || answer === false;
         const answerStr = isBlank ? "no answer" : Array.isArray(answer) ? answer.map(normalizeAnswerText).join(", ") : String(answer);
         alerts.push({
           actionTitle,
           questionText: question.text,
-          message: `Action required: "${actionTitle}" — ${question.text}: ${answerStr}`,
+          message: `Action required: "${actionTitle}" — ${question.text}: ${answerStr}${assignee ? `${ASSIGNEE_SEPARATOR}${assignee}` : ""}`,
         });
       }
     }
