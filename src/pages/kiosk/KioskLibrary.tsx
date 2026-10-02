@@ -262,7 +262,7 @@ export function KioskLibrary({
 }
 
 // Folders and docs share one compact, square-ish tile so they sit in the same grid.
-const tileCls = "card-surface min-h-[120px] flex flex-col items-center justify-center gap-1.5 px-3 py-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]";
+const tileCls = "card-surface min-w-0 overflow-hidden min-h-[120px] flex flex-col items-center justify-center gap-1.5 px-3 py-4 text-center hover:border-sage/30 transition-colors active:scale-[0.99]";
 
 function RootFolders({
   section,
@@ -304,8 +304,8 @@ function RootFolders({
             <div className="w-9 h-9 rounded-lg bg-sage-light flex items-center justify-center shrink-0">
               <Folder size={16} className="text-sage-deep" />
             </div>
-            <div className="w-full">
-              <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
+            <div className="w-full min-w-0">
+              <p className="text-sm font-medium text-foreground leading-tight line-clamp-2 [overflow-wrap:anywhere]">{folder.name}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {showProgress
                   ? t("library.completedCount", { done, total: count })
@@ -348,7 +348,7 @@ function FolderContents({
           <div className="w-9 h-9 rounded-lg bg-sage-light flex items-center justify-center shrink-0">
             <Folder size={16} className="text-sage-deep" />
           </div>
-          <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{folder.name}</p>
+          <p className="text-sm font-medium text-foreground leading-tight line-clamp-2 [overflow-wrap:anywhere]">{folder.name}</p>
         </button>
       ))}
       {docs.map(doc => {
@@ -372,7 +372,7 @@ function FolderContents({
             <div className="w-9 h-9 rounded-lg bg-lavender-light flex items-center justify-center shrink-0">
               {isTraining ? <GraduationCap size={16} className="text-lavender-deep" /> : <FileText size={16} className="text-lavender-deep" />}
             </div>
-            <p className="text-sm font-medium text-foreground leading-tight line-clamp-2">{doc.title}</p>
+            <p className="text-sm font-medium text-foreground leading-tight line-clamp-2 [overflow-wrap:anywhere]">{doc.title}</p>
             {isTraining && doc.metadata?.duration && (
               <p className="text-xs text-muted-foreground">{doc.metadata.duration}</p>
             )}
