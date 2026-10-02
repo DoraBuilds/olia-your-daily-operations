@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import i18n from "@/lib/i18n";
 
 export interface DbAction {
   id: string;
@@ -60,7 +61,7 @@ export function useSaveAction() {
         if (error) throw error;
       } else {
         if (!teamMember) {
-          throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+          throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
         }
         // organization_id is required — RLS will reject rows without it
         const { error } = await supabase.from("actions").insert({
@@ -86,7 +87,7 @@ export function useDeleteAction() {
       const { data: deleted, error } = await supabase.from("actions").delete().eq("id", id).select("id");
       if (error) throw error;
       if (!deleted || deleted.length === 0) {
-        throw new Error("Could not delete this action. It may have already been removed, or your session has expired — please refresh and try again.");
+        throw new Error(i18n.t("errors.deleteAction", { ns: "common" }));
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["actions"] }),

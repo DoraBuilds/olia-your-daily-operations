@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, X, ExternalLink } from "lucide-react";
 import { PLAN_LABELS, type Plan } from "@/lib/plan-features";
+import { useTranslation, Trans } from "react-i18next";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 
 interface UpgradePromptProps {
@@ -15,6 +16,7 @@ export function UpgradePrompt({
   requiredPlan = "growth",
   onClose,
 }: UpgradePromptProps) {
+  const { t } = useTranslation("common");
   const navigate = useNavigate();
   const isNative = useIsNativeApp();
 
@@ -27,12 +29,12 @@ export function UpgradePrompt({
             <div className="w-8 h-8 rounded-full bg-lavender/15 flex items-center justify-center">
               <Sparkles size={15} className="text-lavender" />
             </div>
-            <h2 className="font-display text-base text-foreground">Upgrade to unlock</h2>
+            <h2 className="font-display text-base text-foreground">{t("upgrade.title")}</h2>
           </div>
           <button
             onClick={onClose}
             className="btn-icon"
-            aria-label="Close"
+            aria-label={t("close")}
           >
             <X size={18} className="text-muted-foreground" />
           </button>
@@ -40,9 +42,12 @@ export function UpgradePrompt({
 
         {/* Body */}
         <p className="text-sm text-muted-foreground leading-relaxed">
-          <span className="text-foreground font-medium">{feature}</span> is available on the{" "}
-          <span className="text-foreground font-medium">{PLAN_LABELS[requiredPlan]}</span> plan
-          and above.
+          <Trans
+            t={t}
+            i18nKey="upgrade.body"
+            values={{ feature, plan: PLAN_LABELS[requiredPlan] }}
+            components={{ b: <span className="text-foreground font-medium" /> }}
+          />
         </p>
 
         {/* Actions */}
@@ -51,7 +56,7 @@ export function UpgradePrompt({
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium text-muted-foreground bg-muted hover:bg-muted/70 transition-colors"
           >
-            Not now
+            {t("upgrade.notNow")}
           </button>
           {isNative ? (
             <a
@@ -61,14 +66,14 @@ export function UpgradePrompt({
               onClick={onClose}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors flex items-center justify-center gap-1.5"
             >
-              Upgrade at olia.app <ExternalLink size={12} />
+              {t("upgrade.upgradeExternal")} <ExternalLink size={12} />
             </a>
           ) : (
             <button
               onClick={() => { onClose(); navigate("/billing"); }}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-sage text-primary-foreground hover:bg-sage-deep transition-colors"
             >
-              See plans
+              {t("upgrade.seePlans")}
             </button>
           )}
         </div>

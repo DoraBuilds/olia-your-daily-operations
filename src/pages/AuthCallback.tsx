@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
  *   5. This page detects loading=false and redirects to /admin.
  */
 export default function AuthCallback() {
+  const { t } = useTranslation("common");
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
@@ -25,7 +27,7 @@ export default function AuthCallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-3 bg-background">
       <div className="w-6 h-6 border-2 border-sage border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-muted-foreground">Signing you in…</p>
+      <p className="text-sm text-muted-foreground">{t("loading.signingIn")}</p>
     </div>
   );
 }

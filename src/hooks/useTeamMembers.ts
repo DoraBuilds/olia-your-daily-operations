@@ -5,6 +5,7 @@ import type { TeamMember, ManagerPermissions } from "@/lib/admin-repository";
 import { DEFAULT_PERMISSIONS, getInitials } from "@/lib/admin-repository";
 import { writeAuditLog } from "@/hooks/useAuditLog";
 import { captureEvent } from "@/lib/posthog";
+import i18n from "@/lib/i18n";
 
 export function useTeamMembers() {
   const { teamMember } = useAuth();
@@ -83,7 +84,7 @@ export function useArchiveTeamMember() {
         .select("id");
       if (error) throw error;
       if (!updated || updated.length === 0) {
-        throw new Error("Could not archive this team member. Please refresh and try again.");
+        throw new Error(i18n.t("errors.archiveTeamMember", { ns: "common" }));
       }
       if (teamMember) writeAuditLog({ action: "archive_team_member", entity_type: "team_member", entity_id: id }, teamMember);
     },
@@ -106,7 +107,7 @@ export function useRestoreTeamMember() {
         .select("id");
       if (error) throw error;
       if (!updated || updated.length === 0) {
-        throw new Error("Could not restore this team member. Please refresh and try again.");
+        throw new Error(i18n.t("errors.restoreTeamMember", { ns: "common" }));
       }
       if (teamMember) writeAuditLog({ action: "restore_team_member", entity_type: "team_member", entity_id: id }, teamMember);
     },
@@ -130,7 +131,7 @@ export function useSaveTeamMember() {
   return useMutation({
     mutationFn: async (tm: Partial<TeamMember> & { id?: string; rawPin?: string }) => {
       if (!teamMember) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
 
       // is_owner is intentionally never sent from the client — it's a
@@ -162,7 +163,7 @@ export function useSaveTeamMember() {
           .select("id");
         if (error) throw error;
         if (!updated || updated.length === 0) {
-          throw new Error("Account update failed. Please refresh the page and try again.");
+          throw new Error(i18n.t("errors.accountUpdateFailed", { ns: "common" }));
         }
         writeAuditLog(
           { action: "update_team_member", entity_type: "team_member", entity_id: tm.id,
@@ -173,7 +174,7 @@ export function useSaveTeamMember() {
       }
 
       if (!tm.rawPin) {
-        throw new Error("A kiosk PIN is required for new team members.");
+        throw new Error(i18n.t("errors.kioskPinRequired", { ns: "common" }));
       }
 
       const insertPayload: Record<string, unknown> = {
@@ -241,7 +242,7 @@ export function useDeleteTeamMember() {
       const { data: deleted, error } = await supabase.from("team_members").delete().eq("id", id).select("id");
       if (error) throw error;
       if (!deleted || deleted.length === 0) {
-        throw new Error("Could not remove this team member. Please refresh and try again.");
+        throw new Error(i18n.t("errors.removeTeamMember", { ns: "common" }));
       }
       if (teamMember) writeAuditLog({ action: "delete_team_member", entity_type: "team_member", entity_id: id }, teamMember);
     },

@@ -86,7 +86,7 @@ export function SidebarNav() {
             <PanelLeft size={18} strokeWidth={1.8} />
           </button>
         </div>
-        <nav aria-label="Primary" className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
+        <nav aria-label={t("a11y.primaryNav")} className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
           {appNavItems.map(({ to, labelKey, icon: Icon, children }) => {
             const active = location.pathname.startsWith(to);
             const label = t(labelKey);

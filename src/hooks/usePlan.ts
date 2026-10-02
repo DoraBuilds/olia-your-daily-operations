@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLAN_FEATURES, type Plan, type PlanFeatures, type PlanStatus } from "@/lib/plan-features";
+import i18n from "@/lib/i18n";
 
 interface OrgRecord {
   id: string;
@@ -108,11 +109,11 @@ export function useUpdateOrganizationName() {
   return useMutation({
     mutationFn: async (name: string) => {
       if (!organizationId) {
-        throw new Error("Your organization could not be resolved.");
+        throw new Error(i18n.t("errors.orgUnresolved", { ns: "common" }));
       }
       const trimmed = name.trim();
       if (!trimmed) {
-        throw new Error("Company name can't be empty.");
+        throw new Error(i18n.t("errors.companyNameEmpty", { ns: "common" }));
       }
       const { data, error } = await supabase
         .from("organizations")
@@ -121,7 +122,7 @@ export function useUpdateOrganizationName() {
         .select("id");
       if (error) throw error;
       if (!data || data.length === 0) {
-        throw new Error("Could not update the company name. Please refresh and try again.");
+        throw new Error(i18n.t("errors.updateCompanyName", { ns: "common" }));
       }
     },
     onSuccess: () => {
@@ -137,7 +138,7 @@ export function useSaveActiveLocationsSelection() {
   return useMutation({
     mutationFn: async (locationIds: string[]) => {
       if (!organizationId) {
-        throw new Error("Your billing organization could not be resolved.");
+        throw new Error(i18n.t("errors.billingOrgUnresolved", { ns: "common" }));
       }
       const { data, error } = await supabase
         .from("organizations")
@@ -146,7 +147,7 @@ export function useSaveActiveLocationsSelection() {
         .select("id, active_location_ids");
       if (error) throw error;
       if (!data || data.length === 0) {
-        throw new Error("We could not save the active location selection. Please refresh and try again.");
+        throw new Error(i18n.t("errors.saveActiveLocations", { ns: "common" }));
       }
     },
     onSuccess: () => {

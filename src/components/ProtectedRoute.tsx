@@ -1,9 +1,11 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation("common");
   const { user, teamMember, loading, setupError, signOut, platformAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -46,7 +48,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading && !teamMember) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t("loading.generic")}</p>
       </div>
     );
   }

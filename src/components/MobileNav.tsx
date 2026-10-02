@@ -143,7 +143,7 @@ export function MobileMenu({ isKioskAdminSession, onBackToKiosk }: MobileMenuPro
               </button>
             </div>
 
-            <nav aria-label="Primary" className="flex-1 overflow-y-auto p-3 space-y-1">
+            <nav aria-label={t("a11y.primaryNav")} className="flex-1 overflow-y-auto p-3 space-y-1">
               {appNavItems.map(({ id, to, labelKey, icon: Icon }) => {
                 const active = location.pathname.startsWith(to);
                 const rowClass = cn(

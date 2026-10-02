@@ -238,6 +238,10 @@
     "mc4": "Sí / No",
     "mc5": "Conforme / No conforme"
   },
+  "previewPlaceholders": {
+    "date": "DD / MM / AAAA",
+    "time": "HH : MM"
+  },
   "responsePicker": {
     "heading": "Tipo de respuesta",
     "responsesSection": "Respuestas",

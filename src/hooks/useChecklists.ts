@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { captureEvent } from "@/lib/posthog";
+import i18n from "@/lib/i18n";
 
 export interface FolderItem {
   id: string;
@@ -61,7 +62,7 @@ export function useSaveFolder() {
   return useMutation({
     mutationFn: async (folder: Partial<FolderItem> & { id?: string }) => {
       if (!teamMember) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
       const { error } = await supabase.from("folders").upsert({
         id: folder.id || undefined,
