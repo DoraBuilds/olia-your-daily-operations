@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Concept } from "@/lib/admin-repository";
+import i18n from "@/lib/i18n";
 
 export function useConcepts() {
   const { teamMember } = useAuth();
@@ -33,7 +34,7 @@ export function useSaveConcept() {
         return concept.id;
       }
       if (!teamMember?.organization_id) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
       const { data, error } = await supabase
         .from("concepts")

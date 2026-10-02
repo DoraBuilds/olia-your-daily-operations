@@ -105,7 +105,7 @@ export function KioskPinShell({
       <div className="bg-card w-full max-w-sm mx-4 rounded-2xl p-6 space-y-5 animate-fade-in shadow-lg">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-foreground">{title}</h2>
-          <button onClick={onClose} className="btn-icon" aria-label="Close">
+          <button onClick={onClose} className="btn-icon" aria-label={t("inputs.close")}>
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>

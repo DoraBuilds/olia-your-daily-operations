@@ -19,6 +19,7 @@ import { FolderBreadcrumb } from "./FolderBreadcrumb";
 import { CreateMenuSheet } from "./CreateMenuSheet";
 import { ItemContextMenu } from "./ItemContextMenu";
 import { MoveToFolderSheet } from "./MoveToFolderSheet";
+import i18n from "@/lib/i18n";
 
 // Lazy-load heavy modals — only fetched when the user opens them
 const ConvertFileModal = lazy(() => import("./ConvertFileModal").then(m => ({ default: m.ConvertFileModal })));
@@ -436,7 +437,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         }}
         onUpdate={async (id, updates) => {
           const orig = dbChecklists.find(c => c.id === id);
-          if (!orig) throw new Error("Checklist not found — please refresh and try again.");
+          if (!orig) throw new Error(i18n.t("errors.checklistNotFound", { ns: "common" }));
           await saveChecklistMut.mutateAsync({
             ...orig,
             title: updates.title ?? orig.title,

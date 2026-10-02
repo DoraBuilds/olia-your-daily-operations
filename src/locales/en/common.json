@@ -30,5 +30,58 @@
     "noMatch": "No matches",
     "deselectAll": "Deselect all",
     "selectAll": "Select all"
+  },
+  "errors": {
+    "accountSetup": "Your account setup is not complete. Please refresh the page and try again.",
+    "profileUpdateFailed": "Profile update failed — your session may have expired. Please refresh and try again.",
+    "staffPinRequired": "PIN is required for new staff members.",
+    "archiveProfile": "Could not archive this profile. Please refresh and try again.",
+    "restoreProfile": "Could not restore this profile. Please refresh and try again.",
+    "deleteAction": "Could not delete this action. It may have already been removed, or your session has expired — please refresh and try again.",
+    "orgUnresolved": "Your organization could not be resolved.",
+    "companyNameEmpty": "Company name can't be empty.",
+    "updateCompanyName": "Could not update the company name. Please refresh and try again.",
+    "billingOrgUnresolved": "Your billing organization could not be resolved.",
+    "saveActiveLocations": "We could not save the active location selection. Please refresh and try again.",
+    "locationUpdateFailed": "Location update failed. Your session may have expired — please refresh the page and try again.",
+    "notAuthenticated": "Not authenticated. Please refresh and try again.",
+    "deleteLocation": "Could not delete this location. It may have already been removed, or your session has expired — please refresh and try again.",
+    "archiveTeamMember": "Could not archive this team member. Please refresh and try again.",
+    "restoreTeamMember": "Could not restore this team member. Please refresh and try again.",
+    "accountUpdateFailed": "Account update failed. Please refresh the page and try again.",
+    "kioskPinRequired": "A kiosk PIN is required for new team members.",
+    "removeTeamMember": "Could not remove this team member. Please refresh and try again.",
+    "checklistNotFound": "Checklist not found — please refresh and try again."
+  },
+  "errorFallback": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Try refreshing the page.",
+    "retry": "Try again"
+  },
+  "notFound": {
+    "title": "Oops! Page not found",
+    "home": "Return to Home"
+  },
+  "loading": {
+    "signingIn": "Signing you in…",
+    "generic": "Loading…"
+  },
+  "upgrade": {
+    "title": "Upgrade to unlock",
+    "body": "<b>{{feature}}</b> is available on the <b>{{plan}}</b> plan and above.",
+    "notNow": "Not now",
+    "upgradeExternal": "Upgrade at olia.app",
+    "seePlans": "See plans"
+  },
+  "close": "Close",
+  "cookies": {
+    "ariaLabel": "Cookie consent",
+    "body": "We use essential cookies to run the app, and optional cookies for error monitoring. See our <policy>Cookie Policy</policy> for details.",
+    "essentialOnly": "Essential only",
+    "acceptAll": "Accept all"
+  },
+  "a11y": {
+    "primaryNav": "Primary",
+    "mapPreview": "Location map preview"
   }
 }

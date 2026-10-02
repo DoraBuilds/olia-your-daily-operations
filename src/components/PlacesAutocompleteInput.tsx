@@ -13,6 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { MapPin, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { runtimeConfig } from "@/lib/runtime-config";
 
 const API_KEY = runtimeConfig.googleMapsApiKey;
@@ -245,10 +246,11 @@ interface StaticMapPreviewProps {
 }
 
 export function StaticMapPreview({ lat, lng, className }: StaticMapPreviewProps) {
+  const { t } = useTranslation("common");
   return (
     <div className={cn("rounded-xl overflow-hidden border border-border", className)} style={{ height: 160 }}>
       <iframe
-        title="Location map preview"
+        title={t("a11y.mapPreview")}
         src={
           `https://www.openstreetmap.org/export/embed.html` +
           `?bbox=${lng - 0.003},${lat - 0.002},${lng + 0.003},${lat + 0.002}` +

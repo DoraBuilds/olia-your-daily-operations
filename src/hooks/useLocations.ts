@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Location } from "@/lib/admin-repository";
 import { usePlan } from "@/hooks/usePlan";
 import { captureEvent } from "@/lib/posthog";
+import i18n from "@/lib/i18n";
 
 export function useLocations() {
   const { teamMember } = useAuth();
@@ -108,7 +109,7 @@ export function useSaveLocation() {
         member = data as typeof teamMember;
       }
       if (!member) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
       if (loc.id) {
         // Explicit UPDATE — do NOT include organization_id in the payload.
@@ -142,7 +143,7 @@ export function useSaveLocation() {
           .select("id");
         if (error) throw error;
         if (!updated || updated.length === 0) {
-          throw new Error("Location update failed. Your session may have expired — please refresh the page and try again.");
+          throw new Error(i18n.t("errors.locationUpdateFailed", { ns: "common" }));
         }
       } else {
         // INSERT — organization_id is required for the plan-limit RLS policy.
@@ -181,7 +182,7 @@ export function useDeleteLocation() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!teamMember) {
-        throw new Error("Not authenticated. Please refresh and try again.");
+        throw new Error(i18n.t("errors.notAuthenticated", { ns: "common" }));
       }
       // Use .select("id") so PostgREST returns the deleted row(s) as data.
       // An empty array = 0 rows deleted (either gone already or RLS silently blocked).
@@ -194,7 +195,7 @@ export function useDeleteLocation() {
         .select("id");
       if (error) throw error;
       if (!deleted || deleted.length === 0) {
-        throw new Error("Could not delete this location. It may have already been removed, or your session has expired — please refresh and try again.");
+        throw new Error(i18n.t("errors.deleteLocation", { ns: "common" }));
       }
     },
     onSuccess: () => {

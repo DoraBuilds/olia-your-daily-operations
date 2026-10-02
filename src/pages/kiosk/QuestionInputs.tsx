@@ -44,6 +44,7 @@ export function NumberInput({
   max?: number;
   unit?: "C" | "F";
 }) {
+  const { t } = useTranslation("kiosk");
   const num = value === "" ? 0 : Number(value);
   const hasRange = min != null || max != null;
   const outOfRange = hasRange && value !== "" && (
@@ -80,8 +81,8 @@ export function NumberInput({
           "text-[11px] text-center",
           outOfRange ? "text-status-error font-semibold" : "text-muted-foreground",
         )}>
-          {outOfRange ? "⚠ Out of acceptable range · " : ""}
-          Acceptable: {min != null ? min : "—"} – {max != null ? max : "—"}{unit ? ` ${unit}` : ""}
+          {outOfRange ? `${t("inputs.outOfRange")} · ` : ""}
+          {t("inputs.acceptable", { range: `${min != null ? min : "—"} – ${max != null ? max : "—"}${unit ? ` ${unit}` : ""}` })}
         </p>
       )}
     </div>
@@ -116,6 +117,7 @@ export function TemperatureKeypadInput({
   acceptableMax?: number;
   unit?: "C" | "F";
 }) {
+  const { t } = useTranslation("kiosk");
   // What's been typed lives here: "18." and a lone "−" can't round-trip through a number.
   const [entry, setEntry] = useState(() => splitTemperature(value));
   const { digits, negative } = entry;
@@ -184,14 +186,14 @@ export function TemperatureKeypadInput({
         <button
           type="button"
           onClick={() => update(digits, !negative)}
-          aria-label="Negative"
+          aria-label={t("inputs.negative")}
           aria-pressed={negative}
           className={cn(keyClass, negative && "bg-sage border-sage text-primary-foreground active:bg-sage")}
         >
           +/−
         </button>
         <button type="button" onClick={() => pressDigit("0")} className={keyClass}>0</button>
-        <button type="button" onClick={pressDecimal} aria-label="Decimal point" className={cn(keyClass, "font-semibold")}>
+        <button type="button" onClick={pressDecimal} aria-label={t("inputs.decimalPoint")} className={cn(keyClass, "font-semibold")}>
           .
         </button>
       </div>
@@ -200,10 +202,10 @@ export function TemperatureKeypadInput({
           type="button"
           onClick={() => update(digits.slice(0, -1), negative)}
           disabled={digits === ""}
-          aria-label="Delete last digit"
+          aria-label={t("inputs.deleteLastDigit")}
           className="min-h-[44px] px-5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
         >
-          ⌫ Delete
+          ⌫ {t("inputs.delete")}
         </button>
       </div>
       {hasAcceptableRange && (
@@ -211,8 +213,8 @@ export function TemperatureKeypadInput({
           "text-[11px] text-center",
           outOfRange ? "text-status-error font-semibold" : "text-muted-foreground",
         )}>
-          {outOfRange ? "⚠ Out of acceptable range · " : ""}
-          Acceptable: {acceptableMin != null ? acceptableMin : "—"} – {acceptableMax != null ? acceptableMax : "—"}°{unit}
+          {outOfRange ? `${t("inputs.outOfRange")} · ` : ""}
+          {t("inputs.acceptable", { range: `${acceptableMin != null ? acceptableMin : "—"} – ${acceptableMax != null ? acceptableMax : "—"}°${unit}` })}
         </p>
       )}
     </div>
@@ -222,11 +224,12 @@ export function TemperatureKeypadInput({
 // ─── Text ─────────────────────────────────────────────────────────────────────
 
 export function TextInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useTranslation("kiosk");
   return (
     <textarea
       value={value}
       onChange={e => onChange(e.target.value)}
-      placeholder="Type your answer here…"
+      placeholder={t("inputs.textPlaceholder")}
       className="w-full min-h-[130px] border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring resize-none"
     />
   );
@@ -288,6 +291,7 @@ export function MultipleChoiceInput({
 // ─── DateTime ─────────────────────────────────────────────────────────────────
 
 export function DateTimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useTranslation("kiosk");
   // Auto-initialize to current date/time when the field first appears with no value
   useEffect(() => {
     if (!value) {
@@ -306,7 +310,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
   return (
     <div className="space-y-2">
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Date</label>
+        <label className="text-xs text-muted-foreground mb-1 block">{t("inputs.date")}</label>
         <input
           type="date"
           value={datePart}
@@ -315,7 +319,7 @@ export function DateTimeInput({ value, onChange }: { value: string; onChange: (v
         />
       </div>
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Time</label>
+        <label className="text-xs text-muted-foreground mb-1 block">{t("inputs.time")}</label>
         <input
           type="time"
           value={timePart}
@@ -339,6 +343,7 @@ export function InstructionBlock({
   onImageClick?: (url: string) => void;
   onLinkedResourceOpen?: () => void;
 }) {
+  const { t } = useTranslation("kiosk");
   const safeImageUrl = sanitizeImageUrl(imageUrl);
   return (
     <div className="min-h-[44px] bg-lavender-light rounded-xl px-5 py-4 space-y-3">
@@ -348,16 +353,16 @@ export function InstructionBlock({
           type="button"
           onClick={() => onImageClick?.(safeImageUrl)}
           className="w-full relative group overflow-hidden rounded-lg focus:outline-none"
-          aria-label="Tap to enlarge image"
+          aria-label={t("inputs.tapToEnlargeImage")}
         >
           <img
             src={safeImageUrl}
-            alt="Instruction"
+            alt={t("inputs.instruction")}
             className="w-full max-h-48 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
           />
           <div className="absolute inset-0 flex items-end justify-end p-2 pointer-events-none">
             <span className="bg-foreground/60 text-background text-xs px-2 py-0.5 rounded-full font-medium">
-              Tap to enlarge
+              {t("inputs.tapToEnlarge")}
             </span>
           </div>
         </button>
@@ -420,6 +425,7 @@ export function MediaInput({
   locationId?: string;
   questionId?: string;
 }) {
+  const { t } = useTranslation("kiosk");
   const [isOpen, setIsOpen] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [captured, setCaptured] = useState<string | null>(null);
@@ -466,7 +472,7 @@ export function MediaInput({
   useEffect(() => {
     if (!isOpen) { stopStream(); setCaptured(null); setCapturedCanvas(null); setError(""); return; }
     const mediaDevices = navigator.mediaDevices;
-    if (!mediaDevices?.getUserMedia) { setError("Camera access is not available on this device."); return; }
+    if (!mediaDevices?.getUserMedia) { setError(t("inputs.cameraUnavailable")); return; }
     let cancelled = false;
     setIsLoading(true);
     mediaDevices.getUserMedia({
@@ -483,7 +489,7 @@ export function MediaInput({
         setStream(nextStream);
         setError("");
       })
-      .catch(() => { if (!cancelled) setError("Camera access could not be started."); })
+      .catch(() => { if (!cancelled) setError(t("inputs.cameraFailed")); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
   }, [isOpen]);
@@ -528,7 +534,7 @@ export function MediaInput({
         .from("kiosk-photos")
         .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
       if (uploadError) {
-        setError(`Photo upload failed: ${uploadError.message}. Please try again.`);
+        setError(t("inputs.uploadFailed", { message: uploadError.message }));
         setIsUploading(false);
         return;
       }
@@ -536,7 +542,7 @@ export function MediaInput({
       onChange(uploadData.path);
       closeCamera();
     } catch (err: any) {
-      setError(`Photo upload failed: ${err?.message ?? "Unknown error"}. Please try again.`);
+      setError(t("inputs.uploadFailed", { message: err?.message ?? t("inputs.unknownError") }));
     } finally {
       setIsUploading(false);
     }
@@ -548,27 +554,27 @@ export function MediaInput({
         <div className="space-y-2">
           <div className="relative rounded-xl overflow-hidden border border-border">
             {displayUrl ? (
-              <img src={displayUrl} alt="Captured" className="w-full max-h-52 object-cover" />
+              <img src={displayUrl} alt={t("inputs.captured")} className="w-full max-h-52 object-cover" />
             ) : (
               <div className="w-full h-32 flex items-center justify-center bg-muted text-xs text-muted-foreground">
-                {previewFailed ? "Photo saved" : "Loading photo…"}
+                {previewFailed ? t("inputs.photoSaved") : t("inputs.loadingPhoto")}
               </div>
             )}
             <button
               type="button"
               onClick={() => onChange("")}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/60 flex items-center justify-center"
-              aria-label="Remove photo"
+              aria-label={t("inputs.removePhoto")}
             >
               <X size={14} className="text-background" />
             </button>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-sage">
             <Check size={14} />
-            Photo attached
+            {t("inputs.photoAttached")}
           </div>
           <button type="button" onClick={openCamera} className="text-xs font-medium text-sage hover:underline">
-            Retake photo
+            {t("inputs.retakePhoto")}
           </button>
         </div>
       ) : (
@@ -581,8 +587,8 @@ export function MediaInput({
             <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
             <circle cx="12" cy="13" r="3"/>
           </svg>
-          <span className="text-sm font-medium">Take photo</span>
-          <span className="text-xs">Use the camera to capture this now</span>
+          <span className="text-sm font-medium">{t("inputs.takePhoto")}</span>
+          <span className="text-xs">{t("inputs.takePhotoHint")}</span>
         </button>
       )}
 
@@ -591,14 +597,14 @@ export function MediaInput({
           <div className="w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div>
-                <p className="text-sm font-semibold text-foreground">Capture photo</p>
-                <p className="text-xs text-muted-foreground">Take a new photo now, then confirm it.</p>
+                <p className="text-sm font-semibold text-foreground">{t("inputs.capturePhoto")}</p>
+                <p className="text-xs text-muted-foreground">{t("inputs.capturePhotoHint")}</p>
               </div>
               <button
                 type="button"
                 onClick={closeCamera}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted"
-                aria-label="Close camera"
+                aria-label={t("inputs.closeCamera")}
               >
                 <X size={16} />
               </button>
@@ -610,7 +616,7 @@ export function MediaInput({
                 </div>
               ) : captured ? (
                 <div className="space-y-3">
-                  <img src={captured} alt="Captured preview" className="w-full rounded-xl border border-border max-h-[60vh] object-cover" />
+                  <img src={captured} alt={t("inputs.capturedPreview")} className="w-full rounded-xl border border-border max-h-[60vh] object-cover" />
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -618,7 +624,7 @@ export function MediaInput({
                       disabled={isUploading}
                       className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
                     >
-                      Retake
+                      {t("inputs.retake")}
                     </button>
                     <button
                       type="button"
@@ -626,7 +632,7 @@ export function MediaInput({
                       disabled={isUploading}
                       className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage/90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isUploading ? "Uploading…" : "Use photo"}
+                      {isUploading ? t("inputs.uploading") : t("inputs.usePhoto")}
                     </button>
                   </div>
                 </div>
@@ -636,14 +642,14 @@ export function MediaInput({
                     <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-[60vh] object-cover" />
                   </div>
                   <canvas ref={canvasRef} className="hidden" />
-                  {isLoading && <p className="text-xs text-muted-foreground">Starting camera…</p>}
+                  {isLoading && <p className="text-xs text-muted-foreground">{t("inputs.startingCamera")}</p>}
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={closeCamera}
                       className="flex-1 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted"
                     >
-                      Cancel
+                      {t("inputs.cancel")}
                     </button>
                     <button
                       type="button"
@@ -651,7 +657,7 @@ export function MediaInput({
                       disabled={isLoading || !stream}
                       className="flex-1 px-4 py-3 rounded-xl bg-sage text-primary-foreground text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-sage/90"
                     >
-                      Capture photo
+                      {t("inputs.capturePhoto")}
                     </button>
                   </div>
                 </div>

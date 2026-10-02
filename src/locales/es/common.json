@@ -30,5 +30,58 @@
     "noMatch": "Sin resultados",
     "deselectAll": "Deseleccionar todo",
     "selectAll": "Seleccionar todo"
+  },
+  "errors": {
+    "accountSetup": "La configuración de tu cuenta no está completa. Actualiza la página e inténtalo de nuevo.",
+    "profileUpdateFailed": "No se pudo actualizar el perfil: tu sesión puede haber caducado. Actualiza la página e inténtalo de nuevo.",
+    "staffPinRequired": "El PIN es obligatorio para el personal nuevo.",
+    "archiveProfile": "No se pudo archivar este perfil. Actualiza la página e inténtalo de nuevo.",
+    "restoreProfile": "No se pudo restaurar este perfil. Actualiza la página e inténtalo de nuevo.",
+    "deleteAction": "No se pudo eliminar esta acción. Puede que ya se haya eliminado o que tu sesión haya caducado: actualiza la página e inténtalo de nuevo.",
+    "orgUnresolved": "No se pudo identificar tu organización.",
+    "companyNameEmpty": "El nombre de la empresa no puede estar vacío.",
+    "updateCompanyName": "No se pudo actualizar el nombre de la empresa. Actualiza la página e inténtalo de nuevo.",
+    "billingOrgUnresolved": "No se pudo identificar tu organización de facturación.",
+    "saveActiveLocations": "No pudimos guardar la selección de ubicaciones activas. Actualiza la página e inténtalo de nuevo.",
+    "locationUpdateFailed": "No se pudo actualizar la ubicación. Tu sesión puede haber caducado: actualiza la página e inténtalo de nuevo.",
+    "notAuthenticated": "No has iniciado sesión. Actualiza la página e inténtalo de nuevo.",
+    "deleteLocation": "No se pudo eliminar esta ubicación. Puede que ya se haya eliminado o que tu sesión haya caducado: actualiza la página e inténtalo de nuevo.",
+    "archiveTeamMember": "No se pudo archivar a este miembro del equipo. Actualiza la página e inténtalo de nuevo.",
+    "restoreTeamMember": "No se pudo restaurar a este miembro del equipo. Actualiza la página e inténtalo de nuevo.",
+    "accountUpdateFailed": "No se pudo actualizar la cuenta. Actualiza la página e inténtalo de nuevo.",
+    "kioskPinRequired": "Se requiere un PIN de kiosco para los miembros nuevos del equipo.",
+    "removeTeamMember": "No se pudo eliminar a este miembro del equipo. Actualiza la página e inténtalo de nuevo.",
+    "checklistNotFound": "No se encontró la lista: actualiza la página e inténtalo de nuevo."
+  },
+  "errorFallback": {
+    "title": "Algo salió mal",
+    "body": "Ocurrió un error inesperado. Prueba a actualizar la página.",
+    "retry": "Intentar de nuevo"
+  },
+  "notFound": {
+    "title": "¡Vaya! Página no encontrada",
+    "home": "Volver al inicio"
+  },
+  "loading": {
+    "signingIn": "Iniciando sesión…",
+    "generic": "Cargando…"
+  },
+  "upgrade": {
+    "title": "Mejora tu plan para desbloquear",
+    "body": "<b>{{feature}}</b> está disponible en el plan <b>{{plan}}</b> y superiores.",
+    "notNow": "Ahora no",
+    "upgradeExternal": "Mejorar en olia.app",
+    "seePlans": "Ver planes"
+  },
+  "close": "Cerrar",
+  "cookies": {
+    "ariaLabel": "Consentimiento de cookies",
+    "body": "Usamos cookies esenciales para que la app funcione y cookies opcionales para el control de errores. Consulta nuestra <policy>Política de cookies</policy> para más detalles.",
+    "essentialOnly": "Solo esenciales",
+    "acceptAll": "Aceptar todas"
+  },
+  "a11y": {
+    "primaryNav": "Principal",
+    "mapPreview": "Vista previa del mapa de la ubicación"
   }
 }

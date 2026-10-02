@@ -100,11 +100,11 @@ function MockResponse({
       <div className="mt-2 space-y-1.5">
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50">
           <Calendar size={11} className="text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground">DD / MM / YYYY</span>
+          <span className="text-xs text-muted-foreground">{t("previewPlaceholders.date")}</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50 w-32">
           <Calendar size={11} className="text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground">HH : MM</span>
+          <span className="text-xs text-muted-foreground">{t("previewPlaceholders.time")}</span>
         </div>
       </div>
     );

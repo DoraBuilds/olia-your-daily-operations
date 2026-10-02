@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { StaffProfile } from "@/lib/admin-repository";
 import { writeAuditLog } from "@/hooks/useAuditLog";
+import i18n from "@/lib/i18n";
 
 /** Hash a raw PIN using SHA-256 via the Web Crypto API. */
 export async function hashPin(raw: string): Promise<string> {
@@ -33,7 +34,7 @@ export function useSaveStaffProfile() {
   return useMutation({
     mutationFn: async (sp: Partial<StaffProfile> & { id?: string; rawPin?: string }) => {
       if (!teamMember) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
 
       if (sp.id) {
@@ -69,7 +70,7 @@ export function useSaveStaffProfile() {
           .select("id");
         if (error) throw error;
         if (!updated || updated.length === 0) {
-          throw new Error("Profile update failed — your session may have expired. Please refresh and try again.");
+          throw new Error(i18n.t("errors.profileUpdateFailed", { ns: "common" }));
         }
         if (sp.rawPin) {
           await supabase.rpc("vault_staff_pin", { p_profile_id: sp.id, p_pin: sp.rawPin });
@@ -82,7 +83,7 @@ export function useSaveStaffProfile() {
       } else {
         // ── Creating a new profile: explicit INSERT ─────────────────────────
         if (!sp.rawPin) {
-          throw new Error("PIN is required for new staff members.");
+          throw new Error(i18n.t("errors.staffPinRequired", { ns: "common" }));
         }
         const insertPayload: Record<string, any> = {
           organization_id: teamMember.organization_id,
@@ -125,7 +126,7 @@ export function useArchiveStaffProfile() {
         .select("id");
       if (error) throw error;
       if (!updated || updated.length === 0) {
-        throw new Error("Could not archive this profile. Please refresh and try again.");
+        throw new Error(i18n.t("errors.archiveProfile", { ns: "common" }));
       }
       if (teamMember) writeAuditLog({ action: "archive_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },
@@ -145,7 +146,7 @@ export function useRestoreStaffProfile() {
         .select("id");
       if (error) throw error;
       if (!updated || updated.length === 0) {
-        throw new Error("Could not restore this profile. Please refresh and try again.");
+        throw new Error(i18n.t("errors.restoreProfile", { ns: "common" }));
       }
       if (teamMember) writeAuditLog({ action: "restore_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },

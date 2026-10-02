@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import i18n from "@/lib/i18n";
 
 export interface ChecklistNotificationRules {
   id: string;
@@ -34,7 +35,7 @@ export function useSaveChecklistNotificationRules() {
   return useMutation({
     mutationFn: async (rules: Omit<ChecklistNotificationRules, "id" | "organization_id">) => {
       if (!teamMember) {
-        throw new Error("Your account setup is not complete. Please refresh the page and try again.");
+        throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
       const { error } = await supabase
         .from("checklist_notification_rules")

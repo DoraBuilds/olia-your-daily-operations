@@ -405,7 +405,7 @@ export function ChecklistRunner({
             </button>
             <img
               src={sanitizeImageUrl(lightboxImage)}
-              alt="Full view"
+              alt={t("inputs.fullView")}
               className="max-w-full max-h-full object-contain rounded-xl"
               onClick={e => e.stopPropagation()}
             />
