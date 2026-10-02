@@ -83,8 +83,8 @@
   },
   "grid": {
     "kioskFallbackName": "Kiosco",
-    "identifiedAs": "Hola, <name>{{name}}</name>",
-    "notYou": "¿No eres tú?",
+    "identifiedAs": "Hola, <name>{{name}}</name>!",
+    "exitKiosk": "Salir del kiosco",
     "library": "Infohub",
     "admin": "Admin",
     "stats": {
