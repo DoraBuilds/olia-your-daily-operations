@@ -201,4 +201,12 @@ describe("collectActionAlerts", () => {
     qs[0].config.logicRules[0].triggers[0].config.actionTitle = "  ";
     expect(collectActionAlerts(qs, { q1: "No" })).toEqual([]);
   });
+
+  it("appends the assignee to the message", () => {
+    const qs = q("No") as any;
+    qs[0].config.logicRules[0].triggers[0].config.actionAssignee = " Maria ";
+    expect(collectActionAlerts(qs, { q1: "No" })[0].message).toBe(
+      'Action required: "Call maintenance" — Fridge clean?: No · Assigned to: Maria',
+    );
+  });
 });

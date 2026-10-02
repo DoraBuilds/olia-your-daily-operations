@@ -47,7 +47,8 @@
         "title": "Requiere acción",
         "bodyGeneric": "Un paso de la lista necesita atención.",
         "helper": "Requiere seguimiento",
-        "because": "Motivo: {{detail}}"
+        "because": "Motivo: {{detail}}",
+        "assignedTo": "Asignado a {{name}}"
       },
       "notice": {
         "title": "Aviso de la lista"
