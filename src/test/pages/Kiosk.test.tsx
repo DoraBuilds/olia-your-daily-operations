@@ -796,7 +796,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await screen.findByTestId("kiosk-tab-due");
-    expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Priya")).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Priya!")).toBeInTheDocument();
     expect(supabase.rpc).toHaveBeenCalledWith("get_kiosk_checklists", expect.objectContaining({
       p_location_id: "00000000-0000-0000-0000-000000000011",
       p_department_ids: ["dep-1", "dep-2"],
@@ -846,7 +846,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Jay")).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Jay!")).toBeInTheDocument();
     });
   });
 
@@ -871,11 +871,11 @@ describe("Kiosk — Identify Screen", () => {
     });
   });
 
-  it("'Not you?' clears the session and returns to the identify screen", async () => {
+  it("'Exit Kiosk' clears the session and returns to the identify screen", async () => {
     grantKioskStaffSession({ staffId: "tm-1", staffName: "Sarah Owner", organizationId: "org-1", departmentIds: [] });
     await renderGridScreen();
 
-    fireEvent.click(screen.getByText("Not you?"));
+    fireEvent.click(screen.getByText("Exit Kiosk"));
 
     await waitFor(() => {
       expect(screen.getByText("Enter PIN:")).toBeInTheDocument();

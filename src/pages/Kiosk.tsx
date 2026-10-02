@@ -816,6 +816,17 @@ function KioskScreen() {
           >
             {t("grid.admin")}
           </button>
+          <button
+            id="exit-kiosk-btn"
+            type="button"
+            onClick={() => {
+              clearKioskStaffSession();
+              setStaffIdentity(null);
+            }}
+            className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+          >
+            {t("grid.exitKiosk")}
+          </button>
         </div>
       </div>
 
@@ -834,18 +845,6 @@ function KioskScreen() {
               components={{ name: <span className="text-powder-blue-deep" /> }}
             />
           </span>
-          {" · "}
-          <button
-            id="switch-identity-btn"
-            type="button"
-            onClick={() => {
-              clearKioskStaffSession();
-              setStaffIdentity(null);
-            }}
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
-          >
-            {t("grid.notYou")}
-          </button>
         </p>
 
         {/* Stat strip — DUE / OVERDUE / UPCOMING / DONE */}
