@@ -9,7 +9,7 @@ import { type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
-import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
+import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useReorderChecklists, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useConcepts } from "@/hooks/useConcepts";
@@ -73,6 +73,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const saveFolderMut = useSaveFolder();
   const deleteFolderMut = useDeleteFolder();
   const reorderFoldersMut = useReorderFolders();
+  const reorderChecklistsMut = useReorderChecklists();
   const saveChecklistMut = useSaveChecklist();
   const deleteChecklistMut = useDeleteChecklist();
   const loadChecklist = useLoadChecklist();
@@ -203,6 +204,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [prefillDepartmentIds, setPrefillDepartmentIds] = useState<string[] | null | undefined>(undefined);
   const [prefillConceptId, setPrefillConceptId] = useState<string | null | undefined>(undefined);
   const [dragFolderId, setDragFolderId] = useState<string | null>(null);
+  const [dragChecklistId, setDragChecklistId] = useState<string | null>(null);
+  const [dropFolderId, setDropFolderId] = useState<string | null>(null);
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
   const [isBuilderDirty, setIsBuilderDirty] = useState(false);
   const [previewChecklist, setPreviewChecklist] = useState<ChecklistItem | null>(null);
@@ -341,6 +344,24 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     [newOrder[posA], newOrder[posB]] = [newOrder[posB], newOrder[posA]];
     setFolderOrder(newOrder);
     reorderFoldersMut.mutate(newOrder.map((id, idx) => ({ id, sort_order: idx })));
+  };
+
+  // Dropping a checklist on a folder moves it in; dropping it on another
+  // checklist puts it at that position (order is stored across all checklists).
+  const moveChecklistToFolder = (checklistId: string, folderId: string) => {
+    const orig = dbChecklists.find(c => c.id === checklistId);
+    if (orig && orig.folder_id !== folderId) saveChecklistMut.mutate({ ...orig, folder_id: folderId });
+  };
+
+  const moveChecklistInList = (checklistId: string, targetId: string) => {
+    if (checklistId === targetId) return;
+    const ids = dbChecklists.map(c => c.id).filter(id => id !== checklistId);
+    const targetIdx = ids.indexOf(targetId);
+    if (targetIdx < 0) return;
+    const fromIdx = dbChecklists.findIndex(c => c.id === checklistId);
+    const toIdx = dbChecklists.findIndex(c => c.id === targetId);
+    ids.splice(fromIdx < toIdx ? targetIdx + 1 : targetIdx, 0, checklistId);
+    reorderChecklistsMut.mutate(ids);
   };
 
   // The list carries no questions — fetch the stored ones whenever a checklist
@@ -615,11 +636,18 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         <div className="card-surface divide-y divide-border overflow-hidden">
           {/* Folders */}
           {visibleFolders.map((folder, folderIdx) => (
-            <div key={folder.id} className="flex items-center"
+            <div key={folder.id} className={cn("flex items-center", dropFolderId === folder.id && "bg-sage-light")}
               draggable
               onDragStart={() => setDragFolderId(folder.id)}
-              onDragOver={e => { e.preventDefault(); }}
+              onDragOver={e => { e.preventDefault(); if (dragChecklistId) setDropFolderId(folder.id); }}
+              onDragLeave={() => setDropFolderId(null)}
               onDrop={() => {
+                setDropFolderId(null);
+                if (dragChecklistId) {
+                  moveChecklistToFolder(dragChecklistId, folder.id);
+                  setDragChecklistId(null);
+                  return;
+                }
                 if (dragFolderId && dragFolderId !== folder.id) {
                   moveFolderInList(dragFolderId, folderIdx);
                   setDragFolderId(null);
@@ -649,9 +677,21 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
           {/* Checklists */}
           {visibleChecklists.map(cl => (
-            <div key={cl.id} className="flex items-center">
+            <div key={cl.id} className="flex items-center"
+              draggable
+              onDragStart={() => setDragChecklistId(cl.id)}
+              onDragOver={e => { e.preventDefault(); }}
+              onDrop={() => {
+                if (dragChecklistId) moveChecklistInList(dragChecklistId, cl.id);
+                setDragChecklistId(null);
+              }}
+              onDragEnd={() => { setDragChecklistId(null); setDropFolderId(null); }}
+            >
+              <div className="pl-2 shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors">
+                <GripVertical size={16} />
+              </div>
               <button onClick={() => { void openEditor(cl.id); }}
-                className="flex-1 flex items-center gap-3 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors">
+                className="flex-1 flex items-center gap-3 px-2 py-3.5 text-left hover:bg-muted/30 transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
                   <ClipboardList size={16} className="text-lavender-deep" />
                 </div>

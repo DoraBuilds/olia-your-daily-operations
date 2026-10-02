@@ -34,6 +34,7 @@ export interface ChecklistItem {
   due_time: string | null;   // HH:MM — when checklist is due (drives kiosk visibility)
   visibility_from: string | null;
   visibility_until: string | null;
+  sort_order?: number;
   is_published: boolean;     // Draft checklists are hidden from the kiosk until published
   created_at: string;
   updated_at: string;
@@ -90,6 +91,17 @@ export function useReorderFolders() {
   });
 }
 
+export function useReorderChecklists() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.rpc("reorder_checklists", { p_ids: ids });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["checklists"] }),
+  });
+}
+
 export function useDeleteFolder() {
   const qc = useQueryClient();
   return useMutation({
@@ -105,7 +117,7 @@ export function useDeleteFolder() {
 }
 
 const LIST_COLUMNS =
-  "id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, question_count, time_of_day, due_time, visibility_from, visibility_until, is_published, created_at, updated_at";
+  "id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, question_count, time_of_day, due_time, visibility_from, visibility_until, is_published, sort_order, created_at, updated_at";
 const FULL_COLUMNS = `${LIST_COLUMNS}, sections`;
 
 /** The list of checklists WITHOUT their questions — that content is the bulk
@@ -118,6 +130,7 @@ export function useChecklists() {
       const { data, error } = await supabase
         .from("checklists")
         .select(LIST_COLUMNS)
+        .order("sort_order")
         .order("title");
       if (error) throw error;
       return ((data ?? []) as ChecklistItem[]).filter(

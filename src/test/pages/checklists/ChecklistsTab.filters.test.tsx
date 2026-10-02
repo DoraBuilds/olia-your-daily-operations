@@ -146,6 +146,7 @@ vi.mock("@/hooks/useChecklists", () => {
     useSaveFolder: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteFolder: () => ({ mutate: vi.fn() }),
     useReorderFolders: () => ({ mutate: vi.fn() }),
+    useReorderChecklists: () => ({ mutate: vi.fn() }),
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
     useLoadChecklist: () => async () => { throw new Error("not loaded in this test"); },
