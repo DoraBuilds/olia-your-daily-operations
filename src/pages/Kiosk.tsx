@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -826,7 +826,14 @@ function KioskScreen() {
         </h1>
 
         <p className="text-center text-xs text-muted-foreground mt-1">
-          <span className="text-2xl font-semibold text-powder-blue-deep align-middle">{t("grid.identifiedAs", { name: staffIdentity.firstName || staffIdentity.staffName.split(" ")[0] })}</span>
+          <span className="text-2xl font-semibold text-foreground align-middle">
+            <Trans
+              t={t}
+              i18nKey="grid.identifiedAs"
+              values={{ name: staffIdentity.firstName || staffIdentity.staffName.split(" ")[0] }}
+              components={{ name: <span className="text-powder-blue-deep" /> }}
+            />
+          </span>
           {" · "}
           <button
             id="switch-identity-btn"
