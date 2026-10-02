@@ -79,9 +79,9 @@ describe("Notifications page", () => {
       },
     ];
     renderWithProviders(<Notifications />);
-    expect(screen.getByText("Follow-up needed")).toBeInTheDocument();
-    expect(screen.getByText("Trigger test (n/a is the trigger) was left unanswered.")).toBeInTheDocument();
-    expect(screen.getByText("A response was not provided, so this item needs attention.")).toBeInTheDocument();
+    expect(screen.getByText("Left unanswered")).toBeInTheDocument();
+    expect(screen.getByText('"Trigger test (n/a is the trigger)" had no answer.')).toBeInTheDocument();
+    expect(screen.getByText(/Needs a follow-up · Checklist: Kitchen/)).toBeInTheDocument();
     expect(screen.queryByText(/Action required:/i)).not.toBeInTheDocument();
   });
 

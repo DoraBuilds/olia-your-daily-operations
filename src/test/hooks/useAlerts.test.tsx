@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { useAlerts, useCreateAlert, useDismissAlert, useClearAlerts } from "@/hooks/useAlerts";
 
 const mockFrom = vi.fn();
+const mockRpc = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -14,6 +15,7 @@ vi.mock("@/lib/supabase", () => ({
       }),
     },
     from: (...args: any[]) => mockFrom(...args),
+    rpc: (...args: any[]) => mockRpc(...args),
   },
 }));
 
@@ -129,5 +131,22 @@ describe("useClearAlerts", () => {
   it("is not pending by default", () => {
     const { result } = renderHook(() => useClearAlerts(), { wrapper: makeWrapper() });
     expect(result.current.isPending).toBe(false);
+  });
+});
+
+describe("dismissing alerts", () => {
+  it("calls the dismiss_alerts RPC with the ids", async () => {
+    mockRpc.mockResolvedValue({ data: 2, error: null });
+    const { result } = renderHook(() => useClearAlerts(), { wrapper: makeWrapper() });
+    result.current.mutate(["a-1", "a-2"]);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockRpc).toHaveBeenCalledWith("dismiss_alerts", { p_ids: ["a-1", "a-2"] });
+  });
+
+  it("errors instead of silently succeeding when no row was cleared", async () => {
+    mockRpc.mockResolvedValue({ data: 0, error: null });
+    const { result } = renderHook(() => useDismissAlert(), { wrapper: makeWrapper() });
+    result.current.mutate("a-1");
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

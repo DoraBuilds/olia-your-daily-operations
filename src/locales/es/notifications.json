@@ -4,5 +4,6 @@
   "dismissAriaLabel": "Descartar alerta",
   "clearAll": "Borrar todo",
   "count_one": "{{count}} alerta",
-  "count_other": "{{count}} alertas"
+  "count_other": "{{count}} alertas",
+  "clearFailed": "No se pudo borrar esta alerta. Inténtalo de nuevo."
 }

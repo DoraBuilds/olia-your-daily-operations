@@ -11,9 +11,9 @@ describe("formatOperationalAlertCopy", () => {
       source: "action",
     });
 
-    expect(copy.title).toBe("Follow-up needed");
-    expect(copy.body).toBe("Trigger test (n/a is the trigger) was left unanswered.");
-    expect(copy.helper).toBe("A response was not provided, so this item needs attention.");
+    expect(copy.title).toBe("Left unanswered");
+    expect(copy.body).toBe('"Trigger test (n/a is the trigger)" had no answer.');
+    expect(copy.helper).toBe("Needs a follow-up · Checklist: Kitchen");
   });
 
   it("turns out-of-range trigger text into a more readable review prompt", () => {
@@ -25,8 +25,8 @@ describe("formatOperationalAlertCopy", () => {
       source: "action",
     });
 
-    expect(copy.title).toBe("Response needs a review");
-    expect(copy.body).toBe("Recorded value: 1.");
-    expect(copy.helper).toBe("Allowed range: min 2, max 6.");
+    expect(copy.title).toBe("Reading out of range");
+    expect(copy.body).toBe("Question Temperature + logic: recorded 1.");
+    expect(copy.helper).toBe("Allowed: min 2, max 6 · Checklist: Kitchen · 12:32");
   });
 });
