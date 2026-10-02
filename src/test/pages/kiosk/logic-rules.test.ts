@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateRule, collectNotifyAlerts } from "@/pages/kiosk/logic-rules";
+import { evaluateRule, collectNotifyAlerts, collectActionAlerts } from "@/pages/kiosk/logic-rules";
 import type { LogicRule } from "@/pages/checklists/types";
 
 // ─── evaluateRule ─────────────────────────────────────────────────────────────
@@ -173,5 +173,32 @@ describe("collectNotifyAlerts", () => {
     }];
     const alerts = collectNotifyAlerts(questions, { q1: "" });
     expect(alerts[0].message).toContain("not answered");
+  });
+});
+
+describe("collectActionAlerts", () => {
+  const q = (answerValue: string) => [{
+    id: "q1",
+    text: "Fridge clean?",
+    config: { logicRules: [{
+      id: "r1", comparator: "is" as const, value: answerValue,
+      triggers: [{ type: "require_action" as const, config: { actionTitle: "Call maintenance" } }],
+    }] },
+  }];
+
+  it("raises an alert when the answer matches the rule", () => {
+    const out = collectActionAlerts(q("No") as any, { q1: "No" });
+    expect(out).toHaveLength(1);
+    expect(out[0].message).toBe('Action required: "Call maintenance" — Fridge clean?: No');
+  });
+
+  it("raises nothing when the answer does not match", () => {
+    expect(collectActionAlerts(q("No") as any, { q1: "Yes" })).toEqual([]);
+  });
+
+  it("ignores triggers without an action title", () => {
+    const qs = q("No") as any;
+    qs[0].config.logicRules[0].triggers[0].config.actionTitle = "  ";
+    expect(collectActionAlerts(qs, { q1: "No" })).toEqual([]);
   });
 });

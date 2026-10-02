@@ -85,10 +85,12 @@ export function formatOperationalAlertCopy(alert: AlertLike): AlertCopy {
   }
 
   if (lower.startsWith("action required") || lower.startsWith("action needed")) {
+    // "Action required: "<action>" — <question>: <answer>" from the kiosk
+    const detail = cleanMessage(message).match(/"\s+—\s+(.+)$/)?.[1]?.trim();
     return {
       title: t("actionNeeded.title"),
       body: subject ?? t("actionNeeded.bodyGeneric"),
-      helper: formatContext(alert, t("actionNeeded.helper")),
+      helper: formatContext(alert, detail ? t("actionNeeded.because", { detail }) : t("actionNeeded.helper")),
     };
   }
 
