@@ -148,14 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // A platform admin with no org of their own lands on /super-admin
-    // (ProtectedRoute) — never auto-create an org or accept invites for them.
-    if (adminStatus.isAdmin) {
-      setTeamMember(null);
-      setLoading(false);
-      return;
-    }
-
     // Step 3: Invite acceptance.
     // Prefer the token AcceptInvite.tsx stashes in localStorage right before the
     // OTP round trip, but that token only survives if the same browser/tab/app
@@ -198,6 +190,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         supabase.from("team_members").update({ last_seen_at: new Date().toISOString() }).eq("auth_user_id", userId);
         return;
       }
+    }
+
+    // A platform admin with no org of their own lands on /super-admin
+    // (ProtectedRoute) — never auto-create an org for them. They can still
+    // be invited into a customer org like anyone else, so the invite
+    // acceptance above runs for them too (otherwise an accepted invite
+    // silently dropped them on the support console).
+    if (adminStatus.isAdmin) {
+      setTeamMember(null);
+      setLoading(false);
+      return;
     }
 
     if (pendingInviteToken) {

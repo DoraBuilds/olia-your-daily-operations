@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { cn } from "@/lib/utils";
+import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
+import { useDocumentMeta } from "@/hooks/useDocumentMeta";
+import { AuthLanguageSwitcher } from "@/components/AuthLanguageSwitcher";
 
 type Step = "loading" | "welcome" | "code" | "error";
 
@@ -20,6 +23,7 @@ function isEmailRateLimited(message: string | null | undefined) {
 }
 
 export default function AcceptInvite() {
+  useDocumentMeta("You're invited — Olia", "Accept your invitation to join your team on Olia.");
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -118,136 +122,135 @@ export default function AcceptInvite() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────
+  // Same white/black/teal shell as Login so the invite doesn't feel like a
+  // different product.
+
+  const shell = (children: React.ReactNode) => (
+    <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-start px-6 pt-[14vh] pb-12" style={legalTheme}>
+      <style>{legalLinkStyle}</style>
+      <AuthLanguageSwitcher />
+      <div className="w-full max-w-sm space-y-8">{children}</div>
+    </div>
+  );
+
+  const logo = <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />;
+
+  const primaryButton = (enabled: boolean) =>
+    cn(
+      "w-full py-3 rounded-full text-sm font-semibold transition-colors",
+      enabled ? "bg-[#0B0F0C] text-white hover:bg-[#151A16]" : "bg-muted text-muted-foreground cursor-not-allowed",
+    );
+
+  const inputClass = "w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring";
 
   if (step === "loading") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-sage border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center" style={legalTheme}>
+        <div className="w-8 h-8 border-2 border-foreground/70 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (step === "error") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-sm">
-          <h1 className="font-display text-2xl text-foreground mb-3">{t("acceptInvite.notFoundTitle")}</h1>
-          <p className="text-muted-foreground text-sm mb-6">
-            {t("acceptInvite.notFoundBody")}
-          </p>
-          <button
-            onClick={() => navigate("/login")}
-            className="text-sm text-sage font-medium underline underline-offset-2"
-          >
-            {t("acceptInvite.signInInstead")}
-          </button>
-        </div>
-      </div>
+    return shell(
+      <div className="text-center">
+        {logo}
+        <h1 className="font-display text-2xl text-foreground">{t("acceptInvite.notFoundTitle")}</h1>
+        <p className="text-sm text-muted-foreground mt-1 mb-6">{t("acceptInvite.notFoundBody")}</p>
+        <button
+          onClick={() => navigate("/login")}
+          className="w-full py-3 rounded-full text-sm font-semibold bg-[#0B0F0C] text-white hover:bg-[#151A16] transition-colors"
+        >
+          {t("acceptInvite.signInInstead")}
+        </button>
+      </div>,
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-1">
-          <h1 className="font-display text-3xl text-foreground">{t("acceptInvite.youAreInvited")}</h1>
-          {invite && (
-            <p className="text-muted-foreground text-sm">
-              {t("acceptInvite.joinOrgPrefix")} <span className="font-medium text-foreground">{invite.organization_name}</span> {t("acceptInvite.joinOrgSuffix")}
-            </p>
-          )}
-        </div>
-
-        {/* Card */}
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-4">
-
-          {step === "welcome" && (
-            <>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {t("acceptInvite.willSendCode")}
-                </p>
-                <p className="text-sm font-medium text-foreground bg-muted/40 rounded-lg px-3 py-2 break-all">
-                  {invite?.email}
-                </p>
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
-              )}
-
-              <button
-                onClick={acceptAndSendCode}
-                disabled={loading}
-                className="w-full py-3 px-4 rounded-2xl bg-sage text-white font-semibold text-sm
-                           hover:bg-sage-deep disabled:opacity-50 transition-colors"
-              >
-                {loading ? t("acceptInvite.sendingCode") : t("acceptInvite.acceptInvitation")}
-              </button>
-            </>
-          )}
-
-          {step === "code" && (
-            <>
-              {info && (
-                <p className="text-sm text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">{info}</p>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t("acceptInvite.verificationCode")}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder={t("acceptInvite.codePlaceholder")}
-                  value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                  onKeyDown={e => e.key === "Enter" && verifyCode()}
-                  className={cn(
-                    "w-full px-4 py-3 rounded-xl border text-sm bg-background",
-                    "focus:outline-none focus:ring-2 focus:ring-sage/30 focus:border-sage",
-                    error ? "border-destructive" : "border-border",
-                  )}
-                />
-              </div>
-
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
-              )}
-
-              <button
-                onClick={verifyCode}
-                disabled={loading || code.trim().length < 6}
-                className="w-full py-3 px-4 rounded-2xl bg-sage text-white font-semibold text-sm
-                           hover:bg-sage-deep disabled:opacity-50 transition-colors"
-              >
-                {loading ? t("acceptInvite.verifying") : t("acceptInvite.verifyAndSignIn")}
-              </button>
-
-              <button
-                onClick={acceptAndSendCode}
-                disabled={loading}
-                className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
-              >
-                {t("acceptInvite.resendCode")}
-              </button>
-            </>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          {t("acceptInvite.alreadyHaveAccount")}{" "}
-          <button
-            onClick={() => navigate("/login")}
-            className="text-sage font-medium underline underline-offset-2"
-          >
-            {t("acceptInvite.signIn")}
-          </button>
-        </p>
+  return shell(
+    <>
+      <div className="text-center">
+        {logo}
+        <h1 className="font-display text-2xl text-foreground">{t("acceptInvite.youAreInvited")}</h1>
+        {invite && (
+          <p className="text-sm text-muted-foreground mt-1">
+            {t("acceptInvite.joinOrgPrefix")} <span className="font-medium text-foreground">{invite.organization_name}</span> {t("acceptInvite.joinOrgSuffix")}
+          </p>
+        )}
       </div>
-    </div>
+
+      <div className="space-y-4">
+        {step === "welcome" && (
+          <>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{t("acceptInvite.willSendCode")}</p>
+              <p className="text-sm font-medium text-foreground border border-border rounded-xl bg-card px-4 py-3 break-all">
+                {invite?.email}
+              </p>
+            </div>
+
+            {error && <p className="text-xs text-status-error">{error}</p>}
+
+            <button onClick={acceptAndSendCode} disabled={loading} className={primaryButton(!loading)}>
+              {loading ? t("acceptInvite.sendingCode") : t("acceptInvite.acceptInvitation")}
+            </button>
+          </>
+        )}
+
+        {step === "code" && (
+          <>
+            {info && (
+              <p
+                className="text-xs rounded-xl px-3 py-2 border"
+                style={{ color: "#007E70", background: "rgba(0,229,204,0.08)", borderColor: "rgba(0,229,204,0.25)" }}
+              >
+                {info}
+              </p>
+            )}
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">{t("acceptInvite.verificationCode")}</label>
+              <input
+                autoFocus
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder={t("acceptInvite.codePlaceholder")}
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                onKeyDown={e => e.key === "Enter" && verifyCode()}
+                className={cn(inputClass, error && "border-destructive")}
+              />
+            </div>
+
+            {error && <p className="text-xs text-status-error">{error}</p>}
+
+            <button
+              onClick={verifyCode}
+              disabled={loading || code.trim().length < 6}
+              className={primaryButton(!loading && code.trim().length >= 6)}
+            >
+              {loading ? t("acceptInvite.verifying") : t("acceptInvite.verifyAndSignIn")}
+            </button>
+
+            <button
+              onClick={acceptAndSendCode}
+              disabled={loading}
+              className="text-xs font-medium hover:underline disabled:opacity-50"
+              style={{ color: "#007E70" }}
+            >
+              {t("acceptInvite.resendCode")}
+            </button>
+          </>
+        )}
+      </div>
+
+      <p className="text-center text-xs text-muted-foreground">
+        {t("acceptInvite.alreadyHaveAccount")}{" "}
+        <Link to="/login" className="font-medium hover:underline">
+          {t("acceptInvite.signIn")}
+        </Link>
+      </p>
+    </>,
   );
 }
