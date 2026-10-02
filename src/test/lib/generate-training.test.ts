@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTrainingPrompt, parseTrainingModule } from "../../../supabase/functions/generate-training/training";
+import { buildDocumentTrainingPrompt, buildTrainingPrompt, MAX_SOURCE_CHARS, parseTrainingModule } from "../../../supabase/functions/generate-training/training";
 
 describe("generate-training helpers", () => {
   it("builds a prompt that includes the chosen training category", () => {
@@ -30,5 +30,11 @@ describe("generate-training helpers", () => {
       duration: "6 min",
       steps: ["Listen first", "Offer a fix", "Escalate if needed"],
     });
+  });
+
+  it("builds a document prompt with the title and truncates very long content", () => {
+    const prompt = buildDocumentTrainingPrompt("Grinder maintenance", "x".repeat(MAX_SOURCE_CHARS + 500));
+    expect(prompt).toContain("Grinder maintenance");
+    expect(prompt.length).toBeLessThan(MAX_SOURCE_CHARS + 300);
   });
 });

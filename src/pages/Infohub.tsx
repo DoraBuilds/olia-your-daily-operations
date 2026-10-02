@@ -410,9 +410,9 @@ export default function Infohub() {
         label: t("actions.downloadFile"),
         icon: <Download size={16} className="text-muted-foreground" />,
         onClick: async () => {
-          const libraryDoc = section === "library" ? (doc as DocItem) : null;
-          if (libraryDoc?.filePath) {
-            const { data } = await supabase.storage.from("infohub-files").createSignedUrl(libraryDoc.filePath, 3600);
+          const fileDoc = doc as { filePath?: string };
+          if (fileDoc.filePath) {
+            const { data } = await supabase.storage.from("infohub-files").createSignedUrl(fileDoc.filePath, 3600);
             if (data?.signedUrl) {
               const a = document.createElement("a");
               a.href = data.signedUrl;
@@ -941,10 +941,11 @@ export default function Infohub() {
       )}
       {showUploadDoc && (
         <UploadDocModal
+          section={subTab === "library" ? "library" : "training"}
           folderId={subTab === "library" ? currentLibFolder : currentTrainFolder}
           folders={subTab === "library" ? allLibFolderOptions : allTrainFolderOptions}
           onClose={() => setShowUploadDoc(false)}
-          onSave={(title, folderId, filePath, fileType, tags, body) => {
+          onSave={(title, folderId, filePath, fileType, tags, body, training) => {
             createDocument.mutate({
               section: subTab === "library" ? "library" : "training",
               title,
@@ -953,6 +954,8 @@ export default function Infohub() {
               fileType,
               tags,
               body,
+              steps: training?.steps,
+              duration: training?.duration,
             });
           }}
         />

@@ -41,6 +41,9 @@ export interface InfohubTrainingDoc {
   folderId: string;
   steps: string[];
   access: InfohubAccessControl;
+  /** Original uploaded file the steps were built from, if any. */
+  filePath?: string;
+  fileType?: string;
 }
 
 export interface LinkableInfohubResource {

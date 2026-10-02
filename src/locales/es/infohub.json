@@ -121,6 +121,8 @@
       "fileTooLarge": "El archivo es demasiado grande. El tamaño máximo es 20 MB.",
       "notSignedIn": "No has iniciado sesión.",
       "uploadFailed": "Error al subir el archivo. Inténtalo de nuevo.",
+      "trainingFailed": "No se pudo convertir este archivo en un módulo de formación. Inténtalo de nuevo.",
+      "buildingTraining": "Leyendo el archivo y creando los pasos…",
       "dragDropPrefix": "Arrastra y suelta o",
       "browse": "explora",
       "fileTypesHint": "PDF, DOC, DOCX, imágenes · máx. 20 MB",

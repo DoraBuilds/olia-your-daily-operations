@@ -87,6 +87,9 @@ interface CreateDocumentInput {
   fileType?: string;
   /** Extracted text of an uploaded file, so AI tools can read it. */
   body?: string;
+  /** Training upload: steps/duration built from the file. */
+  steps?: string[];
+  duration?: string;
 }
 
 interface UpdateFolderInput {
@@ -162,6 +165,8 @@ function mapTrainingDocRow(row: InfohubDocumentRow): InfohubTrainingDoc {
     folderId: row.folder_id,
     steps: row.metadata?.steps ?? [],
     access: mapAccess(row),
+    filePath: row.metadata?.filePath,
+    fileType: row.metadata?.fileType,
   };
 }
 
@@ -431,9 +436,13 @@ export function useInfohubContent() {
             section: input.section,
             folder_id: input.folderId,
             title: input.title,
-            summary: "5 min module",
+            summary: `${input.duration ?? "5 min"} module`,
             body: "",
-            metadata: { duration: "5 min", steps: [] as string[] },
+            metadata: {
+              duration: input.duration ?? "5 min",
+              steps: input.steps ?? ([] as string[]),
+              ...(input.filePath ? { filePath: input.filePath, fileType: input.fileType } : {}),
+            },
             ...applyAccessFields(DEFAULT_INFOHUB_ACCESS),
             created_by: teamMemberRefId(teamMember?.id),
           };
@@ -476,11 +485,13 @@ export function useInfohubContent() {
             {
               id: crypto.randomUUID(),
               title: input.title,
-              duration: "5 min",
+              duration: input.duration ?? "5 min",
               completed: false,
               folderId: input.folderId,
-              steps: [],
+              steps: input.steps ?? [],
               access: DEFAULT_INFOHUB_ACCESS,
+              filePath: input.filePath,
+              fileType: input.fileType,
             },
           ],
         };
@@ -542,9 +553,12 @@ export function useInfohubContent() {
         patch.metadata = libraryMetadataWithTags(input.tags, existing);
       }
       if (input.section === "training" && (input.duration !== undefined || input.steps !== undefined)) {
+        const existing = qc.getQueryData<InfohubContentData>(queryKey)?.trainingDocs.find((doc) => doc.id === input.id);
         patch.metadata = {
           duration: input.duration ?? "5 min",
           steps: input.steps ?? [],
+          // Keep the original uploaded file attached when steps are edited.
+          ...(existing?.filePath ? { filePath: existing.filePath, fileType: existing.fileType } : {}),
         };
         if (input.body !== undefined && input.summary === undefined) {
           patch.summary = `${input.duration ?? "5 min"} module`;

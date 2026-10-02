@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { shrinkImageFile } from "@/lib/image-resize";
 import i18n from "@/lib/i18n";
 import { extractUploadText } from "@/lib/file-text";
+import { trainingFromFile, type TrainingFromFile } from "@/lib/training-from-file";
 import { useAuth } from "@/contexts/AuthContext";
 import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
 import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
@@ -463,15 +464,17 @@ export function FilePreviewModal({
 }
 
 export function UploadDocModal({
+  section = "library",
   folderId,
   folders,
   onClose,
   onSave,
 }: {
+  section?: "library" | "training";
   folderId: string | null;
   folders: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (title: string, folderId: string, filePath: string, fileType: string, tags: string[], body: string) => void;
+  onSave: (title: string, folderId: string, filePath: string, fileType: string, tags: string[], body: string, training?: TrainingFromFile) => void;
 }) {
   const { t } = useTranslation("infohub");
   const { teamMember } = useAuth();
@@ -522,8 +525,20 @@ export function UploadDocModal({
       const { error: uploadError } = await supabase.storage.from("infohub-files").upload(path, file);
       if (uploadError) throw uploadError;
       const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
-      const body = await extractUploadText(file, file.type);
-      onSave(title.trim(), selectedFolder, path, file.type, tags, body);
+      if (section === "training") {
+        // A training module is a list of steps, so build them from the file before saving.
+        let training: TrainingFromFile;
+        try {
+          training = await trainingFromFile(file, path, file.type, title.trim());
+        } catch (err) {
+          await supabase.storage.from("infohub-files").remove([path]);
+          throw err;
+        }
+        onSave(title.trim(), selectedFolder, path, file.type, tags, "", training);
+      } else {
+        const body = await extractUploadText(file, file.type);
+        onSave(title.trim(), selectedFolder, path, file.type, tags, body);
+      }
       onClose();
     } catch (err: any) {
       setError(err.message ?? t("shared.upload.uploadFailed"));
@@ -614,7 +629,7 @@ export function UploadDocModal({
           )}
         >
           {uploading ? (
-            <><Loader2 size={16} className="animate-spin" /> {t("shared.upload.uploading")}</>
+            <><Loader2 size={16} className="animate-spin" /> {t(section === "training" ? "shared.upload.buildingTraining" : "shared.upload.uploading")}</>
           ) : t("shared.upload.upload")}
         </button>
       </div>
