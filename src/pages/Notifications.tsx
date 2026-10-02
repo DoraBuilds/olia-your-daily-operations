@@ -38,6 +38,10 @@ export default function Notifications() {
           )}
         </div>
 
+        {(clearMut.isError || dismissMut.isError) && (
+          <p role="alert" className="text-xs text-status-error mb-3">{t("clearFailed")}</p>
+        )}
+
         {alerts.length === 0 ? (
           <div className="card-surface p-10 flex flex-col items-center gap-5 text-center">
             <svg width="80" height="80" viewBox="0 0 80 80" fill="none" className="opacity-40">

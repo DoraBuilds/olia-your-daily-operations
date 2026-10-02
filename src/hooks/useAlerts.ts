@@ -5,7 +5,7 @@ import i18n from "@/lib/i18n";
 
 export interface AlertRecord {
   id: string;
-  type: "error" | "warn";
+  type: "error" | "warn" | "info";
   message: string;
   area: string | null;
   time: string | null;
@@ -52,31 +52,27 @@ export function useCreateAlert() {
   });
 }
 
+async function dismissAlerts(ids: string[]) {
+  if (!ids.length) return;
+  const { data, error } = await supabase.rpc("dismiss_alerts", { p_ids: ids });
+  if (error) throw error;
+  if (typeof data === "number" && data === 0) {
+    throw new Error(i18n.t("clearFailed", { ns: "notifications" }));
+  }
+}
+
 export function useDismissAlert() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("alerts")
-        .update({ dismissed_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+    mutationFn: (id: string) => dismissAlerts([id]),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
   });
 }
 
 export function useClearAlerts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (ids: string[]) => {
-      if (!ids.length) return;
-      const { error } = await supabase
-        .from("alerts")
-        .update({ dismissed_at: new Date().toISOString() })
-        .in("id", ids);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
+    mutationFn: (ids: string[]) => dismissAlerts(ids),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["alerts"] }),
   });
 }

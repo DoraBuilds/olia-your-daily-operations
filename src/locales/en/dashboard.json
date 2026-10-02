@@ -31,28 +31,33 @@
     "openAriaLabel": "Open alerts and review {{title}}",
     "copy": {
       "reviewNeeded": {
-        "title": "Response needs a review",
+        "title": "Reading out of range",
+        "bodyWithQuestion": "{{question}}: recorded {{value}}.",
         "bodyWithValue": "Recorded value: {{value}}.",
         "bodyGeneric": "A recorded value is outside the expected range.",
-        "helperRange": "Allowed range: {{range}}."
+        "helperRange": "Allowed: {{range}}"
       },
       "followUp": {
-        "title": "Follow-up needed",
-        "bodyWithSubject": "{{subject}} was left unanswered.",
-        "bodyGeneric": "A checklist step was left unanswered.",
-        "helper": "A response was not provided, so this item needs attention."
+        "title": "Left unanswered",
+        "bodyWithSubject": "\"{{subject}}\" had no answer.",
+        "bodyGeneric": "A checklist question had no answer.",
+        "helper": "Needs a follow-up"
       },
       "actionNeeded": {
         "title": "Action needed",
         "bodyGeneric": "A checklist step needs attention.",
-        "helper": "Open the checklist to review the detail."
+        "helper": "Needs follow-up"
+      },
+      "notice": {
+        "title": "Checklist notice"
       },
       "fallback": {
         "titleError": "Needs attention",
         "titleWarn": "Check this item",
         "bodyGeneric": "A checklist step needs attention."
       },
-      "contextFallback": "Open the checklist for more detail."
+      "contextFallback": "Open the checklist for more detail.",
+      "inChecklist": "Checklist: {{name}}"
     }
   },
   "compliance": {

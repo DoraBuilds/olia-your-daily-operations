@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { useCreateAlert } from "@/hooks/useAlerts";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useStaffProfiles } from "@/hooks/useStaffProfiles";
@@ -95,7 +94,6 @@ export function ChecklistBuilderModal({
   const MC_COLOR_OPTIONS = useMcColorOptions(t);
   const responseTypeLabel = (type: ResponseType) =>
     RESPONSE_TYPES.find(r => r.key === type) ? getResponseTypeLabel(type) : t("preview.multipleChoiceFallback");
-  const createAlert = useCreateAlert();
   const { user, teamMember: authTeamMember } = useAuth();
   const { data: allDbLocations = [] } = useLocations();
   const { data: concepts = [] } = useConcepts();
@@ -460,25 +458,6 @@ export function ChecklistBuilderModal({
     const savedSchedule = schedule === "none" ? null
       : schedule === "custom" ? `Every ${customRecurrence.interval} ${customRecurrence.unit}(s)`
       : schedule;
-
-    // Collect all "require_action" logic triggers → write to alerts table
-    sections.forEach(section => {
-      section.questions.forEach(question => {
-        (question.config?.logicRules || []).forEach(rule => {
-          rule.triggers.forEach(trigger => {
-            if (trigger.type === "require_action" && trigger.config?.actionTitle) {
-              createAlert.mutate({
-                type: "warn",
-                message: trigger.config.actionTitle,
-                area: title.trim(),
-                time: "Now",
-                source: "action",
-              });
-            }
-          });
-        });
-      });
-    });
 
     // No legacy "person" type baking needed — type removed from builder.
     // Existing saved checklists with person type render as multiple_choice in the runner.

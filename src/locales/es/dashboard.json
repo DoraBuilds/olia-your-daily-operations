@@ -31,28 +31,33 @@
     "openAriaLabel": "Abrir alertas y revisar {{title}}",
     "copy": {
       "reviewNeeded": {
-        "title": "La respuesta necesita revisión",
+        "title": "Lectura fuera de rango",
+        "bodyWithQuestion": "{{question}}: registrado {{value}}.",
         "bodyWithValue": "Valor registrado: {{value}}.",
         "bodyGeneric": "Un valor registrado está fuera del rango esperado.",
-        "helperRange": "Rango permitido: {{range}}."
+        "helperRange": "Permitido: {{range}}"
       },
       "followUp": {
-        "title": "Requiere seguimiento",
-        "bodyWithSubject": "{{subject}} quedó sin responder.",
-        "bodyGeneric": "Un paso de la lista quedó sin responder.",
-        "helper": "No se proporcionó una respuesta, así que este ítem necesita atención."
+        "title": "Sin responder",
+        "bodyWithSubject": "\"{{subject}}\" no tuvo respuesta.",
+        "bodyGeneric": "Una pregunta de la lista no tuvo respuesta.",
+        "helper": "Requiere seguimiento"
       },
       "actionNeeded": {
         "title": "Requiere acción",
         "bodyGeneric": "Un paso de la lista necesita atención.",
-        "helper": "Abre la lista de verificación para revisar el detalle."
+        "helper": "Requiere seguimiento"
+      },
+      "notice": {
+        "title": "Aviso de la lista"
       },
       "fallback": {
         "titleError": "Necesita atención",
         "titleWarn": "Revisa este ítem",
         "bodyGeneric": "Un paso de la lista necesita atención."
       },
-      "contextFallback": "Abre la lista de verificación para más detalle."
+      "contextFallback": "Abre la lista de verificación para más detalle.",
+      "inChecklist": "Lista: {{name}}"
     }
   },
   "compliance": {

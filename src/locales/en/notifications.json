@@ -4,5 +4,6 @@
   "dismissAriaLabel": "Dismiss alert",
   "clearAll": "Clear all",
   "count_one": "{{count}} alert",
-  "count_other": "{{count}} alerts"
+  "count_other": "{{count}} alerts",
+  "clearFailed": "Couldn't clear this alert. Please try again."
 }
