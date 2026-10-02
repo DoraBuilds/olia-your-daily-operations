@@ -207,7 +207,7 @@ describe("useChecklists", () => {
     ];
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: mockChecklists, error: null }),
+      order: vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: mockChecklists, error: null }) }),
     });
     const { result } = renderHook(() => useChecklists(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -348,7 +348,7 @@ describe("checklist questions are not part of the list (payload), but are never 
     const select = vi.fn().mockReturnThis();
     mockFrom.mockReturnValue({
       select,
-      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      order: vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: [], error: null }) }),
     });
     const { result } = renderHook(() => useChecklists(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
