@@ -83,7 +83,7 @@
   },
   "grid": {
     "kioskFallbackName": "Kiosk",
-    "identifiedAs": "Hi, {{name}}",
+    "identifiedAs": "Hi, <name>{{name}}</name>",
     "notYou": "Not you?",
     "library": "Infohub",
     "admin": "Admin",

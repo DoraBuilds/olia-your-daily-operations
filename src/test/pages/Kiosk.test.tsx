@@ -796,7 +796,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await screen.findByTestId("kiosk-tab-due");
-    expect(screen.getByText("Hi, Priya")).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Priya")).toBeInTheDocument();
     expect(supabase.rpc).toHaveBeenCalledWith("get_kiosk_checklists", expect.objectContaining({
       p_location_id: "00000000-0000-0000-0000-000000000011",
       p_department_ids: ["dep-1", "dep-2"],
@@ -846,7 +846,7 @@ describe("Kiosk — Identify Screen", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText("Hi, Jay")).toBeInTheDocument();
+      expect(screen.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Hi, Jay")).toBeInTheDocument();
     });
   });
 
