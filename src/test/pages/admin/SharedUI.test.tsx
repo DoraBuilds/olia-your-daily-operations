@@ -156,21 +156,19 @@ describe("TeamMemberModal", () => {
       });
     });
 
-    it("hides the department picker when no location is ticked, and shows it again after", async () => {
+    it("hides the department picker until a location is ticked", async () => {
       renderModal({ locations });
-      await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
-
-      fireEvent.click(trigger("locations"));
-      fireEvent.click(screen.getByTestId("member-locations-option-all"));
-      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
       expect(screen.queryByTestId("member-departments-trigger")).not.toBeInTheDocument();
 
       pick("locations", "l1");
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
+
+      pick("locations", "l1");
+      expect(screen.queryByTestId("member-departments-trigger")).not.toBeInTheDocument();
     });
 
     it("lists departments from every ticked location, once each by name", async () => {
-      renderModal({ locations });
+      renderModal({ locations, initialLocationIds: ["l1", "l2"] });
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       fireEvent.click(trigger("departments"));
       expect(screen.getByTestId("member-departments-option-d1")).toHaveTextContent("Kitchen");
@@ -179,7 +177,7 @@ describe("TeamMemberModal", () => {
 
     it("ticks every department via Select all, and clears them via Deselect all in the same row", async () => {
       const onSave = vi.fn();
-      renderModal({ locations, onSave });
+      renderModal({ locations, onSave, initialLocationIds: ["l1", "l2"] });
       await waitFor(() => expect(trigger("departments")).toHaveTextContent("No department"));
 
       fireEvent.click(trigger("departments"));
@@ -192,7 +190,7 @@ describe("TeamMemberModal", () => {
 
     it("allows selecting more than one department at once", async () => {
       const onSave = vi.fn();
-      renderModal({ locations, onSave });
+      renderModal({ locations, onSave, initialLocationIds: ["l1", "l2"] });
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       pick("departments", "d1");
       pick("departments", "d2");
@@ -204,7 +202,7 @@ describe("TeamMemberModal", () => {
     });
 
     it("toggles a selected department off when clicked again", async () => {
-      renderModal({ locations });
+      renderModal({ locations, initialLocationIds: ["l1", "l2"] });
       await waitFor(() => expect(trigger("departments")).toBeInTheDocument());
       pick("departments", "d1");
       expect(trigger("departments")).toHaveTextContent("Kitchen");
@@ -244,19 +242,42 @@ describe("TeamMemberModal", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add team member" }));
     };
 
-    it("starts a new member with every concept and location ticked, saved as every location", () => {
+    it("starts a new member with nothing ticked, like departments, and blocks saving until locations are picked", () => {
       const onSave = vi.fn();
       renderModal({ concepts, locations, onSave });
-      expect(trigger("concepts")).toHaveTextContent("All concepts");
+      expect(trigger("concepts")).toHaveTextContent("Select concepts");
+      expect(trigger("locations")).toHaveTextContent("Select at least one location");
+
+      saveAs("Ana");
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("saves every location ticked as every location in the company", () => {
+      const onSave = vi.fn();
+      renderModal({ concepts, locations, onSave });
+      fireEvent.click(trigger("concepts"));
+      fireEvent.click(screen.getByTestId("member-concepts-option-all"));
       expect(trigger("locations")).toHaveTextContent("All locations");
 
       saveAs("Ana");
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ location_ids: [] }));
     });
 
+    it("opens an existing every-location member with every concept and location ticked", () => {
+      renderModal({
+        concepts, locations,
+        member: {
+          id: "m1", name: "Sam", first_name: "Sam", email: null, role: "", is_owner: false, is_manager: false,
+          location_ids: [], department_ids: [], initials: "S", permissions: {} as any,
+        } as Parameters<typeof TeamMemberModal>[0]["member"],
+      });
+      expect(trigger("concepts")).toHaveTextContent("All concepts");
+      expect(trigger("locations")).toHaveTextContent("All locations");
+    });
+
     it("only offers the ticked concepts' locations", () => {
       renderModal({ concepts, locations });
-      pick("concepts", "c2");
+      pick("concepts", "c1");
       fireEvent.click(trigger("locations"));
       expect(screen.getByTestId("member-locations-option-l1")).toBeInTheDocument();
       expect(screen.queryByTestId("member-locations-option-l3")).not.toBeInTheDocument();

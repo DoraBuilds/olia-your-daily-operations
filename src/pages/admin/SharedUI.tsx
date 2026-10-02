@@ -210,14 +210,17 @@ export function TeamMemberModal({
   const name = `${firstName.trim()} ${lastName.trim()}`.trim();
   const [email, setEmail] = useState(member?.email ?? "");
   const [role, setRole] = useState(member?.role ?? "");
-  // Stored empty location_ids means "every location in the company", so it
-  // opens with every concept and location ticked; otherwise concepts are
-  // seeded from the member's (or pre-ticked) locations.
+  // A new member starts with nothing picked (like departments) so the admin
+  // chooses their concepts and locations. For an existing member, stored empty
+  // location_ids means "every location in the company", so it opens with every
+  // concept and location ticked; otherwise concepts are seeded from the
+  // member's (or pre-ticked) locations.
   const initialLocations = member?.location_ids ?? initialLocationIds ?? [];
+  const everyLocation = !!member && initialLocations.length === 0;
   const [locationIds, setLocationIds] = useState<string[]>(
-    () => initialLocations.length === 0 ? locations.map(l => l.id) : initialLocations,
+    () => everyLocation ? locations.map(l => l.id) : initialLocations,
   );
-  const [conceptIds, setConceptIds] = useState<string[]>(() => initialLocations.length === 0
+  const [conceptIds, setConceptIds] = useState<string[]>(() => everyLocation
     ? concepts.map(c => c.id)
     : [...new Set(
       locations.filter(l => initialLocations.includes(l.id) && l.concept_id).map(l => l.concept_id as string),
