@@ -26,7 +26,7 @@ import type {
   ResponseType,
 } from "./types";
 import i18n from "@/lib/i18n";
-import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 
 function useMcColorOptions(t: (key: string) => string) {
@@ -253,7 +253,7 @@ export function FollowUpQuestionEditor({
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
-              {mcSet && <p className="text-xs text-muted-foreground mt-0.5">{mcSet.name}</p>}
+              {mcSet && <p className="text-xs text-muted-foreground mt-0.5">{getMcSetName(mcSet)}</p>}
             </div>
             <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
               {(["single", "multiple"] as const).map(mode => (
