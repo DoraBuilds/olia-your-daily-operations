@@ -10,6 +10,7 @@ import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@
 import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { cn } from "@/lib/utils";
+import { PdfPages } from "./PdfPages";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import {
@@ -435,13 +436,7 @@ export function FilePreviewModal({
             className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
           />
         )}
-        {isPdf && (
-          <iframe
-            src={signedUrl}
-            title={title}
-            className="w-full h-full rounded-xl shadow-lg bg-white"
-          />
-        )}
+        {isPdf && <PdfPages url={signedUrl} title={title} />}
         {!isImage && !isPdf && (
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="w-16 h-16 rounded-2xl bg-lavender-light flex items-center justify-center">
