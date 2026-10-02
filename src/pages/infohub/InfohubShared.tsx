@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { shrinkImageFile } from "@/lib/image-resize";
 import i18n from "@/lib/i18n";
+import { extractUploadText } from "@/lib/file-text";
 import { useAuth } from "@/contexts/AuthContext";
 import { isInfohubAiResult, type InfohubAiAction, type InfohubAiResult } from "@/lib/infohub-ai";
 import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
@@ -470,7 +471,7 @@ export function UploadDocModal({
   folderId: string | null;
   folders: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (title: string, folderId: string, filePath: string, fileType: string, tags: string[]) => void;
+  onSave: (title: string, folderId: string, filePath: string, fileType: string, tags: string[], body: string) => void;
 }) {
   const { t } = useTranslation("infohub");
   const { teamMember } = useAuth();
@@ -521,7 +522,8 @@ export function UploadDocModal({
       const { error: uploadError } = await supabase.storage.from("infohub-files").upload(path, file);
       if (uploadError) throw uploadError;
       const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
-      onSave(title.trim(), selectedFolder, path, file.type, tags);
+      const body = await extractUploadText(file, file.type);
+      onSave(title.trim(), selectedFolder, path, file.type, tags, body);
       onClose();
     } catch (err: any) {
       setError(err.message ?? t("shared.upload.uploadFailed"));
@@ -842,11 +844,14 @@ export function AIActionsSheet({
   docTitle,
   sourceLabel,
   sourceText,
+  loadSourceText,
   onClose,
 }: {
   docTitle: string;
   sourceLabel: string;
   sourceText: string;
+  /** Fallback for uploaded files saved before text extraction existed: fetch + extract on demand. */
+  loadSourceText?: () => Promise<string>;
   onClose: () => void;
 }) {
   const { t } = useTranslation("infohub");
@@ -855,18 +860,21 @@ export function AIActionsSheet({
   const [error, setError] = useState("");
 
   const runAction = async (action: InfohubAiAction) => {
-    if (!sourceText.trim()) {
-      setError(t("aiSheet.notEnoughContent"));
-      return;
-    }
-
     setLoadingAction(action);
     setError("");
     setResult(null);
 
     try {
+      let content = sourceText;
+      if (!content.trim() && loadSourceText) {
+        content = await loadSourceText().catch(() => "");
+      }
+      if (!content.trim()) {
+        setError(t("aiSheet.notEnoughContent"));
+        return;
+      }
       const { data, error: fnError } = await supabase.functions.invoke("infohub-ai-tools", {
-        body: { action, title: docTitle, content: sourceText },
+        body: { action, title: docTitle, content },
       });
 
       if (fnError) throw new Error(fnError.message);

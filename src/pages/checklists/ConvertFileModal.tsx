@@ -5,7 +5,7 @@ import { X, FileUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import i18n from "@/lib/i18n";
-import { ensurePromiseWithResolvers } from "@/lib/promise-with-resolvers-polyfill";
+import { extractPdfText } from "@/lib/file-text";
 import type { SectionDef } from "./types";
 
 /** Reads a file as a base64-encoded string. */
@@ -15,40 +15,6 @@ async function fileToBase64(file: File): Promise<string> {
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary);
-}
-
-/** Extracts text from a PDF using pdfjs-dist (client-side, no API required). */
-async function extractPdfText(file: File): Promise<string> {
-  // pdfjs-dist calls Promise.withResolvers(), unsupported before Safari 17.4.
-  ensurePromiseWithResolvers();
-  const pdfjsLib = await import("pdfjs-dist");
-  // Create the Worker ourselves so Vite bundles it with the right URL and Safari
-  // doesn't have to handle pdf.js's internal new Worker() call, which fails on Safari
-  // when loading an ES-module worker from a path-relative URL. Routed through our
-  // own entry file (rather than pdf.worker.min.mjs directly) so the same
-  // Promise.withResolvers polyfill applies inside the worker's own global scope.
-  const worker = new Worker(
-    new URL("../../lib/pdf-worker-entry.ts", import.meta.url),
-    { type: "module" }
-  );
-  pdfjsLib.GlobalWorkerOptions.workerPort = worker;
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let text = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      text += content.items
-        .filter((item: any) => "str" in item)
-        .map((item: any) => item.str)
-        .join(" ") + "\n";
-    }
-    return text.trim();
-  } finally {
-    worker.terminate();
-    pdfjsLib.GlobalWorkerOptions.workerPort = null;
-  }
 }
 
 /** Extracts readable text from CSV/Excel/PDF files. For images, returns base64 for Claude's vision API. */
