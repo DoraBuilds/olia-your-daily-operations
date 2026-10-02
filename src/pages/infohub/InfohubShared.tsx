@@ -411,7 +411,7 @@ export function FilePreviewModal({
   const isPdf = fileType === "application/pdf";
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex flex-col bg-foreground/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex flex-col bg-foreground/60" onClick={onClose}>
       <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border shrink-0" onClick={e => e.stopPropagation()}>
         <p className="text-sm font-medium text-foreground truncate flex-1 mr-3">{title}</p>
         <div className="flex items-center gap-2 shrink-0">
