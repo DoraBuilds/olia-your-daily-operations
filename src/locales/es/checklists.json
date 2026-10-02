@@ -159,6 +159,7 @@
       "loading": "Cargando…",
       "checklistColumn": "Checklist",
       "completedByColumn": "Completada por",
+      "startedAtColumn": "Iniciada",
       "completedAtColumn": "Finalizada",
       "statusColumn": "Estado",
       "noActivity": "Sin actividad en este período",

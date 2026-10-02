@@ -905,6 +905,7 @@ export function ReportingTab({ initialLocationId, initialStatus, viewSwitcher }:
             <div className="flex items-center gap-3 px-4 py-2 bg-muted/40">
               <p className="text-xs font-bold text-muted-foreground flex-1">{t("reporting.log.checklistColumn")}</p>
               <p className="text-xs font-bold text-muted-foreground hidden sm:block w-44">{t("reporting.log.completedByColumn")}</p>
+              <p className="text-xs font-bold text-muted-foreground hidden sm:block w-32">{t("reporting.log.startedAtColumn")}</p>
               <p className="text-xs font-bold text-muted-foreground hidden sm:block w-32">{t("reporting.log.completedAtColumn")}</p>
               <p className="text-xs font-bold text-muted-foreground w-28 text-right">{t("reporting.log.statusColumn")}</p>
               <div className="w-[13px]" />
@@ -917,9 +918,10 @@ export function ReportingTab({ initialLocationId, initialStatus, viewSwitcher }:
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{log.checklist}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">{contributorsSummary(splitContributors(log.completedBy))} · {log.date}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">{contributorsSummary(splitContributors(log.completedBy))} · {log.startedAt ? `${format(new Date(log.startedAt), "HH:mm")} → ` : ""}{log.date}</p>
                   </div>
                   <div className="hidden sm:block w-44 min-w-0"><ContributorsCell completedBy={log.completedBy} /></div>
+                  <p className="hidden sm:block w-32 text-sm text-muted-foreground tabular-nums">{log.startedAt ? format(new Date(log.startedAt), "d MMM, HH:mm") : "—"}</p>
                   <p className="hidden sm:block w-32 text-sm text-muted-foreground tabular-nums">{log.date}</p>
                   <div className="w-28 flex justify-end shrink-0">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full font-bold", badge.cls)}>
@@ -938,6 +940,7 @@ export function ReportingTab({ initialLocationId, initialStatus, viewSwitcher }:
                   <p className="text-xs text-muted-foreground mt-0.5 sm:hidden">{t("reporting.log.noActivity")}</p>
                 </div>
                 <p className="hidden sm:block w-44 text-sm text-muted-foreground">—</p>
+                <p className="hidden sm:block w-32 text-sm text-muted-foreground">—</p>
                 <p className="hidden sm:block w-32 text-sm text-muted-foreground">—</p>
                 <div className="w-28 flex justify-end shrink-0">
                   <span className="text-xs px-2 py-0.5 rounded-full font-bold status-error">{t("reporting.log.badgeUnstarted")}</span>
