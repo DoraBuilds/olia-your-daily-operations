@@ -156,3 +156,55 @@ export function collectNotifyAlerts(
 
   return alerts;
 }
+
+// ─── Require-action extraction ────────────────────────────────────────────────
+
+export interface ActionAlert {
+  /** The action the manager asked for, e.g. "Call maintenance" */
+  actionTitle: string;
+  questionText: string;
+  /** Alert message in the "Action required" shape alert-copy understands */
+  message: string;
+}
+
+/**
+ * One ActionAlert per matching "require_action" trigger. Unlike notify alerts
+ * these have no recipient: they appear on the dashboard for managers to clear.
+ */
+export function collectActionAlerts(
+  questions: Array<{
+    id: string;
+    text: string;
+    config?: { logicRules?: LogicRule[] };
+  }>,
+  answers: Record<string, any>,
+): ActionAlert[] {
+  const alerts: ActionAlert[] = [];
+
+  for (const question of questions) {
+    const rules = question.config?.logicRules;
+    if (!rules || rules.length === 0) continue;
+    const answer = answers[question.id];
+
+    for (const rule of rules) {
+      if (!evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values)) continue;
+
+      for (const trigger of rule.triggers) {
+        if (trigger.type !== "require_action") continue;
+        const actionTitle = trigger.config?.actionTitle?.trim();
+        if (!actionTitle) continue;
+        if (alerts.some(a => a.actionTitle === actionTitle && a.questionText === question.text)) continue;
+
+        const isBlank = answer === undefined || answer === null || answer === "" || answer === false;
+        const answerStr = isBlank ? "no answer" : Array.isArray(answer) ? answer.map(normalizeAnswerText).join(", ") : String(answer);
+        alerts.push({
+          actionTitle,
+          questionText: question.text,
+          message: `Action required: "${actionTitle}" — ${question.text}: ${answerStr}`,
+        });
+      }
+    }
+  }
+
+  return alerts;
+}

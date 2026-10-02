@@ -31,7 +31,7 @@ import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
 import { useLiveClock, useInactivityTimer } from "./kiosk/hooks";
-import { collectNotifyAlerts } from "./kiosk/logic-rules";
+import { collectActionAlerts, collectNotifyAlerts } from "./kiosk/logic-rules";
 
 // Re-export ChecklistRunner for backward compatibility (tests import from @/pages/Kiosk)
 export { ChecklistRunner };
@@ -328,9 +328,20 @@ function KioskScreen() {
     checklistTitle: string,
   ) => {
     const notifyAlerts = collectNotifyAlerts(questions, answers);
-    if (notifyAlerts.length === 0) return;
+    const actionAlerts = collectActionAlerts(questions, answers);
+    if (notifyAlerts.length === 0 && actionAlerts.length === 0) return;
 
     let anySucceeded = false;
+    for (const alert of actionAlerts) {
+      const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
+        p_location_id: locationIdParam,
+        p_type: "warn",
+        p_message: alert.message.slice(0, 500),
+        p_area: checklistTitle.slice(0, 100),
+      });
+      if (alertErr) console.error("fireNotifyAlerts: action alert insert failed:", alertErr.message);
+      else anySucceeded = true;
+    }
     for (const alert of notifyAlerts) {
       const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
         p_location_id: locationIdParam,

@@ -46,7 +46,8 @@
       "actionNeeded": {
         "title": "Action needed",
         "bodyGeneric": "A checklist step needs attention.",
-        "helper": "Needs follow-up"
+        "helper": "Needs follow-up",
+        "because": "Because: {{detail}}"
       },
       "notice": {
         "title": "Checklist notice"
