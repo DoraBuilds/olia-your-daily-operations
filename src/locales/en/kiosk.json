@@ -117,5 +117,9 @@
     "visibleUntil": "Visible until {{until}}",
     "dueAt": "Due {{time}}",
     "footerBrand": "Olia Operations"
+  },
+  "checkbox": {
+    "completed": "Yes, completed",
+    "tapToConfirm": "Tap to confirm"
   }
 }
