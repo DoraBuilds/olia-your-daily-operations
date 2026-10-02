@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
@@ -27,7 +27,7 @@ export default function AcceptInvite() {
   const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, teamMember, retrySetup, signOut } = useAuth();
 
   const token = searchParams.get("token") ?? "";
 
@@ -38,10 +38,30 @@ export default function AcceptInvite() {
   const [error, setError]         = useState<string | null>(null);
   const [info, setInfo]           = useState<string | null>(null);
 
-  // Already signed in — go straight to dashboard
+  // Already signed in. Opening an invite link while a session exists (e.g. a
+  // platform admin who is invited into a customer org) must not just bounce to
+  // the dashboard — the invite would never be linked and they'd land on the
+  // support console. Accept it for the matching account instead.
+  const [signedInMismatch, setSignedInMismatch] = useState(false);
+  const acceptingSignedIn = useRef(false);
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
-  }, [user, navigate]);
+    if (!user) return;
+    if (teamMember || step === "error") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    if (!invite || acceptingSignedIn.current) return;
+    if (user.email?.toLowerCase() !== invite.email.toLowerCase()) {
+      setSignedInMismatch(true);
+      return;
+    }
+    acceptingSignedIn.current = true;
+    (async () => {
+      const { data } = await supabase.rpc("accept_invite", { p_token: token });
+      if (data?.success) retrySetup();
+      else navigate("/dashboard", { replace: true });
+    })();
+  }, [user, teamMember, invite, step, token, navigate, retrySetup]);
 
   // Validate the token on mount
   useEffect(() => {
@@ -133,7 +153,7 @@ export default function AcceptInvite() {
     </div>
   );
 
-  const logo = <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />;
+  const logo = <img src="/brand/logo/olia-mark-dark.svg" alt="Olia" className="w-14 h-14 mx-auto mb-4" />;
 
   const primaryButton = (enabled: boolean) =>
     cn(
@@ -143,7 +163,25 @@ export default function AcceptInvite() {
 
   const inputClass = "w-full border border-border rounded-xl px-4 py-3 text-sm bg-card focus:outline-none focus:ring-1 focus:ring-ring";
 
-  if (step === "loading") {
+  if (user && signedInMismatch) {
+    return shell(
+      <div className="text-center">
+        {logo}
+        <h1 className="font-display text-2xl text-foreground">{t("acceptInvite.youAreInvited")}</h1>
+        <p className="text-sm text-muted-foreground mt-1 mb-6">
+          {t("acceptInvite.wrongAccount", { current: user.email, invited: invite?.email })}
+        </p>
+        <button
+          onClick={() => { void signOut(); }}
+          className="w-full py-3 rounded-full text-sm font-semibold bg-[#0B0F0C] text-white hover:bg-[#151A16] transition-colors"
+        >
+          {t("acceptInvite.signOutToAccept")}
+        </button>
+      </div>,
+    );
+  }
+
+  if (step === "loading" || user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" style={legalTheme}>
         <div className="w-8 h-8 border-2 border-foreground/70 border-t-transparent rounded-full animate-spin" />

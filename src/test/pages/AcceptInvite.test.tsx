@@ -17,8 +17,11 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
+const mockRetrySetup = vi.fn();
+const mockSignOut = vi.fn();
+let authState: { user: { id: string; email: string } | null; teamMember: unknown } = { user: null, teamMember: null };
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ user: null }),
+  useAuth: () => ({ ...authState, retrySetup: mockRetrySetup, signOut: mockSignOut }),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -56,6 +59,7 @@ beforeEach(() => {
   mockSignInWithOtp.mockResolvedValue({ error: null });
   mockVerifyOtp.mockResolvedValue({ error: null });
   localStorage.clear();
+  authState = { user: null, teamMember: null };
 });
 
 describe("AcceptInvite page", () => {
@@ -164,12 +168,36 @@ describe("AcceptInvite page", () => {
     await waitFor(() => expect(localStorage.getItem("olia_pending_invite_token")).toBeNull());
   });
 
-  it("redirects to /dashboard if already signed in", async () => {
-    vi.resetModules();
-    vi.doMock("@/contexts/AuthContext", () => ({
-      useAuth: () => ({ user: { id: "u1" } }),
-    }));
-    // Note: this is handled by the useEffect in AcceptInvite
-    // We verify navigation is called when user exists
+  it("accepts the invite for an already signed-in matching account instead of bouncing to the dashboard", async () => {
+    authState = { user: { id: "u1", email: "Manager@Example.com" }, teamMember: null };
+    mockRpc.mockImplementation(async (name: string) =>
+      name === "accept_invite"
+        ? { data: { success: true }, error: null }
+        : { data: { valid: true, email: "manager@example.com", organization_name: "Rooftop Bar" }, error: null });
+
+    renderAcceptInvite("tok");
+
+    await waitFor(() => expect(mockRpc).toHaveBeenCalledWith("accept_invite", { p_token: "tok" }));
+    await waitFor(() => expect(mockRetrySetup).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
+  it("asks a signed-in user with a different email to sign out", async () => {
+    authState = { user: { id: "u1", email: "other@example.com" }, teamMember: null };
+
+    renderAcceptInvite();
+
+    await waitFor(() => expect(screen.getByText(/but this invitation is for manager@example.com/)).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Sign out and continue"));
+    expect(mockSignOut).toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalledWith("accept_invite", expect.anything());
+  });
+
+  it("goes to /dashboard when the signed-in user already belongs to an org", async () => {
+    authState = { user: { id: "u1", email: "manager@example.com" }, teamMember: { id: "u1" } };
+
+    renderAcceptInvite();
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true }));
   });
 });

@@ -153,7 +153,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── Build email ─────────────────────────────────────────────────────
   const subject = `You've been invited to join ${org.name} on Olia`;
 
-  const logoUrl = `${siteUrl}/brand/logo/olia-mark-color-1024.png`;
+  const logoUrl = `${siteUrl}/brand/logo/olia-mark-dark-512.png`;
   const safeOrgName = org.name.replace(/[&<>"]/g, (c: string) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string
   ));
