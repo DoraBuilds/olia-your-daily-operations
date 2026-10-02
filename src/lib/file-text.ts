@@ -34,6 +34,21 @@ export async function extractPdfText(file: File): Promise<string> {
   }
 }
 
+export const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+/** Legacy binary Word format — can't be read in the browser. */
+export const DOC_TYPE = "application/msword";
+
+/** Types with no text layer we can read locally; the infohub-ocr edge function transcribes these. */
+export function needsOcr(fileType: string): boolean {
+  return fileType === "application/pdf" || /^image\/(jpeg|png|webp)$/.test(fileType);
+}
+
+async function extractDocxText(file: Blob): Promise<string> {
+  const mammoth = await import("mammoth");
+  const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+  return value;
+}
+
 /** Max characters of extracted text stored on a document body. */
 const MAX_BODY_CHARS = 100_000;
 
@@ -48,6 +63,8 @@ export async function extractUploadText(file: Blob, fileType: string): Promise<s
       text = await extractPdfText(file as File);
     } else if (fileType === "text/plain") {
       text = await file.text();
+    } else if (fileType === DOCX_TYPE) {
+      text = await extractDocxText(file);
     }
     return text.trim().slice(0, MAX_BODY_CHARS);
   } catch {

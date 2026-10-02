@@ -55,6 +55,8 @@
     "heading": "AI Tools",
     "generateFrom": "Generate study materials for \"{{title}}\" from {{source}} content.",
     "notEnoughContent": "This document does not have enough content for AI generation.",
+    "unsupportedDoc": "Word .doc files can't be read. Please save the file as .docx or PDF and upload it again.",
+    "ocrFailed": "Couldn't read the text in this file. Please try again.",
     "unexpectedResponse": "Unexpected AI response. Please try again.",
     "genericError": "Something went wrong. Please try again.",
     "summary": {

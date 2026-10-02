@@ -867,7 +867,7 @@ export function AIActionsSheet({
     try {
       let content = sourceText;
       if (!content.trim() && loadSourceText) {
-        content = await loadSourceText().catch(() => "");
+        content = await loadSourceText();
       }
       if (!content.trim()) {
         setError(t("aiSheet.notEnoughContent"));
