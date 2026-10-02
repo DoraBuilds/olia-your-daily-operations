@@ -11,6 +11,7 @@ import { translateChoice } from "@/pages/checklists/data";
 // ─── Checkbox ─────────────────────────────────────────────────────────────────
 
 export function CheckboxInput({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  const { t } = useTranslation("kiosk");
   return (
     <button
       onClick={() => onChange(!value)}
@@ -27,7 +28,7 @@ export function CheckboxInput({ value, onChange }: { value: boolean; onChange: (
       )}>
         {value && <Check size={12} className="text-primary-foreground" />}
       </div>
-      {value ? "Yes, completed" : "Tap to confirm"}
+      {value ? t("checkbox.completed") : t("checkbox.tapToConfirm")}
     </button>
   );
 }
