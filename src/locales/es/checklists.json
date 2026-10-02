@@ -217,6 +217,27 @@
     "media": "Foto / Multimedia",
     "instruction": "Instrucción"
   },
+  "mcChoices": {
+    "good": "Bueno",
+    "fair": "Regular",
+    "poor": "Malo",
+    "na": "N/A",
+    "safe": "Seguro",
+    "atRisk": "En riesgo",
+    "pass": "Aprobado",
+    "fail": "Reprobado",
+    "yes": "Sí",
+    "no": "No",
+    "compliant": "Conforme",
+    "nonCompliant": "No conforme"
+  },
+  "mcSets": {
+    "mc1": "Bueno / Regular / Malo",
+    "mc2": "Seguro / En riesgo",
+    "mc3": "Aprobado / Reprobado",
+    "mc4": "Sí / No",
+    "mc5": "Conforme / No conforme"
+  },
   "responsePicker": {
     "heading": "Tipo de respuesta",
     "responsesSection": "Respuestas",

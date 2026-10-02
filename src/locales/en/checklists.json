@@ -217,6 +217,27 @@
     "media": "Photo / Media",
     "instruction": "Instruction"
   },
+  "mcChoices": {
+    "good": "Good",
+    "fair": "Fair",
+    "poor": "Poor",
+    "na": "N/A",
+    "safe": "Safe",
+    "atRisk": "At Risk",
+    "pass": "Pass",
+    "fail": "Fail",
+    "yes": "Yes",
+    "no": "No",
+    "compliant": "Compliant",
+    "nonCompliant": "Non-Compliant"
+  },
+  "mcSets": {
+    "mc1": "Good / Fair / Poor",
+    "mc2": "Safe / At Risk",
+    "mc3": "Pass / Fail",
+    "mc4": "Yes / No",
+    "mc5": "Compliant / Non-Compliant"
+  },
   "responsePicker": {
     "heading": "Type of response",
     "responsesSection": "Responses",

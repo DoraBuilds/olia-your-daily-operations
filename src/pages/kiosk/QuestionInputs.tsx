@@ -5,6 +5,8 @@ import { sanitizeImageUrl } from "@/lib/sanitize";
 import { supabase } from "@/lib/supabase";
 import { fitWithin, KIOSK_PHOTO_MAX_DIMENSION } from "@/lib/image-resize";
 import type { Question } from "./types";
+import { useTranslation } from "react-i18next";
+import { translateChoice } from "@/pages/checklists/data";
 
 // ─── Checkbox ─────────────────────────────────────────────────────────────────
 
@@ -240,6 +242,7 @@ export function MultipleChoiceInput({
   value: string | string[];
   onChange: (v: string | string[]) => void;
 }) {
+  useTranslation("checklists"); // re-render on language change (translateChoice reads i18n directly)
   const selected = Array.isArray(value) ? value : value ? [value] : [];
 
   const toggleOption = (option: string) => {
@@ -273,7 +276,7 @@ export function MultipleChoiceInput({
               isSelected && !optionColors?.[idx] && !isNoOption && "bg-sage-light",
             )}
           >
-            {opt}
+            {translateChoice(opt)}
           </button>
         );
       })}

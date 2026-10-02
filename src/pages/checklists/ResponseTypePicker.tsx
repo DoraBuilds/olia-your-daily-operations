@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResponseType } from "./types";
-import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, translateChoice } from "./data";
 
 export type ResponseTypePickerAnchorRect = Pick<DOMRect, "top" | "right" | "bottom" | "left" | "width" | "height">;
 
@@ -79,7 +79,7 @@ export function ResponseTypePicker({ onSelect, onClose, anchorRect }: {
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors text-left">
               <div className="flex gap-1 flex-wrap">
                 {mc.choices.map((c, i) => (
-                  <span key={i} className={cn("text-xs px-2 py-0.5 rounded-full font-medium", mc.colors[i])}>{c}</span>
+                  <span key={i} className={cn("text-xs px-2 py-0.5 rounded-full font-medium", mc.colors[i])}>{translateChoice(c)}</span>
                 ))}
               </div>
             </button>

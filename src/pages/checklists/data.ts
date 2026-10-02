@@ -95,6 +95,21 @@ export const multipleChoiceSets = [
   { id: "mc5", name: "Compliant / Non-Compliant", choices: ["Compliant", "Non-Compliant", "N/A"], colors: ["status-ok", "status-error", "bg-muted text-muted-foreground"] },
 ];
 
+// Display-only translation of the preset multiple-choice sets. The stored
+// answer stays the English string (logs, reports, alert rules compare on it);
+// custom/edited choices have no entry and fall through unchanged.
+const MC_CHOICE_KEYS: Record<string, string> = {
+  "Good": "good", "Fair": "fair", "Poor": "poor", "N/A": "na", "Safe": "safe", "At Risk": "atRisk",
+  "Pass": "pass", "Fail": "fail", "Yes": "yes", "No": "no", "Compliant": "compliant", "Non-Compliant": "nonCompliant",
+};
+export function translateChoice(choice: string): string {
+  const key = MC_CHOICE_KEYS[choice];
+  return key ? i18n.t(`mcChoices.${key}`, { ns: "checklists", defaultValue: choice }) : choice;
+}
+export function getMcSetName(set: { id: string; name: string }): string {
+  return i18n.t(`mcSets.${set.id}`, { ns: "checklists", defaultValue: set.name });
+}
+
 // ─── Response type definitions ───────────────────────────────────────────────
 
 export const RESPONSE_TYPES: { key: ResponseType; label: string; icon: ElementType; group: "response" }[] = [

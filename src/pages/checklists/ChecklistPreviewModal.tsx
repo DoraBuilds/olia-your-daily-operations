@@ -5,7 +5,7 @@ import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, 
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
 import { getScheduleLabel } from "./types";
-import { RESPONSE_TYPES, getResponseTypeLabel } from "./data";
+import { RESPONSE_TYPES, getResponseTypeLabel, translateChoice } from "./data";
 
 function formatTime12h(time24: string) {
   const [h, m] = time24.split(":").map(Number);
@@ -56,7 +56,7 @@ function MockResponse({
               choiceColors?.[idx] ?? "border-border bg-muted/50 text-muted-foreground",
             )}
           >
-            {opt}
+            {translateChoice(opt)}
           </div>
         ))}
       </div>

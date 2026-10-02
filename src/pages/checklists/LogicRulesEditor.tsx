@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, AlertTriangle, Mail, User } from "lucide-react";
 import { cn, blurOnWheel } from "@/lib/utils";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
+import { translateChoice } from "./data";
 import type { LogicRule, LogicComparator, LogicTrigger, LogicTriggerType, ResponseType } from "./types";
 
 interface NotifyRecipient {
@@ -201,7 +202,7 @@ export function LogicRulesEditor({
                             selected ? "bg-sage/15 border-sage/40 text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
                           )}
                         >
-                          {c}
+                          {translateChoice(c)}
                         </button>
                       );
                     })}
@@ -212,7 +213,7 @@ export function LogicRulesEditor({
                     onChange={e => updateRule(ri, { value: e.target.value })}
                     className="text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                   >
-                    {choices.map(c => (<option key={c} value={c}>{c}</option>))}
+                    {choices.map(c => (<option key={c} value={c}>{translateChoice(c)}</option>))}
                   </select>
                 ) : (
                   <>

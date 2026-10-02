@@ -28,7 +28,7 @@ import type {
   QuestionDef, ResponseType
 } from "./types";
 import { parseScheduleType } from "./types";
-import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel } from "./data";
+import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
@@ -1131,7 +1131,7 @@ export function ChecklistBuilderModal({
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
                         {mcSet && (
-                          <span className="text-xs text-muted-foreground">{mcSet.name}</span>
+                          <span className="text-xs text-muted-foreground">{getMcSetName(mcSet)}</span>
                         )}
                       </div>
                       <div className="flex items-center justify-between gap-2">
