@@ -46,6 +46,7 @@ import { canAccessInfohubContent, canManageInfohubAccess, conceptIdsForLocations
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
+import { extractUploadText } from "@/lib/file-text";
 import { AIActionsSheet, CreateDocModal, CreateFolderModal, EditDocInfoModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
 import { ConfirmModal } from "./admin/SharedUI";
@@ -943,7 +944,7 @@ export default function Infohub() {
           folderId={subTab === "library" ? currentLibFolder : currentTrainFolder}
           folders={subTab === "library" ? allLibFolderOptions : allTrainFolderOptions}
           onClose={() => setShowUploadDoc(false)}
-          onSave={(title, folderId, filePath, fileType, tags) => {
+          onSave={(title, folderId, filePath, fileType, tags, body) => {
             createDocument.mutate({
               section: subTab === "library" ? "library" : "training",
               title,
@@ -951,6 +952,7 @@ export default function Infohub() {
               filePath,
               fileType,
               tags,
+              body,
             });
           }}
         />
@@ -983,6 +985,15 @@ export default function Infohub() {
               ? (libDocs.find(doc => doc.title === aiSheetDocTitle)?.content ?? "")
               : (trainDocs.find(doc => doc.title === aiSheetDocTitle)?.steps.join("\n\n") ?? "")
           }
+          loadSourceText={subTab === "library" ? async () => {
+            const doc = libDocs.find(d => d.title === aiSheetDocTitle);
+            if (!doc?.filePath || !doc.fileType) return "";
+            const { data } = await supabase.storage.from("infohub-files").download(doc.filePath);
+            if (!data) return "";
+            const body = await extractUploadText(data, doc.fileType);
+            if (body) updateDocument.mutate({ id: doc.id, section: "library", body });
+            return body;
+          } : undefined}
           onClose={() => setAiSheetDocTitle(null)}
         />
       )}

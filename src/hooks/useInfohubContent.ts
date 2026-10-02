@@ -85,6 +85,8 @@ interface CreateDocumentInput {
   tags?: string[];
   filePath?: string;
   fileType?: string;
+  /** Extracted text of an uploaded file, so AI tools can read it. */
+  body?: string;
 }
 
 interface UpdateFolderInput {
@@ -416,7 +418,7 @@ export function useInfohubContent() {
             folder_id: input.folderId,
             title: input.title,
             summary: input.filePath ? "Uploaded file" : "New document — tap to edit.",
-            body: "",
+            body: input.body ?? "",
             metadata: {
               tags: input.tags ?? [],
               ...(input.filePath ? { filePath: input.filePath, fileType: input.fileType } : {}),
@@ -456,7 +458,7 @@ export function useInfohubContent() {
                 id: crypto.randomUUID(),
                 title: input.title,
                 summary: input.filePath ? "Uploaded file" : "New document — tap to edit.",
-                content: "",
+                content: input.body ?? "",
                 tags: input.tags ?? [],
                 lastUpdated: now,
                 folderId: input.folderId,
