@@ -46,7 +46,7 @@ import { canAccessInfohubContent, canManageInfohubAccess, conceptIdsForLocations
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
 import { countDocsInFolder, countTrainingDocsInFolder, sortFolders, useDragReorder } from "./infohub/infohub-utils";
-import { extractUploadText } from "@/lib/file-text";
+import { DOC_TYPE, extractUploadText, needsOcr } from "@/lib/file-text";
 import { AIActionsSheet, CreateDocModal, CreateFolderModal, EditDocInfoModal, FilePreviewModal, FolderBreadcrumb, ItemContextMenu, ManageAccessModal, MoveToFolderSheet, PlusMenu, RenameFolderModal, SearchOverlay, UploadDocModal } from "./infohub/InfohubShared";
 import { LibraryDocDetail, TrainingDocDetail } from "./infohub/InfohubDocumentViews";
 import { ConfirmModal } from "./admin/SharedUI";
@@ -988,9 +988,16 @@ export default function Infohub() {
           loadSourceText={subTab === "library" ? async () => {
             const doc = libDocs.find(d => d.title === aiSheetDocTitle);
             if (!doc?.filePath || !doc.fileType) return "";
+            if (doc.fileType === DOC_TYPE) throw new Error(t("aiSheet.unsupportedDoc"));
             const { data } = await supabase.storage.from("infohub-files").download(doc.filePath);
             if (!data) return "";
-            const body = await extractUploadText(data, doc.fileType);
+            let body = await extractUploadText(data, doc.fileType);
+            // Scanned PDF / photo of a page: no text layer, so have Claude transcribe it (once).
+            if (!body && needsOcr(doc.fileType)) {
+              const { data: ocr, error: ocrError } = await supabase.functions.invoke("infohub-ocr", { body: { file_path: doc.filePath } });
+              if (ocrError || ocr?.error) throw new Error(t("aiSheet.ocrFailed"));
+              body = String(ocr?.text ?? "");
+            }
             if (body) updateDocument.mutate({ id: doc.id, section: "library", body });
             return body;
           } : undefined}

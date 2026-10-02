@@ -55,6 +55,8 @@
     "heading": "Herramientas de IA",
     "generateFrom": "Genera material de estudio para \"{{title}}\" a partir del contenido de {{source}}.",
     "notEnoughContent": "Este documento no tiene suficiente contenido para la generación con IA.",
+    "unsupportedDoc": "No se pueden leer los archivos .doc de Word. Guarda el archivo como .docx o PDF y vuelve a subirlo.",
+    "ocrFailed": "No se pudo leer el texto de este archivo. Inténtalo de nuevo.",
     "unexpectedResponse": "Respuesta inesperada de la IA. Inténtalo de nuevo.",
     "genericError": "Algo salió mal. Inténtalo de nuevo.",
     "summary": {
