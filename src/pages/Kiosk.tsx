@@ -826,7 +826,7 @@ function KioskScreen() {
         </h1>
 
         <p className="text-center text-xs text-muted-foreground mt-1">
-          <span>{t("grid.identifiedAs", { name: staffIdentity.firstName || staffIdentity.staffName.split(" ")[0] })}</span>
+          <span className="text-2xl font-semibold text-powder-blue-deep align-middle">{t("grid.identifiedAs", { name: staffIdentity.firstName || staffIdentity.staffName.split(" ")[0] })}</span>
           {" · "}
           <button
             id="switch-identity-btn"
