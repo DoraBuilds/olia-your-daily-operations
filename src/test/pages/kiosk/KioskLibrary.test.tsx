@@ -7,9 +7,11 @@ import { renderWithProviders } from "../../test-utils";
 const mockGetKioskLibrary = vi.fn();
 const mockGetProgress = vi.fn();
 const mockSetComplete = vi.fn();
+const mockInvoke = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
+    functions: { invoke: (...args: unknown[]) => mockInvoke(...args) },
     rpc: vi.fn().mockImplementation((fn: string, _params?: unknown) => {
       if (fn === "get_kiosk_library") return mockGetKioskLibrary();
       if (fn === "get_kiosk_training_progress") return mockGetProgress(_params);
@@ -215,14 +217,31 @@ describe("KioskLibrary document detail", () => {
     expect(screen.queryByText("Step 1.")).not.toBeInTheDocument();
   });
 
-  it("shows attachment note for docs with filePath", async () => {
+  it("opens an uploaded file via the kiosk-library-file function", async () => {
     mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
+    mockInvoke.mockResolvedValue({ data: { url: "https://signed.example/file.pdf", file_type: "application/pdf" }, error: null });
     renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
     await waitFor(() => screen.getByText("Safety Procedures"));
     fireEvent.click(screen.getByTestId("library-folder-f1"));
     fireEvent.click(screen.getByTestId("library-folder-f3"));
     fireEvent.click(screen.getByTestId("library-doc-d3"));
-    expect(screen.getByText(/Open in admin panel to download/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("library-open-file-btn"));
+    await waitFor(() => expect(document.querySelector("iframe")?.getAttribute("src")).toBe("https://signed.example/file.pdf"));
+    expect(mockInvoke).toHaveBeenCalledWith("kiosk-library-file", {
+      body: { location_id: "loc-1", team_member_id: "tm-1", kiosk_token: "test-token", document_id: "d3" },
+    });
+  });
+
+  it("shows an error when the file cannot be opened", async () => {
+    mockGetKioskLibrary.mockResolvedValue(SUCCESS_RESPONSE);
+    mockInvoke.mockResolvedValue({ data: { error: "not_found" }, error: null });
+    renderWithProviders(<KioskLibrary {...DEFAULT_PROPS} />);
+    await waitFor(() => screen.getByText("Safety Procedures"));
+    fireEvent.click(screen.getByTestId("library-folder-f1"));
+    fireEvent.click(screen.getByTestId("library-folder-f3"));
+    fireEvent.click(screen.getByTestId("library-doc-d3"));
+    fireEvent.click(screen.getByTestId("library-open-file-btn"));
+    await waitFor(() => expect(screen.getByText(/Couldn't open this file/)).toBeInTheDocument());
   });
 
   it("does not show attachment block when no filePath", async () => {
