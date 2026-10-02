@@ -128,7 +128,7 @@ describe("AuthContext — platform admin support mode", () => {
     expect(result.current.teamMember?.name).not.toBe(ownRow?.name);
   });
 
-  it("an admin with no org of their own is never auto-onboarded or invite-accepted", async () => {
+  it("an admin with no org of their own and no open invite is never auto-onboarded", async () => {
     status = { is_admin: true, viewing: null };
     ownRow = null;
     const { result } = await signIn();
@@ -137,7 +137,28 @@ describe("AuthContext — platform admin support mode", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.teamMember).toBeNull();
     expect(result.current.setupError).toBeNull();
-    expect(rpcNames()).not.toContain("accept_invite");
+    expect(rpcNames()).not.toContain("setup_new_organization");
+  });
+
+  it("an admin with an open invite joins that org instead of landing on the support console", async () => {
+    status = { is_admin: true, viewing: null };
+    const invitedRow = { ...OWN_ROW, organization_id: "invited-org", role: "Manager", is_owner: false };
+    // No row by id or auth_user_id until the invite is accepted.
+    let accepted = false;
+    ownRow = null;
+    mockTeamMemberSingle.mockImplementation(async () => ({ data: accepted ? invitedRow : null, error: null }));
+    const baseImpl = mockRpc.getMockImplementation()!;
+    mockRpc.mockImplementation(async (name: string, args?: { p_org_id?: string }) => {
+      if (name === "accept_invite") {
+        accepted = true;
+        return { data: { success: true }, error: null };
+      }
+      return baseImpl(name, args);
+    });
+    const { result } = await signIn();
+
+    await waitFor(() => expect(result.current.teamMember?.organization_id).toBe("invited-org"));
+    expect(rpcNames()).toContain("accept_invite");
     expect(rpcNames()).not.toContain("setup_new_organization");
   });
 

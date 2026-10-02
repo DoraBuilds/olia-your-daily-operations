@@ -122,15 +122,15 @@ export default function SuperAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-[920px] px-4 sm:px-6 py-6 space-y-5">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background">
+      <div className="mx-auto w-full min-w-0 max-w-[920px] px-4 sm:px-6 py-6 space-y-5">
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <ShieldCheck size={18} className="text-status-warn shrink-0" />
               <h1 className="font-display text-xl text-foreground">Support console</h1>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 [overflow-wrap:anywhere]">
               Enter any organization with full owner access. Every entry and exit is logged.
             </p>
           </div>
@@ -188,7 +188,7 @@ export default function SuperAdmin() {
             />
           </label>
 
-          <div className="card-surface divide-y divide-border">
+          <div className="card-surface divide-y divide-border overflow-hidden">
             {orgsQuery.isLoading && <p className="p-4 text-sm text-muted-foreground">Loading organizations…</p>}
             {orgsQuery.isError && <p className="p-4 text-sm text-status-error">Could not load organizations.</p>}
             {orgsQuery.data && orgs.length === 0 && (
@@ -208,7 +208,7 @@ export default function SuperAdmin() {
                     <p className="text-xs text-muted-foreground truncate">
                       {[org.owner_name, org.owner_email].filter(Boolean).join(" · ") || "No owner"}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-[11px] text-muted-foreground mt-0.5 [overflow-wrap:anywhere]">
                       <span className="capitalize">{org.plan}</span> · {org.plan_status} · {org.member_count} members · {org.location_count} locations · since {formatDate(org.created_at)}
                     </p>
                   </div>
@@ -233,12 +233,12 @@ export default function SuperAdmin() {
 
         <section className="space-y-2">
           <p className="section-label">Recent access</p>
-          <div className="card-surface divide-y divide-border">
+          <div className="card-surface divide-y divide-border overflow-hidden">
             {accessQuery.data?.length === 0 && (
               <p className="p-4 text-sm text-muted-foreground">No support sessions yet.</p>
             )}
             {accessQuery.data?.map((row) => (
-              <div key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
+              <div key={row.id} className="flex min-w-0 items-center justify-between gap-3 px-4 py-2.5 text-xs">
                 <p className="min-w-0 truncate text-foreground">
                   {ACTION_LABEL[row.action]} <span className="font-semibold">{row.organization_name ?? "a deleted org"}</span>
                   <span className="text-muted-foreground"> · {row.admin_email}</span>

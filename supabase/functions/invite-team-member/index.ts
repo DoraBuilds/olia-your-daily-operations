@@ -153,6 +153,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── Build email ─────────────────────────────────────────────────────
   const subject = `You've been invited to join ${org.name} on Olia`;
 
+  const logoUrl = `${siteUrl}/brand/logo/olia-mark-color-1024.png`;
+  const safeOrgName = org.name.replace(/[&<>"]/g, (c: string) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string
+  ));
+  // White / near-black / teal, matching the Olia sign-in and accept-invite pages.
   const htmlBody = `
 <!DOCTYPE html>
 <html>
@@ -160,29 +165,34 @@ Deno.serve(async (req: Request): Promise<Response> => {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body style="margin:0;padding:0;background:#FDFAF7;font-family:'DM Sans',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#FDFAF7;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:48px 20px;">
     <tr>
       <td align="center">
-        <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;padding:40px;border:1px solid #E5E7EB;">
+        <table width="440" cellpadding="0" cellspacing="0" style="max-width:100%;">
           <tr>
-            <td>
-              <h1 style="font-size:24px;color:#1A2A47;margin:0 0 8px;">You're invited!</h1>
-              <p style="font-size:15px;color:#6B7280;margin:0 0 24px;">
-                You've been added to <strong style="color:#1A2A47;">${org.name}</strong> as a team member on Olia.
-              </p>
-              <p style="font-size:15px;color:#4B5563;margin:0 0 32px;">
-                Click the button below to accept your invitation and set up your account.
-                This link expires in 7 days.
+            <td align="center" style="padding-bottom:28px;">
+              <img src="${logoUrl}" width="56" height="56" alt="Olia" style="display:block;border:0;" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:28px;line-height:1.2;color:#0B0F0C;margin:0 0 12px;">You're invited!</h1>
+              <p style="font-size:15px;line-height:1.6;color:#4A524D;margin:0 0 28px;">
+                You've been added to <strong style="color:#0B0F0C;">${safeOrgName}</strong> as a team member on Olia.
+                Accept your invitation to get started. This link expires in 7 days.
               </p>
               <a href="${acceptUrl}"
-                 style="display:inline-block;background:#1A2A47;color:#ffffff;padding:14px 28px;
-                        border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;">
+                 style="display:inline-block;background:#0B0F0C;color:#ffffff;padding:14px 32px;
+                        border-radius:999px;font-size:15px;font-weight:600;text-decoration:none;">
                 Accept invitation
               </a>
-              <p style="font-size:12px;color:#9CA3AF;margin:32px 0 0;">
-                Or copy this link: ${acceptUrl}
+              <p style="font-size:12px;line-height:1.5;color:#8A918C;margin:32px 0 0;word-break:break-all;">
+                Or copy this link into your browser:<br />
+                <a href="${acceptUrl}" style="color:#007E70;">${acceptUrl}</a>
               </p>
+              <hr style="border:0;border-top:1px solid #E0E0E0;margin:32px 0 16px;" />
+              <p style="font-size:12px;color:#8A918C;margin:0;">Olia · Your daily operations</p>
             </td>
           </tr>
         </table>
