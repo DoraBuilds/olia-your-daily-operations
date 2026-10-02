@@ -323,7 +323,10 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
 
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
-    saveFolderMut.mutate({ name: newFolderName.trim(), parent_id: currentFolder });
+    saveFolderMut.mutate(
+      { name: newFolderName.trim(), parent_id: currentFolder },
+      { onError: (err) => toast.error(err instanceof Error ? err.message : t("newFolder.createFailed")) },
+    );
     setNewFolderName("");
     setShowNewFolder(false);
   };

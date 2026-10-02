@@ -44,6 +44,7 @@
     "draftBadge": "Draft"
   },
   "newFolder": {
+    "createFailed": "Could not create the folder. Please try again.",
     "heading": "New folder",
     "namePlaceholder": "Folder name",
     "create": "Create folder"
