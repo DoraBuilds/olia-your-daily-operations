@@ -44,6 +44,7 @@
     "draftBadge": "Borrador"
   },
   "newFolder": {
+    "createFailed": "No se pudo crear la carpeta. Inténtalo de nuevo.",
     "heading": "Nueva carpeta",
     "namePlaceholder": "Nombre de la carpeta",
     "create": "Crear carpeta"

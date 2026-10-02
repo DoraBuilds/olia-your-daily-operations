@@ -64,12 +64,11 @@ export function useSaveFolder() {
       if (!teamMember) {
         throw new Error(i18n.t("errors.accountSetup", { ns: "common" }));
       }
-      const { error } = await supabase.from("folders").upsert({
-        id: folder.id || undefined,
-        organization_id: teamMember.organization_id,
-        name: folder.name,
-        parent_id: folder.parent_id ?? null,
-        location_id: folder.location_id ?? null,
+      const { error } = await supabase.rpc("save_folder", {
+        p_id: folder.id ?? null,
+        p_name: folder.name,
+        p_parent_id: folder.parent_id ?? null,
+        p_location_id: folder.location_id ?? null,
       });
       if (error) throw error;
     },
