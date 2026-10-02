@@ -121,6 +121,8 @@
       "fileTooLarge": "File is too large. Maximum size is 20 MB.",
       "notSignedIn": "Not signed in.",
       "uploadFailed": "Upload failed. Please try again.",
+      "trainingFailed": "Couldn't turn this file into a training module. Please try again.",
+      "buildingTraining": "Reading the file and building steps…",
       "dragDropPrefix": "Drag & drop or",
       "browse": "browse",
       "fileTypesHint": "PDF, DOC, DOCX, images · max 20 MB",

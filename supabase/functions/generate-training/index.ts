@@ -1,7 +1,7 @@
 // Supabase Edge Function — generate-training
 // Proxies training-module requests to Anthropic Claude and returns a JSON module.
 
-import { buildTrainingPrompt, parseTrainingModule, type TrainingCategory } from "./training.ts";
+import { buildDocumentTrainingPrompt, buildTrainingPrompt, DOCUMENT_SYSTEM_PROMPT, parseTrainingModule, type TrainingCategory } from "./training.ts";
 import { enforcePaidPlan } from "../_shared/plan-guard.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -44,19 +44,25 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prompt, category } = body as {
+    const { prompt, category, mode, title, content } = body as {
       prompt?: string;
       category?: TrainingCategory;
+      mode?: "prompt" | "document";
+      title?: string;
+      content?: string;
     };
+    const fromDocument = mode === "document";
 
-    if (!prompt || !prompt.trim()) {
+    if (fromDocument ? !content?.trim() : !prompt?.trim()) {
       return new Response(
-        JSON.stringify({ error: "Provide a prompt" }),
+        JSON.stringify({ error: fromDocument ? "Provide document content" : "Provide a prompt" }),
         { status: 400, headers: { "Content-Type": "application/json", ...CORS } }
       );
     }
 
-    const userMessage = buildTrainingPrompt({ prompt: prompt.trim(), category });
+    const userMessage = fromDocument
+      ? buildDocumentTrainingPrompt(String(title ?? "").trim(), content!)
+      : buildTrainingPrompt({ prompt: prompt!.trim(), category });
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -66,9 +72,9 @@ Deno.serve(async (req) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
+        model: fromDocument ? "claude-sonnet-4-6" : "claude-3-5-haiku-20241022",
+        max_tokens: fromDocument ? 4096 : 2048,
+        system: fromDocument ? DOCUMENT_SYSTEM_PROMPT : SYSTEM_PROMPT,
         messages: [{ role: "user", content: userMessage }],
       }),
     });
