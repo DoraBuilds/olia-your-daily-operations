@@ -327,6 +327,12 @@ export function ChecklistBuilderModal({
     });
   };
 
+  const removeSection = (sectionIdx: number) => {
+    const target = sections[sectionIdx];
+    if (target && target.questions.length > 0 && !window.confirm(t("builder.section.deleteConfirm", { n: target.questions.length }))) return;
+    setSections(prev => prev.length > 1 ? prev.filter((_, i) => i !== sectionIdx) : prev);
+  };
+
   const updateQuestion = (sectionIdx: number, questionIdx: number, update: Partial<QuestionDef>) => {
     setSections(prev => prev.map((s, si) => si === sectionIdx ? {
       ...s,
@@ -870,9 +876,18 @@ export function ChecklistBuilderModal({
                   <span className="text-xs text-muted-foreground">{t("builder.insert.sectionOption")}</span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
-                <input type="text" placeholder={t("builder.question.sectionNamePlaceholder")} value={section.name}
-                  onChange={e => setSections(prev => prev.map((s, i) => i === si ? { ...s, name: e.target.value } : s))}
-                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring font-medium" />
+                <div className="flex items-center gap-2">
+                  <input type="text" placeholder={t("builder.question.sectionNamePlaceholder")} value={section.name}
+                    onChange={e => setSections(prev => prev.map((s, i) => i === si ? { ...s, name: e.target.value } : s))}
+                    className="flex-1 min-w-0 border border-border rounded-xl px-4 py-2.5 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring font-medium" />
+                  {sections.length > 1 && (
+                    <button type="button" onClick={() => removeSection(si)}
+                      aria-label={t("builder.section.delete")}
+                      className="p-1.5 text-muted-foreground hover:text-status-error transition-colors">
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

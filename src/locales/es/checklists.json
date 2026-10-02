@@ -464,6 +464,10 @@
         "fri": "viernes", "sat": "sábado", "sun": "domingo"
       }
     },
+    "section": {
+      "delete": "Eliminar sección",
+      "deleteConfirm": "¿Eliminar esta sección y sus {{n}} pregunta(s)?"
+    },
     "question": {
       "label": "P{{n}}",
       "textPlaceholder": "Escribe tu pregunta aquí",
