@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Check, CheckCircle2, FileText, Folder, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { FilePreviewModal } from "../infohub/InfohubShared";
 import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
 import { cn } from "@/lib/utils";
@@ -223,6 +224,8 @@ export function KioskLibrary({
         {selectedDoc ? (
           <DocDetail
             doc={selectedDoc}
+            locationId={locationId}
+            memberId={memberId}
             completion={canComplete && selectedDoc.section === "training" ? {
               completed: completedIds.has(selectedDoc.id),
               saving: savingDocId === selectedDoc.id,
@@ -390,8 +393,36 @@ interface DocCompletion {
   onChange: (completed: boolean) => void;
 }
 
-function DocDetail({ doc, completion }: { doc: KioskDoc; completion: DocCompletion | null }) {
+function DocDetail({
+  doc,
+  locationId,
+  memberId,
+  completion,
+}: {
+  doc: KioskDoc;
+  locationId: string;
+  memberId: string | null;
+  completion: DocCompletion | null;
+}) {
   const { t } = useTranslation("kiosk");
+  const [opening, setOpening] = useState(false);
+  const [fileError, setFileError] = useState(false);
+  const [preview, setPreview] = useState<{ url: string; fileType: string } | null>(null);
+
+  // The kiosk has no storage access of its own — the edge function checks the
+  // kiosk token + member visibility and hands back a short-lived signed URL.
+  const openFile = async () => {
+    setOpening(true);
+    setFileError(false);
+    const token = await ensureKioskToken(locationId);
+    const { data, error } = await supabase.functions.invoke("kiosk-library-file", {
+      body: { location_id: locationId, team_member_id: memberId, kiosk_token: token, document_id: doc.id },
+    });
+    setOpening(false);
+    if (error || !data?.url) { setFileError(true); return; }
+    setPreview({ url: data.url, fileType: data.file_type || doc.metadata?.fileType || "" });
+  };
+
   return (
     <div className="space-y-4">
       {doc.summary && (
@@ -421,7 +452,7 @@ function DocDetail({ doc, completion }: { doc: KioskDoc; completion: DocCompleti
           ))}
         </ol>
       )}
-      {doc.body && (
+      {doc.body && !doc.metadata?.filePath && (
         <div className="space-y-3">
           {doc.body.split("\n\n").map((para, i) => (
             <p key={i} className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -431,17 +462,35 @@ function DocDetail({ doc, completion }: { doc: KioskDoc; completion: DocCompleti
         </div>
       )}
       {doc.metadata?.filePath && (
-        <div className="card-surface p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
-            <FileText size={18} className="text-lavender-deep" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground">{doc.title}</p>
-            <p className="text-xs text-muted-foreground">
-              {doc.metadata.fileType ?? t("library.attachmentFallback")} · {t("library.openInAdminToDownload")}
-            </p>
-          </div>
-        </div>
+        <>
+          <button
+            data-testid="library-open-file-btn"
+            onClick={openFile}
+            disabled={opening}
+            className="w-full card-surface p-4 flex items-center gap-3 text-left hover:border-sage/30 transition-colors active:scale-[0.99] disabled:opacity-60"
+          >
+            <div className="w-10 h-10 rounded-xl bg-lavender-light flex items-center justify-center shrink-0">
+              <FileText size={18} className="text-lavender-deep" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">{doc.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {doc.metadata.fileType ?? t("library.attachmentFallback")} · {t(opening ? "library.openingFile" : "library.tapToOpen")}
+              </p>
+            </div>
+          </button>
+          {fileError && (
+            <p className="text-xs text-status-error text-center">{t("library.fileOpenError")}</p>
+          )}
+          {preview && (
+            <FilePreviewModal
+              signedUrl={preview.url}
+              fileType={preview.fileType}
+              title={doc.title}
+              onClose={() => setPreview(null)}
+            />
+          )}
+        </>
       )}
       {completion && (
         <div className="pt-2 space-y-2">
