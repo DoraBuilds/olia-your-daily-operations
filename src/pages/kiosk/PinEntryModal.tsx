@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { kioskAdminLogin } from "@/lib/kiosk-pairing";
 import { captureEvent } from "@/lib/posthog";
-import { useInactivityTimer } from "./hooks";
+import { useInactivityTimer, useLiveClock } from "./hooks";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { SupportedLanguage } from "@/lib/i18n";
 
 // Re-exported so Kiosk.tsx's existing import site doesn't need to change —
 // the implementation itself lives in kiosk-guard.ts (pure logic, no UI) so
@@ -456,79 +458,110 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
 // open are attributed to them without another PIN (#869). No idle
 // timer: unlike PinEntryModal there's no other screen to fall back to.
 export function IdentifyModal({
-  locationId, onSuccess, onAdminClick, onLibraryClick,
+  locationId, locationName, language, onLanguageChange, onSuccess, onAdminClick, onLibraryClick,
 }: {
   locationId: string;
+  locationName?: string;
+  language?: SupportedLanguage;
+  onLanguageChange?: (language: SupportedLanguage) => void;
   onSuccess: (identity: KioskIdentity) => void;
   onAdminClick: () => void;
   onLibraryClick: () => void;
 }) {
   const { t } = useTranslation("kiosk");
+  const now = useLiveClock();
   const {
     pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate,
   } = useKioskPinValidator(locationId, onSuccess);
+  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="px-5 pt-6 pb-4 flex items-center justify-end gap-2">
-        <button
-          id="library-btn"
-          onClick={onLibraryClick}
-          className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
-        >
-          {t("grid.library")}
-        </button>
-        <button
-          id="admin-btn"
-          onClick={onAdminClick}
-          className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
-        >
-          {t("grid.admin")}
-        </button>
+    <div className="relative min-h-screen bg-background flex flex-col overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(60% 50% at 12% 8%, hsl(var(--lavender-light)) 0%, transparent 70%), radial-gradient(55% 50% at 90% 12%, hsl(var(--powder-blue-light)) 0%, transparent 70%), radial-gradient(60% 40% at 50% 100%, hsl(var(--sage-light)) 0%, transparent 75%)",
+        }}
+      />
+      <div className="relative px-5 pt-6 pb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <img src="/brand/logo/olia-mark-dark.svg" alt="Olia" className="w-10 h-10 shrink-0" />
+          <p className="text-xs font-bold text-foreground leading-none">Olia</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {language && onLanguageChange && (
+            <LanguageSwitcher variant="pill" value={language} onChange={onLanguageChange} />
+          )}
+          <button
+            id="library-btn"
+            onClick={onLibraryClick}
+            className="text-xs font-semibold text-muted-foreground border border-border bg-background/70 rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+          >
+            {t("grid.library")}
+          </button>
+          <button
+            id="admin-btn"
+            onClick={onAdminClick}
+            className="text-xs font-semibold text-muted-foreground border border-border bg-background/70 rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
+          >
+            {t("grid.admin")}
+          </button>
+        </div>
       </div>
-      <div className="flex-1 flex items-center justify-center px-4 pb-10">
-        <div className="w-full max-w-sm space-y-5">
-          <div className="text-center">
-            <h1 className="font-display text-2xl text-foreground">{t("pin.identifyTitle")}</h1>
+      <div className="relative flex-1 flex items-start sm:items-center justify-center px-4 pt-6 sm:pt-0 pb-6">
+        <div className="w-full max-w-sm space-y-4">
+          <div className="text-center space-y-0.5">
+            <h1 className="font-display text-3xl text-foreground leading-tight">
+              {locationName || t("grid.kioskFallbackName")}
+            </h1>
+            <p className="text-4xl font-semibold text-foreground tabular-nums pt-1">{timeStr}</p>
+            <p className="text-sm text-muted-foreground">{dateStr}</p>
           </div>
 
-          <PinDots count={pin.length} />
+          <div className="rounded-3xl border border-border bg-background/90 backdrop-blur shadow-card p-4 space-y-3">
+            <p className="text-center text-sm font-semibold text-foreground">{t("pin.identifyTitle")}</p>
 
-          {error && !validating && (
-            <p className="text-center text-xs text-status-error">{error}</p>
-          )}
-          {validating && (
-            <p className="text-center text-xs text-muted-foreground">{t("pin.checking")}</p>
-          )}
+            <PinDots count={pin.length} />
 
-          {lockedUntil ? (
-            <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground">
-                <Trans
-                  i18nKey="kiosk:pin.tryAgainIn"
-                  values={{ seconds: lockSecondsLeft }}
-                  components={{ bold: <span className="font-bold text-foreground" /> }}
-                />
-              </p>
-            </div>
-          ) : (
-            <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
-          )}
-
-          <button
-            id="identify-start-btn"
-            data-testid="identify-start-btn"
-            onClick={() => canStart && validate(pin)}
-            disabled={!canStart}
-            className={cn(
-              "w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]",
-              canStart
-                ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
-                : "bg-muted text-muted-foreground cursor-not-allowed",
+            {error && !validating && (
+              <p className="text-center text-xs text-status-error">{error}</p>
             )}
-          >
-            {t("pin.startButton")}
-          </button>
+            {validating && (
+              <p className="text-center text-xs text-muted-foreground">{t("pin.checking")}</p>
+            )}
+
+            {lockedUntil ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">
+                  <Trans
+                    i18nKey="kiosk:pin.tryAgainIn"
+                    values={{ seconds: lockSecondsLeft }}
+                    components={{ bold: <span className="font-bold text-foreground" /> }}
+                  />
+                </p>
+              </div>
+            ) : (
+              <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
+            )}
+
+            <button
+              id="identify-start-btn"
+              data-testid="identify-start-btn"
+              onClick={() => canStart && validate(pin)}
+              disabled={!canStart}
+              className={cn(
+                "w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]",
+                canStart
+                  ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
+                  : "bg-muted text-muted-foreground cursor-not-allowed",
+              )}
+            >
+              {t("pin.startButton")}
+            </button>
+          </div>
         </div>
       </div>
     </div>
