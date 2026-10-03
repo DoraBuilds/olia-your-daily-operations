@@ -52,8 +52,8 @@ export default function AvisoLegal() {
             <li><strong className="text-foreground">NIF/CIF:</strong> {CIF}</li>
             <li><strong className="text-foreground">Domicilio social:</strong> {ADDRESS}</li>
             <li><strong className="text-foreground">Correo electrónico:</strong>{" "}
-              <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
-                hello@oliahq.com
+              <a href="mailto:dora@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                dora@oliahq.com
               </a>
             </li>
             <li><strong className="text-foreground">Sitio web:</strong> oliahq.com</li>

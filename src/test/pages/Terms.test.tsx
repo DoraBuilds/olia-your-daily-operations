@@ -38,7 +38,7 @@ describe("Terms page", () => {
   it("shows a contact email link", () => {
     renderWithProviders(<Terms />);
     const links = screen.getAllByRole("link");
-    const emailLink = links.find(l => l.getAttribute("href")?.includes("hello@oliahq.com"));
+    const emailLink = links.find(l => l.getAttribute("href")?.includes("dora@oliahq.com"));
     expect(emailLink).toBeDefined();
   });
 

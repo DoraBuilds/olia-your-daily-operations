@@ -176,8 +176,8 @@ export default function Cookies() {
         <Section title="Contact">
           <p>
             For questions about our use of cookies, email{" "}
-            <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              hello@oliahq.com
+            <a href="mailto:dora@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              dora@oliahq.com
             </a>{" "}
             or write to us at the address in our{" "}
             <Link to="/aviso-legal" className="underline underline-offset-2 hover:text-foreground transition-colors">

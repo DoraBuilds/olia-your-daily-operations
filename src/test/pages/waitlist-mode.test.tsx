@@ -58,6 +58,12 @@ describe("WaitlistModal", () => {
     expect(screen.getByText(/you'll hear from us very soon/i)).toBeInTheDocument();
   });
 
+  it("shows a launch-emails-only consent line linking to the privacy policy", () => {
+    renderModal();
+    expect(screen.getByText(/only email you about Olia's launch/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute("href", "/privacy");
+  });
+
   it("is a centered pop-up on every width, not a bottom sheet", () => {
     renderModal();
     const overlay = screen.getByRole("dialog");
@@ -130,6 +136,17 @@ describe("landing page CTAs", () => {
     expect(screen.queryByText(/no account to create/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByText("Join the waitlist →")[0]);
+    expect(screen.getByRole("dialog", { name: "Join the waitlist" })).toBeInTheDocument();
+  });
+
+  it("has no demo anywhere; the floating button says Join and opens the waitlist", () => {
+    renderLanding();
+    expect(document.body.textContent).not.toMatch(/demo/i);
+    expect(screen.queryByText("Try it now")).not.toBeInTheDocument();
+    expect(screen.queryByText("Contact sales")).not.toBeInTheDocument();
+    expect(screen.getByText("Made by hospitality people, for hospitality people")).toBeInTheDocument();
+    expect(screen.queryByText("Live in many kitchens")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Join", { selector: "a.rx-float-btn" }));
     expect(screen.getByRole("dialog", { name: "Join the waitlist" })).toBeInTheDocument();
   });
 

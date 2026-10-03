@@ -617,7 +617,7 @@ export default function Billing() {
                       href={`mailto:${ENTERPRISE_SALES_EMAIL}`}
                       className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 bg-sage text-primary-foreground hover:bg-sage-deep"
                     >
-                      {t("card.bookADemo")}
+                      {t("card.contactSales")}
                     </a>
                   )
                 ) : isCurrent ? (

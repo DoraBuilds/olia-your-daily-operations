@@ -72,7 +72,7 @@
     "location_one": "location",
     "location_other": "locations",
     "pricingTailored": "Pricing tailored to your operation",
-    "bookADemo": "Book a demo",
+    "contactSales": "Contact sales",
     "upgradeTo": "Upgrade to {{plan}}",
     "switchTo": "Switch to {{plan}}"
   },

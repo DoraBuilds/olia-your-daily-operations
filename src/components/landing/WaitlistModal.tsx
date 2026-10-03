@@ -137,6 +137,13 @@ export function WaitlistModal({ open, onClose }: Props) {
             >
               {state === "submitting" ? "Joining…" : "Join the waitlist"}
             </button>
+
+            <p className="text-center text-xs text-muted-foreground -mt-1">
+              We'll only email you about Olia's launch.{" "}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                Privacy policy
+              </a>
+            </p>
           </form>
         )}
       </div>

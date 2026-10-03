@@ -47,13 +47,14 @@ export default function Privacy() {
           </p>
           <p>
             For questions about this policy, contact us at{" "}
-            <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              hello@oliahq.com
+            <a href="mailto:dora@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              dora@oliahq.com
             </a>.
           </p>
         </Section>
 
         <Section title="2. What data we collect">
+          <p><strong className="text-foreground">Waitlist:</strong> if you join the waitlist on our website, your email address and the time you signed up.</p>
           <p><strong className="text-foreground">Account holders (owners):</strong> name, email address, business name.</p>
           <p><strong className="text-foreground">Managers:</strong> name, email address, hashed PIN.</p>
           <p><strong className="text-foreground">Staff profiles:</strong> name, role, hashed PIN. Staff profiles do not require an email address.</p>
@@ -66,6 +67,7 @@ export default function Privacy() {
         <Section title="3. Why we collect it">
           <p>We process your data to:</p>
           <ul className="list-disc pl-5 space-y-1">
+            <li>Email you about Olia's launch, if you joined the waitlist</li>
             <li>Provide and maintain the Olia service</li>
             <li>Send transactional emails (team invitations, alerts)</li>
             <li>Process subscription payments</li>
@@ -74,7 +76,7 @@ export default function Privacy() {
           <p>
             Our legal basis is contract performance (Article 6(1)(b) GDPR) for service delivery,
             and legitimate interests (Article 6(1)(f)) for security and fraud prevention.
-            Error monitoring relies on your consent (Article 6(1)(a)).
+            Error monitoring and waitlist emails rely on your consent (Article 6(1)(a)); you can withdraw it at any time.
           </p>
         </Section>
 
@@ -84,6 +86,7 @@ export default function Privacy() {
             <li><strong className="text-foreground">Supabase</strong> — database and authentication, hosted in the EU (Ireland)</li>
             <li><strong className="text-foreground">Stripe</strong> — payment processing</li>
             <li><strong className="text-foreground">Resend</strong> — transactional email delivery</li>
+            <li><strong className="text-foreground">Google Workspace</strong> — we keep a copy of waitlist email addresses in a Google Sheet that we operate</li>
             <li><strong className="text-foreground">Sentry</strong> — error monitoring, hosted in the EU (Frankfurt), only if you consent</li>
             <li><strong className="text-foreground">Google Maps</strong> — address lookup for location setup</li>
             <li><strong className="text-foreground">Anthropic</strong> — powers AI-assisted drafts (Build with AI, Convert File, AI training tools), only for content you explicitly ask AI to generate</li>
@@ -97,6 +100,7 @@ export default function Privacy() {
           </p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong className="text-foreground">Checklist photos</strong> are kept for 2 years from the date they are taken, then automatically and permanently deleted. The checklist log itself is kept and still records that a photo was attached.</li>
+            <li><strong className="text-foreground">Waitlist emails</strong> are kept until we have contacted you about Olia's launch, or until you ask us to remove your address, whichever comes first.</li>
             <li><strong className="text-foreground">Unused photos</strong> — photos taken but never saved to a submitted checklist, for example because they were retaken — are automatically deleted after a few days.</li>
           </ul>
           <p>
@@ -125,8 +129,8 @@ export default function Privacy() {
           </ul>
           <p>
             To exercise any right, email{" "}
-            <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              hello@oliahq.com
+            <a href="mailto:dora@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              dora@oliahq.com
             </a>. We will respond within 30 days.
           </p>
           <p>
@@ -182,7 +186,7 @@ export default function Privacy() {
           <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
           <Link to="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link>
           <Link to="/aviso-legal" className="hover:text-foreground transition-colors">Aviso Legal</Link>
-          <a href="mailto:hello@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
+          <a href="mailto:dora@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
         </div>
       </div>
     </div>

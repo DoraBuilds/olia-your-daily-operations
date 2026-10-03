@@ -227,8 +227,8 @@ export default function Terms() {
         <Section title="14. Contact">
           <p>
             For any questions about these Terms, email us at{" "}
-            <a href="mailto:hello@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
-              hello@oliahq.com
+            <a href="mailto:dora@oliahq.com" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              dora@oliahq.com
             </a>.
           </p>
         </Section>
@@ -238,7 +238,7 @@ export default function Terms() {
           <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
           <Link to="/cookies" className="hover:text-foreground transition-colors">Cookie Policy</Link>
           <Link to="/aviso-legal" className="hover:text-foreground transition-colors">Aviso Legal</Link>
-          <a href="mailto:hello@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
+          <a href="mailto:dora@oliahq.com" className="hover:text-foreground transition-colors">Contact</a>
         </div>
       </div>
     </div>
