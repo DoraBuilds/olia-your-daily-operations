@@ -493,7 +493,10 @@
     },
     "section": {
       "delete": "Delete section",
-      "deleteConfirm": "Delete this section and its {{n}} question(s)?"
+      "deleteHeading": "Delete section?",
+      "deleteBody_one": "This will delete the section and its {{count}} question.",
+      "deleteBody_other": "This will delete the section and its {{count}} questions.",
+      "deleteCancel": "Cancel"
     },
     "question": {
       "label": "Q{{n}}",

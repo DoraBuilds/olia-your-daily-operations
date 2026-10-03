@@ -493,7 +493,10 @@
     },
     "section": {
       "delete": "Eliminar sección",
-      "deleteConfirm": "¿Eliminar esta sección y sus {{n}} pregunta(s)?"
+      "deleteHeading": "¿Eliminar sección?",
+      "deleteBody_one": "Se eliminará la sección y su {{count}} pregunta.",
+      "deleteBody_other": "Se eliminará la sección y sus {{count}} preguntas.",
+      "deleteCancel": "Cancelar"
     },
     "question": {
       "label": "P{{n}}",

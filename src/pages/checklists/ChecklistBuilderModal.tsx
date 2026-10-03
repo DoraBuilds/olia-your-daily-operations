@@ -156,6 +156,7 @@ export function ChecklistBuilderModal({
   const [lastPublishedAt, setLastPublishedAt] = useState<Date | null>(null);
   const [savedId, setSavedId] = useState<string | null>(editId ?? null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [sectionToDelete, setSectionToDelete] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
@@ -325,10 +326,14 @@ export function ChecklistBuilderModal({
     });
   };
 
+  const performRemoveSection = (sectionIdx: number) => {
+    setSections(prev => prev.length > 1 ? prev.filter((_, i) => i !== sectionIdx) : prev);
+  };
+
   const removeSection = (sectionIdx: number) => {
     const target = sections[sectionIdx];
-    if (target && target.questions.length > 0 && !window.confirm(t("builder.section.deleteConfirm", { n: target.questions.length }))) return;
-    setSections(prev => prev.length > 1 ? prev.filter((_, i) => i !== sectionIdx) : prev);
+    if (target && target.questions.length > 0) { setSectionToDelete(sectionIdx); return; }
+    performRemoveSection(sectionIdx);
   };
 
   const updateQuestion = (sectionIdx: number, questionIdx: number, update: Partial<QuestionDef>) => {
@@ -1532,6 +1537,31 @@ export function ChecklistBuilderModal({
     document.body
   ) : null;
 
+  const deleteSectionCount = sectionToDelete !== null ? sections[sectionToDelete]?.questions.length ?? 0 : 0;
+  const deleteSectionDialog = sectionToDelete !== null ? createPortal(
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
+      <div role="alertdialog" aria-modal="true" className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
+        <h3 className="font-display text-lg text-foreground">{t("builder.section.deleteHeading")}</h3>
+        <p className="text-sm text-muted-foreground">{t("builder.section.deleteBody", { count: deleteSectionCount })}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setSectionToDelete(null)}
+            className="flex-1 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            {t("builder.section.deleteCancel")}
+          </button>
+          <button
+            onClick={() => { performRemoveSection(sectionToDelete); setSectionToDelete(null); }}
+            className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            {t("builder.section.delete")}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   if (asPage) {
     return (
       <>
@@ -1540,6 +1570,7 @@ export function ChecklistBuilderModal({
         </div>
         {subModals}
         {discardConfirmDialog}
+        {deleteSectionDialog}
       </>
     );
   }
@@ -1559,6 +1590,7 @@ export function ChecklistBuilderModal({
       </div>
       {subModals}
       {discardConfirmDialog}
+      {deleteSectionDialog}
     </>,
     document.body
   );
