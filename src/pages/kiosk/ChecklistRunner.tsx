@@ -197,7 +197,7 @@ export function ChecklistRunner({
         )}
 
         {/* ── Accordion questions ── */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {questions.map((q, qi) => {
             const isInstruction = q.type === "instruction";
             const isCurrent = qi === currentQuestionIndex;
@@ -234,24 +234,33 @@ export function ChecklistRunner({
 
             return (
               <Fragment key={q.id}>
-                {/* ── Centered section header ── */}
-                {showSectionHeader && (
-                  <div className={cn("flex items-center gap-3", qi === 0 ? "mb-1" : "mt-5 mb-1")}>
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="section-label text-foreground/70 shrink-0">{q.sectionName}</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                )}
+                {/* ── Section band: name + answered/total ── */}
+                {showSectionHeader && (() => {
+                  const sectionQs = questions.filter(sq => sq.sectionName === q.sectionName && sq.type !== "instruction");
+                  const sectionDone = sectionQs.filter(sq => !isBlankAnswer(answers[sq.id])).length;
+                  return (
+                    <div className={qi === 0 ? "" : "pt-5"}>
+                      <div className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-powder-blue-deep to-powder-blue-deep/80 text-white px-4 py-2.5 shadow-card">
+                        <span className="text-sm font-semibold tracking-wide truncate">{q.sectionName}</span>
+                        {sectionQs.length > 0 && (
+                          <span className="text-xs font-semibold tabular-nums shrink-0 rounded-full bg-white/20 px-2.5 py-0.5">
+                            {sectionDone}/{sectionQs.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {isCurrent ? (
                   // ── Expanded (active) question ──
                   <div
                     id={`question-${q.id}`}
                     className={cn(
-                      "bg-card border rounded-2xl p-4 transition-colors shadow-sm",
+                      "bg-card border rounded-2xl p-5 transition-colors shadow-card",
                       isMissing
                         ? "border-status-error/50 bg-status-error/5 ring-1 ring-status-error/20"
-                        : "border-sage/40 ring-1 ring-sage/15",
+                        : "border-powder-blue/25 ring-1 ring-powder-blue/10 bg-powder-blue-light/40 border-l-[3px] border-l-powder-blue/50",
                     )}
                   >
                     {!isInstruction && (
@@ -324,7 +333,7 @@ export function ChecklistRunner({
                     type="button"
                     onClick={() => setCurrentQuestionId(q.id)}
                     className={cn(
-                      "w-full bg-card border rounded-2xl px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
+                      "w-full bg-card border rounded-2xl px-4 py-3.5 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
                       isPast ? "border-border" : "border-border opacity-60",
                       isMissing && "border-status-error/40 bg-status-error/5",
                       !isMissing && selectedOptionSeverity === "error" && "border-status-error/30 bg-status-error/5",
@@ -337,7 +346,7 @@ export function ChecklistRunner({
                         "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
                         selectedOptionSeverity === "error" ? "bg-status-error" :
                         selectedOptionSeverity === "warn" ? "bg-status-warn" :
-                        isNoAnswer ? "bg-status-warn" : "bg-sage",
+                        isNoAnswer ? "bg-status-warn" : "bg-powder-blue-deep",
                       )}>
                         <Check size={11} className="text-white" />
                       </div>
