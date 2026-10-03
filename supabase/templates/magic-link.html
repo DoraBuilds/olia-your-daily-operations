@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>
+  @media (prefers-color-scheme: dark) {
+    .o-page { background:#0B100E !important; }
+    .o-card { background:#151B19 !important; border-color:#26302D !important; }
+    .o-ink { color:#F2F5F4 !important; }
+    .o-muted { color:#A3AEA9 !important; }
+    .o-tint { background:#12302C !important; }
+  }
+  @media only screen and (max-width:620px) {
+    .o-pad { padding-left:20px !important; padding-right:20px !important; }
+    .o-code { font-size:30px !important; letter-spacing:6px !important; }
+  }
+</style>
+</head>
+<!--
+  Supabase Auth "Magic Link" / email OTP template. Paste into
+  Dashboard → Authentication → Email Templates → Magic Link.
+  Subject: Your Olia login code
+  Mirrors supabase/functions/_shared/email-layout.ts — keep in sync.
+-->
+<body class="o-page" style="margin:0;padding:0;background:#F3F6F5">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="o-page" style="background:#F3F6F5"><tr><td align="center" style="padding:32px 12px">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="o-card" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #E3E8E6;border-radius:20px;overflow:hidden">
+    <tr><td style="height:4px;background:#00E5CC;font-size:0;line-height:0">&nbsp;</td></tr>
+    <tr><td class="o-pad" style="padding:28px 36px 8px">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle"><img src="https://oliahq.com/olia-app-icon-180.png" width="36" height="36" alt="" style="display:block;border:0;border-radius:9px"></td>
+        <td class="o-ink" style="vertical-align:middle;padding-left:10px;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1;color:#0B100E">Olia</td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="o-pad o-ink" style="padding:16px 36px 8px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#0B100E">
+      <p style="margin:0 0 8px;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.3">Your login code</p>
+      <p class="o-muted" style="margin:0 0 24px;color:#5F6B66">Enter this code in Olia to sign in.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td class="o-tint" align="center" style="background:#E6FBF8;border:1px solid #BFF4EC;border-radius:16px;padding:22px 12px">
+          <span class="o-code o-ink" style="font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#0B100E;padding-left:10px">{{ .Token }}</span>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="o-pad o-muted" style="padding:20px 36px 28px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.55;color:#5F6B66">
+      <div style="border-top:1px solid #E3E8E6;padding-top:16px">This code expires in 60 minutes. If you didn't try to sign in to Olia, you can safely ignore this email — nobody can sign in without the code.<br><a href="https://oliahq.com" style="color:#007E70">oliahq.com</a></div>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body>
+</html>

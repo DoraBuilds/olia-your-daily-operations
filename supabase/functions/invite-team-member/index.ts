@@ -17,6 +17,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=denonext";
 import { corsHeaders } from "../_shared/cors.ts";
+import { LOGO_URL } from "../_shared/email-layout.ts";
 import {
   logSupportModeAction,
   resolveSupportMode,
@@ -153,7 +154,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── Build email ─────────────────────────────────────────────────────
   const subject = `You've been invited to join ${org.name} on Olia`;
 
-  const logoUrl = `${siteUrl}/brand/logo/olia-mark-dark-512.png`;
+  const logoUrl = LOGO_URL;
   const safeOrgName = org.name.replace(/[&<>"]/g, (c: string) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string
   ));

@@ -1,3 +1,5 @@
+import { APP_URL, BRAND, SERIF, emailButton, emailShell, esc } from "../_shared/email-layout.ts";
+
 export interface AlertPayload {
   id: string;
   type: string;
@@ -43,11 +45,15 @@ export function formatAlertWhen(createdAt: string, fallbackTime?: string | null)
   return fallbackTime ?? "unknown time";
 }
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function buildAlertEmail(alert: AlertPayload) {
   const severityLabel =
     alert.type === "error" ? "🔴 Error" :
     alert.type === "warn"  ? "⚠️ Warning" :
-                             "📋 Notification";
+                             "🚨 Notification";
   const subject = `${severityLabel}: ${alert.message}`;
   const when = formatAlertWhen(alert.created_at, alert.time);
 
@@ -58,7 +64,7 @@ export function buildAlertEmail(alert: AlertPayload) {
     `Message  : ${alert.message}`,
     alert.area ? `Checklist: ${alert.area}` : null,
     `Recorded : ${when}`,
-    alert.source ? `Source   : ${alert.source}` : null,
+    alert.source ? `Source   : ${capitalize(alert.source)}` : null,
     "",
     "---",
     "You are receiving this because a checklist notification rule matched.",
@@ -67,29 +73,19 @@ export function buildAlertEmail(alert: AlertPayload) {
     .filter((line): line is string => line !== null)
     .join("\n");
 
-  const htmlBody = `<!DOCTYPE html>
-<html>
-<body style="font-family:sans-serif;max-width:520px;margin:40px auto;color:#1E1410">
-  <div style="background:#1A2A47;padding:16px 24px;border-radius:8px 8px 0 0">
-    <span style="color:#fff;font-size:16px;font-weight:bold">Olia</span>
-    <span style="color:#B8A5C8;font-size:12px;margin-left:8px">Operational Alert</span>
-  </div>
-  <div style="background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px">
-    <p style="margin:0 0 16px;font-size:18px;font-weight:bold;color:#1A2A47">
-      ${severityLabel}&nbsp; ${esc(alert.message)}
-    </p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px">
-      ${alert.area ? row("Checklist", alert.area) : ""}
-      ${row("Recorded", when)}
-      ${alert.source ? row("Source", alert.source) : ""}
-    </table>
-    <p style="margin:24px 0 0;font-size:12px;color:#857B72">
-      You are receiving this because a checklist notification rule matched.
-      Log in to Olia to view and dismiss this alert.
-    </p>
-  </div>
-</body>
-</html>`;
+  const htmlBody = emailShell({
+    eyebrow: "Operational alert",
+    bodyHtml: `<p class="o-ink" style="margin:0 0 20px;font-family:${SERIF};font-size:22px;line-height:1.3;color:${BRAND.ink}">
+        ${severityLabel}&nbsp; ${esc(alert.message)}
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="o-tint" style="border-collapse:collapse;font-size:14px;border-left:3px solid ${BRAND.teal};background:${BRAND.page}">
+        ${alert.area ? row("Checklist", alert.area) : ""}
+        ${row("Recorded", when)}
+        ${alert.source ? row("Source", capitalize(alert.source)) : ""}
+      </table>
+      ${emailButton("Open Olia", APP_URL)}`,
+    footerHtml: "You are receiving this because a checklist notification rule matched. Log in to Olia to view and dismiss this alert.",
+  });
 
   return {
     severityLabel,
@@ -100,13 +96,9 @@ export function buildAlertEmail(alert: AlertPayload) {
   };
 }
 
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 function row(label: string, value: string): string {
   return `<tr>
-    <td style="padding:6px 0;color:#857B72;width:90px">${esc(label)}</td>
-    <td style="padding:6px 0;font-weight:500">${esc(value)}</td>
+    <td class="o-muted" style="padding:10px 12px 10px 16px;color:${BRAND.muted};width:96px;vertical-align:top">${esc(label)}</td>
+    <td class="o-ink" style="padding:10px 16px 10px 0;font-weight:600;color:${BRAND.ink}">${esc(value)}</td>
   </tr>`;
 }
