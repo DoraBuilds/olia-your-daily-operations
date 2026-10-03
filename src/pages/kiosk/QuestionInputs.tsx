@@ -275,7 +275,10 @@ export function MultipleChoiceInput({
                 ? isNoOption
                   ? "bg-status-warn/10 border-status-warn text-status-warn"
                   : "border-sage text-sage-deep"
-                : "bg-card border-border text-foreground hover:border-sage/40",
+                // Hover only on devices that really hover: on a tablet the
+                // finger's last tap position keeps :hover stuck, so the same
+                // slot on the next question (often "No") looked pre-highlighted.
+                : "bg-card border-border text-foreground [@media(hover:hover)]:hover:border-sage/40",
               isSelected && optionColors?.[idx],
               isSelected && !optionColors?.[idx] && !isNoOption && "bg-sage-light",
             )}
