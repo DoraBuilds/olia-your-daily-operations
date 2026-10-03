@@ -2,10 +2,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Login from "@/pages/Login";
 
-const { mockSignInWithOtp, mockVerifyOtp, mockRpc } = vi.hoisted(() => ({
+const { mockSignInWithOtp, mockVerifyOtp, mockRpc, waitlist } = vi.hoisted(() => ({
   mockSignInWithOtp: vi.fn(),
   mockVerifyOtp: vi.fn(),
   mockRpc: vi.fn(),
+  waitlist: { on: false },
+}));
+
+vi.mock("@/lib/waitlist-mode", () => ({
+  get WAITLIST_MODE() { return waitlist.on; },
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -124,6 +129,41 @@ describe("Login page", () => {
   it("shows a create-account link", () => {
     renderPage();
     expect(screen.getByRole("link", { name: /Create one/i })).toHaveAttribute("href", "/signup");
+  });
+
+  describe("while signups are closed (waitlist mode)", () => {
+    beforeEach(() => { waitlist.on = true; });
+    afterEach(() => { waitlist.on = false; });
+
+    it("has no create-account link and points to the waitlist instead", () => {
+      renderPage();
+      expect(screen.queryByRole("link", { name: /Create one/i })).not.toBeInTheDocument();
+      expect(document.querySelector('a[href="/signup"]')).toBeNull();
+      expect(screen.getByRole("link", { name: "Join the waitlist" })).toHaveAttribute("href", "/");
+    });
+
+    it("never asks Supabase to create a user on login", async () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
+        target: { value: "owner@olia.app" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+      await waitFor(() => expect(mockSignInWithOtp).toHaveBeenCalled());
+      expect(mockSignInWithOtp.mock.calls[0][0].options.shouldCreateUser).toBe(false);
+    });
+
+    it("tells an unknown email to join the waitlist, not to create an account", async () => {
+      mockSignInWithOtp.mockResolvedValue({ data: {}, error: { message: "Signups not allowed for otp" } });
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText("you@yourbusiness.com"), {
+        target: { value: "nobody@olia.app" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+      await waitFor(() => {
+        expect(screen.getByText(/join the waitlist on our homepage/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/create your own account/i)).not.toBeInTheDocument();
+    });
   });
 
   it("lets users switch to code entry if they already have a code", async () => {

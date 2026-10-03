@@ -11,6 +11,7 @@ import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { AuthLanguageSwitcher } from "@/components/AuthLanguageSwitcher";
 import { formatPairingCode, normalizePairingCode, pairKioskDevice, PAIRING_CODE_LENGTH } from "@/lib/kiosk-pairing";
+import { WAITLIST_MODE } from "@/lib/waitlist-mode";
 
 type Step = "email" | "code";
 type Mode = "login" | "kiosk";
@@ -38,7 +39,7 @@ function getFriendlyAuthError(message: string | null | undefined) {
     // invite email rather than just "create one" — creating a new account
     // here would spin up an unrelated organisation instead of joining the
     // team they were invited to.
-    return i18n.t("login.missingAccountError", { ns: "auth" });
+    return i18n.t(WAITLIST_MODE ? "login.missingAccountErrorWaitlist" : "login.missingAccountError", { ns: "auth" });
   }
 
   return message ?? i18n.t("login.genericError", { ns: "auth" });
@@ -290,10 +291,12 @@ export default function Login() {
           </div>
         )}
 
+        {/* While signups are closed there's no "create one" path: point
+            people without an account at the waitlist on the homepage. */}
         <p className="text-center text-xs text-muted-foreground">
-          {t("login.needAccount")}{" "}
-          <Link to="/signup" className="text-sage font-medium hover:underline">
-            {t("login.createOne")}
+          {WAITLIST_MODE ? t("login.notOnOlia") : t("login.needAccount")}{" "}
+          <Link to={WAITLIST_MODE ? "/" : "/signup"} className="text-sage font-medium hover:underline">
+            {WAITLIST_MODE ? t("login.joinWaitlist") : t("login.createOne")}
           </Link>
         </p>
         </>)}
