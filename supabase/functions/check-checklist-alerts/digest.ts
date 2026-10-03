@@ -1,3 +1,5 @@
+import { APP_URL, BRAND, SERIF, emailButton, emailShell, esc } from "../_shared/email-layout.ts";
+
 export interface ChecklistLogRow {
   checklist_id: string | null;
   checklist_title: string;
@@ -69,35 +71,27 @@ export function buildDigestEmail(opts: {
   ].filter(Boolean).join("\n");
 
   const htmlUnstarted = unstarted.length > 0
-    ? `<h3 style="color:#C05621;margin:16px 0 8px">🔲 Not started (${unstarted.length})</h3>
+    ? `<h3 style="color:${BRAND.tealDeep};font-size:15px;margin:20px 0 8px">🔲 Not started (${unstarted.length})</h3>
        <ul style="margin:0;padding-left:18px">${unstarted.map(t => `<li style="margin-bottom:4px">${esc(t)}</li>`).join("")}</ul>`
     : "";
   const htmlUnfinished = unfinished.length > 0
-    ? `<h3 style="color:#C05621;margin:16px 0 8px">⚠️ Unfinished (${unfinished.length})</h3>
+    ? `<h3 style="color:${BRAND.tealDeep};font-size:15px;margin:20px 0 8px">⚠️ Unfinished (${unfinished.length})</h3>
        <ul style="margin:0;padding-left:18px">${unfinished.map(t => `<li style="margin-bottom:4px">${esc(t)}</li>`).join("")}</ul>`
     : "";
   const htmlNothingPending = isTest && !hasAnything
-    ? `<p style="color:#2D6A4F">✅ All checklists are on track today — this is a test email.</p>`
+    ? `<p style="color:${BRAND.tealDeep}">✅ All checklists are on track today — this is a test email.</p>`
     : "";
 
-  const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a2a47">
-  <h2 style="margin:0 0 4px;font-size:20px">Checklist summary</h2>
-  <p style="margin:0 0 16px;color:#6b7280;font-size:14px">${dateStr}</p>
-  ${htmlUnstarted}
-  ${htmlUnfinished}
-  ${htmlNothingPending}
-  <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb">
-  <p style="font-size:12px;color:#9ca3af">Sent by Olia · <a href="https://oliahq.com" style="color:#6b7280">oliahq.com</a></p>
-</body>
-</html>`;
+  const htmlBody = emailShell({
+    eyebrow: isTest ? "Test digest" : "Daily digest",
+    bodyHtml: `<p style="margin:0 0 4px;font-family:${SERIF};font-size:22px;line-height:1.3">Checklist summary</p>
+      <p class="o-muted" style="margin:0 0 8px;color:${BRAND.muted};font-size:14px">${esc(dateStr)}</p>
+      ${htmlUnstarted}
+      ${htmlUnfinished}
+      ${htmlNothingPending}
+      ${emailButton("Open Olia", APP_URL)}`,
+    footerHtml: `Sent by Olia · <a href="${APP_URL}" style="color:${BRAND.tealDeep}">oliahq.com</a>`,
+  });
 
   return { subject, textBody, htmlBody };
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
