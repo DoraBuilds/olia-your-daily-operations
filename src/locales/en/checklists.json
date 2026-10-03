@@ -496,6 +496,7 @@
       "deleteHeading": "Delete section?",
       "deleteBody_one": "This will delete the section and its {{count}} question.",
       "deleteBody_other": "This will delete the section and its {{count}} questions.",
+      "deleted": "Section deleted",
       "deleteCancel": "Cancel"
     },
     "question": {

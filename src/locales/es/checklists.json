@@ -496,6 +496,7 @@
       "deleteHeading": "¿Eliminar sección?",
       "deleteBody_one": "Se eliminará la sección y su {{count}} pregunta.",
       "deleteBody_other": "Se eliminará la sección y sus {{count}} preguntas.",
+      "deleted": "Sección eliminada",
       "deleteCancel": "Cancelar"
     },
     "question": {
