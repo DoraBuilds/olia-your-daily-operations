@@ -769,6 +769,9 @@ function KioskScreen() {
       <>
         <IdentifyModal
           locationId={locationId}
+          locationName={locationName}
+          language={kioskLanguage}
+          onLanguageChange={handleKioskLanguageChange}
           onSuccess={(identity) => {
             grantKioskStaffSession(identity);
             setStaffIdentity(readKioskStaffSession());
