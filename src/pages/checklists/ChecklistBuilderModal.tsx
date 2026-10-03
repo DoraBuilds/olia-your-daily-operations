@@ -1551,7 +1551,7 @@ export function ChecklistBuilderModal({
             {t("builder.section.deleteCancel")}
           </button>
           <button
-            onClick={() => { performRemoveSection(sectionToDelete); setSectionToDelete(null); }}
+            onClick={() => { performRemoveSection(sectionToDelete); setSectionToDelete(null); toast.success(t("builder.section.deleted", { count: deleteSectionCount })); }}
             className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
           >
             {t("builder.section.delete")}
