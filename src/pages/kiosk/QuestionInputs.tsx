@@ -19,7 +19,8 @@ export function CheckboxInput({ value, onChange }: { value: boolean; onChange: (
         "w-full min-h-[44px] rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-colors flex items-center gap-3",
         value
           ? "bg-sage-light border-sage text-sage-deep"
-          : "bg-card border-border text-foreground hover:border-sage/40",
+          // Hover only on devices that really hover (sticky :hover on touch).
+          : "bg-card border-border text-foreground [@media(hover:hover)]:hover:border-sage/40",
       )}
     >
       <div className={cn(
