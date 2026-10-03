@@ -882,6 +882,36 @@ describe("Kiosk — Identify Screen", () => {
     });
   });
 
+  it("returns to the Due tab after Exit Kiosk, even if Overdue was open", async () => {
+    grantKioskStaffSession({ staffId: "tm-1", staffName: "Sarah Owner", organizationId: "org-1", departmentIds: [] });
+    await renderGridScreen();
+
+    fireEvent.click(screen.getByTestId("kiosk-tab-overdue"));
+    expect(screen.getByTestId("kiosk-tab-overdue").className).toMatch(/ring-1/);
+
+    fireEvent.click(screen.getByText("Exit Kiosk"));
+    await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());
+
+    const { supabase } = await import("@/lib/supabase");
+    supabase.rpc.mockImplementation((fn: string) => {
+      if (fn === "verify_kiosk_token") return Promise.resolve({ data: true, error: null });
+      if (fn === "validate_kiosk_member_pin") {
+        return Promise.resolve({
+          data: [{ id: "tm-1", name: "Sarah Owner", organization_id: "org-1", department_ids: [] }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+    for (const d of ["1", "2", "3", "4"]) {
+      fireEvent.click(screen.getByRole("button", { name: d }));
+    }
+
+    const dueTab = await screen.findByTestId("kiosk-tab-due");
+    expect(dueTab.className).toMatch(/ring-1/);
+    expect(screen.getByTestId("kiosk-tab-overdue").className).not.toMatch(/ring-1/);
+  });
+
   it("Admin and Infohub stay reachable from the identify screen", async () => {
     renderWithProviders(<Kiosk />);
     await waitFor(() => expect(screen.getByText("Enter PIN:")).toBeInTheDocument());

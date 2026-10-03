@@ -379,9 +379,12 @@ function KioskScreen() {
   // after a period of no interaction, so a kiosk left on the grid stayed
   // "identified" indefinitely (#796). Mirrors the same 90s pattern already
   // used by ChecklistRunner/KioskLibrary/PinEntryModal.
+  // The grid tab is reset here too so the next person to sign in lands on
+  // "Due now" rather than whatever tab the previous person left open.
   const handleStaffIdentityTimeout = () => {
     clearKioskStaffSession();
     setStaffIdentity(null);
+    setKioskTab("due");
   };
   const { secondsLeft: staffIdleSecondsLeft, cancelCountdown: cancelStaffIdleCountdown } =
     useInactivityTimer(screen === "grid" && staffIdentity !== null, handleStaffIdentityTimeout);
@@ -775,6 +778,7 @@ function KioskScreen() {
           onSuccess={(identity) => {
             grantKioskStaffSession(identity);
             setStaffIdentity(readKioskStaffSession());
+            setKioskTab("due");
           }}
           onAdminClick={handleAdminButtonClick}
           onLibraryClick={() => setShowLibraryPin(true)}
@@ -834,8 +838,7 @@ function KioskScreen() {
             id="exit-kiosk-btn"
             type="button"
             onClick={() => {
-              clearKioskStaffSession();
-              setStaffIdentity(null);
+              handleStaffIdentityTimeout();
             }}
             className="text-xs font-semibold text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:bg-muted transition-colors shrink-0"
           >
