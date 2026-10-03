@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { DemoModal } from "@/components/landing/DemoModal";
+import { WaitlistModal } from "@/components/landing/WaitlistModal";
+import { WAITLIST_MODE } from "@/lib/waitlist-mode";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 
 /**
@@ -487,6 +489,17 @@ const css = `
     .rx-manifesto-header { margin-bottom: 28px; }
     .rx-manifesto-item { gap: 14px; }
     .rx-float-cta { display: none; }
+    .rx-nav-waitlist .rx-nav-inner { justify-content: flex-start; gap: 12px; }
+    .rx-nav-waitlist .rx-logo { position: static; transform: none; flex-shrink: 0; }
+    .rx-nav-waitlist .rx-nav-actions { min-width: 0; }
+    .rx-nav-waitlist .rx-btn-neon { padding: 7px 12px; font-size: 12px; white-space: nowrap; }
+    .rx-wl-short { display: none; }
+  }
+  @media (max-width: 359px) {
+    .rx-nav { padding: 0 14px; }
+    .rx-nav-waitlist .rx-nav-inner { gap: 8px; }
+    .rx-wl-long { display: none; }
+    .rx-wl-short { display: inline; }
   }
 `;
 
@@ -671,6 +684,29 @@ const faqs = [
   },
 ];
 
+// Waitlist-mode FAQ: same questions, reworded so nothing implies you can sign
+// up and start today. Flag off → the original `faqs` above, unchanged.
+const waitlistFaqs = [
+  {
+    q: "When can I start?",
+    a: "Olia is opening soon. Join the waitlist and you'll be among the first to get in. We'll email you the moment it's your turn.",
+  },
+  {
+    q: "How long does it take to set up?",
+    a: "Once you're in, most venues are running in under an hour. No IT department, no lengthy onboarding.",
+  },
+  {
+    q: "Do my staff need to download anything or create an account?",
+    a: "No. Olia is kiosk-first. Staff tap through tasks on a tablet already in your venue, with no app to install and nothing to sign up for.",
+  },
+  faqs[2],
+  faqs[3],
+  {
+    q: "Is there a contract, or can I cancel anytime?",
+    a: "Plans will be billed monthly with no long-term contract, so you can cancel anytime. Pricing is per location, not per user, so adding staff never costs extra.",
+  },
+];
+
 // Honest, early-stage social proof — no invented numbers.
 const floatMessages = [
   "Built with real restaurant operators",
@@ -689,12 +725,20 @@ export default function SundayRemixSite() {
   const showcaseGridRef = useRef<HTMLDivElement>(null);
   const [completed, setCompleted] = useState(0);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [floatVisible, setFloatVisible] = useState(false);
   const [floatMsgIndex, setFloatMsgIndex] = useState(0);
   const [showcaseActive, setShowcaseActive] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const openDemo = (e: React.MouseEvent) => { e.preventDefault(); setDemoOpen(true); };
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const openWaitlist = (e: React.MouseEvent) => { e.preventDefault(); closeMobileMenu(); setWaitlistOpen(true); };
+  // While WAITLIST_MODE is on, every sign-up / sign-in CTA opens the waitlist
+  // modal instead of linking to /signup or /login (see src/lib/waitlist-mode.ts).
+  const cta = (to: string, label: string, waitlistLabel: string, className: string, style?: React.CSSProperties, waitlistContent?: React.ReactNode) =>
+    WAITLIST_MODE
+      ? <a href="#" className={className} style={style} onClick={openWaitlist}>{waitlistContent ?? waitlistLabel}</a>
+      : <Link to={to} className={className} style={style} onClick={closeMobileMenu}>{label}</Link>;
   const total = KIOSK_TASKS.length;
 
   useEffect(() => {
@@ -781,7 +825,7 @@ export default function SundayRemixSite() {
     <div className="olia-remix">
       <style>{css}</style>
 
-      <nav className="rx-nav" ref={navRef}>
+      <nav className={`rx-nav${WAITLIST_MODE ? " rx-nav-waitlist" : ""}`} ref={navRef}>
         <div className="rx-nav-inner">
           <button
             type="button"
@@ -803,9 +847,9 @@ export default function SundayRemixSite() {
             <li><a href="#pricing">Pricing</a></li>
           </ul>
           <div className="rx-nav-actions">
-            <Link to="/login" className="rx-signin">Sign in</Link>
-            <span className="rx-shine-wrap rx-cta-desktop"><Link to="/signup" className="rx-btn-neon">Get started</Link></span>
-            <span className="rx-shine-wrap rx-cta-mobile"><Link to="/login" className="rx-btn-neon">Sign in</Link></span>
+            {!WAITLIST_MODE && <Link to="/login" className="rx-signin">Sign in</Link>}
+            <span className="rx-shine-wrap rx-cta-desktop">{cta("/signup", "Get started", "Join the waitlist", "rx-btn-neon")}</span>
+            <span className="rx-shine-wrap rx-cta-mobile">{cta("/login", "Sign in", "Join the waitlist", "rx-btn-neon", undefined, <><span className="rx-wl-long">Join the waitlist</span><span className="rx-wl-short">Join waitlist</span></>)}</span>
           </div>
         </div>
       </nav>
@@ -819,9 +863,9 @@ export default function SundayRemixSite() {
         </nav>
         <div className="rx-mobile-menu-actions">
           <span className="rx-shine-wrap block">
-            <Link to="/signup" className="rx-btn-neon" onClick={closeMobileMenu} style={{ textAlign: "center" }}>Get started</Link>
+            {cta("/signup", "Get started", "Join the waitlist", "rx-btn-neon", { textAlign: "center" })}
           </span>
-          <Link to="/login" className="rx-mobile-menu-signin" onClick={closeMobileMenu}>Sign in</Link>
+          {!WAITLIST_MODE && <Link to="/login" className="rx-mobile-menu-signin" onClick={closeMobileMenu}>Sign in</Link>}
         </div>
       </div>
 
@@ -832,9 +876,9 @@ export default function SundayRemixSite() {
             <h1>Run every shift<br />the same way — <span className="rx-hl">every time.</span></h1>
             <p className="rx-hero-sub">Olia replaces paper checklists and WhatsApp chasing with a simple system your team actually uses.</p>
             <div className="rx-hero-ctas">
-              <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link></span>
+              <span className="rx-shine-wrap">{cta("/signup", "Set up your first checklist →", "Join the waitlist →", "rx-btn-hero")}</span>
             </div>
-            <p className="rx-hero-note">Starter from €79 · per location · <span className="rx-mark">no per-user fees</span></p>
+            <p className="rx-hero-note">{WAITLIST_MODE ? "Opening soon · from €79" : "Starter from €79"} · per location ·<span className="rx-mark">no per-user fees</span></p>
           </div>
           <div>
             <div className="rx-kiosk-card">
@@ -1039,7 +1083,7 @@ export default function SundayRemixSite() {
               <ul className="rx-pfeats">
                 {["1 location", "Up to 20 staff", "Unlimited checklists", "Compliance & fridge temp logging", "AI checklist builder", "Issue reporting & photo evidence", "Email support"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
-              <Link to="/signup" className="rx-pbtn rx-pbtn-outline">Start with Starter</Link>
+              {cta("/signup", "Start with Starter", "Join the waitlist", "rx-pbtn rx-pbtn-outline")}
             </div>
             <div className="rx-pcard featured rx-fade rx-d1" ref={featuredCardRef}>
               <div className="rx-pbadge">Most popular</div>
@@ -1050,7 +1094,7 @@ export default function SundayRemixSite() {
               <ul className="rx-pfeats">
                 {["Everything in Starter, plus:", "Unlimited locations, billed per location", "Up to 40 staff", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
-              <span className="rx-shine-wrap block"><Link to="/signup" className="rx-pbtn rx-pbtn-neon">Start with Growth</Link></span>
+              <span className="rx-shine-wrap block">{cta("/signup", "Start with Growth", "Join the waitlist", "rx-pbtn rx-pbtn-neon")}</span>
             </div>
             <div className="rx-pcard rx-fade rx-d2">
               <div className="rx-pname">Enterprise</div>
@@ -1097,10 +1141,10 @@ export default function SundayRemixSite() {
           <div className="rx-section-header rx-fade">
             <div className="rx-badge centered"><span className="rx-badge-dot" />FAQ</div>
             <h2>Questions, answered.</h2>
-            <p>Everything you need to know before you set up your first checklist.</p>
+            <p>{WAITLIST_MODE ? "Everything you need to know before Olia opens its doors." : "Everything you need to know before you set up your first checklist."}</p>
           </div>
           <div className="rx-faq-list rx-fade">
-            {faqs.map((f) => (
+            {(WAITLIST_MODE ? waitlistFaqs : faqs).map((f) => (
               <details key={f.q} className="rx-faq-item">
                 <summary>{f.q}</summary>
                 <p>{f.a}</p>
@@ -1113,9 +1157,11 @@ export default function SundayRemixSite() {
       <section className="rx-cta">
         <div className="rx-container">
           <h2 className="rx-fade">Ready to clean up<br />your operational mess?</h2>
-          <p className="rx-cta-sub rx-fade">Set up your first checklist today. Most venues are running in under an hour.</p>
+          <p className="rx-cta-sub rx-fade">{WAITLIST_MODE
+            ? "Olia is opening its doors soon. Join the waitlist and be among the first to run every shift the same way."
+            : "Set up your first checklist today. Most venues are running in under an hour."}</p>
           <div className="rx-cta-btns rx-fade">
-            <span className="rx-shine-wrap"><Link to="/signup" className="rx-btn-hero">Set up your first checklist →</Link></span>
+            <span className="rx-shine-wrap">{cta("/signup", "Set up your first checklist →", "Join the waitlist →", "rx-btn-hero")}</span>
           </div>
         </div>
       </section>
@@ -1158,6 +1204,7 @@ export default function SundayRemixSite() {
       </div>
     </div>
     <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+    <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
     </>
   );
 }

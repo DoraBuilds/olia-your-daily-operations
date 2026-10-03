@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link, Navigate } from "react-router-dom";
+import { WAITLIST_MODE } from "@/lib/waitlist-mode";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -186,6 +187,13 @@ export default function Signup() {
     }
   };
 
+  // Waitlist mode: nobody can create a company by direct URL. The recovery
+  // notices (?reason=account-reset / account-deleted, incl. invite failures)
+  // still render, and an authenticated user is already bounced to /admin above.
+  if (WAITLIST_MODE && !user && !accountReset && !accountDeleted) {
+    return <Navigate to="/" replace />;
+  }
+
   if (isInviteFailure) {
     return (
       <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12 text-center" style={legalTheme}>
@@ -204,6 +212,32 @@ export default function Signup() {
           >
             {t("signup.signInInstead")}
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Waitlist mode: the recovery notices (?reason=account-reset / account-deleted)
+  // must not offer a way to create an account either.
+  if (WAITLIST_MODE && (accountReset || accountDeleted)) {
+    return (
+      <div className="min-h-screen bg-background legal-scope flex flex-col items-center justify-center px-6 py-12 text-center" style={legalTheme}>
+        <style>{legalLinkStyle}</style>
+        <SignupHeader />
+        <div className="w-full max-w-sm space-y-4">
+          <img src="/brand/logo/olia-app-icon.svg" alt="Olia" className="w-14 h-14 mx-auto" />
+          <h1 className="font-display text-2xl text-foreground">
+            {accountDeleted ? t("signup.accountDeleted") : t("signup.closedTitle")}
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">{t("signup.closedBody")}</p>
+          <Link to="/" className="inline-block text-sm text-sage font-medium underline underline-offset-2">
+            {t("signup.closedCta")}
+          </Link>
+          <div>
+            <Link to="/login" className="inline-block text-xs text-muted-foreground underline underline-offset-2">
+              {t("signup.signInInstead")}
+            </Link>
+          </div>
         </div>
       </div>
     );

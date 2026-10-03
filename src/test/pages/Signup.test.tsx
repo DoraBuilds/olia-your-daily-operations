@@ -3,6 +3,10 @@ import { MemoryRouter } from "react-router-dom";
 import Signup from "@/pages/Signup";
 import { routerFutureFlags } from "@/lib/router-future-flags";
 
+// These tests cover the real signup form, so waitlist mode (which redirects
+// /signup to the landing page) is off here. See waitlist-mode.test.tsx.
+vi.mock("@/lib/waitlist-mode", () => ({ WAITLIST_MODE: false }));
+
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 const { mockSignInWithOtp, mockVerifyOtp, mockNavigate } = vi.hoisted(() => ({
   mockSignInWithOtp: vi.fn(),
