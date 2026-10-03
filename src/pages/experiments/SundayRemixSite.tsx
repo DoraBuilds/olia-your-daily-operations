@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import { DemoModal } from "@/components/landing/DemoModal";
 import { WaitlistModal } from "@/components/landing/WaitlistModal";
 import { WAITLIST_MODE } from "@/lib/waitlist-mode";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
@@ -411,7 +410,7 @@ const css = `
   }
   .rx-float-laurel { width: 12px; height: 18px; color: rgba(255,255,255,0.4); flex-shrink: 0; }
   .rx-float-laurel.right { transform: scaleX(-1); }
-  .rx-float-text { position: relative; height: 17px; min-width: 220px; overflow: hidden; }
+  .rx-float-text { position: relative; height: 17px; min-width: 320px; overflow: hidden; }
   .rx-float-msg {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     font-size: 13px; color: rgba(255,255,255,0.72); white-space: nowrap;
@@ -614,7 +613,7 @@ const values = [
 const manifesto = [
   {
     title: "The floor comes first.",
-    body: "Every feature gets judged by whether a tired person on a Saturday night would actually use it, not whether it looks good in a demo.",
+    body: "Every feature gets judged by whether a tired person on a Saturday night would actually use it, not whether it looks good on a slide.",
   },
   {
     title: "Simple beats clever.",
@@ -710,7 +709,7 @@ const waitlistFaqs = [
 // Honest, early-stage social proof — no invented numbers.
 const floatMessages = [
   "Built with real restaurant operators",
-  "Live in many kitchens",
+  "Made by hospitality people, for hospitality people",
   "Founder-tested, every single shift",
 ];
 
@@ -724,13 +723,11 @@ export default function SundayRemixSite() {
   const featuredCardRef = useRef<HTMLDivElement>(null);
   const showcaseGridRef = useRef<HTMLDivElement>(null);
   const [completed, setCompleted] = useState(0);
-  const [demoOpen, setDemoOpen] = useState(false);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [floatVisible, setFloatVisible] = useState(false);
   const [floatMsgIndex, setFloatMsgIndex] = useState(0);
   const [showcaseActive, setShowcaseActive] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const openDemo = (e: React.MouseEvent) => { e.preventDefault(); setDemoOpen(true); };
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const openWaitlist = (e: React.MouseEvent) => { e.preventDefault(); closeMobileMenu(); setWaitlistOpen(true); };
   // While WAITLIST_MODE is on, every sign-up / sign-in CTA opens the waitlist
@@ -1104,7 +1101,9 @@ export default function SundayRemixSite() {
               <ul className="rx-pfeats">
                 {["Everything in Growth, plus:", "Volume pricing across locations", "Unlimited staff", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
-              <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openDemo}>Contact sales</a>
+              {WAITLIST_MODE
+                ? <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openWaitlist}>Join the waitlist</a>
+                : <a href="mailto:dora@oliahq.com" className="rx-pbtn rx-pbtn-outline">Contact sales</a>}
             </div>
           </div>
 
@@ -1198,12 +1197,11 @@ export default function SundayRemixSite() {
           </div>
           <Laurel className="rx-float-laurel right" />
           <div className="rx-float-btn-wrap">
-            <a href="#" className="rx-float-btn" onClick={openDemo}>Try it now</a>
+            {cta("/signup", "Join", "Join", "rx-float-btn")}
           </div>
         </div>
       </div>
     </div>
-    <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
     </>
   );
