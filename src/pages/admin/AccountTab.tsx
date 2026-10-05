@@ -26,6 +26,7 @@ import { useCompanyDepartments } from "@/hooks/useDepartments";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { PERM_LABELS, getPermLabel } from "./shared";
 import { ConfirmModal } from "./SharedUI";
+import { BulkImportModal } from "./BulkImportModal";
 import { NotificationsTab } from "./NotificationsTab";
 
 export interface AccountTabProps {
@@ -100,6 +101,7 @@ export function AccountTab({
   // popover edits — committed on Apply, discarded if it is dismissed.
   const { data: departments = [] } = useCompanyDepartments();
   const [memberSearch, setMemberSearch] = useState("");
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [memberFilters, setMemberFilters] = useState<MemberFilters>(DEFAULT_MEMBER_FILTERS);
   const [memberDraft, setMemberDraft] = useState<MemberFilters>(DEFAULT_MEMBER_FILTERS);
   const [memberFiltersOpen, setMemberFiltersOpen] = useState(false);
@@ -773,6 +775,14 @@ export function AccountTab({
             </FilterField>
           </FiltersPopover>
           <ActiveFilterChips testIdPrefix="members" chips={memberFilterChips} onClearAll={() => setMemberFilters(DEFAULT_MEMBER_FILTERS)} />
+          <button
+            type="button"
+            data-testid="members-bulk-import"
+            onClick={() => setBulkImportOpen(true)}
+            className="text-xs text-sage font-medium hover:underline"
+          >
+            {t("bulkImport.link")}
+          </button>
         </div>
         <div className="card-surface divide-y divide-border">
           {/* Column headers */}
@@ -1031,6 +1041,10 @@ export function AccountTab({
           </div>
         )}
       </section>}
+
+      {bulkImportOpen && (
+        <BulkImportModal existingNames={teamMembers.map(m => m.name)} onClose={() => setBulkImportOpen(false)} />
+      )}
 
       {/* Delete account confirmation modal */}
       {showDeleteModal && (

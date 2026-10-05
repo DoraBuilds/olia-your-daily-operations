@@ -506,5 +506,56 @@
     "save": "Save",
     "renamed": "Kiosk renamed",
     "renameFailed": "Could not rename kiosk: {{error}}"
+  },
+  "bulkImport": {
+    "link": "Import from file",
+    "title": "Import team members",
+    "intro": "Upload a CSV or Excel file. Everyone is added as kiosk-only staff with a 4-digit PIN. You can see each PIN later from their profile.",
+    "columnsHint": "Columns: first_name (required), last_name, pin (optional, 4 digits, generated if blank), department (optional, must match an existing department).",
+    "downloadTemplate": "Download template",
+    "chooseFile": "Choose CSV or Excel file",
+    "reading": "Reading file...",
+    "fileErrors": {
+      "missingFirstNameColumn": "No first_name column found. Download the template to see the expected columns.",
+      "emptyFile": "The file is empty.",
+      "noRows": "No people found in the file.",
+      "tooManyRows": "The file has {{count}} rows. The limit is {{max}} per import.",
+      "readFailed": "Could not read this file. Use a .csv or .xlsx file."
+    },
+    "summary": "{{ready}} ready, {{warnings}} with warnings, {{errors}} will be skipped",
+    "columns": {
+      "row": "Row",
+      "name": "Name",
+      "pin": "PIN",
+      "department": "Department",
+      "status": "Status"
+    },
+    "pinGenerated": "Generated",
+    "status": {
+      "ready": "Ready",
+      "warning": "Warning",
+      "error": "Skipped",
+      "imported": "Imported"
+    },
+    "issues": {
+      "firstNameRequired": "First name is missing",
+      "pinInvalid": "PIN must be 4 digits",
+      "pinDuplicateInFile": "PIN is used twice in this file",
+      "nameDuplicate": "Someone with this name already exists",
+      "departmentNotFound": "Department not found, imported without one",
+      "pinTaken": "PIN is already used by someone else",
+      "noPinAvailable": "No free PIN left",
+      "generic": "Could not import this row"
+    },
+    "import": "Import {{count}} people",
+    "importing": "Importing {{done}} of {{total}}...",
+    "done": "Imported {{count}} team members",
+    "doneSkipped": "{{count}} rows were skipped.",
+    "doneHint": "Assign departments from each member if needed.",
+    "downloadErrors": "Download error report",
+    "chooseAnother": "Choose another file",
+    "cancel": "Cancel",
+    "finish": "Done",
+    "toastFailed": "Import failed: {{error}}"
   }
 }

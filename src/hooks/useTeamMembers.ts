@@ -288,3 +288,32 @@ export function useSendInvite() {
     },
   });
 }
+
+export interface BulkImportRowInput {
+  idx: number;
+  first_name: string;
+  last_name: string;
+  pin: string | null;
+  department_id: string | null;
+}
+
+export interface BulkImportRowResult {
+  idx: number;
+  status: "created" | "error";
+  id?: string;
+  error?: string;
+}
+
+/**
+ * One chunk (max 50 rows) of the Users-tab bulk import. The caller chunks the
+ * file and calls this per chunk; the list is refreshed by the caller once done.
+ */
+export function useBulkCreateTeamMembers() {
+  return useMutation({
+    mutationFn: async (rows: BulkImportRowInput[]): Promise<BulkImportRowResult[]> => {
+      const { data, error } = await supabase.rpc("bulk_create_team_members", { p_rows: rows });
+      if (error) throw new Error(error.message ?? "Bulk import failed");
+      return (data ?? []) as BulkImportRowResult[];
+    },
+  });
+}
