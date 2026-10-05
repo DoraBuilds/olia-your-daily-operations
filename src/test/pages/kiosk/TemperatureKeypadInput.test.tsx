@@ -18,7 +18,7 @@ function Harness({ initial = "" as number | "", onChange = vi.fn(), ...props }: 
 
 const press = (...names: string[]) =>
   names.forEach(name => fireEvent.click(screen.getByRole("button", { name })));
-const reading = () => screen.getByTestId("temperature-reading").textContent;
+const reading = () => screen.getByTestId("temperature-reading").textContent?.replace("\u200B", "");
 
 describe("TemperatureKeypadInput", () => {
   it("shows every digit, the sign toggle, the decimal point and delete", () => {
@@ -29,7 +29,7 @@ describe("TemperatureKeypadInput", () => {
     expect(screen.getByRole("button", { name: "Negative" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Decimal point" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete last digit" })).toBeDisabled();
-    expect(reading()).toBe("—°C");
+    expect(reading()).toBe("°C");
   });
 
   it("builds a reading from key presses", () => {
@@ -115,7 +115,7 @@ describe("TemperatureKeypadInput", () => {
     const { rerender } = render(<TemperatureKeypadInput value={4.26} onChange={vi.fn()} unit="F" />);
     expect(reading()).toBe("4.3°F");
     rerender(<TemperatureKeypadInput value="" onChange={vi.fn()} unit="F" />);
-    expect(reading()).toBe("—°F");
+    expect(reading()).toBe("°F");
   });
 
   it("is what the kiosk renders for temperature questions, with no slider", () => {

@@ -169,7 +169,7 @@ export function TemperatureKeypadInput({
           "text-6xl font-bold tabular-nums leading-none",
           outOfRange ? "text-status-error" : "text-foreground",
         )}>
-          {negative && "−"}{digits === "" ? (negative ? "" : "—") : digits}
+          {negative && "−"}{/* Empty reads as just °C; a zero-width space keeps the line height so the keypad doesn't jump. */}{digits === "" ? (negative ? "" : "\u200B") : digits}
         </span>
         <span className={cn(
           "text-2xl font-medium pb-1",
