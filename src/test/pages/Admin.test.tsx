@@ -432,6 +432,27 @@ describe("Admin page", () => {
     });
   });
 
+  it("Users tab search narrows team members and shows an empty state", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+    await waitFor(() => expect(screen.getAllByText("Alice Smith").length).toBeGreaterThanOrEqual(1));
+    fireEvent.change(screen.getByTestId("members-search"), { target: { value: "alice" } });
+    expect(screen.getAllByText("Alice Smith").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Mike Manager")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("members-search"), { target: { value: "zzzz" } });
+    expect(screen.getByTestId("members-no-results")).toBeInTheDocument();
+  });
+
+  it("Users tab Access filter limits the list to kiosk-only members", async () => {
+    renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+    await waitFor(() => expect(screen.getAllByText("Alice Smith").length).toBeGreaterThanOrEqual(1));
+    fireEvent.click(screen.getByTestId("members-filters-toggle"));
+    fireEvent.click(await screen.findByTestId("members-access-filter-trigger"));
+    fireEvent.click(await screen.findByTestId("members-access-filter-option-kiosk"));
+    fireEvent.click(screen.getByTestId("members-apply-filters"));
+    await waitFor(() => expect(screen.getByTestId("members-active-filters")).toBeInTheDocument());
+    expect(screen.queryByText("Mike Manager")).not.toBeInTheDocument();
+  });
+
   it("Users tab shows 'Owner' badge for the owner and free-text role for other members", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
     await waitFor(() => {
