@@ -25,7 +25,7 @@ import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
 import { useCompanyDepartments } from "@/hooks/useDepartments";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { PERM_LABELS, getPermLabel } from "./shared";
-import { AddLink, ConfirmModal } from "./SharedUI";
+import { ConfirmModal } from "./SharedUI";
 import { NotificationsTab } from "./NotificationsTab";
 
 export interface AccountTabProps {
@@ -721,6 +721,15 @@ export function AccountTab({
                 className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </>}
+            trailing={
+              <button
+                onClick={onInviteMember}
+                aria-label={t("accountTab.addTeamMember")}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-sage text-primary-foreground transition-colors hover:bg-sage-deep shrink-0"
+              >
+                <Plus size={18} />
+              </button>
+            }
           >
             <FilterField label={t("accountTab.conceptFilter")}>
               <FilterMultiSelect
@@ -764,10 +773,6 @@ export function AccountTab({
             </FilterField>
           </FiltersPopover>
           <ActiveFilterChips testIdPrefix="members" chips={memberFilterChips} onClearAll={() => setMemberFilters(DEFAULT_MEMBER_FILTERS)} />
-        </div>
-        {/* pr: card border + row padding + trash button padding, so Add lines up with the trash icons */}
-        <div className="flex justify-end mb-3 pr-[23px]">
-          <AddLink onClick={onInviteMember} ariaLabel={t("accountTab.addTeamMember")} />
         </div>
         <div className="card-surface divide-y divide-border">
           {/* Column headers */}
