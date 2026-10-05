@@ -136,6 +136,8 @@ export function AccountTab({
     if (memberFilters.access.length > 0 && !memberFilters.access.includes(memberAccess(m))) return false;
     return true;
   };
+  const departmentLabel = (m: TeamMember) =>
+    m.department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean).join(", ") || t("accountTab.noDepartment");
   const visibleMembers = [...teamMembers].filter(memberMatches).sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0);
   const accessLabel = (a: MemberAccess) => t(a === "owner" ? "accountTab.accessOwner" : a === "manager" ? "accountTab.accessManager" : "accountTab.accessKiosk");
   const memberFilterCount = [
@@ -789,7 +791,7 @@ export function AccountTab({
           <div className="flex items-center gap-3 px-4 py-2">
             <div className="w-9 shrink-0" />
             <p className="flex-1 text-xs font-semibold text-muted-foreground">{t("accountTab.name")}</p>
-            <p className="w-24 shrink-0 text-xs font-semibold text-muted-foreground">{t("accountTab.role")}</p>
+            <p className="w-28 shrink-0 text-xs font-semibold text-muted-foreground">{t("accountTab.department")}</p>
             <div className="w-32 shrink-0" />
           </div>
           {visibleMembers.length === 0 && (
@@ -822,16 +824,14 @@ export function AccountTab({
                       <p className="text-xs text-muted-foreground/60">{t("accountTab.kioskOnly")}</p>
                     ) : null}
                   </div>
-                  <div className="w-24 shrink-0">
-                    <span
-                      className={cn(
-                        "inline-block max-w-full truncate align-bottom text-xs px-2 py-0.5 rounded-full font-medium",
-                        member.is_owner ? "bg-lavender-light text-lavender-deep" : "status-ok",
-                      )}
-                      title={member.is_owner ? t("roles.Owner") : (member.role || t("accountTab.noRoleSet"))}
+                  <div className="w-28 shrink-0">
+                    <p
+                      data-testid={`member-departments-${member.id}`}
+                      className="truncate text-xs text-foreground"
+                      title={departmentLabel(member)}
                     >
-                      {member.is_owner ? t("roles.Owner") : (member.role || t("accountTab.noRoleSet"))}
-                    </span>
+                      {departmentLabel(member)}
+                    </p>
                   </div>
                   <div className="w-32 shrink-0 flex items-center justify-end gap-2">
                     {hasPendingInvite && (
