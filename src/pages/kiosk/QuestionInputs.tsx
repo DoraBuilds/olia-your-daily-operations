@@ -91,7 +91,7 @@ export function NumberInput({
 }
 
 // ─── Temperature keypad ───────────────────────────────────────────────────────
-// The sign is a toggle, not a character: "−" flips the reading at any point, so
+// The sign is a toggle, not a character: "−" (minus only) flips the reading at any point, so
 // typing "18" for a freezer is fixed with one tap. Readings stop at one decimal.
 
 const TEMPERATURE_MAX_INTEGER_DIGITS = 3;
@@ -191,7 +191,7 @@ export function TemperatureKeypadInput({
           aria-pressed={negative}
           className={cn(keyClass, negative && "bg-sage border-sage text-primary-foreground active:bg-sage")}
         >
-          +/−
+          −
         </button>
         <button type="button" onClick={() => pressDigit("0")} className={keyClass}>0</button>
         <button type="button" onClick={pressDecimal} aria-label={t("inputs.decimalPoint")} className={cn(keyClass, "font-semibold")}>
