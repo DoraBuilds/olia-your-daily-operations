@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
 import { AlertCircle, ArrowLeft, Trash2, X } from "lucide-react";
@@ -9,7 +10,15 @@ import { formatOperationalAlertCopy } from "@/lib/alert-copy";
 export default function Notifications() {
   const navigate = useNavigate();
   const { t } = useTranslation("notifications");
+  const [searchParams] = useSearchParams();
+  const focusAlertId = searchParams.get("alert");
   const { data: alerts = [] } = useAlerts();
+
+  // Arriving from an alert email (?alert=<id>): scroll to that alert.
+  useEffect(() => {
+    if (!focusAlertId || !alerts.some(a => a.id === focusAlertId)) return;
+    document.getElementById(`alert-${focusAlertId}`)?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }, [focusAlertId, alerts]);
   const dismissMut = useDismissAlert();
   const clearMut = useClearAlerts();
 
@@ -60,8 +69,10 @@ export default function Notifications() {
               return (
                 <div
                   key={alert.id}
+                  id={`alert-${alert.id}`}
                   className={cn(
                     "flex items-start gap-3 p-4",
+                    alert.id === focusAlertId && "bg-primary/10 ring-2 ring-inset ring-primary/40",
                     alert.type === "error" ? "border-l-2 border-l-status-error" : "border-l-2 border-l-status-warn",
                   )}
                 >

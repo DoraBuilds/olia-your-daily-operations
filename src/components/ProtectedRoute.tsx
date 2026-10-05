@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { rememberPostLoginPath } from "@/lib/post-login-path";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasActiveKioskAdminSession } from "@/lib/kiosk-admin-session";
 
@@ -8,6 +9,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation("common");
   const { user, teamMember, loading, setupError, signOut, platformAdmin } = useAuth();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
 
   // Navigate first, then sign out. Calling signOut first fires SIGNED_OUT
   // synchronously, which sets user=null and causes ProtectedRoute to render
@@ -54,6 +56,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
+    rememberPostLoginPath(routeLocation.pathname + routeLocation.search);
     return <Navigate to="/login" replace />;
   }
 

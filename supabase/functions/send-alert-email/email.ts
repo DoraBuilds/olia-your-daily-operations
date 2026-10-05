@@ -14,6 +14,7 @@ export interface AlertPayload {
   response_text?: string | null;
   location_name?: string | null;
   staff_name?: string | null;
+  timezone?: string | null;
 }
 
 export const DEV_FALLBACK_FROM_EMAIL = "onboarding@resend.dev";
@@ -35,15 +36,21 @@ export function resolveFromEmail(alertFromEmail?: string | null): SenderResoluti
   };
 }
 
-export function formatAlertWhen(createdAt: string, fallbackTime?: string | null): string {
+export function formatAlertWhen(createdAt: string, fallbackTime?: string | null, timeZone?: string | null): string {
   if (createdAt) {
-    return new Date(createdAt).toLocaleString("en-GB", {
+    const options: Intl.DateTimeFormatOptions = {
       day: "numeric",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
+    };
+    // Local time of the kiosk that raised the alert; UTC when unknown/invalid.
+    try {
+      return new Date(createdAt).toLocaleString("en-GB", { ...options, timeZone: timeZone || "UTC" });
+    } catch {
+      return new Date(createdAt).toLocaleString("en-GB", { ...options, timeZone: "UTC" });
+    }
   }
 
   return fallbackTime ?? "unknown time";
@@ -54,12 +61,13 @@ function capitalize(s: string): string {
 }
 
 export function buildAlertEmail(alert: AlertPayload) {
-  const when = formatAlertWhen(alert.created_at, alert.time);
+  const when = formatAlertWhen(alert.created_at, alert.time, alert.timezone);
 
   // Alerts raised from a kiosk answer carry the question, response, location
   // and staff member: those get the structured "Warning" layout (#1072).
   // Anything else (older alerts, manual alerts) keeps the plain layout.
   if (alert.question_text) {
+    const alertUrl = `${APP_URL}/notifications?alert=${encodeURIComponent(alert.id)}`;
     const severityLabel = "⚠️ Warning";
     const finding = alert.response_text
       ? `${alert.question_text}: recorded ${alert.response_text}`
@@ -91,7 +99,7 @@ export function buildAlertEmail(alert: AlertPayload) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="o-tint" style="border-collapse:collapse;font-size:14px;border-left:3px solid ${BRAND.teal};background:${BRAND.page}">
         ${rows.map(([label, value]) => row(label, value)).join("")}
       </table>
-      ${emailButton("Open Olia", APP_URL)}`,
+      ${emailButton("Open Olia", alertUrl)}`,
       footerHtml: "You are receiving this because a checklist notification rule matched. Log in to Olia to view and dismiss this alert.",
     });
 
@@ -130,7 +138,7 @@ export function buildAlertEmail(alert: AlertPayload) {
         ${row("Recorded", when)}
         ${alert.source ? row("Source", capitalize(alert.source)) : ""}
       </table>
-      ${emailButton("Open Olia", APP_URL)}`,
+      ${emailButton("Open Olia", `${APP_URL}/notifications?alert=${encodeURIComponent(alert.id)}`)}`,
     footerHtml: "You are receiving this because a checklist notification rule matched. Log in to Olia to view and dismiss this alert.",
   });
 

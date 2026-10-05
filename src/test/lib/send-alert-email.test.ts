@@ -74,4 +74,20 @@ describe("send alert email helpers", () => {
     expect(email.htmlBody).toContain("Maria Lopez");
     expect(email.htmlBody).toContain("Open Olia");
   });
+
+  it("shows the kiosk's local time and falls back to UTC", () => {
+    expect(formatAlertWhen("2026-10-05T09:36:00.000Z", null, "Europe/Madrid")).toContain("11:36");
+    expect(formatAlertWhen("2026-10-05T09:36:00.000Z", null, null)).toContain("09:36");
+    expect(formatAlertWhen("2026-10-05T09:36:00.000Z", null, "Not/AZone")).toContain("09:36");
+  });
+
+  it("links Open Olia to the alert in Notifications", () => {
+    const base = {
+      id: "abc-123", type: "warn", message: "m", area: null, time: null, source: null,
+      created_at: "2026-10-05T09:36:00.000Z", organization_id: "o", recipient_email: "a@b.c",
+    };
+    expect(buildAlertEmail(base).htmlBody).toContain("https://oliahq.com/notifications?alert=abc-123");
+    expect(buildAlertEmail({ ...base, question_text: "Q", response_text: "1" }).htmlBody)
+      .toContain("https://oliahq.com/notifications?alert=abc-123");
+  });
 });
