@@ -1,11 +1,11 @@
 // ─── AccountTab ───────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown, MailCheck, Send, Eye, EyeOff, X,
-  LogOut, MoreVertical, ShieldCheck,
+  LogOut, MoreVertical, ShieldCheck, Search, Building2, MapPin, Layers, KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +22,8 @@ import { usePlan, useUpdateOrganizationName } from "@/hooks/usePlan";
 import { PLAN_LABELS, PLAN_PRICES } from "@/lib/plan-features";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
 import { useSaveAdminPin, useSendInvite } from "@/hooks/useTeamMembers";
+import { useCompanyDepartments } from "@/hooks/useDepartments";
+import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { PERM_LABELS, getPermLabel } from "./shared";
 import { AddLink, ConfirmModal } from "./SharedUI";
 import { NotificationsTab } from "./NotificationsTab";
@@ -58,6 +60,18 @@ export interface AccountTabProps {
   section?: "account" | "users" | "billing";
 }
 
+type MemberAccess = "owner" | "manager" | "kiosk";
+
+/** Everything the Filters popover edits — staged as a draft and only committed on Apply. */
+interface MemberFilters {
+  conceptIds: string[];
+  locationIds: string[];
+  departmentIds: string[];
+  access: MemberAccess[];
+}
+
+const DEFAULT_MEMBER_FILTERS: MemberFilters = { conceptIds: [], locationIds: [], departmentIds: [], access: [] };
+
 export function AccountTab({
   locations, concepts, onAddConcept, onEditConcept, onDeleteConcept,
   activeLocationIds, inactiveLocationIds, teamMembers, onSavePerms,
@@ -81,6 +95,58 @@ export function AccountTab({
   useEffect(() => {
     setCompanyName(org?.name ?? "");
   }, [org?.name]);
+
+  // Team member search + filters. Applied filters, plus the staged copy the
+  // popover edits — committed on Apply, discarded if it is dismissed.
+  const { data: departments = [] } = useCompanyDepartments();
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberFilters, setMemberFilters] = useState<MemberFilters>(DEFAULT_MEMBER_FILTERS);
+  const [memberDraft, setMemberDraft] = useState<MemberFilters>(DEFAULT_MEMBER_FILTERS);
+  const [memberFiltersOpen, setMemberFiltersOpen] = useState(false);
+
+  // The popover's location list narrows to the draft concept(s).
+  const draftScopedLocations = useMemo(
+    () => memberDraft.conceptIds.length === 0 ? locations : locations.filter(l => l.concept_id && memberDraft.conceptIds.includes(l.concept_id)),
+    [locations, memberDraft.conceptIds],
+  );
+  // Drop draft locations a concept change put out of scope — keeps the same
+  // object when nothing changed to avoid a re-render loop.
+  useEffect(() => {
+    setMemberDraft(prev => {
+      const next = prev.locationIds.filter(id => draftScopedLocations.some(l => l.id === id));
+      return next.length === prev.locationIds.length ? prev : { ...prev, locationIds: next };
+    });
+  }, [draftScopedLocations]);
+
+  const memberAccess = (m: TeamMember): MemberAccess => m.is_owner ? "owner" : m.is_manager ? "manager" : "kiosk";
+  const normalizedMemberSearch = memberSearch.trim().toLowerCase();
+  // A member with no location assignments works at every location, so they match any location/concept filter.
+  const memberMatches = (m: TeamMember) => {
+    if (normalizedMemberSearch && ![m.name, m.email ?? "", m.role].some(v => v.toLowerCase().includes(normalizedMemberSearch))) return false;
+    const everywhere = m.is_owner || m.location_ids.length === 0;
+    if (memberFilters.conceptIds.length > 0 && !everywhere &&
+      !m.location_ids.some(id => {
+        const conceptId = locations.find(l => l.id === id)?.concept_id;
+        return !!conceptId && memberFilters.conceptIds.includes(conceptId);
+      })) return false;
+    if (memberFilters.locationIds.length > 0 && !everywhere && !m.location_ids.some(id => memberFilters.locationIds.includes(id))) return false;
+    if (memberFilters.departmentIds.length > 0 && !m.department_ids.some(id => memberFilters.departmentIds.includes(id))) return false;
+    if (memberFilters.access.length > 0 && !memberFilters.access.includes(memberAccess(m))) return false;
+    return true;
+  };
+  const visibleMembers = [...teamMembers].filter(memberMatches).sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0);
+  const accessLabel = (a: MemberAccess) => t(a === "owner" ? "accountTab.accessOwner" : a === "manager" ? "accountTab.accessManager" : "accountTab.accessKiosk");
+  const memberFilterCount = [
+    memberFilters.conceptIds, memberFilters.locationIds, memberFilters.departmentIds, memberFilters.access,
+  ].filter(list => list.length > 0).length;
+  const removeMemberFilter = (key: keyof MemberFilters, id: string) =>
+    setMemberFilters(prev => ({ ...prev, [key]: (prev[key] as string[]).filter(x => x !== id) }));
+  const memberFilterChips: ActiveFilterChip[] = [
+    ...memberFilters.conceptIds.map(id => ({ key: `c-${id}`, label: concepts.find(c => c.id === id)?.name ?? id, onRemove: () => removeMemberFilter("conceptIds", id) })),
+    ...memberFilters.locationIds.map(id => ({ key: `l-${id}`, label: locations.find(l => l.id === id)?.name ?? id, onRemove: () => removeMemberFilter("locationIds", id) })),
+    ...memberFilters.departmentIds.map(id => ({ key: `d-${id}`, label: departments.find(d => d.id === id)?.name ?? id, onRemove: () => removeMemberFilter("departmentIds", id) })),
+    ...memberFilters.access.map(a => ({ key: `a-${a}`, label: accessLabel(a), onRemove: () => removeMemberFilter("access", a) })),
+  ];
 
   // Team member expand/collapse
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
@@ -636,6 +702,69 @@ export function AccountTab({
 
       {/* Team Members */}
       {show("users") && <section>
+        <div className="space-y-3 mb-3">
+          <FiltersPopover
+            testIdPrefix="members"
+            open={memberFiltersOpen}
+            onOpenChange={o => { if (o) setMemberDraft(memberFilters); setMemberFiltersOpen(o); }}
+            activeCount={memberFilterCount}
+            onClear={() => setMemberDraft(DEFAULT_MEMBER_FILTERS)}
+            onApply={() => { setMemberFilters(memberDraft); setMemberFiltersOpen(false); }}
+            search={<>
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                data-testid="members-search"
+                placeholder={t("accountTab.searchPlaceholder")}
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </>}
+          >
+            <FilterField label={t("accountTab.conceptFilter")}>
+              <FilterMultiSelect
+                testId="members-concept-filter"
+                icon={<Building2 size={14} className="text-muted-foreground shrink-0" />}
+                options={concepts.map(c => ({ id: c.id, label: c.name }))}
+                selected={memberDraft.conceptIds}
+                onChange={ids => setMemberDraft(prev => ({ ...prev, conceptIds: ids }))}
+                allLabel={t("accountTab.allConcepts")}
+              />
+            </FilterField>
+            <FilterField label={t("accountTab.locationFilter")}>
+              <FilterMultiSelect
+                testId="members-location-filter"
+                icon={<MapPin size={14} className="text-muted-foreground shrink-0" />}
+                options={draftScopedLocations.map(l => ({ id: l.id, label: l.name }))}
+                selected={memberDraft.locationIds}
+                onChange={ids => setMemberDraft(prev => ({ ...prev, locationIds: ids }))}
+                allLabel={t("accountTab.allLocations")}
+              />
+            </FilterField>
+            <FilterField label={t("accountTab.departmentFilter")}>
+              <FilterMultiSelect
+                testId="members-department-filter"
+                icon={<Layers size={14} className="text-muted-foreground shrink-0" />}
+                options={departments.map(d => ({ id: d.id, label: d.name }))}
+                selected={memberDraft.departmentIds}
+                onChange={ids => setMemberDraft(prev => ({ ...prev, departmentIds: ids }))}
+                allLabel={t("accountTab.allDepartments")}
+              />
+            </FilterField>
+            <FilterField label={t("accountTab.accessFilter")}>
+              <FilterMultiSelect
+                testId="members-access-filter"
+                icon={<KeyRound size={14} className="text-muted-foreground shrink-0" />}
+                options={(["owner", "manager", "kiosk"] as MemberAccess[]).map(a => ({ id: a, label: accessLabel(a) }))}
+                selected={memberDraft.access}
+                onChange={ids => setMemberDraft(prev => ({ ...prev, access: ids as MemberAccess[] }))}
+                allLabel={t("accountTab.allAccess")}
+              />
+            </FilterField>
+          </FiltersPopover>
+          <ActiveFilterChips testIdPrefix="members" chips={memberFilterChips} onClearAll={() => setMemberFilters(DEFAULT_MEMBER_FILTERS)} />
+        </div>
         {/* pr: card border + row padding + trash button padding, so Add lines up with the trash icons */}
         <div className="flex justify-end mb-3 pr-[23px]">
           <AddLink onClick={onInviteMember} ariaLabel={t("accountTab.addTeamMember")} />
@@ -648,7 +777,10 @@ export function AccountTab({
             <p className="w-24 shrink-0 text-xs font-semibold text-muted-foreground">{t("accountTab.role")}</p>
             <div className="w-32 shrink-0" />
           </div>
-          {[...teamMembers].sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0).map(member => {
+          {visibleMembers.length === 0 && (
+            <p data-testid="members-no-results" className="text-sm text-muted-foreground py-8 text-center">{t("accountTab.noResults")}</p>
+          )}
+          {visibleMembers.map(member => {
             const isExpanded = expandedMemberId === member.id;
             const mp = pendingPerms[member.id] ?? member.permissions;
             const inviteExpired = pendingInviteStatus.get(member.id);
