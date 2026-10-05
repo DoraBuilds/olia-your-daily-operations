@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { consumePostLoginPath } from "@/lib/post-login-path";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
@@ -21,7 +22,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     if (loading) return; // still processing the session — wait
-    navigate(user ? "/admin" : "/", { replace: true });
+    navigate(user ? consumePostLoginPath("/admin") : "/", { replace: true });
   }, [user, loading, navigate]);
 
   return (

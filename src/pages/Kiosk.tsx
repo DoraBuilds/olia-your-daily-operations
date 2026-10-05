@@ -157,6 +157,11 @@ function KioskPreviewBar() {
   );
 }
 
+/** IANA zone of this device (the kiosk sits at the location), for alert-email times. */
+const kioskTimeZone = () => {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; }
+};
+
 export default function Kiosk() {
   return (
     <>
@@ -285,6 +290,7 @@ function KioskScreen() {
       p_question: question.text.slice(0, 500),
       p_response: String(numericValue),
       p_staff_name: selectedStaffName || null,
+      p_timezone: kioskTimeZone(),
     });
     if (alertErr) {
       setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
@@ -343,6 +349,7 @@ function KioskScreen() {
         p_question: questionText.slice(0, 500),
         p_response: response ? response.slice(0, 500) : null,
         p_staff_name: selectedStaffName || null,
+        p_timezone: kioskTimeZone(),
       };
     };
 

@@ -5,6 +5,7 @@ import i18n from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { consumePostLoginPath } from "@/lib/post-login-path";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { buildPublicAuthRedirectUrl } from "@/lib/github-pages-routing";
 import { legalTheme, legalLinkStyle } from "@/lib/legal-theme";
@@ -65,7 +66,7 @@ export default function Login() {
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) navigate("/admin", { replace: true });
+    if (user) navigate(consumePostLoginPath("/admin"), { replace: true });
   }, [user, navigate]);
 
   const emailValue = email.trim().toLowerCase();
