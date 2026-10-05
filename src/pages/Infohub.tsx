@@ -42,6 +42,7 @@ import {
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import { accessMatchesFilters, activeInfohubFilterCount, DEFAULT_INFOHUB_FILTERS, reachableFolderIds, type AccessFilterContext, type DocKind, type InfohubFilters, type Progress } from "./infohub/infohub-filters";
 import { cn } from "@/lib/utils";
+import { richTextToPlain } from "@/lib/rich-text";
 import { canAccessInfohubContent, canManageInfohubAccess, conceptIdsForLocations, infohubPrincipalForMember, type InfohubAccessControl, type InfohubPrincipal } from "@/lib/infohub-access";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { type AccessTarget, type SubTab } from "./infohub/infohub-types";
@@ -425,7 +426,7 @@ export default function Infohub() {
           let text: string;
           if (section === "library") {
             const libraryDoc = doc as DocItem;
-            text = `${libraryDoc.title}\n${"=".repeat(libraryDoc.title.length)}\n\n${libraryDoc.summary}\n\n${libraryDoc.content}`;
+            text = `${libraryDoc.title}\n${"=".repeat(libraryDoc.title.length)}\n\n${libraryDoc.summary}\n\n${richTextToPlain(libraryDoc.content)}`;
           } else {
             const trainingDoc = doc as TrainingDoc;
             text = `${trainingDoc.title}\n${"=".repeat(trainingDoc.title.length)}\n\n${trainingDoc.steps.map((step, i) => `Step ${i + 1}: ${step}`).join("\n\n")}`;
@@ -986,7 +987,7 @@ export default function Infohub() {
           sourceLabel={subTab === "library" ? t("aiSheet.libraryDocument") : t("aiSheet.trainingModule")}
           sourceText={
             subTab === "library"
-              ? (libDocs.find(doc => doc.title === aiSheetDocTitle)?.content ?? "")
+              ? richTextToPlain(libDocs.find(doc => doc.title === aiSheetDocTitle)?.content ?? "")
               : (trainDocs.find(doc => doc.title === aiSheetDocTitle)?.steps.join("\n\n") ?? "")
           }
           loadSourceText={subTab === "library" ? async () => {

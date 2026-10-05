@@ -13,8 +13,14 @@
  * Called by DocDetail (src/pages/kiosk/KioskLibrary.tsx):
  *   supabase.functions.invoke("kiosk-library-file", { body: { location_id, team_member_id, kiosk_token, document_id } })
  *
+ * Rich text bodies embed images as <img data-path="org/file.jpg">. Passing
+ * `image_paths` signs just those paths, and only if they appear in the body of
+ * a document this team member can see:
+ *   { ..., image_paths: string[] }  ->  { image_urls: { [path]: signedUrl } }
+ *
  * Responses (always 200, like the other functions here):
  *   { url, file_type }
+ *   { image_urls }
  *   { error: "not_found" | "bad_request" | "server_error" }
  */
 
@@ -37,7 +43,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST")    return json({ error: "bad_request" });
 
-  let body: { location_id?: string; team_member_id?: string | null; kiosk_token?: string; document_id?: string };
+  let body: { location_id?: string; team_member_id?: string | null; kiosk_token?: string; document_id?: string; image_paths?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -67,6 +73,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const doc = (data?.documents ?? []).find((d: { id: string }) => d.id === document_id);
+
+  if (Array.isArray(body.image_paths)) {
+    // Only sign paths that are actually embedded in this document's body.
+    const embedded = new Set<string>();
+    for (const m of String(doc?.body ?? "").matchAll(/data-path="([^"]+)"/g)) embedded.add(m[1]);
+    const wanted = body.image_paths
+      .filter((p): p is string => typeof p === "string" && embedded.has(p))
+      .slice(0, 50);
+    if (!doc || wanted.length === 0) return json({ image_urls: {} });
+    const { data: signedList, error: listError } = await admin.storage
+      .from("infohub-files")
+      .createSignedUrls(wanted, 3600);
+    if (listError) {
+      console.error("createSignedUrls failed:", listError.message);
+      return json({ error: "server_error" });
+    }
+    const image_urls: Record<string, string> = {};
+    for (const row of signedList ?? []) if (row.path && row.signedUrl) image_urls[row.path] = row.signedUrl;
+    return json({ image_urls });
+  }
+
   const filePath = doc?.metadata?.filePath;
   if (!filePath) return json({ error: "not_found" });
 
