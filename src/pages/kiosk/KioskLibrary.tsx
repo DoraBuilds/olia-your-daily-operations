@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { BookOpen, Check, CheckCircle2, FileText, Folder, GraduationCap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { FilePreviewModal } from "../infohub/InfohubShared";
+import { RichTextView, type ImageUrlResolver } from "@/components/RichTextView";
 import { ensureKioskToken } from "./PinEntryModal";
 import { useInactivityTimer } from "./hooks";
 import { cn } from "@/lib/utils";
@@ -411,6 +412,14 @@ function DocDetail({
 
   // The kiosk has no storage access of its own — the edge function checks the
   // kiosk token + member visibility and hands back a short-lived signed URL.
+  const resolveKioskImages: ImageUrlResolver = async (paths) => {
+    const token = await ensureKioskToken(locationId);
+    const { data } = await supabase.functions.invoke("kiosk-library-file", {
+      body: { location_id: locationId, team_member_id: memberId, kiosk_token: token, document_id: doc.id, image_paths: paths },
+    });
+    return (data?.image_urls ?? {}) as Record<string, string>;
+  };
+
   const openFile = async () => {
     setOpening(true);
     setFileError(false);
@@ -453,13 +462,11 @@ function DocDetail({
         </ol>
       )}
       {doc.body && !doc.metadata?.filePath && (
-        <div className="space-y-3">
-          {doc.body.split("\n\n").map((para, i) => (
-            <p key={i} className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {para}
-            </p>
-          ))}
-        </div>
+        <RichTextView
+          body={doc.body}
+          resolveImages={resolveKioskImages}
+          onImageClick={(url) => setPreview({ url, fileType: "image/jpeg" })}
+        />
       )}
       {doc.metadata?.filePath && (
         <>

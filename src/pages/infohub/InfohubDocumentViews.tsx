@@ -7,7 +7,12 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc } from "@/lib/infohub-catalog";
 
-import { AIActionsSheet } from "./InfohubShared";
+import { useAuth } from "@/contexts/AuthContext";
+import { richTextToPlain } from "@/lib/rich-text";
+import { resolveInfohubImages } from "@/lib/infohub-images";
+import { RichTextView } from "@/components/RichTextView";
+import { AIActionsSheet, FilePreviewModal } from "./InfohubShared";
+import { RichTextEditor } from "./RichTextEditor";
 
 export function LibraryDocDetail({
   doc,
@@ -29,6 +34,9 @@ export function LibraryDocDetail({
   const [editContent, setEditContent] = useState(doc.content);
   const [editTags, setEditTags] = useState(doc.tags.join(", "));
   const [fileSignedUrl, setFileSignedUrl] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ url: string; alt: string } | null>(null);
+  const { teamMember } = useAuth();
+  const organizationId = teamMember?.organization_id ?? "";
 
   useEffect(() => {
     if (!doc.filePath) return;
@@ -106,12 +114,11 @@ export function LibraryDocDetail({
             </div>
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">{t("docViews.contentLabel")}</label>
-              <textarea
-                data-testid="doc-content-editor"
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                rows={10}
-                className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-sage/30"
+              <RichTextEditor
+                body={editContent}
+                organizationId={organizationId}
+                resolveImages={resolveInfohubImages}
+                onChange={setEditContent}
               />
             </div>
             <div className="space-y-2">
@@ -166,7 +173,11 @@ export function LibraryDocDetail({
             )}
             <div className="card-surface p-5">
               {doc.content ? (
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{doc.content}</p>
+                <RichTextView
+                  body={doc.content}
+                  resolveImages={resolveInfohubImages}
+                  onImageClick={(url, alt) => setImagePreview({ url, alt })}
+                />
               ) : (
                 <button onClick={() => setIsEditing(true)} className="w-full text-sm text-muted-foreground text-center py-4 hover:text-foreground transition-colors">
                   {t("docViews.tapToAddContent")}
@@ -176,11 +187,14 @@ export function LibraryDocDetail({
           </>
         )}
       </main>
+      {imagePreview && (
+        <FilePreviewModal signedUrl={imagePreview.url} fileType="image/jpeg" title={imagePreview.alt || doc.title} onClose={() => setImagePreview(null)} />
+      )}
       {aiSheet && (
         <AIActionsSheet
           docTitle={doc.title}
           sourceLabel={t("aiSheet.libraryDocument")}
-          sourceText={`${doc.title}\n\n${doc.summary}\n\n${doc.content}`}
+          sourceText={`${doc.title}\n\n${doc.summary}\n\n${richTextToPlain(doc.content)}`}
           onClose={() => setAiSheet(false)}
         />
       )}

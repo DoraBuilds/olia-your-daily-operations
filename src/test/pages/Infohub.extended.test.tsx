@@ -235,7 +235,7 @@ describe("Infohub extended behavior", () => {
     expect(screen.queryByRole("button", { name: /restore/i })).not.toBeInTheDocument();
   });
 
-  it("lets a document be edited and saved", () => {
+  it("lets a document be edited and saved", async () => {
     renderWithProviders(<Infohub />);
     const folderRow = screen.getByText("Food Safety").closest("div[class*='flex']") as HTMLElement | null;
     if (!folderRow) return;
@@ -245,10 +245,15 @@ describe("Infohub extended behavior", () => {
     fireEvent.click(docRow);
 
     fireEvent.click(screen.getByTestId("doc-edit-btn"));
-    fireEvent.change(screen.getByTestId("doc-content-editor"), { target: { value: "Updated training content." } });
+    // Content is a rich text editor: toolbar with checklist/image/table tools, existing text loaded
+    expect(await screen.findByTestId("doc-content-editor")).toBeInTheDocument();
+    expect(screen.getByLabelText("Checklist")).toBeInTheDocument();
+    expect(screen.getByLabelText("Insert image")).toBeInTheDocument();
+    expect(screen.getByLabelText("Insert table")).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue("Allergen handling procedure"), { target: { value: "Allergen handling v2" } });
     fireEvent.click(screen.getByTestId("doc-save-btn"));
 
-    expect(screen.getByText("Updated training content.")).toBeInTheDocument();
+    expect(screen.getByText("Allergen handling v2")).toBeInTheDocument();
   });
 
   it("creates a document with tags", () => {
