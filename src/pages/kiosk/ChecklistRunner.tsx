@@ -11,7 +11,6 @@ import {
   isBlankAnswer,
   loadKioskDraftSnapshot,
   buildRuntimeQuestions,
-  getFirstUnansweredQuestionId,
 } from "./utils";
 import { useInactivityTimer, useLiveClock } from "./hooks";
 import { QuestionInput } from "./QuestionInputs";
@@ -55,27 +54,12 @@ export function ChecklistRunner({
   const [answers, setAnswers] = useState<Record<string, any>>(() => initialDraft.answers);
 
   const hasSavedDraft = initialDraft.hasSavedDraft;
-  const initialRuntimeQuestions = buildRuntimeQuestions(checklist.questions, initialDraft.answers);
 
   const [showDraftBanner, setShowDraftBanner] = useState(hasSavedDraft);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showMissingError, setShowMissingError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [linkedResourceId, setLinkedResourceId] = useState<string | null>(null);
-
-  // Accordion: track which question is currently open/active
-  const [currentQuestionId, setCurrentQuestionId] = useState<string>(() => {
-    if (typeof initialDraft.currentQuestionId === "string" && initialDraft.currentQuestionId) {
-      return initialDraft.currentQuestionId;
-    }
-    if (typeof initialDraft.currentQIdx === "number" && Number.isFinite(initialDraft.currentQIdx)) {
-      return initialRuntimeQuestions[Math.min(
-        Math.max(0, initialDraft.currentQIdx),
-        Math.max(0, initialRuntimeQuestions.length - 1),
-      )]?.id ?? initialRuntimeQuestions[0]?.id ?? "";
-    }
-    return getFirstUnansweredQuestionId(initialRuntimeQuestions, initialDraft.answers) ?? initialRuntimeQuestions[0]?.id ?? "";
-  });
 
   // Track when the runner was opened (for PDF metadata)
   const startedAtRef = useRef(new Date());
@@ -88,41 +72,15 @@ export function ChecklistRunner({
   const scorable = questions.filter(q => q.type !== "instruction");
   const answeredCount = scorable.filter(q => !isBlankAnswer(answers[q.id])).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
-  const currentQuestionIndex = Math.max(0, questions.findIndex(q => q.id === currentQuestionId));
   const hasUnansweredTrigger = (question: Question) =>
     Boolean(question.config?.logicRules?.some(rule => rule.comparator === "unanswered" && (rule.triggers?.length ?? 0) > 0));
 
-  const persistDraft = useCallback((nextAnswers: Record<string, any>, nextCurrentQuestionId: string) => {
-    draftRef.current = { answers: nextAnswers, currentQuestionId: nextCurrentQuestionId, hasSavedDraft: true };
+  const persistDraft = useCallback((nextAnswers: Record<string, any>) => {
+    draftRef.current = { answers: nextAnswers, hasSavedDraft: true };
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, currentQuestionId: nextCurrentQuestionId, attribution: attributionRef.current }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, attribution: attributionRef.current }));
     } catch { /* ignore */ }
   }, []);
-
-  const advanceQuestion = (nextAnswers = answers) => {
-    const runtimeQuestions = buildRuntimeQuestions(checklist.questions, nextAnswers);
-    setCurrentQuestionId(prev => {
-      const currentIndex = runtimeQuestions.findIndex(q => q.id === prev);
-      const nextIndex = Math.min(Math.max(currentIndex, 0) + 1, runtimeQuestions.length - 1);
-      const nextQuestionId = runtimeQuestions[nextIndex]?.id ?? prev;
-      persistDraft(nextAnswers, nextQuestionId);
-      setTimeout(() => {
-        const el = document.getElementById(`question-${nextQuestionId}`);
-        if (typeof el?.scrollIntoView === "function") el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 60);
-      return nextQuestionId;
-    });
-  };
-
-  useEffect(() => {
-    if (!questions.some(q => q.id === currentQuestionId)) {
-      const fallbackId = getFirstUnansweredQuestionId(questions, answers) ?? questions[0]?.id ?? "";
-      if (fallbackId && fallbackId !== currentQuestionId) {
-        persistDraft(answers, fallbackId);
-        setCurrentQuestionId(fallbackId);
-      }
-    }
-  }, [answers, currentQuestionId, questions, persistDraft]);
 
   // Derived from live answers so the footer count drops as each missing question is filled in.
   const missingRequired = questions.filter(q => q.required && q.type !== "instruction" && isBlankAnswer(answers[q.id]));
@@ -138,19 +96,27 @@ export function ChecklistRunner({
   }, [lightboxImage]);
 
   const handleComplete = () => {
-    if (missingRequired.length > 0) {
+    // Questions with a "not provided" rule count as skipped once the staff submits without answering.
+    let finalAnswers = answers;
+    for (const q of questions) {
+      if (hasUnansweredTrigger(q) && isBlankAnswer(finalAnswers[q.id])) finalAnswers = { ...finalAnswers, [q.id]: UNANSWERED_SENTINEL };
+    }
+    if (finalAnswers !== answers) { setAnswers(finalAnswers); persistDraft(finalAnswers); }
+    const stillMissing = buildRuntimeQuestions(checklist.questions, finalAnswers)
+      .filter(q => q.required && q.type !== "instruction" && isBlankAnswer(finalAnswers[q.id]));
+    if (stillMissing.length > 0) {
       setShowMissingError(true);
-      document.getElementById(`question-${missingRequired[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      document.getElementById(`question-${stillMissing[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     // Pre-filled defaults nobody touched are attributed to whoever submits.
     const attribution = { ...attributionRef.current };
     const completedAt = new Date().toISOString();
-    for (const [questionId, value] of Object.entries(answers)) {
+    for (const [questionId, value] of Object.entries(finalAnswers)) {
       if (!attribution[questionId] && !isBlankAnswer(value)) attribution[questionId] = { by: staffName, at: completedAt };
     }
-    onComplete(answers, startedAtRef.current, attribution);
+    onComplete(finalAnswers, startedAtRef.current, attribution);
   };
 
   return (
@@ -196,41 +162,18 @@ export function ChecklistRunner({
           </div>
         )}
 
-        {/* ── Accordion questions ── */}
+        {/* ── All questions, always open ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {questions.map((q, qi) => {
             const isInstruction = q.type === "instruction";
-            const isCurrent = qi === currentQuestionIndex;
-            const isPast = qi < currentQuestionIndex;
-
             const isAnswered = !isBlankAnswer(answers[q.id]);
             const isMissing = !!(completionError && q.required && !isAnswered && !isInstruction);
+            // Quiet red edge on required questions still waiting for an answer; gone once answered.
+            const needsAnswer = q.required && !isAnswered && !isInstruction;
 
             const prevQ = qi > 0 ? questions[qi - 1] : null;
             const sectionChanged = !prevQ || prevQ.sectionName !== q.sectionName;
             const showSectionHeader = sectionChanged && !!(q.sectionName);
-
-            const isLastQ = qi >= questions.length - 1;
-            const answerVal = answers[q.id];
-            // For colored multiple-choice (e.g. Yes/No preset), reflect the selected option's color
-            let selectedOptionSeverity: "error" | "warn" | null = null;
-            if (q.type === "multiple_choice" && q.optionColors?.length && typeof answerVal === "string" && q.options?.length) {
-              const idx = q.options.indexOf(answerVal);
-              if (idx >= 0 && idx < q.optionColors.length) {
-                const color = q.optionColors[idx];
-                if (color.includes("status-error")) selectedOptionSeverity = "error";
-                else if (color.includes("status-warn")) selectedOptionSeverity = "warn";
-              }
-            }
-            // For uncolored multiple-choice, treat a "No" answer as a warning
-            const isNoAnswer = q.type === "multiple_choice" && !q.optionColors?.length &&
-              typeof answerVal === "string" && answerVal.toLowerCase() === "no";
-            const hasBlankUnansweredTrigger = hasUnansweredTrigger(q);
-            // Every question keeps its own forward CTA — answering never jumps ahead.
-            // On the last question the footer "Complete checklist" is the CTA.
-            const needsNextBtn = isCurrent && (isInstruction || hasBlankUnansweredTrigger || !isLastQ);
-            const nextBtnDisabled = !isInstruction && q.required && !isAnswered && !hasBlankUnansweredTrigger &&
-              (q.type === "checkbox" || q.type === "multiple_choice");
 
             return (
               <Fragment key={q.id}>
@@ -252,130 +195,59 @@ export function ChecklistRunner({
                   );
                 })()}
 
-                {isCurrent ? (
-                  // ── Expanded (active) question ──
-                  <div
-                    id={`question-${q.id}`}
-                    className={cn(
-                      "bg-card border rounded-2xl p-5 transition-colors shadow-card",
-                      isMissing
-                        ? "border-status-error/50 bg-status-error/5 ring-1 ring-status-error/20"
-                        : "border-powder-blue/25 ring-1 ring-powder-blue/10 bg-powder-blue-light/40 border-l-[3px] border-l-powder-blue/50",
-                    )}
-                  >
-                    {!isInstruction && (
-                      <div className="flex items-start gap-1.5 mb-3">
-                        <span className="text-sm font-normal text-foreground tabular-nums shrink-0 leading-snug">
-                          {qi + 1}.
-                        </span>
-                        <p className="text-sm font-normal text-foreground leading-snug flex-1">
-                          {q.text}
-                          {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
-                        </p>
-                      </div>
-                    )}
+                <div
+                  id={`question-${q.id}`}
+                  className={cn(
+                    "bg-card border rounded-2xl p-5 transition-colors shadow-card border-border",
+                    needsAnswer && "border-l-[3px] border-l-[#E5251B]",
+                    isMissing && "border-status-error/50 bg-status-error/5 ring-1 ring-status-error/20",
+                  )}
+                >
+                  {!isInstruction && (
+                    <div className="flex items-start gap-1.5 mb-3">
+                      <span className="text-sm font-normal text-foreground tabular-nums shrink-0 leading-snug">
+                        {qi + 1}.
+                      </span>
+                      <p className="text-sm font-normal text-foreground leading-snug flex-1">
+                        {q.text}
+                        {q.required && <span className="text-status-error ml-1 font-bold">*</span>}
+                      </p>
+                    </div>
+                  )}
 
-                    <div>
-                      <QuestionInput
-                        question={q}
-                        value={answers[q.id]}
-                        organizationId={organizationId}
-                        locationId={locationId}
-                        onChange={v => {
-                          const nextAnswers = { ...answers, [q.id]: v };
+                  <QuestionInput
+                    question={q}
+                    value={answers[q.id]}
+                    organizationId={organizationId}
+                    locationId={locationId}
+                    onChange={v => {
+                      const nextAnswers = { ...answers, [q.id]: v };
+                      attribute(q.id);
+                      setAnswers(nextAnswers);
+                      persistDraft(nextAnswers);
+                      onQuestionAnswerChange?.(q, v);
+                    }}
+                    onImageClick={url => setLightboxImage(url)}
+                    onLinkedResourceOpen={() => setLinkedResourceId(q.linkedResourceId ?? null)}
+                  />
+
+                  {/* Instructions are the only step that still needs an explicit tap. */}
+                  {isInstruction && !isAnswered && (
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={() => {
+                          const nextAnswers = { ...answers, [q.id]: INSTRUCTION_ACKNOWLEDGED };
                           attribute(q.id);
                           setAnswers(nextAnswers);
-                          persistDraft(nextAnswers, currentQuestionId);
-                          onQuestionAnswerChange?.(q, v);
+                          persistDraft(nextAnswers);
                         }}
-                        onImageClick={url => setLightboxImage(url)}
-                        onLinkedResourceOpen={() => setLinkedResourceId(q.linkedResourceId ?? null)}
-                      />
+                        className="px-5 py-2 text-xs font-bold tracking-wide rounded-xl transition-colors bg-sage text-white hover:bg-sage-deep active:scale-[0.97]"
+                      >
+                        {t("runner.acknowledge")}
+                      </button>
                     </div>
-
-                    {needsNextBtn && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => {
-                            if (isInstruction) {
-                              const nextAnswers = { ...answers, [q.id]: INSTRUCTION_ACKNOWLEDGED };
-                              attribute(q.id);
-                              setAnswers(nextAnswers);
-                              if (isLastQ) { persistDraft(nextAnswers, q.id); } else { advanceQuestion(nextAnswers); }
-                              return;
-                            }
-                            if (hasBlankUnansweredTrigger && isBlankAnswer(answers[q.id])) {
-                              const nextAnswers = { ...answers, [q.id]: UNANSWERED_SENTINEL };
-                              attribute(q.id);
-                              setAnswers(nextAnswers);
-                              if (isLastQ) { persistDraft(nextAnswers, q.id); } else { advanceQuestion(nextAnswers); }
-                              return;
-                            }
-                            advanceQuestion();
-                          }}
-                          disabled={nextBtnDisabled}
-                          className={cn(
-                            "px-5 py-2 text-xs font-bold tracking-wide rounded-xl transition-colors",
-                            nextBtnDisabled
-                              ? "bg-muted text-muted-foreground cursor-not-allowed"
-                              : "bg-sage text-white hover:bg-sage-deep active:scale-[0.97]",
-                          )}
-                        >
-                          {isInstruction ? t("runner.acknowledge") : t("runner.next")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // ── Collapsed question (all clickable — free-order navigation) ──
-                  <button
-                    id={`question-${q.id}`}
-                    type="button"
-                    onClick={() => setCurrentQuestionId(q.id)}
-                    className={cn(
-                      "w-full bg-card border rounded-2xl px-4 py-3.5 text-left flex items-center gap-3 transition-colors cursor-pointer hover:border-sage/30",
-                      isPast ? "border-border" : "border-border opacity-60",
-                      isMissing && "border-status-error/40 bg-status-error/5",
-                      !isMissing && selectedOptionSeverity === "error" && "border-status-error/30 bg-status-error/5",
-                      !isMissing && selectedOptionSeverity === "warn" && "border-status-warn/30 bg-status-warn/5",
-                      !isMissing && isNoAnswer && "border-status-warn/30 bg-status-warn/5",
-                    )}
-                  >
-                    {isAnswered ? (
-                      <div className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
-                        selectedOptionSeverity === "error" ? "bg-status-error" :
-                        selectedOptionSeverity === "warn" ? "bg-status-warn" :
-                        isNoAnswer ? "bg-status-warn" : "bg-powder-blue-deep",
-                      )}>
-                        <Check size={11} className="text-white" />
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 shrink-0",
-                        isMissing ? "border-status-error/50" : "border-muted-foreground/25",
-                      )} />
-                    )}
-                    <p className={cn(
-                      "text-sm font-medium truncate flex-1",
-                      isPast ? "text-foreground" : "text-muted-foreground",
-                    )}>
-                      <span className="tabular-nums mr-1.5">{qi + 1}.</span>
-                      {isInstruction ? (q.instructionText ?? q.text ?? t("runner.noteFallback")) : q.text}
-                      {q.required && !isInstruction && <span className="text-status-error ml-1">*</span>}
-                    </p>
-                    {isAnswered && (
-                      <span className={cn(
-                        "text-xs font-semibold shrink-0",
-                        selectedOptionSeverity === "error" ? "text-status-error" :
-                        selectedOptionSeverity === "warn" ? "text-status-warn" :
-                        isNoAnswer ? "text-status-warn" : "text-sage",
-                      )}>✓ {t("runner.done")}</span>
-                    )}
-                    {!isAnswered && isPast && !isInstruction && <span className="text-xs text-muted-foreground/60 shrink-0">{t("runner.edit")}</span>}
-                    {!isAnswered && !isPast && <span className="text-xs text-muted-foreground/50 shrink-0">{t("runner.pending")}</span>}
-                  </button>
-                )}
+                  )}
+                </div>
               </Fragment>
             );
           })}
