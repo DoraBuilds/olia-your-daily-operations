@@ -269,6 +269,8 @@
       "roleOptional": "Role (optional)",
       "newPinHint": "Share it with them for kiosk sign-in.",
       "editPinHint": "Leave blank to keep the current PIN.",
+      "pinReuseTip": "Already have a PIN for another app here? Reuse it - one code to remember.",
+      "pinReuseLabel": "About reusing a PIN",
       "allConcepts": "All concepts",
       "allLocations": "All locations",
       "allLocationsInConcepts": "All locations in selected concepts",
