@@ -428,7 +428,7 @@ describe("Kiosk — ChecklistRunner required-question validation", () => {
     ]));
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
     await waitFor(() => expect(screen.getByText("2 required questions still need an answer.")).toBeInTheDocument());
-    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "done" } });
+    fireEvent.change(screen.getAllByPlaceholderText("Type your answer here…")[0], { target: { value: "done" } });
     await waitFor(() => expect(screen.getByText("1 required question still needs an answer.")).toBeInTheDocument());
     expect(screen.queryByText(/2 required questions/)).not.toBeInTheDocument();
   });
@@ -641,7 +641,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "5" } }); // 5 < 10
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by lt")).toBeInTheDocument();
     });
@@ -654,7 +653,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "10" } }); // 10 >= 10
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by gte")).toBeInTheDocument();
     });
@@ -667,7 +665,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "11" } }); // 11 > 10
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by gt")).toBeInTheDocument();
     });
@@ -680,7 +677,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "10" } }); // 10 <= 10
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by lte")).toBeInTheDocument();
     });
@@ -693,7 +689,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "10" } }); // 5 <= 10 <= 15
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by between")).toBeInTheDocument();
     });
@@ -706,7 +701,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "20" } }); // 20 not in 5-15
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by not_between")).toBeInTheDocument();
     });
@@ -719,7 +713,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "7" } });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by eq")).toBeInTheDocument();
     });
@@ -732,7 +725,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     const input = screen.getByRole("spinbutton");
     fireEvent.change(input, { target: { value: "5" } }); // 5 != 7
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by neq")).toBeInTheDocument();
     });
@@ -845,7 +837,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
     ]));
     fireEvent.click(screen.getByRole("button", { name: "Damaged" }));
     fireEvent.click(screen.getByRole("button", { name: "Broken" }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by is_selected")).toBeInTheDocument();
     });
@@ -883,7 +874,6 @@ describe("Kiosk — doesRuleMatch comparators (via ChecklistRunner logic)", () =
       { id: "q-final", text: "Final", type: "text", required: false },
     ]));
     fireEvent.click(screen.getByRole("button", { name: "Damaged" }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => {
       expect(screen.getByText("Triggered by is_not_selected")).toBeInTheDocument();
     });

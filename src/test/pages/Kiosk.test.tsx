@@ -544,7 +544,6 @@ describe("Kiosk — Grid Screen", () => {
     await act(async () => { fireEvent.click(getDigitBtn("3")); });
     await act(async () => { fireEvent.click(getDigitBtn("4")); });
 
-
     await waitFor(() => {
       expect(supabase.functions.invoke).toHaveBeenCalledWith("kiosk-admin-login", {
         body: { device_token: "device-token-1", pin: "1234" },
@@ -683,7 +682,7 @@ describe("Kiosk — Grid Screen", () => {
     expect(supabase.rpc).not.toHaveBeenCalledWith("validate_kiosk_member_pin", expect.anything());
   });
 
-  it("lets staff move past an optional checkbox question in the runner", async () => {
+  it("shows every question open without a Next button", async () => {
     const { supabase } = await import("@/lib/supabase");
     supabase.rpc.mockImplementation((fn: string) => {
       if (fn === "get_kiosk_checklists") {
@@ -734,14 +733,9 @@ describe("Kiosk — Grid Screen", () => {
       expect(screen.getByText("Optional confirm")).toBeInTheDocument();
     });
 
-    const nextButtons = screen.getAllByRole("button", { name: /Next/i });
-    expect(nextButtons.length).toBeGreaterThan(0);
-
-    fireEvent.click(nextButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText("Required confirm")).toBeInTheDocument();
-    });
+    // Every question is open at once — no Next step needed to reach the next one.
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Required confirm")).toBeInTheDocument();
   });
 });
 
@@ -1113,24 +1107,21 @@ describe("Kiosk — Checklist Runner", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Did you recheck the fridge?")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), {
+    fireEvent.change(screen.getAllByPlaceholderText("Type your answer here…")[0], {
       target: { value: "Yes, I rechecked it." },
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Final question")).toBeInTheDocument();
     });
   });
 
-  it("executes unanswered triggers after skipping a blank question", async () => {
+  it("executes unanswered triggers when a blank question is left at completion", async () => {
     renderRunner({
       id: "ck-unanswered",
       title: "Unanswered Trigger Checklist",
@@ -1180,7 +1171,7 @@ describe("Kiosk — Checklist Runner", () => {
 
     expect(screen.queryByText("Why was this left blank?")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Why was this left blank?")).toBeInTheDocument();
@@ -1223,17 +1214,14 @@ describe("Kiosk — Checklist Runner", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/note required/i)).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), {
+    fireEvent.change(screen.getAllByPlaceholderText("Type your answer here…")[0], {
       target: { value: "All good." },
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     await waitFor(() => {
       expect(screen.getByText("After note")).toBeInTheDocument();
@@ -1298,7 +1286,6 @@ describe("Kiosk — Checklist Runner", () => {
       });
 
       fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
-      fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/photo required/i)).toBeInTheDocument();
@@ -1310,8 +1297,6 @@ describe("Kiosk — Checklist Runner", () => {
       });
       fireEvent.click(screen.getByRole("button", { name: /capture photo/i }));
       fireEvent.click(screen.getByRole("button", { name: /use photo/i }));
-
-      fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
       await waitFor(() => {
         expect(screen.getByText("After photo")).toBeInTheDocument();
@@ -1368,7 +1353,6 @@ describe("Kiosk — Checklist Runner", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next →/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Wash your hands")).toBeInTheDocument();
@@ -1439,45 +1423,37 @@ describe("Kiosk — Checklist Runner", () => {
     expect(document.getElementById("question-q-second")?.textContent).toContain("2.Second check");
   });
 
-  it("stays on a question after it is answered until the user taps Next", async () => {
+  it("marks a required unanswered question with a red edge that goes away once answered", async () => {
     await openRunnerWithQuestions([
       { id: "q-required-checkbox", text: "Fridge checked", responseType: "checkbox", required: true },
       { id: "q-after", text: "After checkbox", responseType: "text", required: true },
     ]);
 
-    const nextBtn = screen.getByRole("button", { name: /next/i });
-    expect(nextBtn).toBeDisabled();
+    const card = () => document.getElementById("question-q-required-checkbox");
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Type your answer here…")).toBeInTheDocument();
+    expect(card()?.className).toContain("border-l-[#E5251B]");
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
 
-    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
-    expect(screen.queryByPlaceholderText("Type your answer here…")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("Type your answer here…")).toBeInTheDocument();
-    });
+    expect(card()?.className).not.toContain("border-l-");
+    expect(document.getElementById("question-q-after")?.className).toContain("border-l-[#E5251B]");
   });
 
-  it("shows a manual next CTA for an optional unchecked checkbox and lets the user continue", async () => {
+  it("shows optional questions and instructions open without a red edge, instruction keeps Acknowledge", async () => {
     await openRunnerWithQuestions([
       { id: "q-optional-checkbox", text: "Optional checkbox", responseType: "checkbox", required: false },
       { id: "q-instruction", text: "Instruction", responseType: "instruction", config: { instructionText: "Wash hands" } },
       { id: "q-required-text", text: "Required note", responseType: "text", required: true },
     ]);
 
-    const nextBtn = screen.getByRole("button", { name: /next/i });
-    expect(nextBtn.parentElement?.className).toContain("justify-end");
-
-    fireEvent.click(nextBtn);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /acknowledge/i })).toBeInTheDocument();
-    });
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(document.getElementById("question-q-optional-checkbox")?.className).not.toContain("border-l-");
+    expect(screen.getByRole("button", { name: /acknowledge/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Type your answer here…")).toBeInTheDocument();
   });
 
-  it("shows a next CTA for required multi-select multiple choice after an answer is selected", async () => {
+  it("drops the red edge from a required multi-select once an answer is selected", async () => {
     renderWithProviders(
       <ChecklistRunner
         checklist={{
@@ -1511,20 +1487,13 @@ describe("Kiosk — Checklist Runner", () => {
       />
     );
 
-    const nextBtn = screen.getAllByRole("button", { name: /next/i })[0];
-    expect(nextBtn).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Next question")).toBeInTheDocument();
+    expect(document.getElementById("question-q-required-multi")?.className).toContain("border-l-");
 
     fireEvent.click(screen.getByRole("button", { name: "A" }));
 
-    await waitFor(() => {
-      expect(screen.getAllByRole("button", { name: /next/i })[0]).toBeEnabled();
-    });
-
-    fireEvent.click(screen.getAllByRole("button", { name: /next/i })[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText("Next question")).toBeInTheDocument();
-    });
+    expect(document.getElementById("question-q-required-multi")?.className).not.toContain("border-l-");
   });
 
   it("fires an out-of-range number alert after 90 seconds even if the checklist is completed", async () => {
@@ -1640,7 +1609,7 @@ describe("Kiosk — Checklist Runner", () => {
     });
   });
 
-  it("shows a manual next CTA for an optional photo question and uses live camera capture", async () => {
+  it("uses live camera capture for an optional photo question", async () => {
     const originalMediaDevices = navigator.mediaDevices;
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
@@ -1674,8 +1643,8 @@ describe("Kiosk — Checklist Runner", () => {
         { id: "q-instruction", text: "Instruction", responseType: "instruction", config: { instructionText: "Carry on" } },
       ]);
 
-      const nextBtn = screen.getByRole("button", { name: /next/i });
-      expect(nextBtn.parentElement?.className).toContain("justify-end");
+      expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+      expect(screen.getByText("Carry on")).toBeInTheDocument();
 
       expect(document.querySelector('input[type="file"]')).toBeNull();
 
@@ -1692,11 +1661,6 @@ describe("Kiosk — Checklist Runner", () => {
         expect(screen.getByText("Photo attached")).toBeInTheDocument();
       });
 
-      fireEvent.click(nextBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText("Carry on")).toBeInTheDocument();
-      });
     } finally {
       Object.defineProperty(navigator, "mediaDevices", {
         configurable: true,
@@ -1742,7 +1706,6 @@ describe("Kiosk — Checklist Runner", () => {
     ]);
 
     fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => expect(screen.getByText(/note required/i)).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "Door was ajar" } });
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
