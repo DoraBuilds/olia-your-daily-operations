@@ -126,6 +126,7 @@
   },
   "inputs": {
     "negative": "Negativo",
+    "minusHint": "(menos)",
     "decimalPoint": "Punto decimal",
     "deleteLastDigit": "Borrar último dígito",
     "delete": "Borrar",

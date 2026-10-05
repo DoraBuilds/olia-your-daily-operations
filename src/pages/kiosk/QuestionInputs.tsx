@@ -189,9 +189,12 @@ export function TemperatureKeypadInput({
           onClick={() => update(digits, !negative)}
           aria-label={t("inputs.negative")}
           aria-pressed={negative}
-          className={cn(keyClass, negative && "bg-sage border-sage text-primary-foreground active:bg-sage")}
+          className={cn(keyClass, "flex-col gap-0 leading-none", negative && "bg-sage border-sage text-primary-foreground active:bg-sage")}
         >
-          −
+          <span>−</span>
+          <span className={cn("text-[11px] font-normal mt-0.5", negative ? "text-primary-foreground/70" : "text-muted-foreground")}>
+            {t("inputs.minusHint")}
+          </span>
         </button>
         <button type="button" onClick={() => pressDigit("0")} className={keyClass}>0</button>
         <button type="button" onClick={pressDecimal} aria-label={t("inputs.decimalPoint")} className={cn(keyClass, "font-semibold")}>
