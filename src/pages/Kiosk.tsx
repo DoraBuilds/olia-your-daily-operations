@@ -282,6 +282,9 @@ function KioskScreen() {
       p_type: "warn",
       p_message: `${question.text}: recorded ${numericValue} — outside the allowed range (${rangeStr})`,
       p_area: selectedChecklist.title.slice(0, 100),
+      p_question: question.text.slice(0, 500),
+      p_response: String(numericValue),
+      p_staff_name: selectedStaffName || null,
     });
     if (alertErr) {
       setInsertError(`⚠ Out-of-range alert NOT saved to DB: "${question.text}" (${alertErr.message}). Apply migration 20260429000002_secure_anon_alert_insert.sql in Supabase SQL Editor.`);
@@ -331,6 +334,18 @@ function KioskScreen() {
     const actionAlerts = collectActionAlerts(questions, answers);
     if (notifyAlerts.length === 0 && actionAlerts.length === 0) return;
 
+    // Question/response/staff feed the alert email's subject and body (#1072).
+    const detailsFor = (questionText: string) => {
+      const question = questions.find(q => q.text === questionText);
+      const answer = question ? answers[question.id] : undefined;
+      const response = Array.isArray(answer) ? answer.join(", ") : answer == null || answer === "" || answer === false ? null : String(answer);
+      return {
+        p_question: questionText.slice(0, 500),
+        p_response: response ? response.slice(0, 500) : null,
+        p_staff_name: selectedStaffName || null,
+      };
+    };
+
     let anySucceeded = false;
     for (const alert of actionAlerts) {
       const { error: alertErr } = await supabase.rpc("insert_kiosk_alert", {
@@ -338,6 +353,7 @@ function KioskScreen() {
         p_type: "warn",
         p_message: alert.message.slice(0, 500),
         p_area: checklistTitle.slice(0, 100),
+        ...detailsFor(alert.questionText),
       });
       if (alertErr) console.error("fireNotifyAlerts: action alert insert failed:", alertErr.message);
       else anySucceeded = true;
@@ -349,6 +365,7 @@ function KioskScreen() {
         p_message: alert.message.slice(0, 500),
         p_area: checklistTitle.slice(0, 100),
         p_recipient_email: alert.recipientEmail || null,
+        ...detailsFor(alert.questionText),
       });
 
       if (alertErr) {
