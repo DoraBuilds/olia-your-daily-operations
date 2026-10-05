@@ -47,4 +47,31 @@ describe("send alert email helpers", () => {
     expect(email.htmlBody).toContain("Opening checks");
     expect(email.htmlBody).toContain("Kitchen kiosk");
   });
+
+  it("builds the structured warning email for kiosk answer alerts", () => {
+    const email = buildAlertEmail({
+      id: "alert-2",
+      type: "warn",
+      message: "Temperatura del congelador de servicio: recorded 0 - outside the allowed range (min -25, max -10)",
+      area: "TEST",
+      time: null,
+      source: "kiosk",
+      created_at: "2026-10-05T09:36:00.000Z",
+      organization_id: "org-1",
+      recipient_email: "owner@test.com",
+      question_text: "Temperatura del congelador de servicio",
+      response_text: "0",
+      location_name: "Little Fern Bakery",
+      staff_name: "Maria Lopez",
+    });
+
+    expect(email.subject).toBe("⚠️ Warning: Temperatura del congelador de servicio: recorded 0 - Little Fern Bakery");
+    expect(email.textBody).toContain("Location: Little Fern Bakery");
+    expect(email.textBody).toContain("Checklist: TEST");
+    expect(email.textBody).toContain("Staff: Maria Lopez");
+    expect(email.textBody).toContain("Date/time:");
+    expect(email.textBody).not.toContain("Source");
+    expect(email.htmlBody).toContain("Maria Lopez");
+    expect(email.htmlBody).toContain("Open Olia");
+  });
 });
