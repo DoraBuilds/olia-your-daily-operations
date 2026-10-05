@@ -136,8 +136,8 @@ export function AccountTab({
     if (memberFilters.access.length > 0 && !memberFilters.access.includes(memberAccess(m))) return false;
     return true;
   };
-  const departmentLabel = (m: TeamMember) =>
-    m.department_ids.map(id => departments.find(d => d.id === id)?.name).filter(Boolean).join(", ") || t("accountTab.noDepartment");
+  const departmentNames = (m: TeamMember) =>
+    m.department_ids.map(id => departments.find(d => d.id === id)?.name).filter((n): n is string => !!n);
   const visibleMembers = [...teamMembers].filter(memberMatches).sort((a, b) => a.is_owner ? -1 : b.is_owner ? 1 : 0);
   const accessLabel = (a: MemberAccess) => t(a === "owner" ? "accountTab.accessOwner" : a === "manager" ? "accountTab.accessManager" : "accountTab.accessKiosk");
   const memberFilterCount = [
@@ -824,14 +824,18 @@ export function AccountTab({
                       <p className="text-xs text-muted-foreground/60">{t("accountTab.kioskOnly")}</p>
                     ) : null}
                   </div>
-                  <div className="w-28 shrink-0">
-                    <p
-                      data-testid={`member-departments-${member.id}`}
-                      className="truncate text-xs text-foreground"
-                      title={departmentLabel(member)}
-                    >
-                      {departmentLabel(member)}
-                    </p>
+                  <div data-testid={`member-departments-${member.id}`} className="w-28 shrink-0 flex flex-col items-start gap-1">
+                    {departmentNames(member).length === 0 ? (
+                      <span className="text-xs text-muted-foreground">{t("accountTab.noDepartment")}</span>
+                    ) : departmentNames(member).map(name => (
+                      <span
+                        key={name}
+                        title={name}
+                        className="inline-block max-w-full truncate text-xs px-2 py-0.5 rounded-full font-medium status-ok"
+                      >
+                        {name}
+                      </span>
+                    ))}
                   </div>
                   <div className="w-32 shrink-0 flex items-center justify-end gap-2">
                     {hasPendingInvite && (

@@ -453,12 +453,14 @@ describe("Admin page", () => {
     expect(screen.queryByText("Mike Manager")).not.toBeInTheDocument();
   });
 
-  it("Users tab shows a Department column with department names, or a dash when none", async () => {
+  it("Users tab shows a Department column with department names, or a dash when none, as green pills", async () => {
     mockTeam[1].department_ids = ["d1", "d2"];
     try {
       renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
       await waitFor(() => {
-        expect(screen.getByTestId("member-departments-tm2").textContent).toBe("Front of House, Back of House");
+        const pills = within(screen.getByTestId("member-departments-tm2")).getAllByText(/House/);
+        expect(pills.map(el => el.textContent)).toEqual(["Front of House", "Back of House"]);
+        expect(pills.every(el => el.className.includes("status-ok"))).toBe(true);
       });
       expect(screen.getByTestId("member-departments-tm3").textContent).toBe("-");
       expect(screen.getAllByText("Department").length).toBeGreaterThan(0);
