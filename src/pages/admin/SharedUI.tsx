@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/components/ui/sonner";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   PlacesAutocompleteInput, StaticMapPreview, type PlaceResult,
 } from "@/components/PlacesAutocompleteInput";
@@ -231,6 +232,7 @@ export function TeamMemberModal({
   const [pin, setPin] = useState(() => member?.id ? "" : generatePin());
   const [revealedPin, setRevealedPin] = useState<string | null>(null);
   const [showRevealedPin, setShowRevealedPin] = useState(false);
+  const [pinTipOpen, setPinTipOpen] = useState(false);
   const [revealLoading, setRevealLoading] = useState(false);
 
   // Locations without a concept (legacy rows) are always offered.
@@ -416,7 +418,28 @@ export function TeamMemberModal({
             placeholder={t("sharedUI.teamMember.rolePlaceholder")} className={inputCls}
           />
         </FormField>
-        <FormField label={t("sharedUI.teamMember.kioskPin")}>
+        <div>
+          <div className="flex items-start gap-1 mb-1">
+            <label className="text-xs text-muted-foreground block">{t("sharedUI.teamMember.kioskPin")}</label>
+            <TooltipProvider>
+              <Tooltip open={pinTipOpen} onOpenChange={setPinTipOpen} delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    // Tap must open it too: touch screens have no hover.
+                    onClick={e => { e.preventDefault(); setPinTipOpen(true); }}
+                    aria-label={t("sharedUI.teamMember.pinReuseLabel")}
+                    className="-mt-1 w-4 h-4 rounded-full border border-border text-[10px] leading-none font-semibold text-muted-foreground flex items-center justify-center hover:text-foreground"
+                  >
+                    i
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" collisionPadding={12} className="w-[210px] max-w-[calc(100vw-24px)] whitespace-normal text-xs leading-snug text-muted-foreground">
+                  {t("sharedUI.teamMember.pinReuseTip")}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -469,7 +492,7 @@ export function TeamMemberModal({
               )}
             </div>
           )}
-        </FormField>
+        </div>
         <div className="border-t border-border pt-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground">{t("sharedUI.teamMember.managerRole")}</p>

@@ -409,3 +409,13 @@ describe("ConfirmModal", () => {
     }
   });
 });
+
+describe("TeamMemberModal — PIN reuse tip", () => {
+  it("opens a plain-dash tip next to the Kiosk PIN title when the info icon is tapped", async () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: "About reusing a PIN" }));
+    const tips = await screen.findAllByText("Already have a PIN for another app here? Reuse it - one code to remember.");
+    expect(tips.length).toBeGreaterThan(0);
+    expect(tips[0].textContent).not.toContain("—");
+  });
+});
