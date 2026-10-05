@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PinchZoom } from "./PinchZoom";
 import { ensurePromiseWithResolvers } from "@/lib/promise-with-resolvers-polyfill";
 
 /**
@@ -64,9 +65,11 @@ export function PdfPages({ url, title }: { url: string; title: string }) {
   }
 
   return (
-    <div className="w-full h-full overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] [transform:translateZ(0)]" data-testid="pdf-pages">
-      <div ref={containerRef} className="max-w-3xl mx-auto flex flex-col gap-3 pb-4" />
-      {status === "loading" && <p className="text-sm text-background text-center py-8">…</p>}
+    <div className="w-full h-full" data-testid="pdf-pages">
+      <PinchZoom>
+        <div ref={containerRef} className="max-w-3xl mx-auto flex flex-col gap-3 pb-4" />
+        {status === "loading" && <p className="text-sm text-background text-center py-8">…</p>}
+      </PinchZoom>
     </div>
   );
 }

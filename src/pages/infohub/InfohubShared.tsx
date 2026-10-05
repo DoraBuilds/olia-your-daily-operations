@@ -13,6 +13,7 @@ import { canAccessInfohubContent, type InfohubAccessControl, type InfohubPrincip
 import type { InfohubLibraryDoc as DocItem, InfohubLibraryFolder as FolderItem, InfohubTrainingDoc as TrainingDoc, InfohubTrainingFolder as TrainingFolder } from "@/lib/infohub-catalog";
 import { cn } from "@/lib/utils";
 import { PdfPages } from "./PdfPages";
+import { PinchZoom } from "./PinchZoom";
 import { Input } from "@/components/ui/input";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import {
@@ -419,6 +420,8 @@ export function FilePreviewModal({
           <a
             href={signedUrl}
             download={title}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
             className="p-2 rounded-full hover:bg-muted transition-colors"
             aria-label={t("shared.filePreview.download")}
@@ -430,13 +433,11 @@ export function FilePreviewModal({
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
+      <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
         {isImage && (
-          <img
-            src={signedUrl}
-            alt={title}
-            className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
-          />
+          <PinchZoom fill>
+            <img src={signedUrl} alt={title} className="w-full h-full object-contain rounded-xl" />
+          </PinchZoom>
         )}
         {isPdf && <PdfPages url={signedUrl} title={title} />}
         {!isImage && !isPdf && (
@@ -451,6 +452,8 @@ export function FilePreviewModal({
             <a
               href={signedUrl}
               download={title}
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
             >
               {t("shared.filePreview.downloadToOpen")}

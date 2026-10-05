@@ -412,13 +412,14 @@ export default function Infohub() {
         onClick: async () => {
           const fileDoc = doc as { filePath?: string };
           if (fileDoc.filePath) {
+            // Open the tab synchronously (popup blockers), then point it at the file
+            const tab = window.open("", "_blank");
+            if (tab) tab.opener = null;
             const { data } = await supabase.storage.from("infohub-files").createSignedUrl(fileDoc.filePath, 3600);
             if (data?.signedUrl) {
-              const a = document.createElement("a");
-              a.href = data.signedUrl;
-              a.download = doc.title;
-              a.click();
-            }
+              if (tab) tab.location.href = data.signedUrl;
+              else window.open(data.signedUrl, "_blank");
+            } else tab?.close();
             return;
           }
           let text: string;
