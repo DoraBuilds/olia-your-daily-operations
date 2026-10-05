@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, XCircle } from "lucide-react";
@@ -12,9 +13,24 @@ import {
   buildErrorReport, downloadTextFile, parseImportFile, validateImportRows,
   type PreviewRow,
 } from "@/lib/bulk-import";
-import { BottomSheet, ModalHeader } from "./SharedUI";
+import { ModalHeader } from "./SharedUI";
 
 type Step = "pick" | "preview" | "importing" | "done";
+
+// Always a centered pop-up, on phones too (no bottom drawer).
+function CenteredDialog({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/20 backdrop-blur-sm animate-fade-in p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div role="dialog" aria-modal="true" className="bg-card w-full max-w-2xl rounded-2xl p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 const SERVER_ISSUE: Record<string, string> = {
   pin_taken: "pinTaken",
@@ -38,6 +54,7 @@ export function BulkImportModal({ existingNames, onClose }: { existingNames: str
   // Rows the server rejected, keyed by rowNumber → issue key.
   const [serverErrors, setServerErrors] = useState<Map<number, string>>(new Map());
   const [importedCount, setImportedCount] = useState(0);
+  const [dragging, setDragging] = useState(false);
 
   const importable = rows.filter(r => r.status !== "error");
   const counts = {
@@ -120,13 +137,12 @@ export function BulkImportModal({ existingNames, onClose }: { existingNames: str
     : <XCircle size={14} className="text-status-error shrink-0" />;
 
   return (
-    <BottomSheet onClose={step === "importing" ? () => {} : onClose}>
+    <CenteredDialog onClose={step === "importing" ? () => {} : onClose}>
       <ModalHeader title={t("bulkImport.title")} onClose={step === "importing" ? () => {} : onClose} />
 
       {step === "pick" && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">{t("bulkImport.intro")}</p>
-          <p className="text-xs text-muted-foreground">{t("bulkImport.columnsHint")}</p>
           <input
             ref={fileRef}
             type="file"
@@ -137,8 +153,12 @@ export function BulkImportModal({ existingNames, onClose }: { existingNames: str
           />
           <button
             type="button"
+            data-testid="bulk-import-dropzone"
             onClick={() => fileRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted py-8 text-sm text-foreground hover:bg-muted/70 transition-colors"
+            onDragOver={e => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files?.[0]); }}
+            className={`w-full flex items-center justify-center gap-2 rounded-xl border border-dashed py-8 text-sm text-foreground transition-colors ${dragging ? "border-sage bg-sage-light" : "border-border bg-muted hover:bg-muted/70"}`}
           >
             <FileSpreadsheet size={18} /> {t("bulkImport.chooseFile")}
           </button>
@@ -238,6 +258,6 @@ export function BulkImportModal({ existingNames, onClose }: { existingNames: str
           </div>
         </div>
       )}
-    </BottomSheet>
+    </CenteredDialog>
   );
 }

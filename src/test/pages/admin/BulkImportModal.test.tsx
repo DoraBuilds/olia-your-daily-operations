@@ -101,4 +101,10 @@ describe("BulkImportModal", () => {
     upload(`first_name\n${Array.from({ length: 501 }, (_, i) => `P${i}`).join("\n")}\n`);
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("501"));
   });
+
+  it("accepts a dropped file", async () => {
+    renderModal();
+    fireEvent.drop(screen.getByTestId("bulk-import-dropzone"), { dataTransfer: { files: [csv("first_name\nAna\n")] } });
+    await waitFor(() => expect(screen.getByTestId("bulk-import-summary")).toBeTruthy());
+  });
 });

@@ -511,9 +511,8 @@
     "link": "Import from file",
     "title": "Import team members",
     "intro": "Upload a CSV or Excel file. Everyone is added as kiosk-only staff with a 4-digit PIN. You can see each PIN later from their profile.",
-    "columnsHint": "Columns: first_name (required), last_name, pin (optional, 4 digits, generated if blank), department (optional, must match an existing department).",
     "downloadTemplate": "Download template",
-    "chooseFile": "Choose CSV or Excel file",
+    "chooseFile": "Import / drop in CSV or Excel file",
     "reading": "Reading file...",
     "fileErrors": {
       "missingFirstNameColumn": "No first_name column found. Download the template to see the expected columns.",

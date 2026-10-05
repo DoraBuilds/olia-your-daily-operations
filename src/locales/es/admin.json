@@ -511,9 +511,8 @@
     "link": "Importar desde archivo",
     "title": "Importar miembros del equipo",
     "intro": "Sube un archivo CSV o Excel. Todos se agregan como personal solo de kiosco con un PIN de 4 dígitos. Puedes ver cada PIN después en su perfil.",
-    "columnsHint": "Columnas: first_name (obligatoria), last_name, pin (opcional, 4 dígitos, se genera si está vacío), department (opcional, debe coincidir con un departamento existente).",
     "downloadTemplate": "Descargar plantilla",
-    "chooseFile": "Elegir archivo CSV o Excel",
+    "chooseFile": "Importar / arrastrar archivo CSV o Excel",
     "reading": "Leyendo archivo...",
     "fileErrors": {
       "missingFirstNameColumn": "No se encontró la columna first_name. Descarga la plantilla para ver las columnas esperadas.",
