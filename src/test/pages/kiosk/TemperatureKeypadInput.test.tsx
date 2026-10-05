@@ -32,6 +32,14 @@ describe("TemperatureKeypadInput", () => {
     expect(reading()).toBe("°C");
   });
 
+  it("labels the sign key with a muted \"(minus)\" hint", () => {
+    render(<Harness />);
+    const key = screen.getByRole("button", { name: "Negative" });
+    expect(key).toHaveTextContent("−");
+    expect(screen.getByText("(minus)")).toBeInTheDocument();
+    expect(screen.getByText("(minus)").className).toContain("text-muted-foreground");
+  });
+
   it("builds a reading from key presses", () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
