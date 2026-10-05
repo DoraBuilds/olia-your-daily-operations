@@ -269,7 +269,7 @@
       "roleOptional": "Rol (opcional)",
       "newPinHint": "Compártelo para que inicie sesión en el kiosco.",
       "editPinHint": "Déjalo en blanco para mantener el PIN actual.",
-      "pinReuseTip": "¿Ya tiene un PIN para otra app aquí? Reutilícelo - un solo código que recordar.",
+      "pinReuseTip": "¿Ya usa un PIN en otra herramienta de trabajo? Reutilícelo aquí - un solo código que recordar.",
       "pinReuseLabel": "Sobre reutilizar un PIN",
       "allConcepts": "Todos los conceptos",
       "allLocations": "Todos los locales",
