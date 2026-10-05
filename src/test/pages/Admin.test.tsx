@@ -453,13 +453,19 @@ describe("Admin page", () => {
     expect(screen.queryByText("Mike Manager")).not.toBeInTheDocument();
   });
 
-  it("Users tab shows 'Owner' badge for the owner and free-text role for other members", async () => {
-    renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
-    await waitFor(() => {
-      expect(screen.getAllByText("Owner").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText("Assistant Manager")).toBeInTheDocument();
-      expect(screen.getByText("Waiter")).toBeInTheDocument();
-    });
+  it("Users tab shows a Department column with department names, or a dash when none", async () => {
+    mockTeam[1].department_ids = ["d1", "d2"];
+    try {
+      renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
+      await waitFor(() => {
+        expect(screen.getByTestId("member-departments-tm2").textContent).toBe("Front of House, Back of House");
+      });
+      expect(screen.getByTestId("member-departments-tm3").textContent).toBe("-");
+      expect(screen.getAllByText("Department").length).toBeGreaterThan(0);
+      expect(screen.queryByText("Waiter")).not.toBeInTheDocument();
+    } finally {
+      mockTeam[1].department_ids = [];
+    }
   });
 
   it("Users tab shows kiosk-only note for a non-manager member with no last-seen data", async () => {
@@ -694,7 +700,7 @@ describe("Admin page", () => {
     });
   });
 
-  it("team member form has First name, Last name, Email, Role, and Kiosk PIN fields", async () => {
+  it("team member form has First name, Last name, Email, and Kiosk PIN fields", async () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/users"] });
     await waitFor(() => expect(screen.getByRole("button", { name: "Add a team member" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Add a team member" }));
@@ -702,7 +708,6 @@ describe("Admin page", () => {
       expect(screen.getByText("First name")).toBeInTheDocument();
       expect(screen.getByText("Last name (optional)")).toBeInTheDocument();
       expect(screen.getByText("Email (optional)")).toBeInTheDocument();
-      expect(screen.getAllByText("Role").length).toBeGreaterThan(0);
       expect(screen.getByText("Kiosk PIN")).toBeInTheDocument();
     });
   });

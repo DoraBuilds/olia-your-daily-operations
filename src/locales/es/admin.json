@@ -402,6 +402,8 @@
     "addLocation": "Agregar ubicación",
     "name": "Nombre",
     "role": "Rol",
+    "department": "Departamento",
+    "noDepartment": "-",
     "noRoleSet": "—",
     "inviteExpired": "Invitación vencida",
     "invitePending": "Invitación pendiente",
