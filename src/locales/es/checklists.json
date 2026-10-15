@@ -389,8 +389,12 @@
       "askQuestion": "Hacer pregunta",
       "notify": "Notificar (correo)",
       "requireNote": "Requerir nota",
+      "skipToComplete": "Saltar a completar",
+      "skipToCompleteHint": "Se omitirá cualquier paso de aprobación",
       "requireMedia": "Requerir multimedia"
     },
+    "pickOptions": "Selecciona opciones",
+    "done": "Listo",
     "addLogic": "Agregar lógica",
     "heading": "Reglas de lógica",
     "ifAnswer": "Si la respuesta",

@@ -367,15 +367,30 @@ export function getTriggeredRuntimeQuestions(question: Question, answers: Record
   return [...followUps, ...(noteQuestion ? [noteQuestion] : []), ...(mediaQuestion ? [mediaQuestion] : [])];
 }
 
+/** True when a matching rule on this answered question asks to skip straight to completion. */
+export function shouldSkipToComplete(question: Question, answers: Record<string, any>) {
+  const rawAnswer = getQuestionAnswer(question, answers);
+  if (isBlankAnswer(rawAnswer) && rawAnswer !== UNANSWERED_SENTINEL) return false;
+  return (question.config?.logicRules ?? []).some(rule =>
+    rule.triggers.some(trigger => trigger.type === "skip_to_complete") && doesRuleMatch(question, rule, answers));
+}
+
+/**
+ * Questions in order, with triggered follow-ups inserted after their parent.
+ * A "skip to complete" trigger ends the list there: later questions are not
+ * shown and not required.
+ */
 export function buildRuntimeQuestions(baseQuestions: Question[], answers: Record<string, any>): Question[] {
   const next: Question[] = [];
-  for (const question of baseQuestions) {
-    next.push(question);
-    const children = getTriggeredRuntimeQuestions(question, answers);
-    if (children.length > 0) {
-      next.push(...buildRuntimeQuestions(children, answers));
+  const walk = (questions: Question[]): boolean => {
+    for (const question of questions) {
+      next.push(question);
+      if (walk(getTriggeredRuntimeQuestions(question, answers))) return true;
+      if (shouldSkipToComplete(question, answers)) return true;
     }
-  }
+    return false;
+  };
+  walk(baseQuestions);
   return next;
 }
 

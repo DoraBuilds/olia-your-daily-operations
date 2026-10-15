@@ -389,8 +389,12 @@
       "askQuestion": "Ask question",
       "notify": "Notify (email)",
       "requireNote": "Require note",
+      "skipToComplete": "Skip to complete",
+      "skipToCompleteHint": "Any approval step will be skipped",
       "requireMedia": "Require media"
     },
+    "pickOptions": "Select options",
+    "done": "Done",
     "addLogic": "Add logic",
     "heading": "Logic rules",
     "ifAnswer": "If answer",
