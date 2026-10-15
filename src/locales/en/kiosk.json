@@ -12,7 +12,6 @@
     "tryAgainIn": "Try again in <bold>{{seconds}}s</bold>",
     "forgotPin": "Forgot your PIN?",
     "logoutAndSignIn": "Log out and sign in again",
-    "startButton": "Start",
     "accessButton": "Access",
     "selectLocationBeforeAdmin": "Select a kiosk location before opening admin.",
     "selectLocationFirst": "Select a kiosk location first.",
