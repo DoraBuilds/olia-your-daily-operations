@@ -9,6 +9,7 @@ import {
   useChecklistNotificationRules,
   useSaveChecklistNotificationRules,
 } from "@/hooks/useChecklistNotificationRules";
+import { useMyMissedNotifications, useSetMyMissedNotifications } from "@/hooks/useMyMissedNotifications";
 
 function useHours(t: (key: string) => string) {
   return Array.from({ length: 24 }, (_, i) => {
@@ -23,6 +24,8 @@ export function NotificationsTab() {
   const HOURS = useHours(t);
   const { data: rules, isLoading } = useChecklistNotificationRules();
   const saveMut = useSaveChecklistNotificationRules();
+  const { data: notifyMissed = false } = useMyMissedNotifications();
+  const setNotifyMissed = useSetMyMissedNotifications();
 
   const [enabled, setEnabled] = useState(false);
   const [notifyUnstarted, setNotifyUnstarted] = useState(true);
@@ -175,6 +178,31 @@ export function NotificationsTab() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Missed checklists: personal opt-in, emailed to the signed-in person */}
+      <div className="bg-card border border-border rounded-[20px] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle size={16} className="text-sage shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{t("notificationsTab.missedTitle")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("notificationsTab.missedDesc")}</p>
+            </div>
+          </div>
+          <Switch
+            data-testid="notifications-missed-toggle"
+            aria-label={t("notificationsTab.missedTitle")}
+            checked={notifyMissed}
+            disabled={setNotifyMissed.isPending}
+            onCheckedChange={(checked) =>
+              setNotifyMissed.mutate(checked, {
+                onSuccess: () => toast.success(t(checked ? "notificationsTab.missedOn" : "notificationsTab.missedOff")),
+                onError: (err: Error) => toast.error(t("notificationsTab.saveFailed", { error: err.message })),
+              })
+            }
+          />
+        </div>
       </div>
 
       {/* Action row */}

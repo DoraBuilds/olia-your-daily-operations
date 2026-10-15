@@ -44,6 +44,12 @@ vi.mock("@/hooks/useChecklistNotificationRules", () => ({
   }),
 }));
 
+const mockSetMissed = vi.fn();
+vi.mock("@/hooks/useMyMissedNotifications", () => ({
+  useMyMissedNotifications: () => ({ data: false }),
+  useSetMyMissedNotifications: () => ({ mutate: mockSetMissed, isPending: false }),
+}));
+
 vi.mock("@/components/ui/sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -117,5 +123,13 @@ describe("NotificationsTab", () => {
     const select = screen.getByTestId("notifications-hour-select");
     const options = select.querySelectorAll("option");
     expect(options.length).toBe(24);
+  });
+
+  it("lets the signed-in person opt in to missed checklist emails", () => {
+    render(<NotificationsTab />, { wrapper });
+    const toggle = screen.getByTestId("notifications-missed-toggle");
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(mockSetMissed).toHaveBeenCalledWith(true, expect.anything());
   });
 });
