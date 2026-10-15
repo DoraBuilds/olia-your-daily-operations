@@ -23,7 +23,7 @@ describe("touchKioskDevice", () => {
     localStorage.setItem("kiosk_device_token", "t1");
     mockRpc.mockResolvedValue({ data: true, error: null });
     await expect(touchKioskDevice()).resolves.toBe(true);
-    expect(mockRpc).toHaveBeenCalledWith("touch_kiosk_device", { p_device_token: "t1" });
+    expect(mockRpc).toHaveBeenCalledWith("touch_kiosk_device", { p_device_token: "t1", p_timezone: expect.any(String) });
   });
 
   it("returns false only when the server reports the device was revoked", async () => {

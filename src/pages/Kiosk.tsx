@@ -16,6 +16,7 @@ import i18n, { getDeviceLanguage, resolveSupportedLanguage, type SupportedLangua
 import type { AnswerAttribution, KioskChecklist, KioskScreen } from "./kiosk/types";
 import {
   getKioskVisibilityState,
+  getKioskTimingStatus,
   isKioskDue,
   isKioskOverdue,
   isVisibleAtTime,
@@ -677,6 +678,7 @@ function KioskScreen() {
           p_checklist_title:  selectedChecklist.title,
           p_completed_by:     completedBy,
           p_started_at:       startedAt ? startedAt.toISOString() : null,
+          p_timing_status:    getKioskTimingStatus(selectedChecklist, new Date()),
         };
         const { data, error } = await supabase.rpc("submit_kiosk_log", insertPayload);
         if (error) {
