@@ -181,6 +181,9 @@
     "timing": {
       "title": "Puntualidad",
       "loading": "Cargando puntualidad…",
+      "progress": "{{done}}/{{total}} completados",
+      "showSkipped": "ver omitidos",
+      "hideSkipped": "ocultar omitidos",
       "empty": "Aún no hay listas con horario en este periodo. Las listas con ventana de entrega se registran a tiempo, tardías o no realizadas.",
       "range": {
         "week": "Esta semana",

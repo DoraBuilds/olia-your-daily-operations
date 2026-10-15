@@ -4,13 +4,14 @@ import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
 import { sanitizeImageUrl } from "@/lib/sanitize";
-import type { AnswerAttribution, KioskChecklist, Question } from "./types";
+import type { AnswerAttribution, KioskChecklist, KioskDraftProgress, Question } from "./types";
 import {
   INSTRUCTION_ACKNOWLEDGED,
   UNANSWERED_SENTINEL,
   isBlankAnswer,
   loadKioskDraftSnapshot,
   buildRuntimeQuestions,
+  normalizeAnswerText,
 } from "./utils";
 import { useInactivityTimer, useLiveClock } from "./hooks";
 import { QuestionInput } from "./QuestionInputs";
@@ -19,7 +20,7 @@ import { QuestionInput } from "./QuestionInputs";
 // Shows ALL questions in a single scrollable view, grouped by sections.
 // Answers are persisted to localStorage so progress survives interruptions.
 export function ChecklistRunner({
-  checklist, staffName, onComplete, onCancel, onQuestionAnswerChange,
+  checklist, staffName, onComplete, onCancel, onQuestionAnswerChange, onProgress,
   organizationId, locationId, initialAnswers, initialAttribution,
 }: {
   checklist: KioskChecklist;
@@ -27,6 +28,8 @@ export function ChecklistRunner({
   onComplete: (answers: Record<string, any>, startedAt: Date, attribution: AnswerAttribution) => void;
   onCancel: () => void;
   onQuestionAnswerChange?: (question: Question, value: any) => void;
+  /** Reports how far a first-time run has got (debounced), so a missed checklist keeps its progress. */
+  onProgress?: (progress: KioskDraftProgress) => void;
   /** Organization ID — used to scope photo uploads to the correct storage path */
   organizationId?: string;
   /** Location ID — used to scope photo uploads to the correct storage path */
@@ -75,6 +78,40 @@ export function ChecklistRunner({
   const hasUnansweredTrigger = (question: Question) =>
     Boolean(question.config?.logicRules?.some(rule => rule.comparator === "unanswered" && (rule.triggers?.length ?? 0) > 0));
 
+  // Report progress to the server a moment after answers settle, so if this
+  // checklist ends up Missed the manager can see how far it got. Re-edits of
+  // an already-completed checklist are not partial and are skipped.
+  const progressRef = useRef<KioskDraftProgress | null>(null);
+  const progressTimer = useRef<ReturnType<typeof setTimeout>>();
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  const submittedRef = useRef(false);
+  const flushProgress = useCallback(() => {
+    clearTimeout(progressTimer.current);
+    const pending = progressRef.current;
+    progressRef.current = null;
+    // Once submitted it is no longer partial: never resurrect a cleared draft.
+    if (pending && !submittedRef.current) onProgressRef.current?.(pending);
+  }, []);
+  useEffect(() => {
+    if (!onProgressRef.current || initialAnswers || answeredCount === 0) return;
+    progressRef.current = {
+      answered: answeredCount,
+      total: scorable.length,
+      items: scorable.map(q => ({
+        label: q.text,
+        type: q.type,
+        section: q.sectionName || undefined,
+        done: !isBlankAnswer(answers[q.id]),
+        answer: isBlankAnswer(answers[q.id]) ? "" : q.type === "media" ? "photo" : normalizeAnswerText(answers[q.id]).slice(0, 300),
+      })),
+    };
+    clearTimeout(progressTimer.current);
+    progressTimer.current = setTimeout(flushProgress, 1500);
+  }, [answers]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Leaving the runner (cancel, idle timeout) must not lose the last change.
+  useEffect(() => flushProgress, [flushProgress]);
+
   const persistDraft = useCallback((nextAnswers: Record<string, any>) => {
     draftRef.current = { answers: nextAnswers, hasSavedDraft: true };
     try {
@@ -109,6 +146,8 @@ export function ChecklistRunner({
       document.getElementById(`question-${stillMissing[0].id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
       return;
     }
+    submittedRef.current = true;
+    clearTimeout(progressTimer.current);
     try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     // Pre-filled defaults nobody touched are attributed to whoever submits.
     const attribution = { ...attributionRef.current };

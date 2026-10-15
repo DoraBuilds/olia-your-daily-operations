@@ -19,7 +19,7 @@ import { useChecklists } from "@/hooks/useChecklists";
 import { useTimingReportData, useSetMissedNote } from "@/hooks/useTimingReport";
 import {
   buildTimingReport, pctOf, totalCount, MISS_REASONS,
-  type MissReason, type TimingCounts, type TimingReport,
+  type MissReason, type TimingCounts, type TimingMiss, type TimingReport,
 } from "./timing-report";
 
 interface ScopeFilters { conceptIds: string[]; locationIds: string[]; departmentIds: string[] }
@@ -213,6 +213,9 @@ export function TimingReportTab({ viewSwitcher }: { viewSwitcher?: ReactNode }) 
                     <p className="text-xs text-muted-foreground">
                       {m.locationName} · {format(new Date(`${m.operating_date}T00:00:00`), "d MMM")} · {t(`reporting.timing.route.${m.route}`)}
                     </p>
+                    {m.progress && m.progress.total > 0 && (
+                      <MissProgress progress={m.progress} testId={m.id} />
+                    )}
                     {(m.reason || m.note) && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {m.reason && <span className="font-semibold">{t(`reporting.timing.reasons.${m.reason}`)}</span>}
@@ -239,6 +242,31 @@ export function TimingReportTab({ viewSwitcher }: { viewSwitcher?: ReactNode }) 
 
       {noting && <MissNoteDialog miss={noting} onClose={() => setNoting(null)} />}
     </>
+  );
+}
+
+/** "7/10 completed" for a checklist that was started but never submitted, with the skipped items on demand. */
+function MissProgress({ progress, testId }: { progress: NonNullable<TimingMiss["progress"]>; testId: string }) {
+  const { t } = useTranslation("checklists");
+  const [open, setOpen] = useState(false);
+  const skipped = progress.items.filter(i => !i.done);
+  return (
+    <div className="mt-1" data-testid={`timing-progress-${testId}`}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+        className="text-xs font-semibold text-foreground hover:underline"
+      >
+        {t("reporting.timing.progress", { done: progress.answered, total: progress.total })}
+        {skipped.length > 0 && <span className="font-normal text-muted-foreground"> · {t(open ? "reporting.timing.hideSkipped" : "reporting.timing.showSkipped")}</span>}
+      </button>
+      {open && skipped.length > 0 && (
+        <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground list-disc pl-4">
+          {skipped.map((i, idx) => <li key={idx}>{i.label}</li>)}
+        </ul>
+      )}
+    </div>
   );
 }
 

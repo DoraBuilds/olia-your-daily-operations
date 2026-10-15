@@ -181,6 +181,9 @@
     "timing": {
       "title": "Timing",
       "loading": "Loading timing…",
+      "progress": "{{done}}/{{total}} completed",
+      "showSkipped": "show skipped",
+      "hideSkipped": "hide skipped",
       "empty": "No timed checklists in this period yet. Completions are stamped on time or late, and misses are recorded, for checklists that have a due window.",
       "range": {
         "week": "This week",
