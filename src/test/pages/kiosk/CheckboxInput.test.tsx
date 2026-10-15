@@ -7,8 +7,8 @@ vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 describe("CheckboxInput unselected styling", () => {
   it("only applies the hover border on hover-capable devices (sticky touch :hover)", () => {
     render(<CheckboxInput value={false} onChange={vi.fn()} />);
-    const cls = screen.getByRole("button").className;
+    const cls = screen.getByRole("checkbox").className;
     expect(cls).not.toMatch(/(^|\s)hover:border-sage/);
-    expect(cls).toContain("[@media(hover:hover)]:hover:border-sage/40");
+    expect(cls).toContain("[@media(hover:hover)]:hover:border-sage/60");
   });
 });

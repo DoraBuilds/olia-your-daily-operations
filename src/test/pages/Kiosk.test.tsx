@@ -1106,7 +1106,7 @@ describe("Kiosk — Checklist Runner", () => {
       ],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("checkbox"));
 
     await waitFor(() => {
       expect(screen.getByText("Did you recheck the fridge?")).toBeInTheDocument();
@@ -1213,7 +1213,7 @@ describe("Kiosk — Checklist Runner", () => {
       ],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("checkbox"));
 
     await waitFor(() => {
       expect(screen.getByText(/note required/i)).toBeInTheDocument();
@@ -1285,7 +1285,7 @@ describe("Kiosk — Checklist Runner", () => {
         ],
       });
 
-      fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+      fireEvent.click(screen.getByRole("checkbox"));
 
       await waitFor(() => {
         expect(screen.getByText(/photo required/i)).toBeInTheDocument();
@@ -1352,7 +1352,7 @@ describe("Kiosk — Checklist Runner", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("checkbox"));
 
     await waitFor(() => {
       expect(screen.getByText("Wash your hands")).toBeInTheDocument();
@@ -1434,7 +1434,7 @@ describe("Kiosk — Checklist Runner", () => {
     expect(screen.getByPlaceholderText("Type your answer here…")).toBeInTheDocument();
     expect(card()?.className).toContain("border-l-[#E5251B]");
 
-    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("checkbox"));
 
     expect(card()?.className).not.toContain("border-l-");
     expect(document.getElementById("question-q-after")?.className).toContain("border-l-[#E5251B]");
@@ -1705,7 +1705,7 @@ describe("Kiosk — Checklist Runner", () => {
       },
     ]);
 
-    fireEvent.click(screen.getByRole("button", { name: /tap to confirm/i }));
+    fireEvent.click(screen.getByRole("checkbox"));
     await waitFor(() => expect(screen.getByText(/note required/i)).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText("Type your answer here…"), { target: { value: "Door was ajar" } });
     fireEvent.click(screen.getByRole("button", { name: /complete checklist/i }));
