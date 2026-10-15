@@ -14,22 +14,20 @@ export function CheckboxInput({ value, onChange }: { value: boolean; onChange: (
   const { t } = useTranslation("kiosk");
   return (
     <button
+      type="button"
+      role="checkbox"
+      aria-checked={value}
+      aria-label={t("checkbox.tapToConfirm")}
       onClick={() => onChange(!value)}
       className={cn(
-        "w-full min-h-[44px] rounded-2xl border-2 px-5 py-4 text-left text-sm font-medium transition-colors flex items-center gap-3",
+        "w-11 h-11 rounded-xl border-2 flex items-center justify-center transition-colors",
         value
-          ? "bg-sage-light border-sage text-sage-deep"
+          ? "bg-sage border-sage"
           // Hover only on devices that really hover (sticky :hover on touch).
-          : "bg-card border-border text-foreground [@media(hover:hover)]:hover:border-sage/40",
+          : "bg-card border-muted-foreground/40 [@media(hover:hover)]:hover:border-sage/60",
       )}
     >
-      <div className={cn(
-        "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
-        value ? "bg-sage border-sage" : "border-muted-foreground/40",
-      )}>
-        {value && <Check size={12} className="text-primary-foreground" />}
-      </div>
-      {value ? t("checkbox.completed") : t("checkbox.tapToConfirm")}
+      {value && <Check size={22} className="text-primary-foreground" />}
     </button>
   );
 }

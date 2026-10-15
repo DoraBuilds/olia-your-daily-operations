@@ -91,41 +91,29 @@ afterEach(() => {
 // ─── CheckboxInput ────────────────────────────────────────────────────────────
 
 describe("Kiosk — CheckboxInput component", () => {
-  it("renders checkbox question with 'Tap to confirm' text", () => {
+  it("renders checkbox question as an unchecked checkbox", () => {
     renderRunner(makeChecklist([{
       id: "q1",
       text: "Did you check the fridge?",
       type: "checkbox",
       required: true,
     }]));
-    expect(screen.getByText("Tap to confirm")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByText("Yes, completed")).not.toBeInTheDocument();
   });
 
-  it("clicking checkbox toggles to 'Yes, completed'", async () => {
+  it("clicking checkbox checks it, clicking again unchecks it", async () => {
     renderRunner(makeChecklist([{
       id: "q1",
       text: "Did you check the fridge?",
       type: "checkbox",
       required: true,
     }]));
-    fireEvent.click(screen.getByText("Tap to confirm"));
-    await waitFor(() => {
-      expect(screen.getByText("Yes, completed")).toBeInTheDocument();
-    });
-  });
-
-  it("clicking checkbox twice toggles back to 'Tap to confirm'", async () => {
-    renderRunner(makeChecklist([{
-      id: "q1",
-      text: "Did you check the fridge?",
-      type: "checkbox",
-      required: true,
-    }]));
-    const checkbox = screen.getByText("Tap to confirm");
-    fireEvent.click(checkbox);
-    await waitFor(() => expect(screen.getByText("Yes, completed")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Yes, completed"));
-    await waitFor(() => expect(screen.getByText("Tap to confirm")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "true"));
+    expect(screen.queryByText("Yes, completed")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await waitFor(() => expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "false"));
   });
 });
 
