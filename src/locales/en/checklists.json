@@ -175,7 +175,46 @@
     },
     "views": {
       "checklists": "Checklists",
+      "timing": "Timing",
       "training": "Training"
+    },
+    "timing": {
+      "title": "Timing",
+      "loading": "Loading timing…",
+      "empty": "No timed checklists in this period yet. Completions are stamped on time or late, and misses are recorded, for checklists that have a due window.",
+      "range": {
+        "week": "This week",
+        "last7": "Last 7 days",
+        "last30": "Last 30 days"
+      },
+      "onTime": "On time",
+      "late": "Late",
+      "missed": "Missed",
+      "byLocation": "By location",
+      "byDepartment": "By department",
+      "allDepartments": "All departments",
+      "rowCounts": "{{onTime}} on time · {{late}} late · {{missed}} missed",
+      "reasonsTitle": "Why checklists were missed",
+      "noReason": "No reason given",
+      "reasons": {
+        "short_staffed": "Short-staffed",
+        "equipment_issue": "Equipment issue",
+        "forgot": "Forgot",
+        "other": "Other"
+      },
+      "missedTitle": "Missed checklists ({{count}})",
+      "route": {
+        "window_close": "Missed at window close",
+        "after_overdue": "Missed after Overdue"
+      },
+      "addNote": "Add note",
+      "editNote": "Edit note",
+      "noteTitle": "Why was it missed?",
+      "notePlaceholder": "Optional details",
+      "saveNote": "Save note",
+      "noteSaved": "Note saved.",
+      "noteFailed": "Could not save the note: {{error}}",
+      "close": "Close"
     },
     "training": {
       "searchPlaceholder": "Search training",
