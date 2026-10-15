@@ -377,7 +377,13 @@
       "isSelected": "Está seleccionado",
       "isNotSelected": "No está seleccionado",
       "isOneOf": "Es uno de",
-      "isNotOneOf": "No es ninguno de"
+      "isNotOneOf": "No es ninguno de",
+      "isBlank": "Está en blanco",
+      "isNotBlank": "No está en blanco",
+      "checked": "Marcada",
+      "notChecked": "No marcada",
+      "passes": "Pasa",
+      "fails": "Falla"
     },
     "triggers": {
       "askQuestion": "Hacer pregunta",
@@ -406,6 +412,7 @@
     "addTrigger": "disparador",
     "addAnotherRule": "Agregar otra regla",
     "leftUnanswered": "quedó sin responder",
+    "answeredValueless": "respondió: {{comparator}}",
     "answeredSimple": "respondió {{comparator}} {{value}}",
     "answeredBetween": "respondió {{comparator}} {{value}} y {{valueTo}}",
     "answeredOneOf": "respondió {{comparator}} {{values}}",

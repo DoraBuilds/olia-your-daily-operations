@@ -1418,6 +1418,7 @@ export function ChecklistBuilderModal({
                     rules={cfg.logicRules || []}
                     onRulesChange={rules => updateQuestion(si, qi, { config: { ...cfg, logicRules: rules } })}
                     responseType={q.responseType}
+                    config={cfg}
                     choices={questionChoices.length > 0 ? questionChoices : [t("preview.yes"), t("preview.no"), t("preview.notApplicable")]}
                     questionText={q.text || ""}
                     questionIndex={qi}

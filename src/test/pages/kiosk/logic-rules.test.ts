@@ -210,3 +210,47 @@ describe("collectActionAlerts", () => {
     );
   });
 });
+
+describe("evaluateRule — per-type comparators", () => {
+  it("is_blank / is_not_blank for text", () => {
+    expect(evaluateRule("", "is_blank", "")).toBe(true);
+    expect(evaluateRule(undefined, "is_blank", "")).toBe(true);
+    expect(evaluateRule("hi", "is_blank", "")).toBe(false);
+    expect(evaluateRule("hi", "is_not_blank", "")).toBe(true);
+    expect(evaluateRule("", "is_not_blank", "")).toBe(false);
+  });
+
+  it("checked / not_checked for checkbox", () => {
+    expect(evaluateRule(true, "checked", "")).toBe(true);
+    expect(evaluateRule(false, "checked", "")).toBe(false);
+    expect(evaluateRule(false, "not_checked", "")).toBe(true);
+    expect(evaluateRule(undefined, "not_checked", "")).toBe(true);
+    expect(evaluateRule(true, "not_checked", "")).toBe(false);
+  });
+
+  it("passes / fails judge a reading against the acceptable range", () => {
+    const range = { min: 0, max: 5 };
+    expect(evaluateRule(4, "passes", "", undefined, undefined, range)).toBe(true);
+    expect(evaluateRule(0, "passes", "", undefined, undefined, range)).toBe(true);
+    expect(evaluateRule(7, "passes", "", undefined, undefined, range)).toBe(false);
+    expect(evaluateRule(7, "fails", "", undefined, undefined, range)).toBe(true);
+    expect(evaluateRule(-1, "fails", "", undefined, undefined, range)).toBe(true);
+    expect(evaluateRule(4, "fails", "", undefined, undefined, range)).toBe(false);
+    // open-ended bound
+    expect(evaluateRule(-20, "passes", "", undefined, undefined, { max: 5 })).toBe(true);
+    // no reading is neither a pass nor a fail
+    expect(evaluateRule("", "passes", "", undefined, undefined, range)).toBe(false);
+    expect(evaluateRule("", "fails", "", undefined, undefined, range)).toBe(false);
+  });
+});
+
+describe("collectNotifyAlerts — refrigeration fails", () => {
+  it("uses the question's min/max", () => {
+    const q = {
+      id: "q", text: "Fridge", min: 0, max: 5,
+      config: { logicRules: [{ id: "r", comparator: "fails" as const, value: "", triggers: [{ type: "notify" as const, config: { notifyUser: "a@b.co" } }] }] },
+    };
+    expect(collectNotifyAlerts([q], { q: 9 })).toHaveLength(1);
+    expect(collectNotifyAlerts([q], { q: 3 })).toHaveLength(0);
+  });
+});

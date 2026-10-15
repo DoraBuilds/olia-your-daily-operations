@@ -77,7 +77,7 @@ export function ChecklistRunner({
   const answeredCount = scorable.filter(q => !isBlankAnswer(answers[q.id])).length;
   const progress = scorable.length > 0 ? Math.round((answeredCount / scorable.length) * 100) : 100;
   const hasUnansweredTrigger = (question: Question) =>
-    Boolean(question.config?.logicRules?.some(rule => rule.comparator === "unanswered" && (rule.triggers?.length ?? 0) > 0));
+    Boolean(question.config?.logicRules?.some(rule => (rule.comparator === "unanswered" || rule.comparator === "is_blank" || rule.comparator === "not_checked") && (rule.triggers?.length ?? 0) > 0));
 
   // Report progress to the server a moment after answers settle, so if this
   // checklist ends up Missed the manager can see how far it got. Re-edits of
