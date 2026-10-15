@@ -10,6 +10,7 @@ import {
   UNANSWERED_SENTINEL,
   isBlankAnswer,
   loadKioskDraftSnapshot,
+  getKioskOperatingDate,
   buildRuntimeQuestions,
   normalizeAnswerText,
 } from "./utils";
@@ -42,7 +43,7 @@ export function ChecklistRunner({
   const { t } = useTranslation("kiosk");
   const DRAFT_KEY = `kiosk_draft_${checklist.id}`;
   const [initialDraft] = useState(() => {
-    const draft = loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions);
+    const draft = loadKioskDraftSnapshot(DRAFT_KEY, checklist.questions, getKioskOperatingDate(new Date(), checklist.day_end_time));
     if (initialAnswers) return { ...draft, answers: initialAnswers, attribution: initialAttribution, hasSavedDraft: false };
     return draft;
   });
@@ -115,7 +116,7 @@ export function ChecklistRunner({
   const persistDraft = useCallback((nextAnswers: Record<string, any>) => {
     draftRef.current = { answers: nextAnswers, hasSavedDraft: true };
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, attribution: attributionRef.current }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ answers: nextAnswers, attribution: attributionRef.current, date: getKioskOperatingDate(new Date(), checklist.day_end_time) }));
     } catch { /* ignore */ }
   }, []);
 

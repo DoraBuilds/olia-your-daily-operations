@@ -188,7 +188,7 @@ export function isBlankAnswer(value: any) {
     : value === UNANSWERED_SENTINEL || value === undefined || value === "" || value === null || value === false;
 }
 
-export function loadKioskDraftSnapshot(draftKey: string, questions: Question[]): KioskDraftSnapshot {
+export function loadKioskDraftSnapshot(draftKey: string, questions: Question[], operatingDate?: string): KioskDraftSnapshot {
   const defaults: Record<string, any> = {};
   for (const q of questions) {
     if (q.defaultValue) defaults[q.id] = q.defaultValue;
@@ -201,6 +201,11 @@ export function loadKioskDraftSnapshot(draftKey: string, questions: Question[]):
     }
 
     const parsed = JSON.parse(raw);
+    // A draft saved on an earlier operating day is stale: start clean.
+    if (operatingDate && parsed && typeof parsed.date === "string" && parsed.date !== operatingDate) {
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+      return { answers: defaults, hasSavedDraft: false };
+    }
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       if ("answers" in parsed && parsed.answers && typeof parsed.answers === "object" && !Array.isArray(parsed.answers)) {
         return {
