@@ -12,7 +12,6 @@
     "tryAgainIn": "Vuelve a intentarlo en <bold>{{seconds}}s</bold>",
     "forgotPin": "¿Olvidaste tu PIN?",
     "logoutAndSignIn": "Cierra sesión y vuelve a iniciarla",
-    "startButton": "Empezar",
     "accessButton": "Acceder",
     "selectLocationBeforeAdmin": "Selecciona una ubicación de kiosco antes de abrir el panel de administración.",
     "selectLocationFirst": "Selecciona primero una ubicación de kiosco.",

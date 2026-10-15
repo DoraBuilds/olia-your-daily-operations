@@ -447,9 +447,7 @@ function useKioskPinValidator(locationId: string, onSuccess: (identity: KioskIde
     setPin(p => p.slice(0, -1));
   };
 
-  const canStart = pin.length >= 4 && !validating && !lockedUntil;
-
-  return { pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate };
+  return { pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace };
 }
 
 // ─── IdentifyModal (Screen 0) ───────────────────────────────────────────────────
@@ -471,7 +469,7 @@ export function IdentifyModal({
   const { t } = useTranslation("kiosk");
   const now = useLiveClock();
   const {
-    pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace, canStart, validate,
+    pin, error, validating, lockedUntil, lockSecondsLeft, handleDigit, handleBackspace,
   } = useKioskPinValidator(locationId, onSuccess);
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -546,21 +544,6 @@ export function IdentifyModal({
             ) : (
               <NumberPad onDigit={handleDigit} onBackspace={handleBackspace} />
             )}
-
-            <button
-              id="identify-start-btn"
-              data-testid="identify-start-btn"
-              onClick={() => canStart && validate(pin)}
-              disabled={!canStart}
-              className={cn(
-                "w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-[0.98]",
-                canStart
-                  ? "bg-sage text-white hover:bg-sage-deep shadow-card active:shadow-inset"
-                  : "bg-muted text-muted-foreground cursor-not-allowed",
-              )}
-            >
-              {t("pin.startButton")}
-            </button>
           </div>
         </div>
       </div>
