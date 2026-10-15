@@ -83,6 +83,10 @@
   },
   "notificationsTab": {
     "loading": "Cargando…",
+    "missedTitle": "Listas no realizadas",
+    "missedDesc": "Envíame un correo cuando una lista no se realice en mis locales. Solo para ti.",
+    "missedOn": "Recibirás un correo cuando una lista no se realice.",
+    "missedOff": "Correos de listas no realizadas desactivados.",
     "dailySummary": "Resumen diario de listas de verificación",
     "dailySummaryDesc": "Envía por correo un resumen diario de listas incompletas",
     "alertMeAbout": "Avísame sobre",

@@ -83,6 +83,10 @@
   },
   "notificationsTab": {
     "loading": "Loading…",
+    "missedTitle": "Missed checklists",
+    "missedDesc": "Email me when a checklist is missed at my locations. This is just for you.",
+    "missedOn": "You will be emailed about missed checklists.",
+    "missedOff": "Missed checklist emails turned off.",
     "dailySummary": "Daily checklist summary",
     "dailySummaryDesc": "Email a daily summary of incomplete checklists",
     "alertMeAbout": "Alert me about",

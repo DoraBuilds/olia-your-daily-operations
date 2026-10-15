@@ -123,6 +123,9 @@ verify_jwt = false
 [functions.check-checklist-alerts]
 verify_jwt = false
 
+[functions.send-missed-notification]
+verify_jwt = false
+
 [functions.kiosk-admin-login]
 verify_jwt = false
 
