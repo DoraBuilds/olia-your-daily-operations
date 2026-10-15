@@ -5,6 +5,7 @@ import {
   Bell,
   Camera,
   ChevronDown,
+  CornerDownRight,
   FileText,
   GitBranch,
   Image,
@@ -28,6 +29,7 @@ import type {
 import i18n from "@/lib/i18n";
 import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
+import { ChoiceMultiSelect } from "./ChoiceMultiSelect";
 import {
   COMPARATOR_LABEL_KEYS, comparatorKeysFor, defaultComparatorFor, isBetweenComparator, isOneOfComparator,
   isValuelessComparator, logicRuleKind, rulePatchForComparator,
@@ -562,9 +564,10 @@ function LogicRulesEditor({
   };
   const removeTrigger = (ri: number, ti: number) => updateRule(ri, { triggers: rules[ri].triggers.filter((_, i) => i !== ti) });
 
-  const TRIGGER_OPTIONS: { key: LogicTriggerType; label: string; icon: React.ElementType }[] = [
+  const TRIGGER_OPTIONS: { key: LogicTriggerType; label: string; icon: React.ElementType; hint?: string }[] = [
     { key: "ask_question", label: t("logicRules.triggers.askQuestion"), icon: MessageSquare },
     { key: "notify", label: t("logicRules.triggers.notify"), icon: Bell },
+    { key: "skip_to_complete", label: t("logicRules.triggers.skipToComplete"), icon: CornerDownRight, hint: t("logicRules.triggers.skipToCompleteHint") },
     { key: "require_note", label: t("logicRules.triggers.requireNote"), icon: FileText },
     { key: "require_media", label: t("logicRules.triggers.requireMedia"), icon: Image },
   ];
@@ -603,24 +606,13 @@ function LogicRulesEditor({
                   </span>
                 ) : isValuelessComparator(rule.comparator) ? null
                 : isMcType && isOneOfComparator(rule.comparator) ? (
-                  <div className="flex flex-wrap gap-1">
-                    {mcChoices.map(c => {
-                      const selected = (rule.values ?? []).includes(c);
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => toggleRuleValue(ri, c)}
-                          className={cn(
-                            "text-xs px-2 py-1 rounded-full border transition-colors",
-                            selected ? "bg-sage/15 border-sage/40 text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
-                          )}
-                        >
-                          {c}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <ChoiceMultiSelect
+                    choices={mcChoices}
+                    choiceColors={question.choiceColors}
+                    selected={rule.values ?? []}
+                    onToggle={c => toggleRuleValue(ri, c)}
+                    translate={false}
+                  />
                 ) : isMcType ? (
                   <select
                     value={rule.value}
@@ -782,10 +774,16 @@ function LogicRulesEditor({
                           key={t.key}
                           type="button"
                           onClick={() => { addTrigger(ri, t.key); setOpenDropdown(null); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors",
+                            t.key === "require_note" && "border-t border-border",
+                          )}
                         >
                           <t.icon size={13} className="text-sage shrink-0" />
-                          <span className="text-xs text-foreground">{t.label}</span>
+                          <span>
+                            <span className="block text-xs text-foreground">{t.label}</span>
+                            {t.hint && <span className="block text-[11px] text-muted-foreground">{t.hint}</span>}
+                          </span>
                         </button>
                       ))}
                     </div>

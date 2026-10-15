@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, AlertTriangle, Mail, User } from "lucide-react";
+import { Plus, X, GitBranch, MessageSquare, Bell, FileText, Image, CornerDownRight, AlertTriangle, Mail, User } from "lucide-react";
 import { cn, blurOnWheel } from "@/lib/utils";
 import { FollowUpQuestionEditor, createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
 import { translateChoice } from "./data";
+import { ChoiceMultiSelect } from "./ChoiceMultiSelect";
 import type { LogicRule, LogicComparator, LogicTrigger, LogicTriggerType, QuestionConfig, ResponseType } from "./types";
 import {
   COMPARATOR_LABEL_KEYS, comparatorKeysFor, defaultComparatorFor, isBetweenComparator, isOneOfComparator,
@@ -23,6 +24,8 @@ interface LogicRulesEditorProps {
   responseType: ResponseType;
   /** Question config; its number mode decides whether this is a refrigeration question */
   config?: QuestionConfig;
+  /** Tailwind color classes per choice, parallel to `choices` */
+  choiceColors?: string[];
   /** Pre-resolved choices for the question (MC options, or ["Yes","No","N/A"] fallback) */
   choices: string[];
   questionText: string;
@@ -30,17 +33,18 @@ interface LogicRulesEditorProps {
   notifyRecipients: NotifyRecipient[];
 }
 
-function useTriggerOptions(t: (key: string) => string): { key: LogicTriggerType; label: string; icon: React.ElementType }[] {
+function useTriggerOptions(t: (key: string) => string): { key: LogicTriggerType; label: string; icon: React.ElementType; hint?: string }[] {
   return [
     { key: "ask_question", label: t("logicRules.triggers.askQuestion"), icon: MessageSquare },
     { key: "notify", label: t("logicRules.triggers.notify"), icon: Bell },
+    { key: "skip_to_complete", label: t("logicRules.triggers.skipToComplete"), icon: CornerDownRight, hint: t("logicRules.triggers.skipToCompleteHint") },
     { key: "require_note", label: t("logicRules.triggers.requireNote"), icon: FileText },
     { key: "require_media", label: t("logicRules.triggers.requireMedia"), icon: Image },
   ];
 }
 
 export function LogicRulesEditor({
-  rules, onRulesChange, responseType, config, choices, questionText, questionIndex, notifyRecipients,
+  rules, onRulesChange, responseType, config, choiceColors, choices, questionText, questionIndex, notifyRecipients,
 }: LogicRulesEditorProps) {
   const { t } = useTranslation("checklists");
   const TRIGGER_OPTIONS = useTriggerOptions(t);
@@ -167,24 +171,13 @@ export function LogicRulesEditor({
                   </span>
                 ) : isValuelessComparator(rule.comparator) ? null
                 : isChoiceType && isOneOfComparator(rule.comparator) ? (
-                  <div className="flex flex-wrap gap-1">
-                    {choices.map(c => {
-                      const selected = (rule.values ?? []).includes(c);
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => toggleRuleValue(ri, c)}
-                          className={cn(
-                            "text-xs px-2 py-1 rounded-full border transition-colors",
-                            selected ? "bg-sage/15 border-sage/40 text-sage-deep" : "border-border text-muted-foreground hover:border-sage/40",
-                          )}
-                        >
-                          {translateChoice(c)}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <ChoiceMultiSelect
+                    choices={choices}
+                    choiceColors={choiceColors}
+                    selected={rule.values ?? []}
+                    onToggle={c => toggleRuleValue(ri, c)}
+                    translate={true}
+                  />
                 ) : isChoiceType ? (
                   <select
                     value={rule.value}
@@ -363,10 +356,16 @@ export function LogicRulesEditor({
                             key={t.key}
                             type="button"
                             onClick={() => { addTrigger(ri, t.key); setOpenDropdown(null); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors",
+                              t.key === "require_note" && "border-t border-border",
+                            )}
                           >
                             <t.icon size={13} className="text-sage shrink-0" />
-                            <span className="text-xs text-foreground">{t.label}</span>
+                            <span>
+                              <span className="block text-xs text-foreground">{t.label}</span>
+                              {t.hint && <span className="block text-[11px] text-muted-foreground">{t.hint}</span>}
+                            </span>
                           </button>
                         ))}
                     </div>

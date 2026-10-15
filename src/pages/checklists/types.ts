@@ -62,7 +62,7 @@ export type LogicComparator =
   | "is_blank" | "is_not_blank"
   | "checked" | "not_checked"
   | "passes" | "fails";
-export type LogicTriggerType = "ask_question" | "notify" | "require_note" | "require_media" | "require_action";
+export type LogicTriggerType = "ask_question" | "notify" | "skip_to_complete" | "require_note" | "require_media" | "require_action";
 
 export interface LogicTrigger {
   type: LogicTriggerType;
