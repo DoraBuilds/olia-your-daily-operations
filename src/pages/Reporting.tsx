@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ClipboardCheck, GraduationCap } from "lucide-react";
+import { ClipboardCheck, GraduationCap, Timer } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Layout } from "@/components/Layout";
@@ -7,10 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ReportingTab } from "./checklists/ReportingTab";
 import { TrainingReportTab } from "./reporting/TrainingReportTab";
+import { TimingReportTab } from "./reporting/TimingReportTab";
 
 const VALID_STATUSES = ["all", "completed", "unfinished", "unstarted"] as const;
 type ReportingStatus = typeof VALID_STATUSES[number];
-type ReportingView = "checklists" | "training";
+type ReportingView = "checklists" | "training" | "timing";
 
 export default function Reporting() {
   const { t } = useTranslation("checklists");
@@ -25,13 +26,15 @@ export default function Reporting() {
   // Training completion covers everyone's progress, so it's for owners and
   // managers with View reporting — the same rule the database enforces (#915).
   const canViewTraining = !!teamMember && (teamMember.is_owner || (teamMember.is_manager && !!teamMember.permissions?.view_reporting));
-  const [selectedView, setSelectedView] = useState<ReportingView>(searchParams.get("view") === "training" ? "training" : "checklists");
+  const [selectedView, setSelectedView] = useState<ReportingView>(
+    searchParams.get("view") === "training" ? "training" : searchParams.get("view") === "timing" ? "timing" : "checklists",
+  );
   const view: ReportingView = canViewTraining ? selectedView : "checklists";
   const selectView = (next: ReportingView) => {
     setSelectedView(next);
     // Mirrored in the URL so a refresh or shared link keeps the view.
     const params = new URLSearchParams(searchParams);
-    if (next === "training") params.set("view", "training"); else params.delete("view");
+    if (next !== "checklists") params.set("view", next); else params.delete("view");
     setSearchParams(params, { replace: true });
   };
 
@@ -40,6 +43,7 @@ export default function Reporting() {
     <div role="tablist" className="flex gap-1 bg-muted rounded-xl p-1">
       {([
         { key: "checklists" as const, icon: ClipboardCheck },
+        { key: "timing" as const, icon: Timer },
         { key: "training" as const, icon: GraduationCap },
       ]).map(({ key, icon: Icon }) => (
         <button
@@ -64,6 +68,8 @@ export default function Reporting() {
     <Layout>
       {view === "training"
         ? <TrainingReportTab viewSwitcher={viewSwitcher} />
+        : view === "timing"
+        ? <TimingReportTab viewSwitcher={viewSwitcher} />
         : <ReportingTab viewSwitcher={viewSwitcher} initialLocationId={initialLocationId} initialStatus={initialStatus} />}
     </Layout>
   );

@@ -175,7 +175,46 @@
     },
     "views": {
       "checklists": "Checklists",
+      "timing": "Puntualidad",
       "training": "Capacitación"
+    },
+    "timing": {
+      "title": "Puntualidad",
+      "loading": "Cargando puntualidad…",
+      "empty": "Aún no hay listas con horario en este periodo. Las listas con ventana de entrega se registran a tiempo, tardías o no realizadas.",
+      "range": {
+        "week": "Esta semana",
+        "last7": "Últimos 7 días",
+        "last30": "Últimos 30 días"
+      },
+      "onTime": "A tiempo",
+      "late": "Tardías",
+      "missed": "No realizadas",
+      "byLocation": "Por local",
+      "byDepartment": "Por departamento",
+      "allDepartments": "Todos los departamentos",
+      "rowCounts": "{{onTime}} a tiempo · {{late}} tardías · {{missed}} no realizadas",
+      "reasonsTitle": "Por qué no se realizaron",
+      "noReason": "Sin motivo",
+      "reasons": {
+        "short_staffed": "Falta de personal",
+        "equipment_issue": "Problema de equipo",
+        "forgot": "Se olvidó",
+        "other": "Otro"
+      },
+      "missedTitle": "Listas no realizadas ({{count}})",
+      "route": {
+        "window_close": "No realizada al cerrar la ventana",
+        "after_overdue": "No realizada tras Atrasado"
+      },
+      "addNote": "Añadir nota",
+      "editNote": "Editar nota",
+      "noteTitle": "¿Por qué no se realizó?",
+      "notePlaceholder": "Detalles opcionales",
+      "saveNote": "Guardar nota",
+      "noteSaved": "Nota guardada.",
+      "noteFailed": "No se pudo guardar la nota: {{error}}",
+      "close": "Cerrar"
     },
     "training": {
       "searchPlaceholder": "Buscar capacitación",
