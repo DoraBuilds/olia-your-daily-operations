@@ -49,12 +49,12 @@
   "plans": {
     "starter": {
       "description": "For single-location restaurants getting started with digital operations.",
-      "highlights": ["1 location", "Up to 20 staff profiles", "Unlimited checklists", "AI checklist builder + file-to-checklist convert", "Kiosk mode with offline queue", "PDF + CSV export"],
+      "highlights": ["1 location", "Unlimited staff per location", "Unlimited checklists", "AI checklist builder + file-to-checklist convert", "Kiosk mode with offline queue", "PDF + CSV export"],
       "locationHint": "1 location included"
     },
     "growth": {
-      "description": "For operators adding locations, with more staff capacity, deeper reporting, and AI-assisted workflows.",
-      "highlights": ["Unlimited locations, billed per location", "Up to 40 staff profiles", "Advanced reporting & analytics", "Training mode for onboarding", "Maintenance Hub — OCR, fridge trends, machinery health", "Weather-integrated alerts", "AI assistant trained on your business"],
+      "description": "For operators adding locations, with deeper reporting, and AI-assisted workflows.",
+      "highlights": ["Unlimited locations, billed per location", "Unlimited staff per location", "Advanced reporting & analytics", "Training mode for onboarding", "Maintenance Hub — OCR, fridge trends, machinery health", "Weather-integrated alerts", "AI assistant trained on your business"],
       "locationHint": "Unlimited locations, billed per location"
     },
     "enterprise": {
@@ -105,8 +105,6 @@
     },
     "values": {
       "one": "1",
-      "upTo20": "Up to 20",
-      "upTo40": "Up to 40",
       "unlimited": "Unlimited"
     }
   },

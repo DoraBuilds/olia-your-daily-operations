@@ -637,7 +637,7 @@ const manifesto = [
 // `true`/`false` render as check/dash; strings render as-is (locations, staff caps).
 const compareRows: { feature: string; starter: boolean | string; growth: boolean | string; enterprise: boolean | string }[] = [
   { feature: "Locations", starter: "1", growth: "Unlimited (per location)", enterprise: "Contact us" },
-  { feature: "Staff", starter: "20", growth: "40", enterprise: "Unlimited" },
+  { feature: "Staff per location", starter: "Unlimited", growth: "Unlimited", enterprise: "Unlimited" },
   { feature: "Checklists", starter: "Unlimited", growth: "Unlimited", enterprise: "Unlimited" },
   { feature: "Checklist builder, folders & logic", starter: true, growth: true, enterprise: true },
   { feature: "AI checklist builder", starter: true, growth: true, enterprise: true },
@@ -1069,7 +1069,7 @@ export default function SundayRemixSite() {
           <div className="rx-section-header rx-fade">
             <div className="rx-badge centered"><span className="rx-badge-dot" />Pricing</div>
             <h2>Simple pricing per location.</h2>
-            <p>No per user. <span className="rx-mark">Unlimited staff</span>. Cancel anytime.</p>
+            <p>No per user. <span className="rx-mark">Unlimited users per location</span>. Cancel anytime.</p>
           </div>
           <div className="rx-pricing-grid" ref={pricingGridRef}>
             <div className="rx-pcard rx-fade">
@@ -1078,7 +1078,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["1 location", "Up to 20 staff", "Unlimited checklists", "Compliance & fridge temp logging", "AI checklist builder", "Issue reporting & photo evidence", "Email support"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["1 location", "Unlimited staff", "Unlimited checklists", "Compliance & fridge temp logging", "AI checklist builder", "Issue reporting & photo evidence", "Email support"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               {cta("/signup", "Start with Starter", "Join the waitlist", "rx-pbtn rx-pbtn-outline")}
             </div>
@@ -1089,7 +1089,7 @@ export default function SundayRemixSite() {
               <div className="rx-punit">per location · billed monthly</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Everything in Starter, plus:", "Unlimited locations, billed per location", "Up to 40 staff", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Starter, plus:", "Unlimited locations, billed per location", "Unlimited staff per location", "Advanced reporting & analytics", "Maintenance Hub — OCR, fridge trends, machinery health", "Training mode for onboarding", "Weather-integrated alerts", "AI assistant trained on your business"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               <span className="rx-shine-wrap block">{cta("/signup", "Start with Growth", "Join the waitlist", "rx-pbtn rx-pbtn-neon")}</span>
             </div>
@@ -1099,13 +1099,17 @@ export default function SundayRemixSite() {
               <div className="rx-punit">tailored to your requirements</div>
               <div className="rx-pdiv" />
               <ul className="rx-pfeats">
-                {["Everything in Growth, plus:", "Volume pricing across locations", "Unlimited staff", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
+                {["Everything in Growth, plus:", "Volume pricing across locations", "Custom terms for 150+ staff sites", "Priority support", "Dedicated account management", "Custom SLA"].map((f) => <li key={f}><PCheck />{f}</li>)}
               </ul>
               {WAITLIST_MODE
                 ? <a href="#" className="rx-pbtn rx-pbtn-outline" onClick={openWaitlist}>Join the waitlist</a>
                 : <a href="mailto:dora@oliahq.com" className="rx-pbtn rx-pbtn-outline">Contact sales</a>}
             </div>
           </div>
+
+          <p className="rx-pnote" style={{ textAlign: "center", fontSize: 13, color: "var(--ink-soft)", maxWidth: 640, margin: "28px auto 0" }}>
+            Unlimited users per location. Standard locations cover up to about 50 active staff (used Olia in the last 30 days), large locations about 50-150, and above 150 we quote custom. Reviewed at renewal, never mid-season.
+          </p>
 
           <details className="rx-compare">
             <summary>Compare all features</summary>
