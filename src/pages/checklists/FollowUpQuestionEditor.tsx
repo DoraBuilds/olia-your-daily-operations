@@ -28,6 +28,10 @@ import type {
 import i18n from "@/lib/i18n";
 import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
+import {
+  COMPARATOR_LABEL_KEYS, comparatorKeysFor, defaultComparatorFor, isBetweenComparator, isOneOfComparator,
+  isValuelessComparator, logicRuleKind, rulePatchForComparator,
+} from "./logic-comparators";
 
 function useMcColorOptions(t: (key: string) => string) {
   return [
@@ -484,7 +488,7 @@ function LogicRulesEditor({
   const cfg = question.config || {};
   const rules = cfg.logicRules || [];
   const showLogic = rules.length > 0;
-  const isNumericType = question.responseType === "number";
+  const isNumericType = logicRuleKind(question.responseType, cfg) === "number";
   const isMcType = question.responseType === "multiple_choice" || question.responseType === "checkbox";
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -500,33 +504,15 @@ function LogicRulesEditor({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [openDropdown]);
 
-  const NUMERIC_COMPARATORS: { key: LogicComparator; label: string }[] = [
-    { key: "lt", label: t("logicRules.comparators.lessThan") },
-    { key: "lte", label: t("logicRules.comparators.lessThanOrEqual") },
-    { key: "eq", label: t("logicRules.comparators.equalTo") },
-    { key: "neq", label: t("logicRules.comparators.notEqualTo") },
-    { key: "gte", label: t("logicRules.comparators.greaterThanOrEqual") },
-    { key: "gt", label: t("logicRules.comparators.greaterThan") },
-    { key: "between", label: t("logicRules.comparators.between") },
-    { key: "not_between", label: t("logicRules.comparators.notBetween") },
-    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
-  ];
-  const CHOICE_COMPARATORS: { key: LogicComparator; label: string }[] = [
-    { key: "is", label: t("logicRules.comparators.is") },
-    { key: "is_not", label: t("logicRules.comparators.isNot") },
-    { key: "is_selected", label: t("logicRules.comparators.isSelected") },
-    { key: "is_not_selected", label: t("logicRules.comparators.isNotSelected") },
-    { key: "is_one_of", label: t("logicRules.comparators.isOneOf") },
-    { key: "is_not_one_of", label: t("logicRules.comparators.isNotOneOf") },
-    { key: "unanswered", label: t("logicRules.comparators.notProvided") },
-  ];
-  const TEXT_COMPARATORS = CHOICE_COMPARATORS;
-  const comparators = isNumericType ? NUMERIC_COMPARATORS : isMcType ? CHOICE_COMPARATORS : TEXT_COMPARATORS;
-  const isOneOfComparator = (comparator: LogicComparator) => comparator === "is_one_of" || comparator === "is_not_one_of";
+  const kind = logicRuleKind(question.responseType, cfg);
+  const comparatorLabel = (c: LogicComparator) => t(`logicRules.comparators.${COMPARATOR_LABEL_KEYS[c]}`);
   const describeCondition = (rule: LogicRule) => {
     if (rule.comparator === "unanswered") return t("logicRules.leftUnanswered");
-    const label = comparators.find(c => c.key === rule.comparator)?.label || rule.comparator;
-    if ((rule.comparator === "between" || rule.comparator === "not_between") && rule.valueTo) {
+    const label = comparatorLabel(rule.comparator);
+    if (isValuelessComparator(rule.comparator)) {
+      return t("logicRules.answeredValueless", { comparator: label.toLowerCase() });
+    }
+    if (isBetweenComparator(rule.comparator) && rule.valueTo) {
       return t("logicRules.answeredBetween", { comparator: label.toLowerCase(), value: rule.value, valueTo: rule.valueTo });
     }
     if (isOneOfComparator(rule.comparator)) {
@@ -549,8 +535,8 @@ function LogicRulesEditor({
   const addRule = () => {
     const newRule: LogicRule = {
       id: `lr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      comparator: comparators[0].key,
-      value: isMcType ? mcChoices[0] : "",
+      comparator: defaultComparatorFor(kind),
+      value: kind === "choice" ? mcChoices[0] : "",
       triggers: [],
     };
     updateQuestion({ config: { ...cfg, logicRules: [...rules, newRule] } });
@@ -603,25 +589,20 @@ function LogicRulesEditor({
                 <select
                   value={rule.comparator}
                   onChange={e => {
-                    const nextComparator = e.target.value as LogicComparator;
-                    updateRule(ri, {
-                      comparator: nextComparator,
-                      value: nextComparator === "unanswered" ? "" : rule.value,
-                      valueTo: nextComparator === "unanswered" ? undefined : rule.valueTo,
-                      values: isOneOfComparator(nextComparator) ? (rule.values ?? []) : undefined,
-                    });
+                    updateRule(ri, rulePatchForComparator(e.target.value as LogicComparator, rule));
                   }}
                   className="text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  {comparators.map(c => (
-                    <option key={c.key} value={c.key}>{c.label.toLowerCase()}</option>
+                  {comparatorKeysFor(kind, rule.comparator).map(c => (
+                    <option key={c} value={c}>{comparatorLabel(c).toLowerCase()}</option>
                   ))}
                 </select>
                 {rule.comparator === "unanswered" ? (
                   <span className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-muted-foreground">
                     {t("logicRules.noResponseProvided")}
                   </span>
-                ) : isMcType && isOneOfComparator(rule.comparator) ? (
+                ) : isValuelessComparator(rule.comparator) ? null
+                : isMcType && isOneOfComparator(rule.comparator) ? (
                   <div className="flex flex-wrap gap-1">
                     {mcChoices.map(c => {
                       const selected = (rule.values ?? []).includes(c);
@@ -657,7 +638,7 @@ function LogicRulesEditor({
                       placeholder={isNumericType ? t("logicRules.valuePlaceholder") : t("logicRules.textPlaceholder")}
                       className="w-20 text-xs border border-border rounded-lg px-2 py-1.5 bg-muted focus:outline-none focus:ring-1 focus:ring-ring"
                     />
-                    {(rule.comparator === "between" || rule.comparator === "not_between") && (
+                    {isBetweenComparator(rule.comparator) && (
                       <>
                         <span className="text-xs text-muted-foreground">{t("logicRules.and")}</span>
                         <input

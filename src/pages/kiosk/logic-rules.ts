@@ -8,7 +8,11 @@
  */
 
 import type { LogicComparator, LogicRule } from "@/pages/checklists/types";
-import { normalizeAnswerText } from "./utils";
+import { normalizeAnswerText, isWithinRange } from "./utils";
+
+function questionRange(question: { min?: number; max?: number }) {
+  return { min: question.min, max: question.max };
+}
 
 // ─── Rule evaluation ──────────────────────────────────────────────────────────
 
@@ -21,10 +25,23 @@ export function evaluateRule(
   ruleValue: string,
   ruleValueTo?: string,
   ruleValues?: string[],
+  /** Acceptable range of a refrigeration question, used by "passes" / "fails" */
+  range?: { min?: number; max?: number },
 ): boolean {
   // "unanswered" does not depend on the value at all
   if (comparator === "unanswered") {
     return answer === undefined || answer === null || answer === "" || answer === false;
+  }
+
+  const isBlank = answer === undefined || answer === null || answer === "" || answer === false
+    || (Array.isArray(answer) && answer.length === 0);
+  if (comparator === "is_blank" || comparator === "not_checked") return isBlank;
+  if (comparator === "is_not_blank" || comparator === "checked") return !isBlank;
+  if (comparator === "passes" || comparator === "fails") {
+    const reading = isBlank ? NaN : Number(answer);
+    if (Number.isNaN(reading)) return false;
+    const inRange = isWithinRange(reading, range?.min, range?.max);
+    return comparator === "passes" ? inRange : !inRange;
   }
 
   const strAnswer = answer === undefined || answer === null ? "" : String(answer).trim();
@@ -108,6 +125,8 @@ export function collectNotifyAlerts(
     id: string;
     text: string;
     config?: { logicRules?: LogicRule[] };
+    min?: number;
+    max?: number;
   }>,
   answers: Record<string, any>,
 ): NotifyAlert[] {
@@ -120,7 +139,7 @@ export function collectNotifyAlerts(
     const answer = answers[question.id];
 
     for (const rule of rules) {
-      const matched = evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values);
+      const matched = evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values, questionRange(question));
       if (!matched) continue;
 
       for (const trigger of rule.triggers) {
@@ -179,6 +198,8 @@ export function collectActionAlerts(
     id: string;
     text: string;
     config?: { logicRules?: LogicRule[] };
+    min?: number;
+    max?: number;
   }>,
   answers: Record<string, any>,
 ): ActionAlert[] {
@@ -190,7 +211,7 @@ export function collectActionAlerts(
     const answer = answers[question.id];
 
     for (const rule of rules) {
-      if (!evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values)) continue;
+      if (!evaluateRule(answer, rule.comparator, rule.value, rule.valueTo, rule.values, questionRange(question))) continue;
 
       for (const trigger of rule.triggers) {
         if (trigger.type !== "require_action") continue;

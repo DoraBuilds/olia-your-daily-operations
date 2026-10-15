@@ -294,45 +294,46 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(trigger.config.followUpQuestion.config.logicRules[0].triggers[0].type).toBe("notify");
   });
 
-  it("lets logic rules use a not-provided comparator and keep triggers attached", () => {
+  it("lets text logic rules check for a blank answer and keep triggers attached", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Text answer"));
     fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
-    fireEvent.change(screen.getByDisplayValue("is"), { target: { value: "unanswered" } });
-    expect(screen.getByText(/No response provided/i)).toBeInTheDocument();
+    const select = screen.getByDisplayValue("is");
+    expect(Array.from((select as HTMLSelectElement).options).map(o => o.value)).toEqual(["is", "is_not", "is_blank", "is_not_blank"]);
+    fireEvent.change(select, { target: { value: "is_blank" } });
+    expect(screen.queryByPlaceholderText(/Enter text/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /trigger/i }));
     fireEvent.click(screen.getByText("Require note"));
 
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
-      target: { value: "Unanswered Checklist" },
+      target: { value: "Blank Checklist" },
     });
     fireEvent.click(screen.getByTestId("checklist-save-button"));
 
-    const saved = onAdd.mock.calls[0][0] as any;
-    expect(saved.sections[0].questions[0].config.logicRules[0].comparator).toBe("unanswered");
-    expect(saved.sections[0].questions[0].config.logicRules[0].value).toBe("");
-    expect(saved.sections[0].questions[0].config.logicRules[0].triggers[0].type).toBe("require_note");
+    const rule = (onAdd.mock.calls[0][0] as any).sections[0].questions[0].config.logicRules[0];
+    expect(rule.comparator).toBe("is_blank");
+    expect(rule.value).toBe("");
+    expect(rule.triggers[0].type).toBe("require_note");
   });
 
-  it("offers 'is one of' as a logic comparator and stores the picked values", () => {
+  it("offers checked / not checked for checkbox logic rules", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Add logic/i }));
-    fireEvent.change(screen.getByDisplayValue("is"), { target: { value: "is_one_of" } });
-
-    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
-    fireEvent.click(screen.getByRole("button", { name: "No" }));
+    const select = screen.getByDisplayValue("checked");
+    expect(Array.from((select as HTMLSelectElement).options).map(o => o.value)).toEqual(["checked", "not_checked"]);
+    fireEvent.change(select, { target: { value: "not_checked" } });
 
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
-      target: { value: "One Of Checklist" },
+      target: { value: "Checkbox Checklist" },
     });
     fireEvent.click(screen.getByTestId("checklist-save-button"));
 
-    const saved = onAdd.mock.calls[0][0] as any;
-    const rule = saved.sections[0].questions[0].config.logicRules[0];
-    expect(rule.comparator).toBe("is_one_of");
-    expect(rule.values).toEqual(["Yes", "No"]);
+    const rule = (onAdd.mock.calls[0][0] as any).sections[0].questions[0].config.logicRules[0];
+    expect(rule.comparator).toBe("not_checked");
   });
 
   it("shows colored multiple-choice options and hides the create action trigger option", async () => {

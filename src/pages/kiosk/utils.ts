@@ -241,6 +241,11 @@ export function normalizeAnswerText(value: any): string {
   return String(value).trim();
 }
 
+/** A reading passes when it sits inside the acceptable range; a missing bound is open-ended. */
+export function isWithinRange(value: number, min?: number, max?: number) {
+  return (min == null || value >= min) && (max == null || value <= max);
+}
+
 export function parseComparableNumber(value: any): number | null {
   if (value === undefined || value === null || value === "") return null;
   const parsed = Number(value);
@@ -255,6 +260,16 @@ export function doesRuleMatch(question: Question, rule: LogicRule, answers: Reco
   const rawAnswer = getQuestionAnswer(question, answers);
   if (rule.comparator === "unanswered") {
     return rawAnswer === UNANSWERED_SENTINEL;
+  }
+  // Blank and checkbox rules are decided by whether there is an answer at all.
+  if (rule.comparator === "is_blank" || rule.comparator === "not_checked") return isBlankAnswer(rawAnswer);
+  if (rule.comparator === "is_not_blank") return !isBlankAnswer(rawAnswer);
+  if (rule.comparator === "checked") return !isBlankAnswer(rawAnswer);
+  if (rule.comparator === "passes" || rule.comparator === "fails") {
+    const reading = parseComparableNumber(rawAnswer);
+    if (reading == null) return false;
+    const inRange = isWithinRange(reading, question.min, question.max);
+    return rule.comparator === "passes" ? inRange : !inRange;
   }
   if (isBlankAnswer(rawAnswer)) return false;
 

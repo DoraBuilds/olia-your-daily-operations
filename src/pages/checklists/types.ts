@@ -58,7 +58,10 @@ export type LogicComparator =
   | "is" | "is_not"
   | "is_selected" | "is_not_selected"
   | "is_one_of" | "is_not_one_of"
-  | "lt" | "lte" | "eq" | "neq" | "gte" | "gt" | "between" | "not_between" | "unanswered";
+  | "lt" | "lte" | "eq" | "neq" | "gte" | "gt" | "between" | "not_between" | "unanswered"
+  | "is_blank" | "is_not_blank"
+  | "checked" | "not_checked"
+  | "passes" | "fails";
 export type LogicTriggerType = "ask_question" | "notify" | "require_note" | "require_media" | "require_action";
 
 export interface LogicTrigger {
