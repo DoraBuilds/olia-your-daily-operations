@@ -80,6 +80,22 @@
     "doneButton": "Done",
     "returningIn": "Returning to home in {{count}}s"
   },
+  "missed": {
+    "title": "Missed today",
+    "hint": "These can no longer be completed. Add a note so the next shift knows why.",
+    "addNote": "Add note",
+    "editNote": "Edit note",
+    "noteTitle": "Why was it missed?",
+    "notePlaceholder": "Optional details",
+    "save": "Save note",
+    "saveFailed": "Could not save the note. Try again.",
+    "reasons": {
+      "short_staffed": "Short-staffed",
+      "equipment_issue": "Equipment issue",
+      "forgot": "Forgot",
+      "other": "Other"
+    }
+  },
   "grid": {
     "kioskFallbackName": "Kiosk",
     "identifiedAs": "Hi, <name>{{name}}</name>!",

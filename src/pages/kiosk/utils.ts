@@ -365,3 +365,17 @@ export function getFirstUnansweredQuestionId(questions: Question[], answers: Rec
   }
   return questions[0]?.id ?? null;
 }
+
+/**
+ * The operating date ("yyyy-MM-dd") `now` belongs to for a location whose day
+ * ends at `dayEndTime` (default midnight). With a 04:00 day end, 01:30 still
+ * belongs to the day that began yesterday.
+ */
+export function getKioskOperatingDate(now: Date, dayEndTime: string | null | undefined): string {
+  const dayEnd = parseTimeToMinutes(dayEndTime) ?? 0;
+  const shifted = new Date(now.getTime() - dayEnd * 60_000);
+  const y = shifted.getFullYear();
+  const m = String(shifted.getMonth() + 1).padStart(2, "0");
+  const d = String(shifted.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}

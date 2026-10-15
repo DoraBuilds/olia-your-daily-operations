@@ -32,6 +32,7 @@ import { KioskLibrary } from "./kiosk/KioskLibrary";
 import { ChecklistRunner } from "./kiosk/ChecklistRunner";
 import { CompletionScreen } from "./kiosk/CompletionScreen";
 import { useLiveClock, useInactivityTimer } from "./kiosk/hooks";
+import { MissedBox } from "./kiosk/MissedBox";
 import { collectActionAlerts, collectNotifyAlerts } from "./kiosk/logic-rules";
 
 // Re-export ChecklistRunner for backward compatibility (tests import from @/pages/Kiosk)
@@ -736,6 +737,7 @@ function KioskScreen() {
   const dueChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "due" && !completedIds.has(c.id));
   const overdueChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "overdue" && !completedIds.has(c.id));
   const upcomingChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "upcoming" && !completedIds.has(c.id));
+  const missedChecklists = kioskChecklists.filter(c => getKioskVisibilityState(c, now) === "missed" && !completedIds.has(c.id));
   const doneChecklists = kioskChecklists.filter(c => completedIds.has(c.id));
   const visibleChecklists = kioskChecklists; // total — used for "no checklists" empty state
 
@@ -948,6 +950,19 @@ function KioskScreen() {
               <X size={14} />
             </button>
           </div>
+        </div>
+      )}
+
+      {missedChecklists.length > 0 && !checklistsLoading && (
+        <div className="px-5 sm:px-6 lg:px-8 mt-2">
+          <MissedBox
+            checklists={missedChecklists}
+            locationId={locationId}
+            dayEndTime={kioskChecklists[0]?.day_end_time ?? null}
+            departmentIds={staffIdentity?.departmentIds ?? []}
+            staffName={staffIdentity?.staffName ?? ""}
+            now={now}
+          />
         </div>
       )}
 
