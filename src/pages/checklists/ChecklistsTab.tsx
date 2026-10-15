@@ -102,6 +102,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     due_time: c.due_time ?? null,
     visibility_from: c.visibility_from ?? null,
     visibility_until: c.visibility_until ?? null,
+    allow_late_completion: c.allow_late_completion ?? true,
     is_published: c.is_published,
   }));
 
@@ -404,6 +405,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       due_time: cl.due_time ?? null,
       visibility_from: cl.visibility_from ?? null,
       visibility_until: cl.visibility_until ?? null,
+      allow_late_completion: cl.allow_late_completion ?? true,
       is_published: cl.is_published,
     });
   });
@@ -455,6 +457,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             due_time: item.due_time ?? null,
             visibility_from: item.visibility_from ?? null,
             visibility_until: item.visibility_until ?? null,
+            allow_late_completion: item.allow_late_completion ?? true,
             is_published: item.is_published ?? false,
           });
           return (data as any)?.id as string | undefined;
@@ -477,6 +480,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             due_time: updates.due_time !== undefined ? updates.due_time : orig.due_time,
             visibility_from: updates.visibility_from !== undefined ? updates.visibility_from : (orig.visibility_from ?? null),
             visibility_until: updates.visibility_until !== undefined ? updates.visibility_until : (orig.visibility_until ?? null),
+            allow_late_completion: updates.allow_late_completion !== undefined ? updates.allow_late_completion : (orig.allow_late_completion ?? true),
             is_published: updates.is_published !== undefined ? updates.is_published : orig.is_published,
           });
         }}
@@ -490,6 +494,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialStartDate={editingChecklist?.start_date ?? null}
         initialVisibilityFrom={editingChecklist?.visibility_from ?? null}
         initialVisibilityUntil={editingChecklist?.visibility_until ?? null}
+        initialAllowLateCompletion={editingChecklist?.allow_late_completion ?? true}
         initialIsPublished={editingChecklist?.is_published ?? false}
         editId={editingChecklistId || undefined}
         onDirtyChange={handleDirtyChange}

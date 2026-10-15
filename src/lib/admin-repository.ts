@@ -75,6 +75,8 @@ export interface Location {
   contact_phone: string;
   trading_hours: string;
   archive_threshold_days: number;
+  /** End of the location's operating day, HH:MM. Default 00:00 (midnight). */
+  day_end_time?: string;
   created_at?: string;
   // Google Maps / Places fields (populated by autocomplete)
   lat?: number | null;

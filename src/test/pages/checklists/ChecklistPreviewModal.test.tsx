@@ -266,7 +266,7 @@ describe("ChecklistPreviewModal", () => {
 
   it("shows the configured visibility window in the preview header", () => {
     render(<ChecklistPreviewModal checklist={visibilityWindowChecklist} onClose={onClose} onEdit={onEdit} />);
-    expect(screen.getByText(/Visible 9am - 10am/)).toBeInTheDocument();
+    expect(screen.getByText(/Due 9am - 10am/)).toBeInTheDocument();
   });
 
   it("shows nested follow-up question summaries in the preview", () => {

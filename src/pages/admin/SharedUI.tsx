@@ -571,6 +571,7 @@ export function LocationModal({
   const [address, setAddress] = useState(location?.address ?? "");
   const [email, setEmail] = useState(location?.contact_email ?? "");
   const [phone, setPhone] = useState(location?.contact_phone ?? "");
+  const [dayEnd, setDayEnd] = useState((location?.day_end_time ?? "00:00").slice(0, 5));
   // Google Maps fields — set when user picks from autocomplete dropdown
   const [lat, setLat] = useState<number | null>(location?.lat ?? null);
   const [lng, setLng] = useState<number | null>(location?.lng ?? null);
@@ -604,6 +605,7 @@ export function LocationModal({
       contact_phone: phone.trim(),
       // preserve existing archive threshold (or default for new locations)
       archive_threshold_days: location?.archive_threshold_days ?? 90,
+      day_end_time: dayEnd || "00:00",
       lat: lat ?? null,
       lng: lng ?? null,
       place_id: placeId ?? null,
@@ -660,6 +662,16 @@ export function LocationModal({
             onChange={e => setPhone(e.target.value)}
             placeholder={t("sharedUI.location.phonePlaceholder")} className={inputCls}
           />
+        </FormField>
+        <FormField label={t("sharedUI.location.dayEnd")}>
+          <input
+            type="time" value={dayEnd}
+            onChange={e => setDayEnd(e.target.value)}
+            data-testid="location-day-end" className={inputCls}
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            {t("sharedUI.location.dayEndHint")}
+          </p>
         </FormField>
         <SaveButton disabled={!name.trim() || !email.trim()} label={location ? t("sharedUI.location.saveChanges") : t("sharedUI.location.addLocation")} />
       </form>

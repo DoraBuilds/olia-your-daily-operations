@@ -35,6 +35,10 @@ export interface KioskChecklist {
   due_time: string | null;   // HH:MM — kiosk visibility based on this
   visibility_from: string | null;
   visibility_until: string | null;
+  /** Off = after the window closes the checklist is Missed instead of Overdue. */
+  allow_late_completion: boolean;
+  /** End of the location's operating day, HH:MM (default 00:00 = midnight). */
+  day_end_time: string | null;
   questions: Question[];
 }
 

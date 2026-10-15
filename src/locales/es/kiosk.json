@@ -113,7 +113,7 @@
     "itemCount_one": "{{count}} pregunta",
     "itemCount_other": "{{count}} preguntas",
     "visibleAllDay": "Visible todo el día",
-    "visibleRange": "Visible {{from}} - {{until}}",
+    "visibleRange": "Entrega {{from}} - {{until}}",
     "visibleFrom": "Visible desde {{from}}",
     "visibleUntil": "Visible hasta {{until}}",
     "dueAt": "Vence a las {{time}}",

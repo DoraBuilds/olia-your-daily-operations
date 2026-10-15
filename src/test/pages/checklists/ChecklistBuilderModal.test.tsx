@@ -359,15 +359,15 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.getByText("Select start date")).toBeInTheDocument();
   });
 
-  it("shows a visibility window toggle after the start date", () => {
+  it("shows a due window toggle after the start date", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    expect(screen.getByText("Visibility window")).toBeInTheDocument();
-    expect(screen.getByText(/Leave it off and the checklist stays visible all day/i)).toBeInTheDocument();
+    expect(screen.getByText("Due window")).toBeInTheDocument();
+    expect(screen.getByText(/Leave it off and the checklist stays open all day/i)).toBeInTheDocument();
   });
 
   it("reveals visibility window inputs when enabled", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
-    fireEvent.click(screen.getByRole("switch", { name: /Visibility window/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /Due window/i }));
     expect(screen.getByDisplayValue("09:00")).toBeInTheDocument();
     expect(screen.getByDisplayValue("10:00")).toBeInTheDocument();
   });
@@ -629,7 +629,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
   it("stores the visibility window on save when enabled", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
-    fireEvent.click(screen.getByRole("switch", { name: /Visibility window/i }));
+    fireEvent.click(screen.getByRole("switch", { name: /Due window/i }));
     fireEvent.change(screen.getByDisplayValue("09:00"), { target: { value: "08:30" } });
     fireEvent.change(screen.getByDisplayValue("10:00"), { target: { value: "10:15" } });
     fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
@@ -643,6 +643,27 @@ describe("ChecklistBuilderModal - new checklist", () => {
       visibility_from: "08:30",
       visibility_until: "10:15",
       due_time: null,
+    }));
+  });
+
+  it("allows late completion by default and saves it off when toggled", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    // Only shown once a due window exists: no window means no deadline.
+    expect(screen.queryByTestId("checklist-allow-late-toggle")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: /Due window/i }));
+    const toggle = screen.getByTestId("checklist-allow-late-toggle");
+    expect(toggle).toBeChecked();
+
+    fireEvent.click(toggle);
+    fireEvent.change(screen.getByPlaceholderText(/Morning Opening Checklist/), {
+      target: { value: "Strict Checklist" },
+    });
+    fireEvent.click(screen.getByTestId("checklist-save-button"));
+
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Strict Checklist",
+      allow_late_completion: false,
     }));
   });
 

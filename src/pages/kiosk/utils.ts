@@ -70,6 +70,8 @@ export function dbToKioskChecklist(raw: any): KioskChecklist {
     due_time: raw.due_time ?? null,
     visibility_from: raw.visibility_from ?? null,
     visibility_until: raw.visibility_until ?? null,
+    allow_late_completion: raw.allow_late_completion ?? true,
+    day_end_time: raw.day_end_time ?? null,
     questions: flattenSectionsToQuestions(raw.sections ?? []),
   };
 }
@@ -102,31 +104,49 @@ export function isKioskOverdue(due_time: string | null | undefined, now: Date): 
   return nowMinutes > dueMinutes;
 }
 
-export function getKioskVisibilityState(
-  checklist: Pick<KioskChecklist, "due_time" | "visibility_from" | "visibility_until">,
-  now: Date
-): "due" | "upcoming" | "overdue" {
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const fromMinutes = parseTimeToMinutes(checklist.visibility_from);
-  const untilMinutes = parseTimeToMinutes(checklist.visibility_until);
+export type KioskVisibilityState = "due" | "upcoming" | "overdue" | "missed";
 
-  if (fromMinutes != null || untilMinutes != null) {
-    const start = fromMinutes ?? 0;
-    const end = untilMinutes ?? 24 * 60 - 1;
+/**
+ * Where a checklist is right now. The window end is the deadline: before the
+ * window it is upcoming, inside it due, after it overdue (late completion on)
+ * or missed (late completion off). Overdue ends at the location's day end
+ * (default midnight), when the next operating day starts.
+ */
+export function getKioskVisibilityState(
+  checklist: Pick<KioskChecklist, "due_time" | "visibility_from" | "visibility_until"> &
+    Partial<Pick<KioskChecklist, "allow_late_completion" | "day_end_time">>,
+  now: Date
+): KioskVisibilityState {
+  // Measure everything from the start of the operating day (the previous day
+  // end) so a 04:00 day end keeps 01:00 in the day that began yesterday.
+  const dayEnd = parseTimeToMinutes(checklist.day_end_time) ?? 0;
+  const shift = (minutes: number) => (minutes - dayEnd + 24 * 60) % (24 * 60);
+  const afterWindow: KioskVisibilityState = checklist.allow_late_completion === false ? "missed" : "overdue";
+  const nowMinutes = shift(now.getHours() * 60 + now.getMinutes());
+  const rawFrom = parseTimeToMinutes(checklist.visibility_from);
+  const rawUntil = parseTimeToMinutes(checklist.visibility_until);
+
+  if (rawFrom != null || rawUntil != null) {
+    const start = rawFrom != null ? shift(rawFrom) : 0;
+    const end = rawUntil != null ? shift(rawUntil) : 24 * 60 - 1;
     if (start <= end) {
       if (nowMinutes < start) return "upcoming";
-      if (nowMinutes > end) return "overdue";
+      if (nowMinutes > end) return afterWindow;
       return "due";
     }
     // Overnight visibility window: visible from start through midnight, and
     // from midnight through end.
     if (nowMinutes >= start || nowMinutes <= end) return "due";
-    return nowMinutes < start ? "upcoming" : "overdue";
+    return nowMinutes < start ? "upcoming" : afterWindow;
   }
 
   if (checklist.due_time) {
-    if (isKioskDue(checklist.due_time, now)) return "due";
-    if (isKioskOverdue(checklist.due_time, now)) return "overdue";
+    const dueMinutes = parseTimeToMinutes(checklist.due_time);
+    if (dueMinutes != null) {
+      const due = shift(dueMinutes);
+      if (nowMinutes >= due - 60 && nowMinutes <= due) return "due";
+      if (nowMinutes > due) return afterWindow;
+    }
     return "upcoming";
   }
 
