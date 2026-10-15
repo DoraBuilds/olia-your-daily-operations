@@ -49,7 +49,7 @@ function useComparisonRows(t: (key: string) => string): ComparisonRow[] {
     // ── Usage limits ──────────────────────────────────────────────────────────
     { isHeader: true, label: section("usageLimits") },
     { label: row("locations"),      starter: v("one"),    growth: v("unlimited"), enterprise: v("unlimited") },
-    { label: row("staffProfiles"),  starter: v("upTo20"), growth: v("upTo40"), enterprise: v("unlimited") },
+    { label: row("staffProfiles"),  starter: v("unlimited"), growth: v("unlimited"), enterprise: v("unlimited") },
     { label: row("checklists"),     starter: v("unlimited"), growth: v("unlimited"), enterprise: v("unlimited") },
     // ── Core features ─────────────────────────────────────────────────────────
     { isHeader: true, label: section("coreFeatures") },

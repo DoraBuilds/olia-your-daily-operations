@@ -38,7 +38,7 @@ export interface PlanFeatures {
 export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   starter: {
     maxLocations: 1,
-    maxStaff: 20,
+    maxStaff: -1,
     maxChecklists: -1,
     aiBuilder: true,
     fileConvert: true,
@@ -50,7 +50,7 @@ export const PLAN_FEATURES: Record<Plan, PlanFeatures> = {
   },
   growth: {
     maxLocations: -1,
-    maxStaff: 40,
+    maxStaff: -1,
     maxChecklists: -1,
     aiBuilder: true,
     fileConvert: true,

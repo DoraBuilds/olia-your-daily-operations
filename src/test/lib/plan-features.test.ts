@@ -34,9 +34,9 @@ describe("PLAN_FEATURES", () => {
 
   describe("starter plan", () => {
     const starter = PLAN_FEATURES.starter;
-    it("has limited locations and staff", () => {
+    it("has one location and unlimited staff", () => {
       expect(starter.maxLocations).toBe(1);
-      expect(starter.maxStaff).toBeLessThanOrEqual(25);
+      expect(starter.maxStaff).toBe(-1);
     });
     it("does not include multi-location support", () => {
       expect(starter.multiLocation).toBe(false);

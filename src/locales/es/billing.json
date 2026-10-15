@@ -53,7 +53,7 @@
       "locationHint": "1 ubicación incluida"
     },
     "growth": {
-      "description": "Para operadores que agregan ubicaciones, con más capacidad de personal, informes más profundos y flujos de trabajo asistidos por IA.",
+      "description": "Para operadores que agregan ubicaciones, con informes más profundos y flujos de trabajo asistidos por IA.",
       "highlights": ["Ubicaciones ilimitadas, facturadas por ubicación", "Hasta 40 perfiles de personal", "Informes y análisis avanzados", "Modo de capacitación para incorporación", "Centro de mantenimiento — OCR, tendencias de refrigeración, salud de maquinaria", "Alertas integradas con el clima", "Asistente de IA entrenado con tu negocio"],
       "locationHint": "Ubicaciones ilimitadas, facturadas por ubicación"
     },
@@ -105,8 +105,6 @@
     },
     "values": {
       "one": "1",
-      "upTo20": "Hasta 20",
-      "upTo40": "Hasta 40",
       "unlimited": "Ilimitado"
     }
   },
