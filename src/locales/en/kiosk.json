@@ -113,7 +113,7 @@
     "itemCount_one": "{{count}} question",
     "itemCount_other": "{{count}} questions",
     "visibleAllDay": "Visible all day",
-    "visibleRange": "Visible {{from}} - {{until}}",
+    "visibleRange": "Due {{from}} - {{until}}",
     "visibleFrom": "Visible from {{from}}",
     "visibleUntil": "Visible until {{until}}",
     "dueAt": "Due {{time}}",

@@ -300,6 +300,8 @@
       "alertEmailPlaceholder": "e.g. main@olia.app",
       "alertEmailHint": "Out-of-range alerts and operational notifications are sent here.",
       "phoneOptional": "Location phone (optional)",
+      "dayEnd": "Day ends at",
+      "dayEndHint": "The end of your operating day (default 00:00, midnight). Checklists that are Overdue stop being completable at this time. Set e.g. 04:00 for a late bar.",
       "phonePlaceholder": "e.g. +33 4 78 00 11 22",
       "saveChanges": "Save changes",
       "addLocation": "Add location"

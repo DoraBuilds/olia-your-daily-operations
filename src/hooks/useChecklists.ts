@@ -34,6 +34,7 @@ export interface ChecklistItem {
   due_time: string | null;   // HH:MM — when checklist is due (drives kiosk visibility)
   visibility_from: string | null;
   visibility_until: string | null;
+  allow_late_completion: boolean;
   sort_order?: number;
   is_published: boolean;     // Draft checklists are hidden from the kiosk until published
   created_at: string;
@@ -117,7 +118,7 @@ export function useDeleteFolder() {
 }
 
 const LIST_COLUMNS =
-  "id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, question_count, time_of_day, due_time, visibility_from, visibility_until, is_published, sort_order, created_at, updated_at";
+  "id, organization_id, title, description, folder_id, location_id, location_ids, department_ids, concept_id, start_date, schedule, question_count, time_of_day, due_time, visibility_from, visibility_until, allow_late_completion, is_published, sort_order, created_at, updated_at";
 const FULL_COLUMNS = `${LIST_COLUMNS}, sections`;
 
 /** The list of checklists WITHOUT their questions — that content is the bulk
@@ -182,6 +183,7 @@ export function useSaveChecklist() {
         p_due_time:         checklist.due_time ?? null,
         p_visibility_from:  checklist.visibility_from ?? null,
         p_visibility_until: checklist.visibility_until ?? null,
+        p_allow_late_completion: checklist.allow_late_completion ?? true,
         // New checklists default to draft (hidden from kiosk) unless the caller says otherwise.
         p_is_published:     checklist.is_published ?? false,
       });

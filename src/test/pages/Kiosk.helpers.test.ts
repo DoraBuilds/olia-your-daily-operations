@@ -65,3 +65,41 @@ describe("getKioskVisibilityState", () => {
     expect(getKioskVisibilityState(checklist, makeDate(15, 15))).toBe("due");
   });
 });
+
+describe("getKioskVisibilityState: late completion and day end", () => {
+  const makeDate = (hour: number, minute = 0): Date => {
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+  const window = { due_time: null, visibility_from: "08:00", visibility_until: "09:00" };
+
+  it("goes straight to missed after the window when late completion is off", () => {
+    const checklist = { ...window, allow_late_completion: false };
+
+    expect(getKioskVisibilityState(checklist, makeDate(8, 30))).toBe("due");
+    expect(getKioskVisibilityState(checklist, makeDate(9, 30))).toBe("missed");
+  });
+
+  it("is overdue after the window when late completion is on (or unset)", () => {
+    expect(getKioskVisibilityState({ ...window, allow_late_completion: true }, makeDate(14, 0))).toBe("overdue");
+    expect(getKioskVisibilityState(window, makeDate(14, 0))).toBe("overdue");
+  });
+
+  it("stops being overdue at the end of the location's day, not midnight", () => {
+    const checklist = { ...window, allow_late_completion: true, day_end_time: "04:00" };
+
+    // 01:00 still belongs to the day that began yesterday: yesterday's morning window is overdue.
+    expect(getKioskVisibilityState(checklist, makeDate(1, 0))).toBe("overdue");
+    // After 04:00 the new day starts and the window is upcoming again.
+    expect(getKioskVisibilityState(checklist, makeDate(4, 30))).toBe("upcoming");
+    expect(getKioskVisibilityState(checklist, makeDate(23, 30))).toBe("overdue");
+  });
+
+  it("treats the default 00:00 day end as midnight", () => {
+    const checklist = { ...window, allow_late_completion: true, day_end_time: "00:00" };
+
+    expect(getKioskVisibilityState(checklist, makeDate(23, 59))).toBe("overdue");
+    expect(getKioskVisibilityState(checklist, makeDate(0, 5))).toBe("upcoming");
+  });
+});

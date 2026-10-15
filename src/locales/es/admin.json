@@ -300,6 +300,8 @@
       "alertEmailPlaceholder": "p. ej. main@olia.app",
       "alertEmailHint": "Aquí se envían las alertas de valores fuera de rango y las notificaciones operativas.",
       "phoneOptional": "Teléfono de la ubicación (opcional)",
+      "dayEnd": "El día termina a las",
+      "dayEndHint": "El final de tu día de operación (por defecto 00:00, medianoche). Las listas atrasadas dejan de poder completarse a esta hora. Por ejemplo 04:00 para un bar nocturno.",
       "phonePlaceholder": "p. ej. +33 4 78 00 11 22",
       "saveChanges": "Guardar cambios",
       "addLocation": "Agregar ubicación"

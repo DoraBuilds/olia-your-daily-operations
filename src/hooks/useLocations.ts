@@ -16,7 +16,7 @@ export function useLocations() {
       const { data, error } = await supabase
         .from("locations")
         .select(
-          "id, organization_id, concept_id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, created_at, lat, lng, place_id",
+          "id, organization_id, concept_id, name, address, contact_email, contact_phone, trading_hours, archive_threshold_days, day_end_time, created_at, lat, lng, place_id",
         )
         .order("name");
       if (error) throw error;
@@ -130,6 +130,7 @@ export function useSaveLocation() {
           contact_phone: loc.contact_phone ?? null,
           trading_hours: loc.trading_hours ?? null,
           archive_threshold_days: loc.archive_threshold_days ?? 90,
+          day_end_time: loc.day_end_time ?? "00:00",
           lat: loc.lat ?? null,
           lng: loc.lng ?? null,
           place_id: loc.place_id ?? null,
@@ -156,6 +157,7 @@ export function useSaveLocation() {
           contact_phone: loc.contact_phone ?? null,
           trading_hours: loc.trading_hours ?? null,
           archive_threshold_days: loc.archive_threshold_days ?? 90,
+          day_end_time: loc.day_end_time ?? "00:00",
           lat: loc.lat ?? null,
           lng: loc.lng ?? null,
           place_id: loc.place_id ?? null,

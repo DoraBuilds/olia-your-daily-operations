@@ -35,6 +35,7 @@ export interface ChecklistItem {
   due_time?: string | null;
   visibility_from?: string | null;
   visibility_until?: string | null;
+  allow_late_completion?: boolean;
   is_published?: boolean;
 }
 

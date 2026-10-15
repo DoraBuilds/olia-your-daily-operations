@@ -75,6 +75,8 @@ interface ChecklistBuilderModalProps {
   initialStartDate?: string | null;
   initialVisibilityFrom?: string | null;
   initialVisibilityUntil?: string | null;
+  /** Whether staff can still complete after the due window closes (recorded as late). Defaults to true. */
+  initialAllowLateCompletion?: boolean;
   /** Whether this checklist is currently visible on the kiosk. Defaults to false (Draft) for new checklists. */
   initialIsPublished?: boolean;
   editId?: string;
@@ -88,7 +90,7 @@ interface ChecklistBuilderModalProps {
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
   initialDepartmentIds, initialConceptId, initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil,
-  initialIsPublished, editId, asPage = false, onDirtyChange,
+  initialAllowLateCompletion, initialIsPublished, editId, asPage = false, onDirtyChange,
 }: ChecklistBuilderModalProps) {
   const { t } = useTranslation("checklists");
   const MC_COLOR_OPTIONS = useMcColorOptions(t);
@@ -115,6 +117,7 @@ export function ChecklistBuilderModal({
   const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
   const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
   const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
+  const [allowLateCompletion, setAllowLateCompletion] = useState(initialAllowLateCompletion ?? true);
   const [isPublished, setIsPublished] = useState(initialIsPublished ?? false);
   const [schedule, setSchedule] = useState<ScheduleType>(() => parseScheduleType(initialSchedule));
   const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>({
@@ -174,6 +177,7 @@ export function ChecklistBuilderModal({
     visibilityWindowEnabled,
     visibilityFrom: visibilityWindowEnabled ? visibilityFrom : null,
     visibilityUntil: visibilityWindowEnabled ? visibilityUntil : null,
+    allowLateCompletion,
     locationMode,
     selectedLocationIds: locationMode === "specific" ? [...selectedLocationIds].sort() : [],
     allLocationsConceptId: locationMode === "all" ? allLocationsConceptId : null,
@@ -486,6 +490,7 @@ export function ChecklistBuilderModal({
       due_time: null,
       visibility_from: visibilityWindowEnabled ? visibilityFrom : null,
       visibility_until: visibilityWindowEnabled ? visibilityUntil : null,
+      allow_late_completion: allowLateCompletion,
       location_id: isAllLocations ? null : (selectedIds.length === 1 ? selectedIds[0] : null),
       location_ids: isAllLocations ? null : selectedIds,
       concept_id: isAllLocations ? allLocationsConceptId : null,
@@ -781,6 +786,23 @@ export function ChecklistBuilderModal({
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {visibilityWindowEnabled && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("builder.schedule.allowLate")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {allowLateCompletion ? t("builder.schedule.allowLateOnHint") : t("builder.schedule.allowLateOffHint")}
+                  </p>
+                </div>
+                <Switch
+                  data-testid="checklist-allow-late-toggle"
+                  aria-label={t("builder.schedule.allowLate")}
+                  checked={allowLateCompletion}
+                  onCheckedChange={setAllowLateCompletion}
+                />
               </div>
             )}
 
