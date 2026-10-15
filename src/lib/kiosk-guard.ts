@@ -61,7 +61,12 @@ export async function touchKioskDevice(): Promise<boolean> {
   const token = localStorage.getItem("kiosk_device_token");
   if (!token) return true;
   try {
-    const { data, error } = await supabase.rpc("touch_kiosk_device", { p_device_token: token });
+    const { data, error } = await supabase.rpc("touch_kiosk_device", {
+      p_device_token: token,
+      // The location's timezone is learned from the kiosk itself (first value wins) so the
+      // server can tell what local time it is there when sweeping for missed checklists.
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? null,
+    });
     if (error) return true;
     return data !== false;
   } catch {

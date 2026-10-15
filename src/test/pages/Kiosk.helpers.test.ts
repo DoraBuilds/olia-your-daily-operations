@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getKioskVisibilityState, isVisibleAtTime } from "@/pages/Kiosk";
+import { getKioskTimingStatus } from "@/pages/kiosk/utils";
 
 function makeDate(hour: number): Date {
   const d = new Date();
@@ -101,5 +102,28 @@ describe("getKioskVisibilityState: late completion and day end", () => {
 
     expect(getKioskVisibilityState(checklist, makeDate(23, 59))).toBe("overdue");
     expect(getKioskVisibilityState(checklist, makeDate(0, 5))).toBe("upcoming");
+  });
+});
+
+describe("getKioskTimingStatus", () => {
+  const at = (hour: number, minute = 0): Date => {
+    const d = new Date();
+    d.setHours(hour, minute, 0, 0);
+    return d;
+  };
+  const window = { due_time: null, visibility_from: "08:00", visibility_until: "09:00" };
+
+  it("stamps on time inside the window and late after it", () => {
+    expect(getKioskTimingStatus(window, at(8, 15))).toBe("on_time");
+    expect(getKioskTimingStatus(window, at(14, 0))).toBe("late");
+  });
+
+  it("does not stamp when there is no due window", () => {
+    expect(getKioskTimingStatus({ due_time: null, visibility_from: null, visibility_until: null }, at(14, 0))).toBeNull();
+  });
+
+  it("does not stamp outside the completable states", () => {
+    expect(getKioskTimingStatus(window, at(7, 0))).toBeNull();
+    expect(getKioskTimingStatus({ ...window, allow_late_completion: false }, at(14, 0))).toBeNull();
   });
 });

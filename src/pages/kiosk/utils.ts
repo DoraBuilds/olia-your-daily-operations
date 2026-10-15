@@ -104,6 +104,22 @@ export function isKioskOverdue(due_time: string | null | undefined, now: Date): 
   return nowMinutes > dueMinutes;
 }
 
+/**
+ * On-time / late stamp for a completion happening at `now`: inside the due
+ * window is on time, after it is late. Checklists with no window have no
+ * deadline, so no stamp.
+ */
+export function getKioskTimingStatus(
+  checklist: Parameters<typeof getKioskVisibilityState>[0],
+  now: Date,
+): "on_time" | "late" | null {
+  if (!checklist.visibility_from && !checklist.visibility_until && !checklist.due_time) return null;
+  const state = getKioskVisibilityState(checklist, now);
+  if (state === "due") return "on_time";
+  if (state === "overdue") return "late";
+  return null;
+}
+
 export type KioskVisibilityState = "due" | "upcoming" | "overdue" | "missed";
 
 /**
