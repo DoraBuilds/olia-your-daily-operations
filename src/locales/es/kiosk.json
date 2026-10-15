@@ -80,6 +80,22 @@
     "doneButton": "Listo",
     "returningIn": "Volviendo al inicio en {{count}}s"
   },
+  "missed": {
+    "title": "No realizado hoy",
+    "hint": "Ya no se pueden completar. Añade una nota para que el siguiente turno sepa por qué.",
+    "addNote": "Añadir nota",
+    "editNote": "Editar nota",
+    "noteTitle": "¿Por qué no se realizó?",
+    "notePlaceholder": "Detalles opcionales",
+    "save": "Guardar nota",
+    "saveFailed": "No se pudo guardar la nota. Inténtalo de nuevo.",
+    "reasons": {
+      "short_staffed": "Falta de personal",
+      "equipment_issue": "Problema de equipo",
+      "forgot": "Se olvidó",
+      "other": "Otro"
+    }
+  },
   "grid": {
     "kioskFallbackName": "Kiosco",
     "identifiedAs": "Hola, <name>{{name}}</name>!",
