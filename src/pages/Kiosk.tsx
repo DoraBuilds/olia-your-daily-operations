@@ -17,6 +17,7 @@ import type { AnswerAttribution, KioskChecklist, KioskScreen } from "./kiosk/typ
 import {
   getKioskVisibilityState,
   getKioskTimingStatus,
+  getKioskOperatingDate,
   isKioskDue,
   isKioskOverdue,
   isVisibleAtTime,
@@ -690,6 +691,12 @@ function KioskScreen() {
           returnedLogId = result?.log_id ?? null;
           returnedEditToken = result?.edit_token ?? null;
           queryClient.invalidateQueries({ queryKey: ["checklist_logs"] });
+          // Submitted, so it is no longer a partly completed checklist.
+          void supabase.rpc("clear_kiosk_draft", {
+            p_location_id: locationId,
+            p_checklist_id: selectedChecklist.id,
+            p_operating_date: getKioskOperatingDate(new Date(), selectedChecklist.day_end_time),
+          });
         }
       }
 
@@ -753,6 +760,18 @@ function KioskScreen() {
         initialAttribution={completedSubmissions.get(selectedChecklist.id)?.attribution}
         organizationId={selectedOrgId || teamMember?.organization_id}
         locationId={locationId ?? undefined}
+        onProgress={(progress) => {
+          if (!locationId) return;
+          void supabase.rpc("save_kiosk_draft", {
+            p_location_id: locationId,
+            p_checklist_id: selectedChecklist.id,
+            p_operating_date: getKioskOperatingDate(new Date(), kioskChecklists[0]?.day_end_time),
+            p_items: progress.items,
+            p_answered: progress.answered,
+            p_total: progress.total,
+            p_by: selectedStaffName || null,
+          });
+        }}
         onQuestionAnswerChange={(question: KioskChecklist["questions"][number], value: any) => {
           if (question.type !== "number") return;
           scheduleOutOfRangeAlert(question, value);

@@ -16,6 +16,10 @@ export interface TimingLog {
   created_at: string;
 }
 
+export interface TimingProgressItem { label: string; type: string; section?: string; done: boolean; answer: string }
+/** How far a checklist got before it was missed (kiosk reported it as it went). */
+export interface TimingProgress { answered: number; total: number; items: TimingProgressItem[] }
+
 export interface TimingMiss {
   id: string;
   checklist_id: string;
@@ -29,6 +33,7 @@ export interface TimingMiss {
   note: string | null;
   note_by: string | null;
   note_at: string | null;
+  progress?: TimingProgress | null;
 }
 
 export interface TimingChecklist {

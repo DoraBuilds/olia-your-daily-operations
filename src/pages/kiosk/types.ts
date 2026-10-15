@@ -47,6 +47,10 @@ export type KioskScreen = "grid" | "runner" | "completion" | "library";
 /** Who answered each question, and when (ISO) — keyed by question id. */
 export type AnswerAttribution = Record<string, { by: string; at: string }>;
 
+/** One question's state in a partly completed checklist, reported to the server. */
+export type KioskDraftItem = { label: string; type: string; section?: string; done: boolean; answer: string };
+export type KioskDraftProgress = { answered: number; total: number; items: KioskDraftItem[] };
+
 export type KioskDraftSnapshot = {
   answers: Record<string, any>;
   attribution?: AnswerAttribution;

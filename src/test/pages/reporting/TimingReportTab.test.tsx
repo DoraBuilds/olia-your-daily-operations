@@ -26,7 +26,8 @@ describe("TimingReportTab", () => {
       ],
       misses: [
         { id: "m1", checklist_id: "open", checklist_title: "Opening checklist", location_id: "a", operating_date: "2026-10-15", route: "window_close", window_from: "08:00", window_until: "09:00", reason: "short_staffed", note: "Two of us", note_by: "Sam", note_at: "2026-10-15T10:00:00Z" },
-        { id: "m2", checklist_id: "open", checklist_title: "Closing checklist", location_id: "a", operating_date: "2026-10-14", route: "after_overdue", window_from: null, window_until: null, reason: null, note: null, note_by: null, note_at: null },
+        { id: "m2", checklist_id: "open", checklist_title: "Closing checklist", location_id: "a", operating_date: "2026-10-14", route: "after_overdue", window_from: null, window_until: null, reason: null, note: null, note_by: null, note_at: null,
+          progress: { answered: 7, total: 10, items: [{ label: "Wipe down the grill", type: "checkbox", done: false, answer: "" }, { label: "Count the till", type: "number", done: true, answer: "120" }] } },
       ],
     };
   });
@@ -75,5 +76,20 @@ describe("TimingReportTab", () => {
     mockData = { logs: [], misses: [] };
     renderWithProviders(<TimingReportTab />);
     expect(screen.getByText(/No timed checklists in this period yet/)).toBeInTheDocument();
+  });
+
+  it("shows how far a started-but-missed checklist got and which items were skipped", () => {
+    renderWithProviders(<TimingReportTab />);
+    const progress = screen.getByTestId("timing-progress-m2");
+    expect(progress).toHaveTextContent("7/10 completed");
+    expect(screen.queryByText("Wipe down the grill")).not.toBeInTheDocument();
+    fireEvent.click(progress.querySelector("button")!);
+    expect(screen.getByText("Wipe down the grill")).toBeInTheDocument();
+    expect(screen.queryByText("Count the till")).not.toBeInTheDocument();
+  });
+
+  it("shows no progress for a miss that was never started", () => {
+    renderWithProviders(<TimingReportTab />);
+    expect(screen.queryByTestId("timing-progress-m1")).not.toBeInTheDocument();
   });
 });

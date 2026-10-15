@@ -1,9 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import type { MissReason, TimingLog, TimingMiss } from "@/pages/reporting/timing-report";
+import type { MissReason, TimingLog, TimingMiss, TimingProgress } from "@/pages/reporting/timing-report";
 
 const PAGE = 1000;
+
+interface DraftRow {
+  checklist_id: string;
+  location_id: string;
+  operating_date: string;
+  answered_count: number;
+  total_count: number;
+  items: TimingProgress["items"] | null;
+}
 
 /** PostgREST caps a response (1000 rows by default), so read in pages. */
 async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>): Promise<T[]> {
@@ -26,7 +35,7 @@ export function useTimingReportData(range: { fromIso: string; toIso: string; fro
   return useQuery({
     queryKey: ["timing_report", teamMember?.organization_id ?? null, range],
     queryFn: async () => {
-      const [logs, misses] = await Promise.all([
+      const [logs, misses, drafts] = await Promise.all([
         fetchAll<TimingLog>((from, to) =>
           supabase
             .from("checklist_logs")
@@ -46,8 +55,23 @@ export function useTimingReportData(range: { fromIso: string; toIso: string; fro
             .order("operating_date", { ascending: false })
             .range(from, to),
         ),
+        fetchAll<DraftRow>((from, to) =>
+          supabase
+            .from("checklist_drafts")
+            .select("checklist_id, location_id, operating_date, answered_count, total_count, items")
+            .gte("operating_date", range.fromDate)
+            .lte("operating_date", range.toDate)
+            .range(from, to),
+        ),
       ]);
-      return { logs, misses };
+      // A miss that was started but not submitted keeps the progress it had.
+      const progressByMiss = new Map<string, TimingProgress>(
+        drafts.map(d => [`${d.checklist_id}|${d.location_id}|${d.operating_date}`, { answered: d.answered_count, total: d.total_count, items: d.items ?? [] }]),
+      );
+      return {
+        logs,
+        misses: misses.map(m => ({ ...m, progress: progressByMiss.get(`${m.checklist_id}|${m.location_id}|${m.operating_date}`) ?? null })),
+      };
     },
     enabled: !!teamMember?.organization_id,
   });
