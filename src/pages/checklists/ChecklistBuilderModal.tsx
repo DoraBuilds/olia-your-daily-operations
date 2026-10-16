@@ -31,6 +31,7 @@ import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName 
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
 import { linkableInfohubResources } from "@/lib/infohub-catalog";
+import type { ChecklistDraftContent } from "@/hooks/useChecklists";
 
 const DRAFT_KEY = "olia_checklist_draft";
 
@@ -85,12 +86,19 @@ interface ChecklistBuilderModalProps {
   asPage?: boolean;
   /** Called whenever the dirty state changes so the parent can gate router-level navigation blocking. */
   onDirtyChange?: (isDirty: boolean) => void;
+  /** Unpublished edits of a live checklist, restored when the editor opens. */
+  initialDraft?: ChecklistDraftContent | null;
+  /** Autosave target for edits to a live checklist. Autosave is off when omitted. */
+  onSaveDraft?: (id: string, content: ChecklistDraftContent) => Promise<void>;
+  /** Removes the draft once its content has been published. */
+  onClearDraft?: (id: string) => Promise<void>;
 }
 
 export function ChecklistBuilderModal({
   onClose, onAdd, onUpdate, initialTitle, initialDescription, initialSections, initialLocationIds,
   initialDepartmentIds, initialConceptId, initialSchedule, initialStartDate, initialVisibilityFrom, initialVisibilityUntil,
   initialAllowLateCompletion, initialIsPublished, editId, asPage = false, onDirtyChange,
+  initialDraft, onSaveDraft, onClearDraft,
 }: ChecklistBuilderModalProps) {
   const { t } = useTranslation("checklists");
   const MC_COLOR_OPTIONS = useMcColorOptions(t);
@@ -108,19 +116,20 @@ export function ChecklistBuilderModal({
   const isNewChecklist = !editId && !initialTitle && (!initialSections || initialSections.length === 0);
   const draft = isNewChecklist ? loadDraft() : null;
 
-  const [title, setTitle] = useState(draft?.title ?? initialTitle ?? "");
-  const [description, setDescription] = useState(draft?.description ?? initialDescription ?? "");
+  const [title, setTitle] = useState(initialDraft?.title ?? draft?.title ?? initialTitle ?? "");
+  const [description, setDescription] = useState(initialDraft?.description ?? draft?.description ?? initialDescription ?? "");
+  const initialStart = initialDraft ? initialDraft.startDate : initialStartDate;
   const [startDate, setStartDate] = useState<Date | undefined>(
-    initialStartDate ? new Date(`${initialStartDate}T00:00:00`) : undefined,
+    initialStart ? new Date(`${initialStart}T00:00:00`) : undefined,
   );
   const [startDateOpen, setStartDateOpen] = useState(false);
-  const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(Boolean(initialVisibilityFrom || initialVisibilityUntil));
-  const [visibilityFrom, setVisibilityFrom] = useState(initialVisibilityFrom || "09:00");
-  const [visibilityUntil, setVisibilityUntil] = useState(initialVisibilityUntil || "10:00");
-  const [allowLateCompletion, setAllowLateCompletion] = useState(initialAllowLateCompletion ?? true);
-  const [isPublished, setIsPublished] = useState(initialIsPublished ?? false);
-  const [schedule, setSchedule] = useState<ScheduleType>(() => parseScheduleType(initialSchedule));
-  const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>({
+  const [visibilityWindowEnabled, setVisibilityWindowEnabled] = useState(initialDraft ? initialDraft.visibilityWindowEnabled : Boolean(initialVisibilityFrom || initialVisibilityUntil));
+  const [visibilityFrom, setVisibilityFrom] = useState(initialDraft?.visibilityFrom ?? (initialVisibilityFrom || "09:00"));
+  const [visibilityUntil, setVisibilityUntil] = useState(initialDraft?.visibilityUntil ?? (initialVisibilityUntil || "10:00"));
+  const [allowLateCompletion, setAllowLateCompletion] = useState(initialDraft?.allowLateCompletion ?? initialAllowLateCompletion ?? true);
+  const [isPublished, setIsPublished] = useState(initialDraft?.isPublished ?? initialIsPublished ?? false);
+  const [schedule, setSchedule] = useState<ScheduleType>(() => parseScheduleType(initialDraft?.schedule ?? initialSchedule));
+  const [customRecurrence, setCustomRecurrence] = useState<CustomRecurrence>(initialDraft?.customRecurrence ?? {
     interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13,
   });
   const [showCustomRecurrence, setShowCustomRecurrence] = useState(false);
@@ -128,14 +137,15 @@ export function ChecklistBuilderModal({
   // departments. No locations picked = every location of that concept (saved
   // as concept_id); picked locations are saved as location_ids. Same for departments.
   const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(
-    initialLocationIds?.length ? initialLocationIds : [],
+    initialDraft ? initialDraft.selectedLocationIds : initialLocationIds?.length ? initialLocationIds : [],
   );
   const [allLocationsConceptId, setAllLocationsConceptId] = useState<string | null>(() => {
+    if (initialDraft) return initialDraft.selectedLocationIds.length > 0 ? null : initialDraft.allLocationsConceptId;
     if (initialLocationIds && initialLocationIds.length > 0) return null;
     return initialConceptId ?? null;
   });
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>(
-    initialDepartmentIds?.length ? initialDepartmentIds : [],
+    initialDraft ? initialDraft.selectedDepartmentIds : initialDepartmentIds?.length ? initialDepartmentIds : [],
   );
   const locationMode: "all" | "specific" = selectedLocationIds.length > 0 ? "specific" : "all";
   const departmentMode: "all" | "specific" = selectedDepartmentIds.length > 0 ? "specific" : "all";
@@ -151,7 +161,7 @@ export function ChecklistBuilderModal({
     if (conceptIds.size === 1) setAllLocationsConceptId([...conceptIds][0]);
   }, [allDbLocations, selectedLocationIds]);
   const [sections, setSections] = useState<SectionDef[]>(
-    draft?.sections ?? initialSections ?? [{
+    initialDraft?.sections ?? draft?.sections ?? initialSections ?? [{
       id: "sec-default", name: "", questions: [{ id: "q-1", text: "", responseType: "checkbox", required: true, config: {} }],
     }]
   );
@@ -216,8 +226,130 @@ export function ChecklistBuilderModal({
   const initialSectionsRef = useRef(JSON.stringify(sections));
   const initialSettingsRef = useRef(settingsSnapshot());
 
-  // Intercept Exit/X when there's unsaved content — show a confirmation first
-  const handleRequestClose = () => {
+  // ── Autosave ──────────────────────────────────────────────────────────────
+  // Every edit is saved as one document. A live checklist saves into its draft
+  // (the kiosk keeps the published version until Publish); a checklist that
+  // isn't live yet has nothing to protect, so its own hidden row is the draft.
+  type SaveStatus = "idle" | "saving" | "saved" | "error";
+  const autosaveEnabled = !!onSaveDraft;
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [hasDraft, setHasDraft] = useState(!!initialDraft);
+  const [retryTick, setRetryTick] = useState(0);
+  const hasDraftRef = useRef(!!initialDraft);
+  const savedIdRef = useRef<string | null>(editId ?? null);
+  const liveInDbRef = useRef(initialIsPublished ?? false);
+  const touchedRef = useRef(false);
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const lastSavedRef = useRef<string | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const buildDraftContent = (): ChecklistDraftContent => ({
+    title, description, sections,
+    startDate: startDate ? format(startDate, "yyyy-MM-dd") : null,
+    schedule, customRecurrence,
+    visibilityWindowEnabled, visibilityFrom, visibilityUntil, allowLateCompletion,
+    selectedLocationIds, allLocationsConceptId, selectedDepartmentIds, isPublished,
+  });
+  const contentSnapshot = autosaveEnabled ? JSON.stringify(buildDraftContent()) : "";
+  if (lastSavedRef.current === null) lastSavedRef.current = contentSnapshot;
+  const hasUnsavedEdits = autosaveEnabled && touchedRef.current && contentSnapshot !== lastSavedRef.current;
+
+  // Hidden-row payload for a checklist that isn't live. Never publishes, and
+  // keeps the picked locations/departments as they are (no filtering against
+  // lists that may still be loading).
+  const hiddenRowPayload = (c: ChecklistDraftContent): Partial<ChecklistItem> => {
+    const specific = c.selectedLocationIds.length > 0;
+    return {
+      title: c.title.trim() || t("builder.untitled"),
+      description: c.description.trim() || null,
+      questionsCount: c.sections.reduce((n, sec) => n + sec.questions.length, 0),
+      schedule: c.schedule === "none" ? null
+        : c.schedule === "custom" ? `Every ${c.customRecurrence.interval} ${c.customRecurrence.unit}(s)`
+        : c.schedule,
+      start_date: c.startDate,
+      sections: c.sections,
+      time_of_day: "anytime",
+      due_time: null,
+      visibility_from: c.visibilityWindowEnabled ? c.visibilityFrom : null,
+      visibility_until: c.visibilityWindowEnabled ? c.visibilityUntil : null,
+      allow_late_completion: c.allowLateCompletion,
+      location_id: specific && c.selectedLocationIds.length === 1 ? c.selectedLocationIds[0] : null,
+      location_ids: specific ? c.selectedLocationIds : null,
+      concept_id: specific ? null : c.allLocationsConceptId,
+      department_ids: c.selectedDepartmentIds.length > 0 ? c.selectedDepartmentIds : null,
+      is_published: false,
+    };
+  };
+
+  const persistAutosave = async (c: ChecklistDraftContent) => {
+    const id = savedIdRef.current;
+    if (id && liveInDbRef.current) {
+      await onSaveDraft!(id, c);
+      hasDraftRef.current = true;
+      setHasDraft(true);
+    } else if (id && onUpdate) {
+      await onUpdate(id, hiddenRowPayload(c));
+    } else if (!id) {
+      const result = await onAdd({
+        id: `cl-${Date.now()}`,
+        ...hiddenRowPayload(c),
+        type: "checklist",
+        folderId: null,
+        createdAt: new Date().toISOString().slice(0, 10),
+      } as any);
+      if (result) { savedIdRef.current = result as string; setSavedId(result as string); }
+    }
+  };
+
+  /** Saves the current edits. Resolves true when nothing is left unsaved. */
+  const runAutosave = (): Promise<boolean> => {
+    if (!autosaveEnabled) return Promise.resolve(true);
+    const content = buildDraftContent();
+    const snap = JSON.stringify(content);
+    const job = queueRef.current.then(async () => {
+      if (snap === lastSavedRef.current) return true;
+      setSaveStatus("saving");
+      try {
+        await persistAutosave(content);
+        lastSavedRef.current = snap;
+        setSaveStatus("saved");
+        return true;
+      } catch {
+        setSaveStatus("error");
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => setRetryTick(n => n + 1), 5000);
+        return false;
+      }
+    });
+    queueRef.current = job;
+    return job;
+  };
+  const runAutosaveRef = useRef(runAutosave);
+  runAutosaveRef.current = runAutosave;
+
+  // Debounced: save shortly after the last edit (and again after a failure).
+  useEffect(() => {
+    if (!hasUnsavedEdits) return;
+    setSaveStatus(prev => (prev === "error" ? prev : "saving"));
+    const timer = setTimeout(() => { void runAutosaveRef.current(); }, 1000);
+    return () => clearTimeout(timer);
+  }, [contentSnapshot, retryTick, hasUnsavedEdits]);
+
+  useEffect(() => () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); }, []);
+
+  // Any pointer/keyboard/change inside the form counts as the user editing.
+  // (Effects that tidy state on load, e.g. dropping stale departments, don't.)
+  const markTouched = () => { touchedRef.current = true; };
+
+  // Intercept Exit/X: autosave first; only warn when the latest edits couldn't be saved
+  const handleRequestClose = async () => {
+    if (autosaveEnabled) {
+      const ok = await runAutosave();
+      if (!ok) { setShowDiscardConfirm(true); return; }
+      if (hasDraftRef.current) toast.success(t("builder.toast.draftKept"));
+      onClose();
+      return;
+    }
     const warnForNew = !savedId && hasContent;
     const warnForEdit = !!savedId && (
       title !== initialTitleRef.current ||
@@ -253,7 +385,9 @@ export function ChecklistBuilderModal({
 
   useEffect(() => {
     if (!onDirtyChange) return;
-    const dirty = !savedId
+    const dirty = autosaveEnabled
+      ? hasUnsavedEdits
+      : !savedId
       ? hasContent
       : (title !== initialTitleRef.current ||
          description !== initialDescriptionRef.current ||
@@ -264,7 +398,7 @@ export function ChecklistBuilderModal({
   }, [title, description, sections, startDate, schedule, customRecurrence,
       visibilityWindowEnabled, visibilityFrom, visibilityUntil,
       locationMode, selectedLocationIds, allLocationsConceptId, departmentMode, selectedDepartmentIds,
-      savedId, onDirtyChange]);
+      savedId, onDirtyChange, hasUnsavedEdits]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -502,9 +636,14 @@ export function ChecklistBuilderModal({
 
     setIsSaving(true);
     try {
-      const isFirstPublish = !savedId;
-      if (savedId && onUpdate) {
-        await onUpdate(savedId, payload);
+      // Let any in-flight autosave land first so it can't write a stale draft after we publish.
+      const publishedSnapshot = autosaveEnabled ? JSON.stringify(buildDraftContent()) : "";
+      if (autosaveEnabled) await queueRef.current;
+      const currentId = savedIdRef.current ?? savedId;
+      const wasLive = liveInDbRef.current;
+      const isFirstPublish = autosaveEnabled ? !wasLive : !currentId;
+      if (currentId && onUpdate) {
+        await onUpdate(currentId, payload);
       } else {
         const result = await onAdd({
           id: `cl-${Date.now()}`,
@@ -513,7 +652,18 @@ export function ChecklistBuilderModal({
           folderId: null,
           createdAt: new Date().toISOString().slice(0, 10),
         } as any);
-        if (result) setSavedId(result as string);
+        if (result) { savedIdRef.current = result as string; setSavedId(result as string); }
+      }
+      if (autosaveEnabled) {
+        const publishedId = savedIdRef.current ?? currentId;
+        if (publishedId && (hasDraftRef.current || wasLive)) {
+          try { await onClearDraft?.(publishedId); } catch { /* published; a leftover draft is retried on next publish */ }
+        }
+        hasDraftRef.current = false;
+        setHasDraft(false);
+        liveInDbRef.current = isPublished;
+        lastSavedRef.current = publishedSnapshot;
+        setSaveStatus("saved");
       }
       clearChecklistDraft();
       initialTitleRef.current = title;
@@ -597,7 +747,20 @@ export function ChecklistBuilderModal({
             "flex flex-row items-center gap-2 transition-all duration-150",
             footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
           )}>
-            {lastPublishedAt && (
+            {autosaveEnabled && saveStatus !== "idle" ? (
+              <span
+                data-testid="builder-save-status"
+                role="status"
+                className={cn(
+                  "text-[10px] px-2.5 py-1 rounded-full border whitespace-nowrap",
+                  saveStatus === "error" ? "text-status-error border-status-error/40" : "text-muted-foreground border-border/50",
+                )}
+              >
+                {saveStatus === "saving" ? t("builder.saveStatus.saving")
+                  : saveStatus === "error" ? t("builder.saveStatus.error")
+                  : t("builder.saveStatus.saved")}
+              </span>
+            ) : lastPublishedAt && (
               <span className="text-[10px] text-muted-foreground px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
                 {t("builder.footer.savedAt", { time: format(lastPublishedAt, "h:mm a") })}
               </span>
@@ -619,7 +782,29 @@ export function ChecklistBuilderModal({
         </div>
       )}
       {/* Form body — no inner scroll; outer overlay handles all scrolling */}
-      <div className="px-5 pb-5 pt-2 space-y-5">
+      <div
+        className="px-5 pb-5 pt-2 space-y-5"
+        onPointerDownCapture={markTouched}
+        onKeyDownCapture={markTouched}
+        onChangeCapture={markTouched}
+      >
+        {autosaveEnabled && hasDraft && (
+          <div
+            data-testid="builder-draft-banner"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-status-warn/40 bg-status-warn/10 p-3"
+          >
+            <p className="text-sm font-medium text-status-warn">{t("builder.draftBanner.text")}</p>
+            <button
+              type="button"
+              data-testid="builder-draft-banner-publish"
+              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
+              onClick={handleCreate}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+            >
+              {t("builder.draftBanner.publish")}
+            </button>
+          </div>
+        )}
         {/* Kiosk visibility (Draft/Live) */}
         <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/40 p-3">
           <div>
@@ -1532,7 +1717,7 @@ export function ChecklistBuilderModal({
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
         <h3 className="font-display text-lg text-foreground">{t("unsavedExit.heading")}</h3>
-        <p className="text-sm text-muted-foreground">{t("unsavedExit.body")}</p>
+        <p className="text-sm text-muted-foreground">{autosaveEnabled ? t("unsavedExit.bodyAutosave") : t("unsavedExit.body")}</p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDiscardConfirm(false)}
@@ -1544,7 +1729,7 @@ export function ChecklistBuilderModal({
             onClick={() => { clearChecklistDraft(); onClose(); }}
             className="flex-1 py-2.5 rounded-xl bg-status-error text-white text-sm font-medium hover:opacity-90 transition-opacity"
           >
-            {t("builder.discardConfirm.discard")}
+            {t("builder.discardConfirm.leave")}
           </button>
         </div>
       </div>

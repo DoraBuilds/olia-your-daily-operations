@@ -214,6 +214,72 @@ export function useSaveChecklist() {
   });
 }
 
+/** The whole builder state, saved as one document while editing a live checklist. */
+export interface ChecklistDraftContent {
+  title: string;
+  description: string;
+  sections: any[];
+  startDate: string | null;
+  schedule: string;
+  customRecurrence: any;
+  visibilityWindowEnabled: boolean;
+  visibilityFrom: string;
+  visibilityUntil: string;
+  allowLateCompletion: boolean;
+  selectedLocationIds: string[];
+  allLocationsConceptId: string | null;
+  selectedDepartmentIds: string[];
+  isPublished: boolean;
+}
+
+/** Ids of checklists that have unpublished edits (a draft on top of the live version). */
+export function useChecklistDraftIds() {
+  const { teamMember } = useAuth();
+  return useQuery({
+    queryKey: ["checklist-drafts", teamMember?.organization_id ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("checklist_edit_drafts").select("checklist_id");
+      if (error) throw error;
+      return (data ?? []).map(r => r.checklist_id as string);
+    },
+    enabled: !!teamMember?.organization_id,
+  });
+}
+
+/** Returns a loader for one checklist's draft (null when it has none). Always reads fresh. */
+export function useLoadChecklistDraft() {
+  const qc = useQueryClient();
+  return (id: string) =>
+    qc.fetchQuery({
+      queryKey: ["checklist-draft", id],
+      staleTime: 0,
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("checklist_edit_drafts").select("content").eq("checklist_id", id).maybeSingle();
+        if (error) throw error;
+        return (data?.content ?? null) as ChecklistDraftContent | null;
+      },
+    });
+}
+
+export function useSaveChecklistDraft() {
+  const qc = useQueryClient();
+  return async (id: string, content: ChecklistDraftContent) => {
+    const { error } = await supabase.rpc("save_checklist_draft", { p_checklist_id: id, p_content: content });
+    if (error) throw error;
+    qc.setQueriesData<string[]>({ queryKey: ["checklist-drafts"] }, old => (old && !old.includes(id) ? [...old, id] : old));
+  };
+}
+
+export function useClearChecklistDraft() {
+  const qc = useQueryClient();
+  return async (id: string) => {
+    const { error } = await supabase.rpc("clear_checklist_draft", { p_checklist_id: id });
+    if (error) throw error;
+    qc.setQueriesData<string[]>({ queryKey: ["checklist-drafts"] }, old => old?.filter(x => x !== id));
+  };
+}
+
 export function useDeleteChecklist() {
   const qc = useQueryClient();
   return useMutation({

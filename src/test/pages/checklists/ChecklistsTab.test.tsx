@@ -90,6 +90,7 @@ vi.mock("@/hooks/usePlan", () => ({
 }));
 
 const listState = vi.hoisted(() => ({ loading: false }));
+const draftState = vi.hoisted(() => ({ ids: [] as string[] }));
 const loadedIds = vi.hoisted(() => [] as string[]);
 
 vi.mock("@/hooks/useChecklists", () => {
@@ -122,6 +123,10 @@ vi.mock("@/hooks/useChecklists", () => {
       const base = CHECKLISTS.find(c => c.id === id)!;
       return { ...base, sections: [{ id: "s1", name: "Prep", questions: [{ id: "q1", text: "Fridge temp?", responseType: "temperature", required: true }] }] };
     },
+    useChecklistDraftIds: () => ({ data: draftState.ids }),
+    useLoadChecklistDraft: () => async () => null,
+    useSaveChecklistDraft: () => async () => {},
+    useClearChecklistDraft: () => async () => {},
   };
 });
 
@@ -138,6 +143,7 @@ describe("ChecklistsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listState.loading = false;
+    draftState.ids = [];
     loadedIds.length = 0;
   });
 
@@ -220,5 +226,22 @@ describe("ChecklistsTab", () => {
       expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     });
     expect(screen.queryAllByText("Draft")).toHaveLength(0);
+  });
+
+  it("marks a published checklist that has a draft with red italic Unpublished changes", async () => {
+    draftState.ids = ["cl-1"];
+    render(<ChecklistsTab />, { wrapper });
+    fireEvent.click(screen.getByText("Daily Operations"));
+    const note = await screen.findByTestId("checklist-unpublished-changes");
+    expect(note).toHaveTextContent("Unpublished changes");
+    expect(note.className).toContain("italic");
+    expect(note.className).toContain("text-status-error");
+  });
+
+  it("shows no Unpublished changes note without a draft, or for a checklist that is not live", async () => {
+    draftState.ids = ["cl-2"];
+    render(<ChecklistsTab />, { wrapper });
+    await screen.findByText("Unfinished Checklist");
+    expect(screen.queryByTestId("checklist-unpublished-changes")).toBeNull();
   });
 });

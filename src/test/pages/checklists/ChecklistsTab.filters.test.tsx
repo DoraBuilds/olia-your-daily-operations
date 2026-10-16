@@ -150,6 +150,10 @@ vi.mock("@/hooks/useChecklists", () => {
     useSaveChecklist: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue({}) }),
     useDeleteChecklist: () => ({ mutate: vi.fn() }),
     useLoadChecklist: () => async () => { throw new Error("not loaded in this test"); },
+    useChecklistDraftIds: () => ({ data: [] }),
+    useLoadChecklistDraft: () => async () => null,
+    useSaveChecklistDraft: () => async () => {},
+    useClearChecklistDraft: () => async () => {},
   };
 });
 

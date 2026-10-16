@@ -9,7 +9,7 @@ import { type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
 import { getScheduleLabel } from "./types";
-import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useReorderChecklists, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
+import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useReorderChecklists, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, useChecklistDraftIds, useLoadChecklistDraft, useSaveChecklistDraft, useClearChecklistDraft, type ChecklistDraftContent, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
 import { useConcepts } from "@/hooks/useConcepts";
@@ -77,6 +77,10 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const saveChecklistMut = useSaveChecklist();
   const deleteChecklistMut = useDeleteChecklist();
   const loadChecklist = useLoadChecklist();
+  const loadChecklistDraft = useLoadChecklistDraft();
+  const saveChecklistDraft = useSaveChecklistDraft();
+  const clearChecklistDraft = useClearChecklistDraft();
+  const { data: draftIds = [] } = useChecklistDraftIds();
 
   // Map DB → UI types
   const folders: FolderItem[] = dbFolders.map(f => ({
@@ -204,6 +208,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [prefillLocationIds, setPrefillLocationIds] = useState<string[] | null | undefined>(undefined);
   const [prefillDepartmentIds, setPrefillDepartmentIds] = useState<string[] | null | undefined>(undefined);
   const [prefillConceptId, setPrefillConceptId] = useState<string | null | undefined>(undefined);
+  const [editingDraft, setEditingDraft] = useState<ChecklistDraftContent | null>(null);
   const [dragFolderId, setDragFolderId] = useState<string | null>(null);
   const [dragChecklistId, setDragChecklistId] = useState<string | null>(null);
   const [dropFolderId, setDropFolderId] = useState<string | null>(null);
@@ -281,6 +286,7 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     setPrefillLocationIds(undefined);
     setPrefillDepartmentIds(undefined);
     setPrefillConceptId(undefined);
+    setEditingDraft(null);
     setEditingChecklistId(null);
     setIsBuilderDirty(false);
     onBuilderTitleChange?.(null);
@@ -376,7 +382,12 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     }
   };
 
-  const openEditor = (id: string) => withFullChecklist(id, cl => {
+  const openEditor = async (id: string) => {
+    // Unpublished edits (if any) open in place of the live version.
+    let draftContent: ChecklistDraftContent | null = null;
+    try { draftContent = await loadChecklistDraft(id); } catch { /* open the live version */ }
+    await withFullChecklist(id, cl => {
+    setEditingDraft(draftContent);
     setEditingChecklistId(cl.id);
     setPrefillTitle(cl.title);
     setPrefillSections(cl.sections as SectionDef[]);
@@ -384,8 +395,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     setPrefillDepartmentIds(cl.department_ids ?? null);
     setPrefillConceptId(cl.concept_id ?? null);
     setShowBuilder(true);
-    onBuilderTitleChange?.(cl.title);
-  });
+    onBuilderTitleChange?.(draftContent?.title ?? cl.title);
+    });
+  };
 
   const openPreview = (id: string) => withFullChecklist(id, cl => {
     setPreviewChecklist({
@@ -498,6 +510,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
         initialIsPublished={editingChecklist?.is_published ?? false}
         editId={editingChecklistId || undefined}
         onDirtyChange={handleDirtyChange}
+        initialDraft={editingDraft}
+        onSaveDraft={saveChecklistDraft}
+        onClearDraft={clearChecklistDraft}
       />
       </Suspense>
       {(blocker.state === "blocked" || showNavExitConfirm) && createPortal(
@@ -714,6 +729,11 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                   </p>
                 </div>
               </button>
+              {cl.is_published && draftIds.includes(cl.id) && (
+                <span data-testid="checklist-unpublished-changes" className="shrink-0 text-xs italic text-status-error px-1">
+                  {t("checklist.unpublishedChanges")}
+                </span>
+              )}
               <button onClick={e => { e.stopPropagation(); void openPreview(cl.id); }}
                 className="p-2 text-muted-foreground hover:text-sage transition-colors shrink-0"
                 title={t("checklist.previewTooltip")}>
