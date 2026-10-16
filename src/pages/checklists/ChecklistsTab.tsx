@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { type MultiSelectOption } from "@/components/MultiSelectFilter";
 import { FiltersPopover, FilterField, FilterMultiSelect, ActiveFilterChips, type ActiveFilterChip } from "@/components/FiltersPopover";
 import type { FolderItem, ChecklistItem, SectionDef } from "./types";
-import { getScheduleLabel } from "./types";
+import { getScheduleLabel, getScheduleSummary } from "./types";
 import { useFolders, useSaveFolder, useDeleteFolder, useReorderFolders, useReorderChecklists, useChecklists, useSaveChecklist, useDeleteChecklist, useLoadChecklist, useChecklistDraftIds, useLoadChecklistDraft, useSaveChecklistDraft, useClearChecklistDraft, type ChecklistDraftContent, type FolderItem as DbFolder, type ChecklistItem as DbChecklist } from "@/hooks/useChecklists";
 import { useLocations } from "@/hooks/useLocations";
 import { useDepartmentsForLocations } from "@/hooks/useDepartments";
@@ -518,8 +518,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
       {(blocker.state === "blocked" || showNavExitConfirm) && createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm">
           <div className="bg-card rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl space-y-4">
-            <h3 className="font-display text-lg text-foreground">{t("unsavedExit.heading")}</h3>
-            <p className="text-sm text-muted-foreground">{t("unsavedExit.body")}</p>
+            <h3 className="font-display text-lg text-foreground">{t("unsavedExit.headingDraft")}</h3>
+            <p className="text-sm text-muted-foreground">{t("unsavedExit.bodyDraft")}</p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowNavExitConfirm(false); if (blocker.state === "blocked") blocker.reset(); }}
@@ -724,13 +724,15 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {t("checklist.questionsCount", { count: cl.questionsCount })}{cl.schedule ? ` · ${getScheduleLabel(cl.schedule)}` : ""}
-                  </p>
+                  {getScheduleSummary(cl.schedule, cl.visibility_from, cl.visibility_until) && (
+                    <p className="text-xs text-muted-foreground">
+                      {getScheduleSummary(cl.schedule, cl.visibility_from, cl.visibility_until)}
+                    </p>
+                  )}
                 </div>
               </button>
               {cl.is_published && draftIds.includes(cl.id) && (
-                <span data-testid="checklist-unpublished-changes" className="shrink-0 text-xs italic text-status-error px-1">
+                <span data-testid="checklist-unpublished-changes" className="shrink-0 text-xs italic text-muted-foreground px-1">
                   {t("checklist.unpublishedChanges")}
                 </span>
               )}

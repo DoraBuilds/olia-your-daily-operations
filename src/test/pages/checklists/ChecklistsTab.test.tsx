@@ -100,6 +100,7 @@ vi.mock("@/hooks/useChecklists", () => {
   const CHECKLISTS = [{
     id: "cl-1", title: "Opening Checklist", folder_id: "f1",
     location_id: null, schedule: "daily", sections: [],
+    visibility_from: "08:00:00", visibility_until: "10:30:00",
     is_published: true,
     created_at: "2026-01-01", updated_at: "2026-01-01",
   }, {
@@ -147,9 +148,15 @@ describe("ChecklistsTab", () => {
     loadedIds.length = 0;
   });
 
-  it("shows each checklist's question count from the list, without its questions", () => {
+  it("no longer shows the question count under the title", () => {
     render(<ChecklistsTab />, { wrapper });
-    expect(screen.getByText(/7 questions/)).toBeInTheDocument();
+    expect(screen.queryByText(/7 questions/)).toBeNull();
+  });
+
+  it("shows the frequency with its visibility window under the title", async () => {
+    render(<ChecklistsTab />, { wrapper });
+    fireEvent.click(screen.getByText("Daily Operations"));
+    expect(await screen.findByText("Every day between 8am-10:30am")).toBeInTheDocument();
   });
 
   it("loads the full checklist (with its questions) when a row is opened", async () => {
@@ -228,14 +235,14 @@ describe("ChecklistsTab", () => {
     expect(screen.queryAllByText("Draft")).toHaveLength(0);
   });
 
-  it("marks a published checklist that has a draft with red italic Unpublished changes", async () => {
+  it("marks a published checklist that has a draft with grey italic Unpublished changes", async () => {
     draftState.ids = ["cl-1"];
     render(<ChecklistsTab />, { wrapper });
     fireEvent.click(screen.getByText("Daily Operations"));
     const note = await screen.findByTestId("checklist-unpublished-changes");
     expect(note).toHaveTextContent("Unpublished changes");
     expect(note.className).toContain("italic");
-    expect(note.className).toContain("text-status-error");
+    expect(note.className).toContain("text-muted-foreground");
   });
 
   it("shows no Unpublished changes note without a draft, or for a checklist that is not live", async () => {

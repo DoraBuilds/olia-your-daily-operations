@@ -42,7 +42,9 @@
     "questionsCount_other": "{{count}} questions",
     "previewTooltip": "Preview checklist",
     "draftBadge": "Draft",
-    "unpublishedChanges": "Unpublished changes"
+    "unpublishedChanges": "Unpublished changes",
+    "scheduleWithWindow": "{{schedule}} between {{from}}-{{to}}",
+    "windowOnly": "Between {{from}}-{{to}}"
   },
   "newFolder": {
     "createFailed": "Could not create the folder. Please try again.",
@@ -72,7 +74,9 @@
     "body": "Your unsaved changes will be lost if you exit.",
     "keepEditing": "Keep editing",
     "discard": "Leave",
-    "bodyAutosave": "Your latest changes couldn't be saved and will be lost if you leave."
+    "bodyAutosave": "Your latest changes couldn't be saved and will be lost if you leave.",
+    "headingDraft": "Leave without publishing?",
+    "bodyDraft": "Your changes are saved as a draft. The kiosk keeps showing the published version until you publish."
   },
   "breadcrumb": {
     "all": "All"
@@ -612,17 +616,12 @@
       "saved": "Saved",
       "error": "Couldn't save, retrying"
     },
-    "draftBanner": {
-      "text": "Draft, not live yet",
-      "publish": "Publish"
-    },
     "toast": {
       "planLimitError": "Could not save — you may have reached your plan's checklist limit. Delete unused checklists to free up space.",
       "genericSaveError": "Could not save checklist — please try again.",
       "published": "Checklist published!",
       "changesSaved": "Changes saved!",
-      "savedAsDraft": "Saved as draft — hidden from the kiosk until published.",
-      "draftKept": "Draft saved. The kiosk still shows the published version."
+      "savedAsDraft": "Saved as draft — hidden from the kiosk until published."
     }
   }
 }
