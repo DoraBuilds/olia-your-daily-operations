@@ -33,6 +33,7 @@ import { ChoiceMultiSelect } from "./ChoiceMultiSelect";
 import {
   COMPARATOR_LABEL_KEYS, comparatorKeysFor, defaultComparatorFor, isBetweenComparator, isOneOfComparator,
   isValuelessComparator, logicRuleKind, rulePatchForComparator,
+  rulesForResponseTypeChange,
 } from "./logic-comparators";
 
 function useMcColorOptions(t: (key: string) => string) {
@@ -112,7 +113,8 @@ export function FollowUpQuestionEditor({
     if (type !== "multiple_choice") {
       next.mcSetId = undefined;
     }
-    updateQuestion(next);
+    const logicRules = rulesForResponseTypeChange(cfg.logicRules, question, { responseType: type, config: cfg });
+    updateQuestion(logicRules === cfg.logicRules ? next : { ...next, config: { ...cfg, logicRules } });
   };
 
   const renderResponseConfig = () => {
@@ -230,11 +232,9 @@ export function FollowUpQuestionEditor({
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
           <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.checkbox.heading")}</p>
           <div className="flex gap-2 flex-wrap">
-            {[t("preview.yes"), t("preview.no"), t("preview.notApplicable")].map(opt => (
-              <div key={opt} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
-                <Square size={11} /> {opt}
-              </div>
-            ))}
+            <div className="flex items-center px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground">
+              <Square size={14} />
+            </div>
           </div>
         </div>
       );
