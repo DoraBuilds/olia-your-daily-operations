@@ -43,6 +43,7 @@ vi.mock("@/hooks/usePlan", () => ({
   usePlan: () => mockUsePlan(),
 }));
 
+vi.mock("@/hooks/useActiveStaffCounts", () => ({ useActiveStaffCounts: () => ({ data: [] }) }));
 vi.mock("@/hooks/useIsNativeApp", () => ({
   useIsNativeApp: () => mockUseIsNativeApp(),
 }));

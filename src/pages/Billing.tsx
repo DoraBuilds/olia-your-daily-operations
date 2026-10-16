@@ -7,6 +7,8 @@ import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { usePlan } from "@/hooks/usePlan";
+import { useActiveStaffCounts } from "@/hooks/useActiveStaffCounts";
+import { staffSizeBand } from "@/lib/staff-size-band";
 import { useAuth } from "@/contexts/AuthContext";
 import { runtimeConfig } from "@/lib/runtime-config";
 import { useIsNativeApp } from "@/hooks/useIsNativeApp";
@@ -89,6 +91,7 @@ export default function Billing() {
   const { teamMember } = useAuth();
   const qc = useQueryClient();
   const { plan, resolvedPlan, planStatus, hasStripeSubscription, billingUnavailable } = usePlan();
+  const { data: activeStaff = [] } = useActiveStaffCounts();
   const isNative = useIsNativeApp();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
   const [loading, setLoading] = useState<Plan | null>(null);
@@ -460,6 +463,23 @@ export default function Billing() {
             </div>
           )}
         </div>
+
+        {activeStaff.length > 0 && (
+          <div className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 space-y-2">
+            <p className="text-sm font-medium text-foreground">{t("activeStaff.title")}</p>
+            <p className="text-xs text-muted-foreground">{t("activeStaff.hint")}</p>
+            <ul className="divide-y divide-border/60">
+              {activeStaff.map((loc) => (
+                <li key={loc.location_id} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+                  <span className="truncate text-foreground">{loc.location_name}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {t("activeStaff.row", { count: loc.active_staff, band: t(`activeStaff.band.${staffSizeBand(loc.active_staff)}`) })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {cancelAtPeriodEnd && (
           <p className="text-xs text-status-warn bg-status-warn/10 border border-status-warn/20 rounded-xl px-3 py-2">

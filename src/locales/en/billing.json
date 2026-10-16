@@ -20,6 +20,12 @@
     "genericError": "Something went wrong. Please try again.",
     "stripeNotConfigured": "Online upgrades aren't available yet. To upgrade your plan, email us at hello@olia.app and we'll get you set up."
   },
+  "activeStaff": {
+    "title": "Active staff per location",
+    "hint": "Staff who used Olia in the last 30 days. Leavers drop off automatically. Pricing is reviewed at renewal, never mid-season.",
+    "row": "{{count}} active · {{band}}",
+    "band": { "standard": "Standard (up to ~50)", "large": "Large (~50-150)", "custom": "Custom (150+)" }
+  },
   "planSummary": {
     "billingUnavailableBadge": "Billing unavailable",
     "couldNotVerify": "We couldn't verify your billing plan just now.",
