@@ -131,8 +131,8 @@
     "filters": {
       "button": "Filters",
       "date": "Date",
-      "user": "User",
-      "allUsers": "All users",
+      "user": "Team member",
+      "allUsers": "All team members",
       "clear": "Clear filters",
       "apply": "Apply",
       "concept": "Concept",

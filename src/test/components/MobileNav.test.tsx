@@ -47,7 +47,7 @@ describe("MobileNav", () => {
     it("shows 'Admin' over the current admin section", () => {
       renderTitle("/admin/users");
       expect(screen.getByText("Admin")).toBeInTheDocument();
-      expect(screen.getByText("Users")).toBeInTheDocument();
+      expect(screen.getByText("Team")).toBeInTheDocument();
     });
 
     it("treats bare /admin as the Concepts section", () => {
@@ -84,7 +84,7 @@ describe("MobileNav", () => {
       renderNav("/dashboard");
       openMenu();
       fireEvent.click(screen.getByRole("button", { name: "Admin" }));
-      for (const label of ["Concepts", "Departments", "Users", "Devices", "Account", "Billing"]) {
+      for (const label of ["Concepts", "Departments", "Team", "Devices", "Account", "Billing"]) {
         expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
       }
       expect(screen.getByRole("link", { name: "Devices" })).toHaveAttribute("href", "/admin/kiosks");
@@ -96,7 +96,7 @@ describe("MobileNav", () => {
       renderNav("/admin/billing");
       openMenu();
       expect(screen.getByRole("link", { name: "Billing" })).toHaveClass("font-semibold");
-      expect(screen.getByRole("link", { name: "Users" })).not.toHaveClass("font-semibold");
+      expect(screen.getByRole("link", { name: "Team" })).not.toHaveClass("font-semibold");
     });
 
     it("re-expands Admin on reopen from an admin page even if it was collapsed", () => {
@@ -105,7 +105,7 @@ describe("MobileNav", () => {
       fireEvent.click(screen.getByRole("button", { name: "Admin" }));
       fireEvent.click(screen.getByRole("button", { name: "Close menu" }));
       openMenu();
-      expect(screen.getByRole("link", { name: "Users" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Team" })).toBeInTheDocument();
     });
 
     it("gives a non-owner a plain Admin link — they only have Concepts", () => {

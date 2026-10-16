@@ -41,7 +41,7 @@ describe("SidebarNav", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
 
     expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Billing" })).toBeNull();
   });

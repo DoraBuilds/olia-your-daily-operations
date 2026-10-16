@@ -131,8 +131,8 @@
     "filters": {
       "button": "Filtros",
       "date": "Fecha",
-      "user": "Usuario",
-      "allUsers": "Todos los usuarios",
+      "user": "Miembro del equipo",
+      "allUsers": "Todo el equipo",
       "clear": "Borrar filtros",
       "apply": "Aplicar",
       "concept": "Concepto",
