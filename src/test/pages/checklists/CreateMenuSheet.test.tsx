@@ -22,7 +22,6 @@ describe("CreateMenuSheet", () => {
   const onBuildOwn = vi.fn();
   const onConvertFile = vi.fn();
   const onBuildAI = vi.fn();
-  const onCreateFolder = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +34,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     expect(screen.getByText("Create new")).toBeInTheDocument();
@@ -48,13 +46,12 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     expect(screen.getByText("Build your own checklist")).toBeInTheDocument();
     expect(screen.getByText("Convert file")).toBeInTheDocument();
     expect(screen.getByText("Build with AI")).toBeInTheDocument();
-    expect(screen.getByText("Create a folder")).toBeInTheDocument();
+    expect(screen.queryByText("Create a folder")).not.toBeInTheDocument();
   });
 
   it("shows sublabel for Convert file", () => {
@@ -64,7 +61,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     expect(screen.getByText("Excel, image or PDF")).toBeInTheDocument();
@@ -77,7 +73,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     const buttons = screen.getAllByRole("button");
@@ -92,7 +87,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     fireEvent.click(screen.getByText("Build your own checklist"));
@@ -107,7 +101,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     fireEvent.click(screen.getByText("Convert file"));
@@ -122,7 +115,6 @@ describe("CreateMenuSheet", () => {
         onBuildOwn={onBuildOwn}
         onConvertFile={onConvertFile}
         onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
       />
     );
     fireEvent.click(screen.getByText("Build with AI"));
@@ -130,18 +122,4 @@ describe("CreateMenuSheet", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("clicking Create a folder calls onCreateFolder and onClose", () => {
-    render(
-      <CreateMenuSheet
-        onClose={onClose}
-        onBuildOwn={onBuildOwn}
-        onConvertFile={onConvertFile}
-        onBuildAI={onBuildAI}
-        onCreateFolder={onCreateFolder}
-      />
-    );
-    fireEvent.click(screen.getByText("Create a folder"));
-    expect(onCreateFolder).toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalled();
-  });
 });

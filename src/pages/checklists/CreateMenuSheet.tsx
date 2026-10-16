@@ -1,20 +1,18 @@
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { X, ClipboardList, FileUp, Sparkles, FolderPlus, ChevronRight } from "lucide-react";
+import { X, ClipboardList, FileUp, Sparkles, ChevronRight } from "lucide-react";
 
-export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI, onCreateFolder }: {
+export function CreateMenuSheet({ onClose, onBuildOwn, onConvertFile, onBuildAI }: {
   onClose: () => void;
   onBuildOwn: () => void;
   onConvertFile: () => void;
   onBuildAI: () => void;
-  onCreateFolder: () => void;
 }) {
   const { t } = useTranslation("checklists");
   const items = [
     { label: t("createMenu.buildOwn"), icon: ClipboardList, action: onBuildOwn },
     { label: t("createMenu.convertFile"), sublabel: t("createMenu.convertFileSub"), icon: FileUp, action: onConvertFile },
     { label: t("createMenu.buildAI"), icon: Sparkles, action: onBuildAI, hasAiIcon: true },
-    { label: t("createMenu.createFolder"), icon: FolderPlus, action: onCreateFolder },
   ];
 
   return createPortal(

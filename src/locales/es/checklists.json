@@ -47,12 +47,6 @@
     "scheduleWithWindow": "{{schedule}} entre {{from}}-{{to}}",
     "windowOnly": "Entre {{from}}-{{to}}"
   },
-  "newFolder": {
-    "createFailed": "No se pudo crear la carpeta. Inténtalo de nuevo.",
-    "heading": "Nueva carpeta",
-    "namePlaceholder": "Nombre de la carpeta",
-    "create": "Crear carpeta"
-  },
   "deleteConfirm": {
     "headingFolder": "¿Eliminar carpeta?",
     "headingChecklist": "¿Eliminar lista?",
@@ -89,8 +83,7 @@
     "buildOwn": "Crear tu propia lista",
     "convertFile": "Convertir archivo",
     "convertFileSub": "Excel, imagen o PDF",
-    "buildAI": "Crear con IA",
-    "createFolder": "Crear una carpeta"
+    "buildAI": "Crear con IA"
   },
   "contextMenu": {
     "moveToFolder": "Mover a carpeta",
