@@ -417,7 +417,7 @@ describe("ReportingTab search + Filters toolbar", () => {
 
     openFilters();
     fireEvent.click(screen.getByTestId("reporting-clear-filters"));
-    expect(screen.getByTestId("reporting-user-filter-trigger")).toHaveTextContent("All users");
+    expect(screen.getByTestId("reporting-user-filter-trigger")).toHaveTextContent("All team members");
     applyFilters();
     expect(screen.getByText("Opening Checklist")).toBeInTheDocument();
     expect(screen.getByTestId("reporting-result-summary")).toHaveTextContent("This Week");

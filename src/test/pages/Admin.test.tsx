@@ -253,10 +253,10 @@ describe("Admin page", () => {
     expect(document.body).toBeDefined();
   });
 
-  it("shows 'Concepts', 'Users', 'Account', and 'Billing' tabs", () => {
+  it("shows 'Concepts', 'Team', 'Account', and 'Billing' tabs", () => {
     renderWithProviders(<Admin />, { initialEntries: ["/admin/location"] });
     expect(screen.getAllByText("Concepts").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Users").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Team").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Account").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Billing").length).toBeGreaterThanOrEqual(1);
   });
