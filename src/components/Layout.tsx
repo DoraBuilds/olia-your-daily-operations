@@ -1,9 +1,9 @@
 import { ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PanelLeft } from "lucide-react";
 import { MobileMenu, MobileRouteTitle } from "./MobileNav";
-import { SidebarNav } from "./SidebarNav";
+import { SidebarNav, useSidebarCollapsed } from "./SidebarNav";
 import { SupportModeBanner } from "./SupportModeBanner";
 import {
   hasActiveKioskAdminSession, clearKioskAdminSession, subscribeKioskAdminSession,
@@ -24,6 +24,8 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
+  const sidebarToggleLabel = sidebarCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar");
   // mx-auto: without it, this max-width column pins to the left edge of
   // <main> and any width freed up — e.g. by collapsing SidebarNav, or by a
   // wide viewport under the shell's 1240px cap — just becomes dead space on
@@ -82,10 +84,29 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   }, [isKioskAdminSession, navigate]);
 
   return (
-    <div className="h-screen bg-background flex flex-col w-full overflow-hidden relative">
+    <div className="h-screen bg-[hsl(var(--shell))] flex flex-col w-full overflow-hidden relative">
       <SupportModeBanner />
+      {/* Desktop top bar: sidebar toggle on the left, Olia centered on the
+          window (not the content pane, so it stays put when the sidebar
+          collapses). Borderless and the same tint as the sidebar, so the
+          white content panel below reads as sitting inside one frame. */}
+      <div className="hidden md:flex relative h-16 shrink-0 items-center px-4">
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed((prev) => !prev)}
+          aria-label={sidebarToggleLabel}
+          title={sidebarToggleLabel}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-card/70 hover:text-foreground transition-colors"
+        >
+          <PanelLeft size={20} strokeWidth={1.8} />
+        </button>
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5">
+          <img src="/brand/logo/olia-mark-dark.svg" alt="" className="w-7 h-7 shrink-0" />
+          <span className="font-display text-[19px] font-semibold text-foreground tracking-tight leading-none">Olia</span>
+        </div>
+      </div>
       {/* Header — the "Olia" + owner-name banner that used to live here for
-          every page is gone; "Olia" branding lives only in SidebarNav now,
+          every page is gone; "Olia" branding lives only in the desktop top bar now,
           and Log out/Delete account moved into Admin > Account (AccountTab).
           From md up it shows only for (a) pages that still pass a distinct
           `title` (e.g. Maintenance, SOP Library, Training), and (b) a
@@ -96,7 +117,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           page's title, or its route-derived name for title-less pages. */}
       <header
         className={cn(
-          "sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border safe-area-pt",
+          "sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border safe-area-pt md:bg-transparent md:border-0 md:backdrop-blur-none",
           !(title || isKioskAdminSession) && "md:hidden",
         )}
       >
@@ -150,14 +171,12 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
       {/* Body: sidebar is fixed, only the content column scrolls */}
       <div className="flex flex-1 overflow-hidden">
-        <div className={cn("flex flex-1 px-5 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
+        <div className="flex flex-1 min-w-0">
           {/* Sidebar: outside the scroll container so it never scrolls */}
-          <SidebarNav />
-          {/* Same hairline as the one under the Olia mark in SidebarNav */}
-          <div aria-hidden className="hidden md:block w-px shrink-0 self-stretch bg-border" />
+          <SidebarNav collapsed={sidebarCollapsed} />
 
           {/* Only this column scrolls */}
-          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col">
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-background px-5 sm:px-6 lg:px-8 xl:px-10 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col md:rounded-t-[20px] md:mr-4">
             {/* portrait:my-auto centers content vertically only on tall/narrow
                 (portrait) viewports, e.g. a short list on a tablet-portrait
                 screen — auto margins collapse to 0 once content overflows, so

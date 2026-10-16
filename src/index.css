@@ -115,6 +115,7 @@ html { font-size: 16px; }                        /* mobile / default        */
     --powder-blue-light: 173 55% 93%;
 
     --background:      0 0% 100%;    /* white */
+    --shell:           165 14% 94%;  /* tint around the white content panel (sidebar + top bar) */
     --foreground:      135 15% 5%;   /* near-black */
 
     --card:            0 0% 100%;    /* pure white #FFFFFF */

@@ -41,6 +41,19 @@ describe("Layout", () => {
     expect(screen.getByText("Hello children")).toBeInTheDocument();
   });
 
+  it("collapses the sidebar to icon-only from the top-bar toggle and remembers it", () => {
+    localStorage.removeItem("olia_sidebar_collapsed");
+    renderWithProviders(<Layout><p>x</p></Layout>, { initialEntries: ["/dashboard"] });
+    expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("Dashboard");
+
+    fireEvent.click(screen.getByRole("button", { name: /collapse sidebar/i }));
+
+    expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("");
+    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
+    expect(localStorage.getItem("olia_sidebar_collapsed")).toBe("1");
+    localStorage.removeItem("olia_sidebar_collapsed");
+  });
+
   it("scrolls the shared content container to the top on mount", () => {
     const scrollTopSpy = vi.spyOn(HTMLElement.prototype, "scrollTop", "set");
 
