@@ -613,7 +613,7 @@
     "untitled": "Lista sin título",
     "saveStatus": {
       "saving": "Guardando…",
-      "saved": "Guardado",
+      "savedAt": "Guardado a las {{time}}",
       "error": "No se pudo guardar, reintentando"
     },
     "toast": {

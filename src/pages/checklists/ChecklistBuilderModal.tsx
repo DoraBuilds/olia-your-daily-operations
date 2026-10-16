@@ -244,6 +244,8 @@ export function ChecklistBuilderModal({
   const lastSavedRef = useRef<string | null>(null);
   const initialContentRef = useRef<string | null>(null);
   const [exitSaveFailed, setExitSaveFailed] = useState(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const latestSnapshotRef = useRef("");
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildDraftContent = (): ChecklistDraftContent => ({
@@ -254,6 +256,7 @@ export function ChecklistBuilderModal({
     selectedLocationIds, allLocationsConceptId, selectedDepartmentIds, isPublished,
   });
   const contentSnapshot = autosaveEnabled ? JSON.stringify(buildDraftContent()) : "";
+  latestSnapshotRef.current = contentSnapshot;
   if (lastSavedRef.current === null) lastSavedRef.current = contentSnapshot;
   if (initialContentRef.current === null) initialContentRef.current = contentSnapshot;
   const hasUnsavedEdits = autosaveEnabled && touchedRef.current && contentSnapshot !== lastSavedRef.current;
@@ -318,6 +321,7 @@ export function ChecklistBuilderModal({
       try {
         await persistAutosave(content);
         lastSavedRef.current = snap;
+        setSavedAt(new Date());
         setSaveStatus("saved");
         return true;
       } catch {
@@ -345,7 +349,15 @@ export function ChecklistBuilderModal({
 
   // Any pointer/keyboard/change inside the form counts as the user editing.
   // (Effects that tidy state on load, e.g. dropping stale departments, don't.)
-  const markTouched = () => { touchedRef.current = true; };
+  // The first interaction fixes the baseline: whatever the form looks like once
+  // it has settled is "unchanged", so opening a checklist and clicking around
+  // never creates a draft.
+  const markTouched = () => {
+    if (touchedRef.current) return;
+    touchedRef.current = true;
+    initialContentRef.current = latestSnapshotRef.current;
+    lastSavedRef.current = latestSnapshotRef.current;
+  };
 
   // Intercept Exit/X: autosave first; only warn when the latest edits couldn't be saved
   const handleRequestClose = async () => {
@@ -673,6 +685,7 @@ export function ChecklistBuilderModal({
         setHasDraft(false);
         liveInDbRef.current = isPublished;
         lastSavedRef.current = publishedSnapshot;
+        setSavedAt(new Date());
         setSaveStatus("saved");
       }
       clearChecklistDraft();
@@ -750,39 +763,36 @@ export function ChecklistBuilderModal({
           data-testid="builder-action-bar"
           className="sticky -top-5 z-30 flex items-center justify-between gap-3 bg-background px-5 py-3"
         >
-          {autosaveEnabled && hasDraft && (
-            <span
-              data-testid="builder-unpublished-note"
-              className="hidden sm:block absolute left-1/2 -translate-x-1/2 text-xs italic text-muted-foreground pointer-events-none"
-            >
-              {t("checklist.unpublishedChanges")}
-            </span>
-          )}
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> {t("builder.exit")}
           </button>
-          <div className={cn(
-            "flex flex-row items-center gap-2 transition-all duration-150",
-            footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
-          )}>
-            {autosaveEnabled && saveStatus !== "idle" ? (
-              <span
-                data-testid="builder-save-status"
-                role="status"
-                className={cn(
-                  "text-[10px] px-2.5 py-1 rounded-full border whitespace-nowrap",
-                  saveStatus === "error" ? "text-status-error border-status-error/40" : "text-muted-foreground border-border/50",
-                )}
-              >
-                {saveStatus === "saving" ? t("builder.saveStatus.saving")
-                  : saveStatus === "error" ? t("builder.saveStatus.error")
-                  : t("builder.saveStatus.saved")}
-              </span>
+          <div className="flex flex-row items-center gap-3">
+            {autosaveEnabled ? (
+              (saveStatus !== "idle" || hasDraft) && (
+                <span
+                  data-testid="builder-save-status"
+                  role="status"
+                  className={cn(
+                    "text-xs whitespace-nowrap",
+                    saveStatus === "error" ? "text-status-error" : "text-muted-foreground",
+                    saveStatus === "idle" && "italic",
+                  )}
+                >
+                  {saveStatus === "saving" ? t("builder.saveStatus.saving")
+                    : saveStatus === "error" ? t("builder.saveStatus.error")
+                    : saveStatus === "saved" && savedAt ? t("builder.saveStatus.savedAt", { time: format(savedAt, "h:mmaaa") })
+                    : t("checklist.unpublishedChanges")}
+                </span>
+              )
             ) : lastPublishedAt && (
               <span className="text-[10px] text-muted-foreground px-2.5 py-1 rounded-full border border-border/50 whitespace-nowrap">
                 {t("builder.footer.savedAt", { time: format(lastPublishedAt, "h:mm a") })}
               </span>
             )}
+            <div className={cn(
+              "transition-all duration-150",
+              footerPublishVisible ? "opacity-0 pointer-events-none" : "opacity-100",
+            )}>
             <button
               data-testid="checklist-save-button"
               disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
@@ -796,6 +806,7 @@ export function ChecklistBuilderModal({
             >
               {primaryActionLabel}
             </button>
+            </div>
           </div>
         </div>
       )}
@@ -806,9 +817,6 @@ export function ChecklistBuilderModal({
         onKeyDownCapture={markTouched}
         onChangeCapture={markTouched}
       >
-        {autosaveEnabled && hasDraft && (
-          <p className="sm:hidden text-center text-xs italic text-muted-foreground">{t("checklist.unpublishedChanges")}</p>
-        )}
         {/* Kiosk visibility (Draft/Live) */}
         <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/40 p-3">
           <div>

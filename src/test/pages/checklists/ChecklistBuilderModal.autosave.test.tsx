@@ -97,8 +97,8 @@ describe("ChecklistBuilderModal - autosave", () => {
     await waitFor(() => expect(onSaveDraft).toHaveBeenCalledTimes(1), { timeout: 3000 });
     expect(onSaveDraft).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Opening v2", sections: SECTIONS }));
     expect(onUpdate).not.toHaveBeenCalled();
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(screen.getByTestId("builder-unpublished-note")).toHaveTextContent("Unpublished changes");
+    expect(await screen.findByText(/^Saved at \d{1,2}:\d{2}(am|pm)$/)).toBeInTheDocument();
+    expect(screen.getByTestId("builder-save-status")).toHaveTextContent(/^Saved at/);
   });
 
   it("does not save anything when the form is only opened", async () => {
@@ -106,10 +106,19 @@ describe("ChecklistBuilderModal - autosave", () => {
     await new Promise(r => setTimeout(r, 1300));
     expect(onSaveDraft).not.toHaveBeenCalled();
     expect(onUpdate).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("builder-unpublished-note")).toBeNull();
+    expect(screen.queryByTestId("builder-save-status")).toBeNull();
   });
 
-  it("restores a draft, shows the unpublished note and publishes it from the Publish button", async () => {
+  it("does not create a draft when you only click around, even if the form settles after load", async () => {
+    // Specific locations: the concept picker is filled in by an effect after mount.
+    renderLive({ initialLocationIds: ["loc-1"] });
+    fireEvent.pointerDown(screen.getByPlaceholderText(/Morning Opening Checklist/));
+    await new Promise(r => setTimeout(r, 1500));
+    expect(onSaveDraft).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("builder-save-status")).toBeNull();
+  });
+
+  it("restores a draft, shows Unpublished changes by the Publish button and publishes it from the Publish button", async () => {
     renderLive({ initialDraft: {
       title: "Opening DRAFT", description: "", sections: SECTIONS, startDate: null, schedule: "none",
       customRecurrence: { interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13 },
@@ -117,11 +126,11 @@ describe("ChecklistBuilderModal - autosave", () => {
       selectedLocationIds: [], allLocationsConceptId: null, selectedDepartmentIds: [], isPublished: true,
     } });
     expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toHaveValue("Opening DRAFT");
-    expect(screen.getByTestId("builder-unpublished-note")).toBeInTheDocument();
+    expect(screen.getByTestId("builder-save-status")).toHaveTextContent("Unpublished changes");
     fireEvent.click(screen.getAllByTestId("checklist-save-button")[0]);
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Opening DRAFT", is_published: true })));
     await waitFor(() => expect(onClearDraft).toHaveBeenCalledWith("cl-1"));
-    await waitFor(() => expect(screen.queryByTestId("builder-unpublished-note")).toBeNull());
+    await waitFor(() => expect(screen.getByTestId("builder-save-status")).toHaveTextContent(/^Saved at/));
   });
 
   it("shows Couldn't save, retrying and retries after a failure", async () => {
@@ -131,7 +140,7 @@ describe("ChecklistBuilderModal - autosave", () => {
     editTitle("Opening v2");
     expect(await screen.findByText("Couldn't save, retrying", {}, { timeout: 3000 })).toBeInTheDocument();
     await waitFor(() => expect(onSaveDraft).toHaveBeenCalledTimes(2), { timeout: 9000 });
-    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(await screen.findByText(/^Saved at \d{1,2}:\d{2}(am|pm)$/)).toBeInTheDocument();
   }, 15000);
 
   it("saves, then asks before leaving when there are changes", async () => {

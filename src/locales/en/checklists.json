@@ -613,7 +613,7 @@
     "untitled": "Untitled checklist",
     "saveStatus": {
       "saving": "Saving…",
-      "saved": "Saved",
+      "savedAt": "Saved at {{time}}",
       "error": "Couldn't save, retrying"
     },
     "toast": {
