@@ -455,13 +455,6 @@ export function ChecklistBuilderModal({
     });
   })();
 
-  const formatTime12h = (time24: string) => {
-    const [h, m] = time24.split(":").map(Number);
-    const ampm = h >= 12 ? "pm" : "am";
-    const h12 = h % 12 || 12;
-    return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
-  };
-
   const handleCreate = async () => {
     if (!title.trim()) return;
     const savedSchedule = schedule === "none" ? null
@@ -806,11 +799,9 @@ export function ChecklistBuilderModal({
               </div>
             )}
 
-            <p className="text-sm italic text-muted-foreground">
-              {visibilityWindowEnabled
-                ? t("builder.schedule.visibleWindowNotice", { from: formatTime12h(visibilityFrom), to: formatTime12h(visibilityUntil) })
-                : t("builder.schedule.noWindowNotice")}
-            </p>
+            {!visibilityWindowEnabled && (
+              <p className="text-sm italic text-muted-foreground">{t("builder.schedule.noWindowNotice")}</p>
+            )}
           </div>
 
           {/* Repeat */}

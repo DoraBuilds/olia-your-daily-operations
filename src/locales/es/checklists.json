@@ -523,7 +523,6 @@
       "off": "Desactivada",
       "from": "Desde",
       "until": "Hasta",
-      "visibleWindowNotice": "Esta lista debe completarse entre {{from}} y {{to}}. Se abre a las {{from}} y completarla después de las {{to}} cuenta como tardía.",
       "noWindowNotice": "No se configuró ventana de entrega. La lista estará abierta todo el día programado hasta completarse.",
       "allowLate": "Permitir completar con retraso",
       "allowLateOnHint": "Al cerrarse la ventana, la lista pasa a Atrasado. El personal aún puede completarla y se registra como tardía, hasta el final del día del local.",
