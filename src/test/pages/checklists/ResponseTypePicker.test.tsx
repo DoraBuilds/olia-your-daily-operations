@@ -50,9 +50,9 @@ describe("ResponseTypePicker", () => {
     expect(screen.getByText("Checkbox")).toBeInTheDocument();
   });
 
-  it("shows Number response type", () => {
+  it("shows Temperature response type", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    expect(screen.getByText("Number")).toBeInTheDocument();
+    expect(screen.getByText("Temperature")).toBeInTheDocument();
   });
 
   it("shows Date & Time response type", () => {
@@ -119,9 +119,9 @@ describe("ResponseTypePicker", () => {
     expect(onSelect).toHaveBeenCalledWith("checkbox");
   });
 
-  it("clicking Number calls onSelect with 'number'", () => {
+  it("clicking Temperature calls onSelect with 'number'", () => {
     render(<ResponseTypePicker onSelect={onSelect} onClose={onClose} />);
-    fireEvent.click(screen.getByText("Number"));
+    fireEvent.click(screen.getByText("Temperature"));
     expect(onSelect).toHaveBeenCalledWith("number");
   });
 });

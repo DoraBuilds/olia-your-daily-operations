@@ -28,8 +28,7 @@ RESPONSE TYPE — pick the FIRST that matches:
 
 • "instruction" — item tells staff to DO something (imperative verb: "Limpia los carros", "Asegúrate de que…", "Lleva la basura a…", "Check that X is done"). This includes action steps that have a photo/image in the source — the image shows HOW to do it, so the item is still an instruction. Add the image warning below.
 • "datetime" — item asks WHEN something happened or should happen ("¿Cuándo se limpió X?", "When was X last done?", "Fecha del último…", "Record the date/time"). Use this for any question starting with ¿Cuándo / When / Date / Time.
-• "number" — plain count or quantity (not temperature).
-• "number" + temperature — item asks for a temperature reading. You MUST output it like this example:
+• "number" + temperature — item asks for a temperature reading (the only use of "number"; counts and quantities are "text"). You MUST output it like this example:
   {"id":"q-1","text":"Temperatura del nevera","responseType":"number","required":true,"config":{"mode":"temperature"}}
 • "multiple_choice" ["Sí","No"] — YES/NO verification question where staff must explicitly record the answer ("¿Se ha limpiado X?", "¿Está Y en orden?", "Is X clean?"). Add "selectionMode":"single" and "choices":["Sí","No"] (or ["Yes","No"] in English).
 • "multiple_choice" other — ONLY when the source explicitly lists 3+ named options (e.g. "Bueno/Regular/Malo"). Add "selectionMode":"single" and "choices":[…]. Do NOT invent options.

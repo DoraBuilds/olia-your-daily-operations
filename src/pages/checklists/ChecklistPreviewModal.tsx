@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { X, Pencil, CheckSquare, Square, Hash, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
+import { X, Pencil, CheckSquare, Square, Thermometer, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
 import { getScheduleLabel } from "./types";
@@ -65,7 +65,7 @@ function MockResponse({
     return (
       <div className="mt-2 space-y-2">
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/50 w-32">
-          <Hash size={11} className="text-muted-foreground shrink-0" />
+          <Thermometer size={11} className="text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground">0.00</span>
           {isTemperature && (
             <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-sage-light text-sage-deep">

@@ -6,6 +6,7 @@ import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search,
   AlertTriangle, Upload, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
   Building2, MapPin, Layers,
+  Thermometer,
 } from "lucide-react";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import { sanitizeImageUrl } from "@/lib/sanitize";
@@ -21,7 +22,7 @@ import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConcepts } from "@/hooks/useConcepts";
 import { createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
-import { rulesForResponseTypeChange } from "./logic-comparators";
+import { rulesForResponseTypeChange, withTemperatureDefaults } from "./logic-comparators";
 import { LogicRulesEditor } from "./LogicRulesEditor";
 import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
@@ -1166,101 +1167,68 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "number" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">{t("builder.number.heading")}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {t("builder.number.description")}
-                          </p>
+                      <div className="flex items-center gap-1.5">
+                        <Thermometer size={14} className="text-sage shrink-0" />
+                        <p className="text-xs font-medium text-muted-foreground">{t("builder.number.heading")}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t("builder.number.description")}
+                      </p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            onWheel={blurOnWheel}
+                            placeholder={t("builder.number.min")}
+                            value={cfg.numberMin ?? ""}
+                            onChange={e => updateQuestion(si, qi, {
+                              config: {
+                                ...cfg,
+                                numberMode: "temperature",
+                                numberMin: e.target.value ? Number(e.target.value) : undefined,
+                              },
+                            })}
+                            className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
+                          <span className="text-xs text-muted-foreground">{t("builder.number.to")}</span>
+                          <input
+                            type="number"
+                            onWheel={blurOnWheel}
+                            placeholder={t("builder.number.max")}
+                            value={cfg.numberMax ?? ""}
+                            onChange={e => updateQuestion(si, qi, {
+                              config: {
+                                ...cfg,
+                                numberMode: "temperature",
+                                numberMax: e.target.value ? Number(e.target.value) : undefined,
+                              },
+                            })}
+                            className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          />
                         </div>
-                        <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
-                          {(["single", "temperature"] as const).map(mode => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => updateQuestion(si, qi, {
-                                config: {
-                                  ...cfg,
-                                  numberMode: mode,
-                                  numberMin: mode === "temperature" ? cfg.numberMin : undefined,
-                                  numberMax: mode === "temperature" ? cfg.numberMax : undefined,
-                                  temperatureUnit: mode === "temperature" ? (cfg.temperatureUnit ?? "C") : undefined,
-                                },
-                              })}
-                              className={cn(
-                                "px-3 py-1 text-[11px] rounded-full transition-colors",
-                                (cfg.numberMode ?? "single") === mode
-                                  ? "bg-sage text-primary-foreground"
-                                  : "text-muted-foreground hover:text-foreground",
-                              )}
-                            >
-                              {mode === "single" ? t("builder.number.modeNumber") : t("builder.number.modeTemperature")}
-                            </button>
-                          ))}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground shrink-0">{t("builder.number.unit")}</span>
+                          <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
+                            {(["C", "F"] as const).map(unit => (
+                              <button
+                                key={unit}
+                                type="button"
+                                onClick={() => updateQuestion(si, qi, {
+                                  config: { ...cfg, numberMode: "temperature", temperatureUnit: unit },
+                                })}
+                                className={cn(
+                                  "px-3 py-1 text-[11px] rounded-full transition-colors",
+                                  (cfg.temperatureUnit ?? "C") === unit
+                                    ? "bg-sage text-primary-foreground"
+                                    : "text-muted-foreground hover:text-foreground",
+                                )}
+                              >
+                                {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-
-                      {(cfg.numberMode ?? "single") === "single" ? (
-                        <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                          {t("builder.number.singleModeNotice")}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              onWheel={blurOnWheel}
-                              placeholder={t("builder.number.min")}
-                              value={cfg.numberMin ?? ""}
-                              onChange={e => updateQuestion(si, qi, {
-                                config: {
-                                  ...cfg,
-                                  numberMode: "temperature",
-                                  numberMin: e.target.value ? Number(e.target.value) : undefined,
-                                },
-                              })}
-                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                            <span className="text-xs text-muted-foreground">{t("builder.number.to")}</span>
-                            <input
-                              type="number"
-                              onWheel={blurOnWheel}
-                              placeholder={t("builder.number.max")}
-                              value={cfg.numberMax ?? ""}
-                              onChange={e => updateQuestion(si, qi, {
-                                config: {
-                                  ...cfg,
-                                  numberMode: "temperature",
-                                  numberMax: e.target.value ? Number(e.target.value) : undefined,
-                                },
-                              })}
-                              className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground shrink-0">{t("builder.number.unit")}</span>
-                            <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
-                              {(["C", "F"] as const).map(unit => (
-                                <button
-                                  key={unit}
-                                  type="button"
-                                  onClick={() => updateQuestion(si, qi, {
-                                    config: { ...cfg, numberMode: "temperature", temperatureUnit: unit },
-                                  })}
-                                  className={cn(
-                                    "px-3 py-1 text-[11px] rounded-full transition-colors",
-                                    (cfg.temperatureUnit ?? "C") === unit
-                                      ? "bg-sage text-primary-foreground"
-                                      : "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -1638,14 +1606,15 @@ export function ChecklistBuilderModal({
             const mcSet = mcSetId ? multipleChoiceSets.find(m => m.id === mcSetId) : null;
             if (showResponsePicker.scope === "main") {
               const mainQ = sections[showResponsePicker.sectionIdx].questions[showResponsePicker.questionIdx];
-              const mainRules = rulesForResponseTypeChange(mainQ.config?.logicRules, mainQ, { responseType: type, config: mainQ.config });
+              const mainCfg = withTemperatureDefaults(type, mainQ.responseType, mainQ.config);
+              const mainRules = rulesForResponseTypeChange(mainCfg?.logicRules, mainQ, { responseType: type, config: mainCfg });
               updateQuestion(showResponsePicker.sectionIdx, showResponsePicker.questionIdx, {
                 responseType: type,
                 mcSetId: mcSetId ?? undefined,
                 choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                 choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                 selectionMode: type === "multiple_choice" ? "single" : undefined,
-                ...(mainRules !== mainQ.config?.logicRules ? { config: { ...(mainQ.config || {}), logicRules: mainRules } } : {}),
+                ...(mainCfg !== mainQ.config || mainRules !== mainCfg?.logicRules ? { config: { ...(mainCfg || {}), logicRules: mainRules } } : {}),
                 uncertain: undefined,
                 warning: undefined,
               });
@@ -1661,7 +1630,8 @@ export function ChecklistBuilderModal({
                   triggers: rule.triggers.map((trigger, ti) => {
                     if (ti !== triggerIdx) return trigger;
                     const nextFollowUp = trigger.config?.followUpQuestion ?? createDefaultFollowUpQuestion();
-                    const fuRules = rulesForResponseTypeChange(nextFollowUp.config?.logicRules, nextFollowUp, { responseType: type, config: nextFollowUp.config });
+                    const fuCfg = withTemperatureDefaults(type, nextFollowUp.responseType, nextFollowUp.config);
+                    const fuRules = rulesForResponseTypeChange(fuCfg?.logicRules, nextFollowUp, { responseType: type, config: fuCfg });
                     return {
                       ...trigger,
                       config: {
@@ -1673,7 +1643,7 @@ export function ChecklistBuilderModal({
                           choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                           choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                           selectionMode: type === "multiple_choice" ? ("single" as const) : undefined,
-                          config: { ...(nextFollowUp.config || {}), logicRules: fuRules },
+                          config: { ...(fuCfg || {}), logicRules: fuRules },
                         },
                       },
                     };

@@ -92,3 +92,9 @@ export function rulesForResponseTypeChange<R extends { comparator: LogicComparat
   if (logicRuleKind(prev.responseType, prev.config) === nextKind) return rules;
   return rules.map(r => ({ ...r, comparator: defaultComparatorFor(nextKind), value: "", valueTo: undefined, values: undefined }));
 }
+
+/** "Number" is now only the temperature answer: picking it switches temperature mode on. */
+export function withTemperatureDefaults(next: ResponseType, prev: ResponseType, config?: QuestionConfig): QuestionConfig | undefined {
+  if (next !== "number" || prev === "number") return config;
+  return { ...config, numberMode: "temperature", temperatureUnit: config?.temperatureUnit ?? "C" };
+}
