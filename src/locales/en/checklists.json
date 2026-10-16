@@ -75,8 +75,8 @@
     "keepEditing": "Keep editing",
     "discard": "Leave",
     "bodyAutosave": "Your latest changes couldn't be saved and will be lost if you leave.",
-    "headingDraft": "Leave without publishing?",
-    "bodyDraft": "Your changes are saved as a draft. The kiosk keeps showing the published version until you publish."
+    "headingDraft": "Changes saved",
+    "bodyDraft": "Your team won’t see them until you publish."
   },
   "breadcrumb": {
     "all": "All"
