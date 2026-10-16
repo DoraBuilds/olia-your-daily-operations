@@ -1,4 +1,5 @@
 {
+  "reorderFailed": "We couldn't save the new folder order. Please try again, or ask an account owner for access.",
   "close": "Close",
   "schedule": {
     "none": "Once",

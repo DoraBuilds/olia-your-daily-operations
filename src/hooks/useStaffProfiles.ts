@@ -159,8 +159,11 @@ export function useDeleteStaffProfile() {
   const { teamMember } = useAuth();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("staff_profiles").delete().eq("id", id);
+      const { data: deleted, error } = await supabase.from("staff_profiles").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error(i18n.t("errors.deleteProfile", { ns: "common" }));
+      }
       if (teamMember) writeAuditLog({ action: "delete_staff_profile", entity_type: "staff_profile", entity_id: id }, teamMember);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_profiles"] }),

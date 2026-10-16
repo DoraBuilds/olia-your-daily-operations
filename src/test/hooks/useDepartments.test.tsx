@@ -127,7 +127,7 @@ describe("useSaveDepartment", () => {
   });
 
   it("renames an existing department, then sets its assignments", async () => {
-    const eqMock = vi.fn().mockResolvedValue({ error: null });
+    const eqMock = vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [{ id: "dep-1" }], error: null }) });
     const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
     mockFrom.mockImplementation(() => ({ update: updateMock }));
     mockRpc.mockResolvedValue({ error: null });
@@ -144,7 +144,7 @@ describe("useSaveDepartment", () => {
   });
 
   it("surfaces an RPC error", async () => {
-    mockFrom.mockImplementation(() => ({ update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }) }));
+    mockFrom.mockImplementation(() => ({ update: () => ({ eq: () => ({ select: vi.fn().mockResolvedValue({ data: [{ id: "dep-1" }], error: null }) }) }) }));
     mockRpc.mockResolvedValue({ error: new Error("Only the Owner can change department assignments.") });
 
     const { result } = renderHook(() => useSaveDepartment(), { wrapper: makeWrapper() });

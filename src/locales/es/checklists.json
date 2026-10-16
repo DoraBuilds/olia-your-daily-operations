@@ -1,4 +1,5 @@
 {
+  "reorderFailed": "No pudimos guardar el nuevo orden de las carpetas. Inténtalo de nuevo o pide acceso a un propietario de la cuenta.",
   "close": "Cerrar",
   "schedule": {
     "none": "Una vez",

@@ -32,6 +32,10 @@
     "selectAll": "Select all"
   },
   "errors": {
+    "deleteConcept": "We couldn't delete this concept. You may not have permission, or it may already be gone. Please refresh and try again.",
+    "saveConcept": "We couldn't save this concept. You may not have permission. Please refresh and try again.",
+    "saveDepartment": "We couldn't save this department. Only account owners can change departments.",
+    "deleteProfile": "We couldn't delete this profile. You may not have permission, or it may already be gone. Please refresh and try again.",
     "accountSetup": "Your account setup is not complete. Please refresh the page and try again.",
     "profileUpdateFailed": "Profile update failed — your session may have expired. Please refresh and try again.",
     "staffPinRequired": "PIN is required for new staff members.",

@@ -32,6 +32,10 @@
     "selectAll": "Seleccionar todo"
   },
   "errors": {
+    "deleteConcept": "No pudimos eliminar este concepto. Puede que no tengas permiso o que ya no exista. Actualiza la página e inténtalo de nuevo.",
+    "saveConcept": "No pudimos guardar este concepto. Puede que no tengas permiso. Actualiza la página e inténtalo de nuevo.",
+    "saveDepartment": "No pudimos guardar este departamento. Solo los propietarios de la cuenta pueden cambiar los departamentos.",
+    "deleteProfile": "No pudimos eliminar este perfil. Puede que no tengas permiso o que ya no exista. Actualiza la página e inténtalo de nuevo.",
     "accountSetup": "La configuración de tu cuenta no está completa. Actualiza la página e inténtalo de nuevo.",
     "profileUpdateFailed": "No se pudo actualizar el perfil: tu sesión puede haber caducado. Actualiza la página e inténtalo de nuevo.",
     "staffPinRequired": "El PIN es obligatorio para el personal nuevo.",

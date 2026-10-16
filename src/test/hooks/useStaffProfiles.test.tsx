@@ -354,7 +354,7 @@ describe("useRestoreStaffProfile", () => {
 
 describe("useDeleteStaffProfile", () => {
   it("calls supabase DELETE and resolves without error", async () => {
-    const eqFn = vi.fn().mockResolvedValue({ error: null });
+    const eqFn = vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [{ id: "sp-1" }], error: null }) });
     const deleteFn = vi.fn().mockReturnValue({ eq: eqFn });
 
     mockFrom.mockReturnValue({
