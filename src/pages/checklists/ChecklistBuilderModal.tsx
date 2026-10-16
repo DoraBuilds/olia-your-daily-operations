@@ -1450,7 +1450,6 @@ export function ChecklistBuilderModal({
                         <div className="rounded-xl border border-sage/25 bg-sage/5 px-3 py-2 flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-foreground">{cfg.instructionLinkTitle}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{cfg.instructionLinkSection}</p>
                           </div>
                           <button
                             type="button"
@@ -1523,16 +1522,14 @@ export function ChecklistBuilderModal({
                                 }}
                                 className="w-full rounded-xl border border-border px-3 py-3 text-left hover:border-sage/40 hover:bg-muted/30 transition-colors"
                               >
-                                <div className="flex items-start gap-2">
+                                <div className="flex items-center gap-2">
                                   {resource.section === "library" ? (
-                                    <BookOpen size={14} className="text-sage mt-0.5 shrink-0" />
+                                    <BookOpen size={14} className="text-sage shrink-0" />
                                   ) : (
-                                    <GraduationCap size={14} className="text-sage mt-0.5 shrink-0" />
+                                    <GraduationCap size={14} className="text-sage shrink-0" />
                                   )}
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-foreground">{resource.title}</p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">{resource.section}</p>
-                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{resource.subtitle}</p>
                                   </div>
                                 </div>
                               </button>
