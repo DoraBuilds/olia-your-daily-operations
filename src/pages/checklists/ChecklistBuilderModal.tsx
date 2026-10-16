@@ -21,6 +21,7 @@ import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConcepts } from "@/hooks/useConcepts";
 import { createDefaultFollowUpQuestion } from "./FollowUpQuestionEditor";
+import { rulesForResponseTypeChange } from "./logic-comparators";
 import { LogicRulesEditor } from "./LogicRulesEditor";
 import type {
   ChecklistItem, SectionDef, ScheduleType, CustomRecurrence,
@@ -1633,12 +1634,15 @@ export function ChecklistBuilderModal({
           onSelect={(type, mcSetId) => {
             const mcSet = mcSetId ? multipleChoiceSets.find(m => m.id === mcSetId) : null;
             if (showResponsePicker.scope === "main") {
+              const mainQ = sections[showResponsePicker.sectionIdx].questions[showResponsePicker.questionIdx];
+              const mainRules = rulesForResponseTypeChange(mainQ.config?.logicRules, mainQ, { responseType: type, config: mainQ.config });
               updateQuestion(showResponsePicker.sectionIdx, showResponsePicker.questionIdx, {
                 responseType: type,
                 mcSetId: mcSetId ?? undefined,
                 choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                 choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
                 selectionMode: type === "multiple_choice" ? "single" : undefined,
+                ...(mainRules !== mainQ.config?.logicRules ? { config: { ...(mainQ.config || {}), logicRules: mainRules } } : {}),
                 uncertain: undefined,
                 warning: undefined,
               });
@@ -1654,6 +1658,7 @@ export function ChecklistBuilderModal({
                   triggers: rule.triggers.map((trigger, ti) => {
                     if (ti !== triggerIdx) return trigger;
                     const nextFollowUp = trigger.config?.followUpQuestion ?? createDefaultFollowUpQuestion();
+                    const fuRules = rulesForResponseTypeChange(nextFollowUp.config?.logicRules, nextFollowUp, { responseType: type, config: nextFollowUp.config });
                     return {
                       ...trigger,
                       config: {
@@ -1664,7 +1669,8 @@ export function ChecklistBuilderModal({
                           mcSetId: mcSetId ?? undefined,
                           choices: type === "multiple_choice" ? (mcSet?.choices ?? []) : undefined,
                           choiceColors: type === "multiple_choice" ? (mcSet?.colors ?? []) : undefined,
-                          selectionMode: type === "multiple_choice" ? "single" : undefined,
+                          selectionMode: type === "multiple_choice" ? ("single" as const) : undefined,
+                          config: { ...(nextFollowUp.config || {}), logicRules: fuRules },
                         },
                       },
                     };

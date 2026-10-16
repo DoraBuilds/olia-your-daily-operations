@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  logicRuleKind, comparatorKeysFor, isValuelessComparator, rulePatchForComparator, defaultComparatorFor,
+  logicRuleKind, comparatorKeysFor, isValuelessComparator, rulePatchForComparator, defaultComparatorFor, rulesForResponseTypeChange,
 } from "@/pages/checklists/logic-comparators";
 
 describe("logicRuleKind", () => {
@@ -41,5 +41,20 @@ describe("rulePatchForComparator", () => {
   it("keeps valueTo only for between", () => {
     expect(rulePatchForComparator("between", { value: "1", valueTo: "3" }).valueTo).toBe("3");
     expect(rulePatchForComparator("lt", { value: "1", valueTo: "3" }).valueTo).toBeUndefined();
+  });
+});
+
+describe("rulesForResponseTypeChange", () => {
+  const rule = { id: "r1", comparator: "checked" as const, value: "", triggers: [{ type: "notify" as const }] };
+
+  it("resets the condition to the new type's default and keeps the actions", () => {
+    const out = rulesForResponseTypeChange([rule], { responseType: "checkbox" }, { responseType: "text" });
+    expect(out?.[0].comparator).toBe("is");
+    expect(out?.[0].triggers).toEqual(rule.triggers);
+  });
+
+  it("leaves rules alone when the type stays in the same family", () => {
+    const rules = [rule];
+    expect(rulesForResponseTypeChange(rules, { responseType: "checkbox" }, { responseType: "checkbox" })).toBe(rules);
   });
 });

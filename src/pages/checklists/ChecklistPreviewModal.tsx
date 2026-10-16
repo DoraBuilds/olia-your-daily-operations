@@ -36,11 +36,9 @@ function MockResponse({
   if (responseType === "checkbox") {
     return (
       <div className="flex gap-2 mt-2">
-        {[t("preview.yes"), t("preview.no"), t("preview.notApplicable")].map(opt => (
-          <div key={opt} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-xs text-muted-foreground">
-            <Square size={11} /> {opt}
-          </div>
-        ))}
+        <div className="flex items-center px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground">
+          <Square size={14} />
+        </div>
       </div>
     );
   }

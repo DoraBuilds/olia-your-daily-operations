@@ -76,3 +76,19 @@ export function rulePatchForComparator(
     values: isOneOfComparator(next) ? (rule.values ?? []) : undefined,
   };
 }
+
+/**
+ * Logic rules written for one answer type make no sense for another ("is checked"
+ * on a text answer). When the type's rule family changes, each rule goes back to
+ * that family's default condition; its "then" actions are kept.
+ */
+export function rulesForResponseTypeChange<R extends { comparator: LogicComparator; value: string; valueTo?: string; values?: string[] }>(
+  rules: R[] | undefined,
+  prev: { responseType: ResponseType; config?: QuestionConfig },
+  next: { responseType: ResponseType; config?: QuestionConfig },
+): R[] | undefined {
+  if (!rules?.length) return rules;
+  const nextKind = logicRuleKind(next.responseType, next.config);
+  if (logicRuleKind(prev.responseType, prev.config) === nextKind) return rules;
+  return rules.map(r => ({ ...r, comparator: defaultComparatorFor(nextKind), value: "", valueTo: undefined, values: undefined }));
+}
