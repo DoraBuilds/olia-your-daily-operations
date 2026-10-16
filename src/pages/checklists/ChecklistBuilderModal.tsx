@@ -6,7 +6,6 @@ import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
   AlertTriangle, Upload, ArrowLeft, Link2, GripVertical,
   Building2, MapPin, Layers,
-  Thermometer,
 } from "lucide-react";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
 import { sanitizeImageUrl } from "@/lib/sanitize";
@@ -1172,13 +1171,6 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "number" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Thermometer size={14} className="text-sage shrink-0" />
-                        <p className="text-xs font-medium text-muted-foreground">{t("builder.number.heading")}</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t("builder.number.description")}
-                      </p>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <input
@@ -1190,6 +1182,7 @@ export function ChecklistBuilderModal({
                               config: {
                                 ...cfg,
                                 numberMode: "temperature",
+                                temperatureUnit: cfg.temperatureUnit ?? "C",
                                 numberMin: e.target.value ? Number(e.target.value) : undefined,
                               },
                             })}
@@ -1205,33 +1198,12 @@ export function ChecklistBuilderModal({
                               config: {
                                 ...cfg,
                                 numberMode: "temperature",
+                                temperatureUnit: cfg.temperatureUnit ?? "C",
                                 numberMax: e.target.value ? Number(e.target.value) : undefined,
                               },
                             })}
                             className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                           />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground shrink-0">{t("builder.number.unit")}</span>
-                          <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
-                            {(["C", "F"] as const).map(unit => (
-                              <button
-                                key={unit}
-                                type="button"
-                                onClick={() => updateQuestion(si, qi, {
-                                  config: { ...cfg, numberMode: "temperature", temperatureUnit: unit },
-                                })}
-                                className={cn(
-                                  "px-3 py-1 text-[11px] rounded-full transition-colors",
-                                  (cfg.temperatureUnit ?? "C") === unit
-                                    ? "bg-sage text-primary-foreground"
-                                    : "text-muted-foreground hover:text-foreground",
-                                )}
-                              >
-                                {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
-                              </button>
-                            ))}
-                          </div>
                         </div>
                       </div>
                     </div>

@@ -434,12 +434,9 @@
     "questionTextPlaceholder": "Follow-up question text",
     "emailSubjectPlaceholder": "Email subject (optional — auto-generated if blank)",
     "number": {
-      "heading": "Temperature",
-      "description": "Set the acceptable range and unit. Staff enter the reading on a keypad in the kiosk. For plain numbers, use a text answer.",
       "min": "Min",
       "max": "Max",
-      "to": "to",
-      "unit": "Unit"
+      "to": "to"
     },
     "text": {
       "heading": "Text answer preview",
@@ -565,12 +562,9 @@
       "dismissWarning": "Dismiss warning"
     },
     "number": {
-      "heading": "Temperature",
-      "description": "Set the acceptable range and unit. Staff enter the reading on a keypad in the kiosk. For plain numbers, use a text answer.",
       "min": "Min",
       "max": "Max",
-      "to": "to",
-      "unit": "Unit"
+      "to": "to"
     },
     "multipleChoice": {
       "selectionMode": "Selection mode"
