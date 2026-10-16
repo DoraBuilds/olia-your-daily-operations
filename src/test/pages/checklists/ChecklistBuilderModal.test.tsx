@@ -581,7 +581,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
-  it("picking Temperature shows only the range, with no title, description or unit toggle", () => {
+  it("picking Temperature shows a short range prompt, with no unit toggle", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByText("Checkbox"));
@@ -590,7 +590,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.getByPlaceholderText("Min")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Max")).toBeInTheDocument();
     expect(screen.queryByText("Celsius")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Set the acceptable range/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Set the acceptable range:")).toBeInTheDocument();
   });
 
   it("browses Library folders into documents when linking Infohub content", () => {

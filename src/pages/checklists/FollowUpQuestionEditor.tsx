@@ -123,6 +123,7 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "number") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <p className="text-xs text-muted-foreground">{t("followUpEditor.number.description")}</p>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <input

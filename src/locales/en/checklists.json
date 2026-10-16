@@ -434,6 +434,7 @@
     "questionTextPlaceholder": "Follow-up question text",
     "emailSubjectPlaceholder": "Email subject (optional — auto-generated if blank)",
     "number": {
+      "description": "Set the acceptable range:",
       "min": "Min",
       "max": "Max",
       "to": "to"
@@ -552,6 +553,7 @@
       "dismissWarning": "Dismiss warning"
     },
     "number": {
+      "description": "Set the acceptable range:",
       "min": "Min",
       "max": "Max",
       "to": "to"

@@ -434,6 +434,7 @@
     "questionTextPlaceholder": "Texto de la pregunta de seguimiento",
     "emailSubjectPlaceholder": "Asunto del correo (opcional — se genera automáticamente si está vacío)",
     "number": {
+      "description": "Define el rango aceptable:",
       "min": "Mín",
       "max": "Máx",
       "to": "a"
@@ -552,6 +553,7 @@
       "dismissWarning": "Descartar advertencia"
     },
     "number": {
+      "description": "Define el rango aceptable:",
       "min": "Mín",
       "max": "Máx",
       "to": "a"

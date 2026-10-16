@@ -1171,6 +1171,7 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "number" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">{t("builder.number.description")}</p>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <input
