@@ -242,6 +242,8 @@ export function ChecklistBuilderModal({
   const touchedRef = useRef(false);
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
   const lastSavedRef = useRef<string | null>(null);
+  const initialContentRef = useRef<string | null>(null);
+  const [exitSaveFailed, setExitSaveFailed] = useState(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildDraftContent = (): ChecklistDraftContent => ({
@@ -253,7 +255,10 @@ export function ChecklistBuilderModal({
   });
   const contentSnapshot = autosaveEnabled ? JSON.stringify(buildDraftContent()) : "";
   if (lastSavedRef.current === null) lastSavedRef.current = contentSnapshot;
+  if (initialContentRef.current === null) initialContentRef.current = contentSnapshot;
   const hasUnsavedEdits = autosaveEnabled && touchedRef.current && contentSnapshot !== lastSavedRef.current;
+  // Edited since the editor opened (saved or not): leaving asks first.
+  const changedSinceOpen = autosaveEnabled && touchedRef.current && contentSnapshot !== initialContentRef.current;
 
   // Hidden-row payload for a checklist that isn't live. Never publishes, and
   // keeps the picked locations/departments as they are (no filtering against
@@ -346,8 +351,12 @@ export function ChecklistBuilderModal({
   const handleRequestClose = async () => {
     if (autosaveEnabled) {
       const ok = await runAutosave();
-      if (!ok) { setShowDiscardConfirm(true); return; }
-      if (hasDraftRef.current) toast.success(t("builder.toast.draftKept"));
+      if (!ok) { setExitSaveFailed(true); setShowDiscardConfirm(true); return; }
+      if (touchedRef.current && JSON.stringify(buildDraftContent()) !== initialContentRef.current) {
+        setExitSaveFailed(false);
+        setShowDiscardConfirm(true);
+        return;
+      }
       onClose();
       return;
     }
@@ -387,7 +396,7 @@ export function ChecklistBuilderModal({
   useEffect(() => {
     if (!onDirtyChange) return;
     const dirty = autosaveEnabled
-      ? hasUnsavedEdits
+      ? changedSinceOpen
       : !savedId
       ? hasContent
       : (title !== initialTitleRef.current ||
@@ -399,7 +408,7 @@ export function ChecklistBuilderModal({
   }, [title, description, sections, startDate, schedule, customRecurrence,
       visibilityWindowEnabled, visibilityFrom, visibilityUntil,
       locationMode, selectedLocationIds, allLocationsConceptId, departmentMode, selectedDepartmentIds,
-      savedId, onDirtyChange, hasUnsavedEdits]);
+      savedId, onDirtyChange, changedSinceOpen]);
 
   useEffect(() => {
     if (insertDropdown === null) return;
@@ -741,6 +750,14 @@ export function ChecklistBuilderModal({
           data-testid="builder-action-bar"
           className="sticky -top-5 z-30 flex items-center justify-between gap-3 bg-background px-5 py-3"
         >
+          {autosaveEnabled && hasDraft && (
+            <span
+              data-testid="builder-unpublished-note"
+              className="hidden sm:block absolute left-1/2 -translate-x-1/2 text-xs italic text-muted-foreground pointer-events-none"
+            >
+              {t("checklist.unpublishedChanges")}
+            </span>
+          )}
           <button onClick={handleRequestClose} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={16} /> {t("builder.exit")}
           </button>
@@ -790,21 +807,7 @@ export function ChecklistBuilderModal({
         onChangeCapture={markTouched}
       >
         {autosaveEnabled && hasDraft && (
-          <div
-            data-testid="builder-draft-banner"
-            className="flex items-center justify-between gap-3 rounded-2xl border border-status-warn/40 bg-status-warn/10 p-3"
-          >
-            <p className="text-sm font-medium text-status-warn">{t("builder.draftBanner.text")}</p>
-            <button
-              type="button"
-              data-testid="builder-draft-banner-publish"
-              disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
-              onClick={handleCreate}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
-            >
-              {t("builder.draftBanner.publish")}
-            </button>
-          </div>
+          <p className="sm:hidden text-center text-xs italic text-muted-foreground">{t("checklist.unpublishedChanges")}</p>
         )}
         {/* Kiosk visibility (Draft/Live) */}
         <div className="flex items-center justify-between rounded-2xl border border-border bg-muted/40 p-3">
@@ -1696,8 +1699,10 @@ export function ChecklistBuilderModal({
   const discardConfirmDialog = showDiscardConfirm ? createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-foreground/30 backdrop-blur-sm p-4">
       <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
-        <h3 className="font-display text-lg text-foreground">{t("unsavedExit.heading")}</h3>
-        <p className="text-sm text-muted-foreground">{autosaveEnabled ? t("unsavedExit.bodyAutosave") : t("unsavedExit.body")}</p>
+        <h3 className="font-display text-lg text-foreground">{autosaveEnabled && !exitSaveFailed ? t("unsavedExit.headingDraft") : t("unsavedExit.heading")}</h3>
+        <p className="text-sm text-muted-foreground">
+          {!autosaveEnabled ? t("unsavedExit.body") : exitSaveFailed ? t("unsavedExit.bodyAutosave") : t("unsavedExit.bodyDraft")}
+        </p>
         <div className="flex gap-3">
           <button
             onClick={() => setShowDiscardConfirm(false)}

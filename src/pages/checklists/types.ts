@@ -183,3 +183,28 @@ export interface LogAnswer {
   answeredBy?: string;  // staff name — kiosk logs after per-question attribution shipped
   answeredAt?: string;  // ISO timestamp
 }
+
+/** "08:00" / "08:00:00" -> "8am", "17:30" -> "5:30pm". */
+export function formatTime12h(time24: string): string {
+  const [h, m] = time24.split(":").map(Number);
+  const ampm = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return m ? `${h12}:${String(m).padStart(2, "0")}${ampm}` : `${h12}${ampm}`;
+}
+
+/** List subtitle: frequency plus the visibility window, e.g. "Every day between 8am-10am". */
+export function getScheduleSummary(
+  schedule?: string | null,
+  visibilityFrom?: string | null,
+  visibilityUntil?: string | null,
+): string | null {
+  const label = getScheduleLabel(schedule);
+  if (visibilityFrom && visibilityUntil) {
+    const from = formatTime12h(visibilityFrom);
+    const to = formatTime12h(visibilityUntil);
+    return label
+      ? i18n.t("checklist.scheduleWithWindow", { ns: "checklists", schedule: label, from, to })
+      : i18n.t("checklist.windowOnly", { ns: "checklists", from, to });
+  }
+  return label;
+}

@@ -98,7 +98,7 @@ describe("ChecklistBuilderModal - autosave", () => {
     expect(onSaveDraft).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Opening v2", sections: SECTIONS }));
     expect(onUpdate).not.toHaveBeenCalled();
     expect(await screen.findByText("Saved")).toBeInTheDocument();
-    expect(screen.getByTestId("builder-draft-banner")).toHaveTextContent("Draft, not live yet");
+    expect(screen.getByTestId("builder-unpublished-note")).toHaveTextContent("Unpublished changes");
   });
 
   it("does not save anything when the form is only opened", async () => {
@@ -106,10 +106,10 @@ describe("ChecklistBuilderModal - autosave", () => {
     await new Promise(r => setTimeout(r, 1300));
     expect(onSaveDraft).not.toHaveBeenCalled();
     expect(onUpdate).not.toHaveBeenCalled();
-    expect(screen.queryByTestId("builder-draft-banner")).toBeNull();
+    expect(screen.queryByTestId("builder-unpublished-note")).toBeNull();
   });
 
-  it("restores a draft, shows the banner and publishes it from the banner", async () => {
+  it("restores a draft, shows the unpublished note and publishes it from the Publish button", async () => {
     renderLive({ initialDraft: {
       title: "Opening DRAFT", description: "", sections: SECTIONS, startDate: null, schedule: "none",
       customRecurrence: { interval: 1, unit: "week", weekDays: ["tue"], ends: "never", occurrences: 13 },
@@ -117,10 +117,11 @@ describe("ChecklistBuilderModal - autosave", () => {
       selectedLocationIds: [], allLocationsConceptId: null, selectedDepartmentIds: [], isPublished: true,
     } });
     expect(screen.getByPlaceholderText(/Morning Opening Checklist/)).toHaveValue("Opening DRAFT");
-    fireEvent.click(screen.getByTestId("builder-draft-banner-publish"));
+    expect(screen.getByTestId("builder-unpublished-note")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByTestId("checklist-save-button")[0]);
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith("cl-1", expect.objectContaining({ title: "Opening DRAFT", is_published: true })));
     await waitFor(() => expect(onClearDraft).toHaveBeenCalledWith("cl-1"));
-    await waitFor(() => expect(screen.queryByTestId("builder-draft-banner")).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId("builder-unpublished-note")).toBeNull());
   });
 
   it("shows Couldn't save, retrying and retries after a failure", async () => {
@@ -133,14 +134,32 @@ describe("ChecklistBuilderModal - autosave", () => {
     expect(await screen.findByText("Saved")).toBeInTheDocument();
   }, 15000);
 
-  it("saves first, then leaves without a warning", async () => {
+  it("saves, then asks before leaving when there are changes", async () => {
     renderLive();
     fireEvent.pointerDown(screen.getByPlaceholderText(/Morning Opening Checklist/));
     editTitle("Opening v2");
     fireEvent.click(screen.getByText("Exit"));
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(await screen.findByText("Leave without publishing?")).toBeInTheDocument();
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Leave"));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("keeps editing when Keep editing is chosen", async () => {
+    renderLive();
+    fireEvent.pointerDown(screen.getByPlaceholderText(/Morning Opening Checklist/));
+    editTitle("Opening v2");
+    fireEvent.click(screen.getByText("Exit"));
+    fireEvent.click(await screen.findByText("Keep editing"));
+    expect(onClose).not.toHaveBeenCalled();
     expect(screen.queryByText("Leave")).toBeNull();
+  });
+
+  it("leaves straight away when nothing was changed", async () => {
+    renderLive();
+    fireEvent.click(screen.getByText("Exit"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it("warns with a Leave button only when the latest edits could not be saved", async () => {
@@ -150,6 +169,7 @@ describe("ChecklistBuilderModal - autosave", () => {
     editTitle("Opening v2");
     fireEvent.click(screen.getByText("Exit"));
     const leave = await screen.findByText("Leave");
+    expect(screen.getByText(/couldn't be saved/)).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(leave);
     expect(onClose).toHaveBeenCalled();
