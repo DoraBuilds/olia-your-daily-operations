@@ -175,7 +175,7 @@ export function ChecklistBuilderModal({
   const [isSaving, setIsSaving] = useState(false);
   const [dragQuestionKey, setDragQuestionKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
-  const suppressQuestionDragRef = useRef(false);
+  const dragArmedRef = useRef(false);
   const [insertDropdown, setInsertDropdown] = useState<{ si: number; qi: number } | null>(null);
   const insertDropdownRef = useRef<HTMLDivElement>(null);
   const footerPublishRef = useRef<HTMLButtonElement>(null);
@@ -1094,11 +1094,10 @@ export function ChecklistBuilderModal({
                   <div
                     draggable
                     onMouseDown={e => {
-                      const tag = (e.target as HTMLElement).tagName;
-                      suppressQuestionDragRef.current = tag === "INPUT" || tag === "TEXTAREA";
+                      dragArmedRef.current = !!(e.target as HTMLElement).closest("[data-question-drag-handle]");
                     }}
                     onDragStart={e => {
-                      if (suppressQuestionDragRef.current) { e.preventDefault(); return; }
+                      if (!dragArmedRef.current) { e.preventDefault(); return; }
                       e.dataTransfer.effectAllowed = "move"; setDragQuestionKey(qKey);
                     }}
                     onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverKey(qKey); }}
@@ -1111,12 +1110,14 @@ export function ChecklistBuilderModal({
                       setDragQuestionKey(null);
                       setDragOverKey(null);
                     }}
-                    onDragEnd={() => { setDragQuestionKey(null); setDragOverKey(null); }}
+                    onDragEnd={() => { dragArmedRef.current = false; setDragQuestionKey(null); setDragOverKey(null); }}
                     className={cn("card-surface p-4 space-y-3 transition-opacity", dragQuestionKey === qKey && "opacity-40")}
                   >
                   <div className="flex items-start gap-2">
-                    {section.questions.length > 1 && (
-                      <GripVertical size={14} className="mt-2.5 shrink-0 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
+                    {totalQuestions > 1 && (
+                      <span data-question-drag-handle className="mt-2.5 shrink-0 cursor-grab active:cursor-grabbing">
+                        <GripVertical size={14} className="text-muted-foreground/50" />
+                      </span>
                     )}
                     <span className="text-xs text-muted-foreground mt-2.5 shrink-0">{t("builder.question.label", { n: qi + 1 })}</span>
                     <textarea rows={1} placeholder={q.responseType === "instruction" ? t("builder.question.instructionTitlePlaceholder") : t("builder.question.textPlaceholder")} value={q.text}
