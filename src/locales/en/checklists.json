@@ -47,12 +47,6 @@
     "scheduleWithWindow": "{{schedule}} between {{from}}-{{to}}",
     "windowOnly": "Between {{from}}-{{to}}"
   },
-  "newFolder": {
-    "createFailed": "Could not create the folder. Please try again.",
-    "heading": "New folder",
-    "namePlaceholder": "Folder name",
-    "create": "Create folder"
-  },
   "deleteConfirm": {
     "headingFolder": "Delete folder?",
     "headingChecklist": "Delete checklist?",
@@ -89,8 +83,7 @@
     "buildOwn": "Build your own checklist",
     "convertFile": "Convert file",
     "convertFileSub": "Excel, image or PDF",
-    "buildAI": "Build with AI",
-    "createFolder": "Create a folder"
+    "buildAI": "Build with AI"
   },
   "contextMenu": {
     "moveToFolder": "Move to folder",

@@ -196,8 +196,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
   const [showConvertFile, setShowConvertFile] = useState(false);
   const [showBuildAI, setShowBuildAI] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
   const [contextMenu, setContextMenu] = useState<{ id: string; type: "folder" | "checklist" } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: "folder" | "checklist"; name: string } | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -330,16 +328,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [showBuilder, isBuilderDirty]);
-
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
-    saveFolderMut.mutate(
-      { name: newFolderName.trim(), parent_id: currentFolder },
-      { onError: (err) => toast.error(err instanceof Error ? err.message : t("newFolder.createFailed")) },
-    );
-    setNewFolderName("");
-    setShowNewFolder(false);
-  };
 
   const moveFolderInList = (folderId: string, targetIdx: number) => {
     const siblings = visibleFolders;
@@ -769,7 +757,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
             if (!can("aiBuilder")) { setUpgradeFeature("AI checklist builder"); return; }
             setShowBuildAI(true);
           }}
-          onCreateFolder={() => setShowNewFolder(true)}
         />
       )}
 
@@ -799,28 +786,6 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
           />
         )}
       </Suspense>
-
-      {showNewFolder && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 bg-foreground/20 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card w-full max-w-lg rounded-t-2xl p-5 pb-20 space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg text-foreground">{t("newFolder.heading")}</h2>
-              <button onClick={() => setShowNewFolder(false)} className="btn-icon" aria-label={t("close")}>
-                <X size={18} className="text-muted-foreground" />
-              </button>
-            </div>
-            <input autoFocus type="text" placeholder={t("newFolder.namePlaceholder")} value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-muted focus:outline-none focus:ring-1 focus:ring-ring" />
-            <button disabled={!newFolderName.trim()} onClick={handleCreateFolder}
-              className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
-                newFolderName.trim() ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}>
-              {t("newFolder.create")}
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
 
       {contextMenu && (
         <ItemContextMenu type={contextMenu.type} onAction={handleContextAction}
