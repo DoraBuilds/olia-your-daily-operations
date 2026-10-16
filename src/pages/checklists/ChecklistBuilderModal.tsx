@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
-  AlertTriangle, Upload, ArrowLeft, Link2, GripVertical,
+  AlertTriangle, Upload, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
   Building2, MapPin, Layers,
 } from "lucide-react";
 import { FilterField, FilterMultiSelect } from "@/components/FiltersPopover";
@@ -1410,8 +1410,11 @@ export function ChecklistBuilderModal({
                       </div>
 
                       {cfg.instructionLinkId && (
-                        <div className="rounded-xl border border-sage/25 bg-sage/5 px-3 py-2 flex items-start justify-between gap-3">
-                          <div className="min-w-0">
+                        <div className="rounded-xl border border-sage/25 bg-sage/5 px-3 py-2 flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex items-center gap-2">
+                            {cfg.instructionLinkSection === "training"
+                              ? <GraduationCap size={14} className="text-sage shrink-0" />
+                              : <BookOpen size={14} className="text-sage shrink-0" />}
                             <p className="text-xs font-medium text-foreground">{cfg.instructionLinkTitle}</p>
                           </div>
                           <button
