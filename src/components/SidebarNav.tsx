@@ -15,6 +15,28 @@ function readStoredCollapsed(): boolean {
   }
 }
 
+/** Hand-drawn-looking underline mark for the active nav tab — two barely-curved
+ *  strokes (the second ~80% the length of the first, centered under it), not a
+ *  straight bar or a wavy squiggle. `preserveAspectRatio="none"` stretches both,
+ *  together, to fit any label width, so the proportions hold at any size. */
+function ActiveTabMark({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 100 16"
+      preserveAspectRatio="none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      className={cn("text-[hsl(var(--powder-blue))]", className)}
+    >
+      <path d="M2 5 Q50 2.5 98 5" />
+      <path d="M12 13 Q50 10.5 88 13" />
+    </svg>
+  );
+}
+
 /** Collapsed state lives in Layout (the toggle sits in the top bar), persisted here. */
 export function useSidebarCollapsed() {
   const [collapsed, setCollapsed] = useState(readStoredCollapsed);
@@ -65,13 +87,21 @@ export function SidebarNav({ collapsed = false }: { collapsed?: boolean }) {
                       ? "h-11 w-11 justify-center rounded-full"
                       : "gap-3 rounded-full px-4 py-2.5 text-sm font-medium",
                     active
-                      ? "bg-card text-[hsl(var(--powder-blue-deep))] shadow-sm"
+                      ? "text-[hsl(var(--powder-blue-deep))]"
                       : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
                   )}
                 >
                   <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
                   {!collapsed && (
-                    <span className="tracking-[0.02em]">{label}</span>
+                    <span className="relative tracking-[0.02em]">
+                      {label}
+                      {active && (
+                        <ActiveTabMark className="absolute left-0 right-0 -bottom-3 h-3 w-full" />
+                      )}
+                    </span>
+                  )}
+                  {collapsed && active && (
+                    <ActiveTabMark className="absolute left-1/2 bottom-1 h-2.5 w-5 -translate-x-1/2" />
                   )}
                 </NavLink>
                 {!collapsed && visibleChildren.length > 0 ? (

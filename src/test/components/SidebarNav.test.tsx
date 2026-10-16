@@ -56,11 +56,12 @@ describe("SidebarNav", () => {
     expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
   });
 
-  it("marks Dashboard as active with a white pill and teal text", () => {
+  it("marks Dashboard as active with teal text and an underline mark, not a filled pill", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
     expect(dashLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
-    expect(dashLink.className).toContain("bg-card");
+    expect(dashLink.className).not.toContain("bg-card");
+    expect(dashLink.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("marks Admin as active when on an /admin/* route", () => {
