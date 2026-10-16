@@ -686,6 +686,7 @@ export function ChecklistBuilderModal({
         setHasDraft(false);
         liveInDbRef.current = isPublished;
         lastSavedRef.current = publishedSnapshot;
+        initialContentRef.current = publishedSnapshot;
         setSavedAt(new Date());
         setSaveStatus("saved");
       }
@@ -707,6 +708,12 @@ export function ChecklistBuilderModal({
       setIsSaving(false);
     }
   };
+
+  // Publish is filled only when there is something to publish; otherwise it is an outline.
+  const hasPublishableChanges = !autosaveEnabled || hasDraft || changedSinceOpen;
+  const publishFillClass = hasPublishableChanges
+    ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+    : "border border-border text-muted-foreground hover:bg-muted";
 
   // Primary action label: "Publish" only makes sense once the checklist will actually
   // go live on the kiosk. While it's staying in Draft, this button just saves it.
@@ -801,7 +808,7 @@ export function ChecklistBuilderModal({
               className={cn(
                 "px-4 py-2 rounded-xl text-sm font-medium transition-colors",
                 !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0)
-                  ? "bg-sage text-primary-foreground hover:bg-sage-deep"
+                  ? publishFillClass
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
             >
@@ -1584,7 +1591,7 @@ export function ChecklistBuilderModal({
           disabled={isSaving || !title.trim() || (locationMode === "specific" && selectedLocationIds.length === 0)}
           onClick={handleCreate}
           className={cn("w-full py-3 rounded-xl text-sm font-medium transition-colors",
-            !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? "bg-sage text-primary-foreground hover:bg-sage-deep" : "bg-muted text-muted-foreground cursor-not-allowed"
+            !isSaving && title.trim() && (locationMode === "all" || selectedLocationIds.length > 0) ? publishFillClass : "bg-muted text-muted-foreground cursor-not-allowed"
           )}>
           {primaryActionLabel}
         </button>

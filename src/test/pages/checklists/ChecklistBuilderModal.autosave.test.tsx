@@ -196,4 +196,17 @@ describe("ChecklistBuilderModal - autosave", () => {
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith("cl-new", expect.objectContaining({ title: "Brand new 2", is_published: false })), { timeout: 3000 });
     expect(onSaveDraft).not.toHaveBeenCalled();
   });
+
+  it("fills the Publish button only once something has changed", async () => {
+    renderLive();
+    const publish = () => screen.getAllByTestId("checklist-save-button")[0];
+    expect(publish().className).not.toContain("bg-sage");
+    fireEvent.pointerDown(screen.getByPlaceholderText(/Morning Opening Checklist/));
+    expect(publish().className).not.toContain("bg-sage");
+    editTitle("Opening v2");
+    await waitFor(() => expect(publish().className).toContain("bg-sage"));
+    fireEvent.click(publish());
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    await waitFor(() => expect(publish().className).not.toContain("bg-sage"));
+  });
 });
