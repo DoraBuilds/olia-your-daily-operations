@@ -580,16 +580,16 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.queryByText("Create action")).not.toBeInTheDocument();
   });
 
-  it("shows single-number hint for number questions", () => {
+  it("picking Temperature shows the range and unit, with no plain-number mode", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByText("Checkbox"));
-    fireEvent.click(screen.getByText("Number"));
+    fireEvent.click(screen.getByText("Temperature"));
 
-    expect(screen.getByText(/Staff will enter one number/i)).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Min")).not.toBeInTheDocument();
-    expect(screen.queryByText("Celsius")).not.toBeInTheDocument();
-    // "Temperature" is always visible as a mode-selector tab — Min/Max inputs and Celsius are hidden in single mode
+    expect(screen.getByPlaceholderText("Min")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Max")).toBeInTheDocument();
+    expect(screen.getByText("Celsius")).toBeInTheDocument();
+    expect(screen.queryByText(/Staff will enter one number/i)).not.toBeInTheDocument();
   });
 
   it("lets instruction questions link to Infohub content", () => {

@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { CalendarIcon, Type, Hash, CheckSquare, Image, Pencil, User, Info } from "lucide-react";
+import { CalendarIcon, Type, Thermometer, CheckSquare, Image, Pencil, User, Info } from "lucide-react";
 import i18n from "@/lib/i18n";
 import type { FolderItem, ChecklistItem, Action, LogEntry, ResponseType } from "./types";
 
@@ -115,7 +115,7 @@ export function getMcSetName(set: { id: string; name: string }): string {
 export const RESPONSE_TYPES: { key: ResponseType; label: string; icon: ElementType; group: "response" }[] = [
   { key: "checkbox", label: "Checkbox", icon: CheckSquare, group: "response" },
   { key: "text", label: "Text answer", icon: Type, group: "response" },
-  { key: "number", label: "Number", icon: Hash, group: "response" },
+  { key: "number", label: "Temperature", icon: Thermometer, group: "response" },
   { key: "datetime", label: "Date & Time", icon: CalendarIcon, group: "response" },
   { key: "media", label: "Photo / Media", icon: Image, group: "response" },
   { key: "instruction", label: "Instruction", icon: Info, group: "response" },

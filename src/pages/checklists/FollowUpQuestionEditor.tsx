@@ -15,6 +15,7 @@ import {
   Square,
   User,
   X,
+  Thermometer,
 } from "lucide-react";
 import { cn, blurOnWheel } from "@/lib/utils";
 import type {
@@ -34,6 +35,7 @@ import {
   COMPARATOR_LABEL_KEYS, comparatorKeysFor, defaultComparatorFor, isBetweenComparator, isOneOfComparator,
   isValuelessComparator, logicRuleKind, rulePatchForComparator,
   rulesForResponseTypeChange,
+  withTemperatureDefaults,
 } from "./logic-comparators";
 
 function useMcColorOptions(t: (key: string) => string) {
@@ -113,98 +115,69 @@ export function FollowUpQuestionEditor({
     if (type !== "multiple_choice") {
       next.mcSetId = undefined;
     }
-    const logicRules = rulesForResponseTypeChange(cfg.logicRules, question, { responseType: type, config: cfg });
-    updateQuestion(logicRules === cfg.logicRules ? next : { ...next, config: { ...cfg, logicRules } });
+    const nextCfg = withTemperatureDefaults(type, question.responseType, cfg) ?? cfg;
+    const logicRules = rulesForResponseTypeChange(cfg.logicRules, question, { responseType: type, config: nextCfg });
+    updateQuestion(nextCfg === cfg && logicRules === cfg.logicRules ? next : { ...next, config: { ...nextCfg, logicRules } });
   };
 
   const renderResponseConfig = () => {
     if (question.responseType === "number") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.number.heading")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {t("followUpEditor.number.description")}
-              </p>
+          <div className="flex items-center gap-1.5">
+            <Thermometer size={14} className="text-sage shrink-0" />
+            <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.number.heading")}</p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("followUpEditor.number.description")}
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                onWheel={blurOnWheel}
+                placeholder={t("followUpEditor.number.min")}
+                value={cfg.numberMin ?? ""}
+                onChange={e => updateConfig({
+                  numberMode: "temperature",
+                  numberMin: e.target.value ? Number(e.target.value) : undefined,
+                })}
+                className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <span className="text-xs text-muted-foreground">{t("followUpEditor.number.to")}</span>
+              <input
+                type="number"
+                onWheel={blurOnWheel}
+                placeholder={t("followUpEditor.number.max")}
+                value={cfg.numberMax ?? ""}
+                onChange={e => updateConfig({
+                  numberMode: "temperature",
+                  numberMax: e.target.value ? Number(e.target.value) : undefined,
+                })}
+                className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              />
             </div>
-            <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
-              {(["single", "temperature"] as const).map(mode => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => updateConfig({
-                    numberMode: mode,
-                    numberMin: mode === "temperature" ? cfg.numberMin : undefined,
-                    numberMax: mode === "temperature" ? cfg.numberMax : undefined,
-                    temperatureUnit: mode === "temperature" ? (cfg.temperatureUnit ?? "C") : undefined,
-                  })}
-                  className={cn(
-                    "px-3 py-1 text-[11px] rounded-full transition-colors",
-                    (cfg.numberMode ?? "single") === mode
-                      ? "bg-sage text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {mode === "single" ? t("followUpEditor.number.modeNumber") : t("followUpEditor.number.modeTemperature")}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">{t("followUpEditor.number.unit")}</span>
+              <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
+                {(["C", "F"] as const).map(unit => (
+                  <button
+                    key={unit}
+                    type="button"
+                    onClick={() => updateConfig({ numberMode: "temperature", temperatureUnit: unit })}
+                    className={cn(
+                      "px-3 py-1 text-[11px] rounded-full transition-colors",
+                      (cfg.temperatureUnit ?? "C") === unit
+                        ? "bg-sage text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-
-          {(cfg.numberMode ?? "single") === "single" ? (
-            <div className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              {t("followUpEditor.number.singleModeNotice")}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  onWheel={blurOnWheel}
-                  placeholder={t("followUpEditor.number.min")}
-                  value={cfg.numberMin ?? ""}
-                  onChange={e => updateConfig({
-                    numberMode: "temperature",
-                    numberMin: e.target.value ? Number(e.target.value) : undefined,
-                  })}
-                  className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <span className="text-xs text-muted-foreground">{t("followUpEditor.number.to")}</span>
-                <input
-                  type="number"
-                  onWheel={blurOnWheel}
-                  placeholder={t("followUpEditor.number.max")}
-                  value={cfg.numberMax ?? ""}
-                  onChange={e => updateConfig({
-                    numberMode: "temperature",
-                    numberMax: e.target.value ? Number(e.target.value) : undefined,
-                  })}
-                  className="flex-1 border border-border rounded-lg px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground shrink-0">{t("followUpEditor.number.unit")}</span>
-                <div className="flex gap-1 rounded-full bg-background p-1 border border-border">
-                  {(["C", "F"] as const).map(unit => (
-                    <button
-                      key={unit}
-                      type="button"
-                      onClick={() => updateConfig({ numberMode: "temperature", temperatureUnit: unit })}
-                      className={cn(
-                        "px-3 py-1 text-[11px] rounded-full transition-colors",
-                        (cfg.temperatureUnit ?? "C") === unit
-                          ? "bg-sage text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {unit === "C" ? t("preview.celsius") : t("preview.fahrenheit")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }

@@ -261,7 +261,7 @@
   "responseTypes": {
     "checkbox": "Checkbox",
     "text": "Text answer",
-    "number": "Number",
+    "number": "Temperature",
     "datetime": "Date & Time",
     "media": "Photo / Media",
     "instruction": "Instruction"
@@ -434,11 +434,8 @@
     "questionTextPlaceholder": "Follow-up question text",
     "emailSubjectPlaceholder": "Email subject (optional — auto-generated if blank)",
     "number": {
-      "heading": "Number response",
-      "description": "Default is a single numeric answer. Enable temperature mode only when you need an acceptable range.",
-      "modeNumber": "Number",
-      "modeTemperature": "Temperature",
-      "singleModeNotice": "Staff will enter one number and see the numeric keypad on supported devices.",
+      "heading": "Temperature",
+      "description": "Set the acceptable range and unit. Staff enter the reading on a keypad in the kiosk. For plain numbers, use a text answer.",
       "min": "Min",
       "max": "Max",
       "to": "to",
@@ -568,11 +565,8 @@
       "dismissWarning": "Dismiss warning"
     },
     "number": {
-      "heading": "Number response",
-      "description": "Enable temperature mode to set an acceptable range and show a keypad in kiosk.",
-      "modeNumber": "Number",
-      "modeTemperature": "Temperature",
-      "singleModeNotice": "Staff will enter one number. Use logic rules below to trigger actions based on the value.",
+      "heading": "Temperature",
+      "description": "Set the acceptable range and unit. Staff enter the reading on a keypad in the kiosk. For plain numbers, use a text answer.",
       "min": "Min",
       "max": "Max",
       "to": "to",

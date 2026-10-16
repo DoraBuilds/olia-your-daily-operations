@@ -261,7 +261,7 @@
   "responseTypes": {
     "checkbox": "Casilla",
     "text": "Respuesta de texto",
-    "number": "Número",
+    "number": "Temperatura",
     "datetime": "Fecha y hora",
     "media": "Foto / Multimedia",
     "instruction": "Instrucción"
@@ -434,11 +434,8 @@
     "questionTextPlaceholder": "Texto de la pregunta de seguimiento",
     "emailSubjectPlaceholder": "Asunto del correo (opcional — se genera automáticamente si está vacío)",
     "number": {
-      "heading": "Respuesta numérica",
-      "description": "Por defecto es una sola respuesta numérica. Activa el modo temperatura solo cuando necesites un rango aceptable.",
-      "modeNumber": "Número",
-      "modeTemperature": "Temperatura",
-      "singleModeNotice": "El personal ingresará un número y verá el teclado numérico en los dispositivos compatibles.",
+      "heading": "Temperatura",
+      "description": "Define el rango aceptable y la unidad. El personal introduce la lectura con un teclado en el kiosco. Para números simples, usa una respuesta de texto.",
       "min": "Mín",
       "max": "Máx",
       "to": "a",
@@ -568,11 +565,8 @@
       "dismissWarning": "Descartar advertencia"
     },
     "number": {
-      "heading": "Respuesta numérica",
-      "description": "Activa el modo temperatura para fijar un rango aceptable y mostrar un teclado numérico en el kiosco.",
-      "modeNumber": "Número",
-      "modeTemperature": "Temperatura",
-      "singleModeNotice": "El personal ingresará un número. Usa las reglas de lógica de abajo para activar acciones según el valor.",
+      "heading": "Temperatura",
+      "description": "Define el rango aceptable y la unidad. El personal introduce la lectura con un teclado en el kiosco. Para números simples, usa una respuesta de texto.",
       "min": "Mín",
       "max": "Máx",
       "to": "a",
