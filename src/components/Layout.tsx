@@ -24,7 +24,6 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef<HTMLElement | null>(null);
-  const shellWidthClass = "mx-auto w-full max-w-[1240px]";
   // mx-auto: without it, this max-width column pins to the left edge of
   // <main> and any width freed up — e.g. by collapsing SidebarNav, or by a
   // wide viewport under the shell's 1240px cap — just becomes dead space on
@@ -101,7 +100,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           !(title || isKioskAdminSession) && "md:hidden",
         )}
       >
-        <div className={cn(shellWidthClass, "flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3 lg:px-8 xl:px-10")}>
+        <div className={cn("flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3 lg:px-8 xl:px-10")}>
           <MobileMenu isKioskAdminSession={isKioskAdminSession} onBackToKiosk={handleBackToKiosk} />
           {title ? (
             <>
@@ -151,7 +150,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
 
       {/* Body: sidebar is fixed, only the content column scrolls */}
       <div className="flex flex-1 overflow-hidden">
-        <div className={cn(shellWidthClass, "flex flex-1 px-5 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
+        <div className={cn("flex flex-1 px-5 sm:px-6 lg:px-8 xl:px-10 gap-6 lg:gap-8")}>
           {/* Sidebar: outside the scroll container so it never scrolls */}
           <SidebarNav />
 
