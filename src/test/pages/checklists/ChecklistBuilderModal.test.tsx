@@ -174,6 +174,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
     const dropZone = screen.getAllByRole("button", { name: "Insert question or section" })
       .at(-1)!.parentElement as HTMLElement;
 
+    fireEvent.mouseDown(dragHandle.querySelector("[data-question-drag-handle]") as HTMLElement);
     fireEvent.dragStart(dragHandle, { dataTransfer: {} });
     fireEvent.dragOver(dropZone, { dataTransfer: {} });
     fireEvent.drop(dropZone, { dataTransfer: {} });
