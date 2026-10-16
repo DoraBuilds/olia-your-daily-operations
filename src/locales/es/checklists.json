@@ -63,7 +63,9 @@
     "cancel": "Cancelar",
     "confirm": "Eliminar permanentemente",
     "fallbackFolder": "esta carpeta",
-    "fallbackChecklist": "esta lista"
+    "fallbackChecklist": "esta lista",
+    "folderFailed": "No pudimos eliminar esta carpeta. Inténtalo de nuevo o pide acceso a un propietario de la cuenta.",
+    "checklistFailed": "No pudimos eliminar esta lista. Inténtalo de nuevo o pide acceso a un propietario de la cuenta."
   },
   "renameFolder": {
     "heading": "Renombrar carpeta",

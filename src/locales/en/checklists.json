@@ -63,7 +63,9 @@
     "cancel": "Cancel",
     "confirm": "Delete permanently",
     "fallbackFolder": "this folder",
-    "fallbackChecklist": "this checklist"
+    "fallbackChecklist": "this checklist",
+    "folderFailed": "We couldn't delete this folder. Please try again, or ask an account owner for access.",
+    "checklistFailed": "We couldn't delete this checklist. Please try again, or ask an account owner for access."
   },
   "renameFolder": {
     "heading": "Rename folder",
