@@ -1541,17 +1541,19 @@ export function ChecklistBuilderModal({
                   )}
 
                   {/* Logic rules */}
-                  <LogicRulesEditor
-                    rules={cfg.logicRules || []}
-                    onRulesChange={rules => updateQuestion(si, qi, { config: { ...cfg, logicRules: rules } })}
-                    responseType={q.responseType}
-                    config={cfg}
-                    choiceColors={questionChoiceColors}
-                    choices={questionChoices.length > 0 ? questionChoices : [t("preview.yes"), t("preview.no"), t("preview.notApplicable")]}
-                    questionText={q.text || ""}
-                    questionIndex={qi}
-                    notifyRecipients={notifyRecipients}
-                  />
+                  {q.responseType !== "instruction" && (
+                    <LogicRulesEditor
+                      rules={cfg.logicRules || []}
+                      onRulesChange={rules => updateQuestion(si, qi, { config: { ...cfg, logicRules: rules } })}
+                      responseType={q.responseType}
+                      config={cfg}
+                      choiceColors={questionChoiceColors}
+                      choices={questionChoices.length > 0 ? questionChoices : [t("preview.yes"), t("preview.no"), t("preview.notApplicable")]}
+                      questionText={q.text || ""}
+                      questionIndex={qi}
+                      notifyRecipients={notifyRecipients}
+                    />
+                  )}
                 </div>
                 </div>
                 {renderInsertButton(si, qi)}
