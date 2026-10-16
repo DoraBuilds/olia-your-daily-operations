@@ -523,7 +523,6 @@
       "off": "Off",
       "from": "From",
       "until": "Until",
-      "visibleWindowNotice": "This checklist is due between {{from}} and {{to}}. It opens at {{from}} and completing it after {{to}} counts as late.",
       "noWindowNotice": "No due window set. The checklist stays open for the full scheduled day until completed.",
       "allowLate": "Allow late completion",
       "allowLateOnHint": "After the window closes the checklist moves to Overdue. Staff can still complete it and it is recorded as late, until the end of the location's day.",
