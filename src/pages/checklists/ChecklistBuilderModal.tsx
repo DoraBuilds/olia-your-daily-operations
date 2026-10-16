@@ -1211,7 +1211,6 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "text" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.text.heading")}</p>
                       <div className="relative">
                         <input type="text" placeholder={t("followUpEditor.text.placeholder")} maxLength={160} disabled
                           className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-background text-muted-foreground" />
@@ -1222,19 +1221,16 @@ export function ChecklistBuilderModal({
 
                   {q.responseType === "media" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.media.heading")}</p>
                       <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors">
                         <Camera size={16} />
                         {t("preview.takePhoto")}
                       </button>
-                      <p className="text-xs text-muted-foreground">{t("followUpEditor.media.notice")}</p>
                     </div>
                   )}
 
                   {q.responseType === "multiple_choice" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
                         {mcSet && (
                           <span className="text-xs text-muted-foreground">{getMcSetName(mcSet)}</span>
                         )}
@@ -1341,7 +1337,6 @@ export function ChecklistBuilderModal({
                   {/* Issue 7: Instruction buttons — working image upload, remove dead "Link document" */}
                   {q.responseType === "instruction" && (
                     <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-                      <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.instruction.heading")}</p>
                       <textarea placeholder={t("followUpEditor.instruction.placeholder")} rows={3}
                         value={cfg.instructionText || ""}
                         onChange={e => updateQuestion(si, qi, { config: { ...cfg, instructionText: e.target.value } })}
