@@ -593,12 +593,26 @@ describe("ChecklistBuilderModal - new checklist", () => {
     expect(screen.queryByText(/Staff will enter one number/i)).not.toBeInTheDocument();
   });
 
+  it("browses Library folders into documents when linking Infohub content", () => {
+    renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
+
+    fireEvent.click(screen.getByText("Checkbox"));
+    fireEvent.click(screen.getByText("Instruction"));
+    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    expect(screen.getByRole("button", { name: "Service Standards" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /How to serve a customer/i })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Service Standards" }));
+    expect(screen.getByRole("button", { name: /How to serve a customer/i })).toBeInTheDocument();
+  });
+
   it("lets instruction questions link to Infohub content", () => {
     renderWithClient(<ChecklistBuilderModal onClose={onClose} onAdd={onAdd} />);
 
     fireEvent.click(screen.getByText("Checkbox"));
     fireEvent.click(screen.getByText("Instruction"));
-    fireEvent.click(screen.getByRole("button", { name: /Link Infohub content/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    expect(screen.queryByRole("button", { name: "All" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Training" }));
     fireEvent.change(screen.getByPlaceholderText(/Search library or training/i), {
       target: { value: "latte" },
     });

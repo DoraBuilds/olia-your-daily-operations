@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLinkableInfohubResource } from "@/lib/infohub-catalog";
+import { LinkedResourceModal } from "./LinkedResourceModal";
 import { sanitizeImageUrl } from "@/lib/sanitize";
 import type { AnswerAttribution, KioskChecklist, KioskDraftProgress, Question } from "./types";
 import {
@@ -22,7 +22,7 @@ import { QuestionInput } from "./QuestionInputs";
 // Answers are persisted to localStorage so progress survives interruptions.
 export function ChecklistRunner({
   checklist, staffName, onComplete, onCancel, onQuestionAnswerChange, onProgress,
-  organizationId, locationId, initialAnswers, initialAttribution,
+  organizationId, locationId, memberId, initialAnswers, initialAttribution,
 }: {
   checklist: KioskChecklist;
   staffName: string;
@@ -35,6 +35,8 @@ export function ChecklistRunner({
   organizationId?: string;
   /** Location ID — used to scope photo uploads to the correct storage path */
   locationId?: string;
+  /** Team member working the checklist - scopes which linked Infohub docs they may open */
+  memberId?: string | null;
   /** Pre-filled answers when re-editing a completed checklist */
   initialAnswers?: Record<string, any>;
   /** Who answered what on the earlier submission(s) — carried over on re-edit */
@@ -334,40 +336,14 @@ export function ChecklistRunner({
         )}
 
         {/* ── Linked infohub resource modal ── */}
-        {linkedResourceId && (() => {
-          const resource = getLinkableInfohubResource(linkedResourceId);
-          if (!resource) return null;
-          return (
-            <div
-              className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm px-4 py-8"
-              onClick={() => setLinkedResourceId(null)}
-            >
-              <div
-                className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">{resource.section}</p>
-                    <h3 className="text-base font-semibold text-foreground mt-1">{resource.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{resource.subtitle}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setLinkedResourceId(null)}
-                    className="p-2 rounded-full hover:bg-muted transition-colors shrink-0"
-                    aria-label={t("runner.closeLinkedResource")}
-                  >
-                    <X size={16} className="text-muted-foreground" />
-                  </button>
-                </div>
-                <div className="px-5 py-5 overflow-y-auto flex-1">
-                  <div className="whitespace-pre-line text-sm text-foreground leading-relaxed">{resource.body}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {linkedResourceId && (
+          <LinkedResourceModal
+            resourceId={linkedResourceId}
+            locationId={locationId}
+            memberId={memberId ?? null}
+            onClose={() => setLinkedResourceId(null)}
+          />
+        )}
 
         {/* ── Exit confirm ── */}
         {showCancelConfirm && (
