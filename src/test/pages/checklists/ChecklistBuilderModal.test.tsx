@@ -598,7 +598,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
     fireEvent.click(screen.getByText("Checkbox"));
     fireEvent.click(screen.getByText("Instruction"));
-    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Link Infohub" }));
     expect(screen.getByRole("button", { name: "Service Standards" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /How to serve a customer/i })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Service Standards" }));
@@ -610,7 +610,7 @@ describe("ChecklistBuilderModal - new checklist", () => {
 
     fireEvent.click(screen.getByText("Checkbox"));
     fireEvent.click(screen.getByText("Instruction"));
-    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Link Infohub" }));
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Training" }));
     fireEvent.change(screen.getByPlaceholderText(/Search library or training/i), {
