@@ -565,7 +565,7 @@
       "invalidImageUrl": "La URL de imagen no está permitida. Sube un archivo de imagen o usa un enlace de tu almacenamiento de Supabase.",
       "removeInvalidImageUrl": "Eliminar URL de imagen no válida",
       "changeInfohubLink": "Cambiar enlace",
-      "linkInfohubContent": "Vincular",
+      "linkInfohubContent": "Vincular Infohub",
       "removeLinkedContent": "Eliminar contenido vinculado de Infohub",
       "searchLibraryTraining": "Buscar en biblioteca o capacitación",
       "filterAll": "Todo",

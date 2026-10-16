@@ -565,7 +565,7 @@
       "invalidImageUrl": "Image URL is not allowed. Upload an image file or use a link from your Supabase storage.",
       "removeInvalidImageUrl": "Remove invalid image URL",
       "changeInfohubLink": "Change link",
-      "linkInfohubContent": "Link",
+      "linkInfohubContent": "Link Infohub",
       "removeLinkedContent": "Remove linked Infohub content",
       "searchLibraryTraining": "Search library or training",
       "filterAll": "All",
