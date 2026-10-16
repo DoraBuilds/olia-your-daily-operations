@@ -176,7 +176,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           <SidebarNav collapsed={sidebarCollapsed} />
 
           {/* Only this column scrolls */}
-          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-background px-5 sm:px-6 lg:px-8 xl:px-10 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col md:rounded-t-[20px] md:mr-4">
+          <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-background px-5 sm:px-6 lg:px-8 xl:px-10 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col md:rounded-tl-[20px]">
             {/* portrait:my-auto centers content vertically only on tall/narrow
                 (portrait) viewports, e.g. a short list on a tablet-portrait
                 screen — auto margins collapse to 0 once content overflows, so
