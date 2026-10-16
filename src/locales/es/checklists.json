@@ -41,7 +41,8 @@
     "questionsCount_one": "{{count}} pregunta",
     "questionsCount_other": "{{count}} preguntas",
     "previewTooltip": "Vista previa de la lista",
-    "draftBadge": "Borrador"
+    "draftBadge": "Borrador",
+    "unpublishedChanges": "Cambios sin publicar"
   },
   "newFolder": {
     "createFailed": "No se pudo crear la carpeta. Inténtalo de nuevo.",
@@ -70,7 +71,8 @@
     "heading": "¿Salir sin guardar?",
     "body": "Los cambios sin guardar se perderán si sales.",
     "keepEditing": "Seguir editando",
-    "discard": "Descartar cambios"
+    "discard": "Salir",
+    "bodyAutosave": "Tus últimos cambios no se pudieron guardar y se perderán si sales."
   },
   "breadcrumb": {
     "all": "Todo"
@@ -602,14 +604,25 @@
       "savedAt": "Guardado {{time}}"
     },
     "discardConfirm": {
-      "discard": "Descartar"
+      "leave": "Salir"
+    },
+    "untitled": "Lista sin título",
+    "saveStatus": {
+      "saving": "Guardando…",
+      "saved": "Guardado",
+      "error": "No se pudo guardar, reintentando"
+    },
+    "draftBanner": {
+      "text": "Borrador, aún no publicado",
+      "publish": "Publicar"
     },
     "toast": {
       "planLimitError": "No se pudo guardar — es posible que hayas alcanzado el límite de listas de tu plan. Elimina listas sin usar para liberar espacio.",
       "genericSaveError": "No se pudo guardar la lista — inténtalo de nuevo.",
       "published": "¡Lista publicada!",
       "changesSaved": "¡Cambios guardados!",
-      "savedAsDraft": "Guardada como borrador — oculta en el kiosco hasta que se publique."
+      "savedAsDraft": "Guardada como borrador — oculta en el kiosco hasta que se publique.",
+      "draftKept": "Borrador guardado. El quiosco sigue mostrando la versión publicada."
     }
   }
 }
