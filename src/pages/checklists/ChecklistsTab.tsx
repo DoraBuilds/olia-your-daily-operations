@@ -861,8 +861,8 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
                 disabled={deleteConfirmText !== t("deleteConfirm.confirmWord")}
                 onClick={() => {
                   if (deleteConfirmText !== t("deleteConfirm.confirmWord")) return;
-                  if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id);
-                  else deleteChecklistMut.mutate(deleteConfirm.id);
+                  if (deleteConfirm.type === "folder") deleteFolderMut.mutate(deleteConfirm.id, { onError: () => toast.error(t("deleteConfirm.folderFailed")) });
+                  else deleteChecklistMut.mutate(deleteConfirm.id, { onError: () => toast.error(t("deleteConfirm.checklistFailed")) });
                   setDeleteConfirm(null);
                   setDeleteConfirmText("");
                 }}

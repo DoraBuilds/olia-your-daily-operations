@@ -107,7 +107,7 @@ export function useDeleteFolder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("folders").delete().eq("id", id);
+      const { error } = await supabase.rpc("delete_folder", { p_id: id });
       if (error) throw error;
     },
     onSuccess: () => {

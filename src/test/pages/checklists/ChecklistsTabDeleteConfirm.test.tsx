@@ -170,7 +170,7 @@ describe("ChecklistsTab delete confirmation", () => {
     const confirmBtn = screen.getByText("Delete permanently").closest("button") as HTMLButtonElement;
     fireEvent.click(confirmBtn);
 
-    expect(deleteChecklistMock).toHaveBeenCalledWith("cl-2");
+    expect(deleteChecklistMock).toHaveBeenCalledWith("cl-2", expect.anything());
     await waitFor(() => {
       expect(screen.queryByText("Delete checklist?")).not.toBeInTheDocument();
     });
