@@ -531,7 +531,6 @@
       "customOption": "Custom",
       "editCustomRecurrence": "Edit custom recurrence →",
       "scheduledOnce": "Scheduled once on {{date}}.",
-      "firstScheduleStarts": "First schedule starts on {{date}}, and will {{repeat}}.",
       "repeatDaily": "repeat every day",
       "repeatWeekday": "repeat every weekday",
       "repeatWeeklyOn": "repeat every following {{weekday}}",

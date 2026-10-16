@@ -531,7 +531,6 @@
       "customOption": "Personalizado",
       "editCustomRecurrence": "Editar repetición personalizada →",
       "scheduledOnce": "Programada una vez el {{date}}.",
-      "firstScheduleStarts": "La primera vez será el {{date}}, y luego se {{repeat}}.",
       "repeatDaily": "repetirá todos los días",
       "repeatWeekday": "repetirá cada día laborable",
       "repeatWeeklyOn": "repetirá cada {{weekday}}",

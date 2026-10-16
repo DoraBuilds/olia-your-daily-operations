@@ -829,35 +829,9 @@ export function ChecklistBuilderModal({
           </div>
 
           {/* Schedule summary */}
-          {startDate && (
+          {startDate && schedule === "none" && (
             <p className="text-sm italic text-muted-foreground">
-              {(() => {
-                const dateStr = format(startDate, "dd/MM/yyyy");
-                if (schedule === "none") return t("builder.schedule.scheduledOnce", { date: dateStr });
-                const repeatLabel = (() => {
-                  switch (schedule) {
-                    case "daily": return t("builder.schedule.repeatDaily");
-                    case "weekday": return t("builder.schedule.repeatWeekday");
-                    case "weekly": return t("builder.schedule.repeatWeeklyOn", { weekday: format(startDate, "EEEE") });
-                    case "monthly": return t("builder.schedule.repeatMonthly");
-                    case "yearly": return t("builder.schedule.repeatYearly");
-                    case "custom": {
-                      const { interval, unit, weekDays } = customRecurrence;
-                      if (unit === "week" && weekDays.length > 0) {
-                        const days = weekDays.map(d => t(`builder.schedule.weekdays.${d}`)).join(", ");
-                        return interval === 1
-                          ? t("builder.schedule.repeatWeekOn", { days })
-                          : t("builder.schedule.repeatWeeksOn", { interval, days });
-                      }
-                      return interval === 1
-                        ? t("builder.schedule.repeatUnit", { unit })
-                        : t("builder.schedule.repeatUnits", { interval, unit });
-                    }
-                    default: return "";
-                  }
-                })();
-                return t("builder.schedule.firstScheduleStarts", { date: dateStr, repeat: repeatLabel });
-              })()}
+              {t("builder.schedule.scheduledOnce", { date: format(startDate, "dd/MM/yyyy") })}
             </p>
           )}
 
