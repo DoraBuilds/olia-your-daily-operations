@@ -760,6 +760,7 @@ function KioskScreen() {
         initialAttribution={completedSubmissions.get(selectedChecklist.id)?.attribution}
         organizationId={selectedOrgId || teamMember?.organization_id}
         locationId={locationId ?? undefined}
+        memberId={selectedStaffId}
         onProgress={(progress) => {
           if (!locationId) return;
           void supabase.rpc("save_kiosk_draft", {

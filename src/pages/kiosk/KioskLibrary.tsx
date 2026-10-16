@@ -20,7 +20,7 @@ interface KioskFolder {
   section?: Section;
 }
 
-interface KioskDoc {
+export interface KioskDoc {
   id: string;
   title: string;
   summary: string;
@@ -394,7 +394,7 @@ interface DocCompletion {
   onChange: (completed: boolean) => void;
 }
 
-function DocDetail({
+export function DocDetail({
   doc,
   locationId,
   memberId,

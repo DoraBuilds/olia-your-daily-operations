@@ -3,8 +3,8 @@ import { toast } from "@/components/ui/sonner";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Camera, Plus, X, CalendarIcon, ChevronDown, Clock, Search,
-  AlertTriangle, Upload, ArrowLeft, BookOpen, GraduationCap, Link2, GripVertical,
+  Camera, Plus, X, CalendarIcon, ChevronDown, Clock,
+  AlertTriangle, Upload, ArrowLeft, Link2, GripVertical,
   Building2, MapPin, Layers,
   Thermometer,
 } from "lucide-react";
@@ -32,7 +32,7 @@ import { parseScheduleType } from "./types";
 import { RESPONSE_TYPES, multipleChoiceSets, getResponseTypeLabel, getMcSetName } from "./data";
 import { ResponseTypePicker } from "./ResponseTypePicker";
 import { CustomRecurrencePicker } from "./CustomRecurrencePicker";
-import { linkableInfohubResources } from "@/lib/infohub-catalog";
+import { InfohubLinkPicker } from "./InfohubLinkPicker";
 import type { ChecklistDraftContent } from "@/hooks/useChecklists";
 
 const DRAFT_KEY = "olia_checklist_draft";
@@ -440,8 +440,6 @@ export function ChecklistBuilderModal({
     | null
   >(null);
   const [requiredError, setRequiredError] = useState("");
-  const [instructionResourceSearch, setInstructionResourceSearch] = useState("");
-  const [instructionResourceSection, setInstructionResourceSection] = useState<"all" | "library" | "training">("all");
   const [instructionPickerQuestionId, setInstructionPickerQuestionId] = useState<string | null>(null);
 
   const SCHEDULE_OPTIONS: { key: ScheduleType; label: string }[] = [
@@ -554,15 +552,6 @@ export function ChecklistBuilderModal({
       return next.length === prev.length ? prev : next;
     });
   }, [availableDepartments, departmentsLoading]);
-
-  const filteredInstructionResources = linkableInfohubResources.filter((resource) => {
-    const matchesSection = instructionResourceSection === "all" || resource.section === instructionResourceSection;
-    const query = instructionResourceSearch.trim().toLowerCase();
-    const matchesQuery = !query
-      || resource.title.toLowerCase().includes(query)
-      || resource.subtitle.toLowerCase().includes(query);
-    return matchesSection && matchesQuery;
-  });
 
   // Staff available for person-type questions and notify triggers, scoped to
   // selected locations. "all" mode uses the chosen concept's locations (or every location).
@@ -1437,8 +1426,6 @@ export function ChecklistBuilderModal({
                           type="button"
                           onClick={() => {
                             setInstructionPickerQuestionId(prev => prev === q.id ? null : q.id);
-                            setInstructionResourceSearch("");
-                            setInstructionResourceSection("all");
                           }}
                           className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:border-sage/40 hover:text-foreground transition-colors"
                         >
@@ -1471,72 +1458,19 @@ export function ChecklistBuilderModal({
                       )}
 
                       {instructionPickerQuestionId === q.id && (
-                        <div className="rounded-xl border border-border bg-background p-3 space-y-3">
-                          <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2">
-                            <Search size={14} className="text-muted-foreground shrink-0" />
-                            <input
-                              type="text"
-                              value={instructionResourceSearch}
-                              onChange={e => setInstructionResourceSearch(e.target.value)}
-                              placeholder={t("builder.instruction.searchLibraryTraining")}
-                              className="flex-1 bg-transparent text-sm outline-none"
-                            />
-                          </div>
-                          <div className="flex gap-2 flex-wrap">
-                            {[
-                              { key: "all", label: t("builder.instruction.filterAll") },
-                              { key: "library", label: t("builder.instruction.filterLibrary") },
-                              { key: "training", label: t("builder.instruction.filterTraining") },
-                            ].map(option => (
-                              <button
-                                key={option.key}
-                                type="button"
-                                onClick={() => setInstructionResourceSection(option.key as "all" | "library" | "training")}
-                                className={cn(
-                                  "px-3 py-1.5 rounded-full border text-xs transition-colors",
-                                  instructionResourceSection === option.key
-                                    ? "bg-sage text-primary-foreground border-sage"
-                                    : "border-border text-muted-foreground hover:border-sage/40",
-                                )}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="max-h-56 overflow-y-auto space-y-2">
-                            {filteredInstructionResources.length === 0 ? (
-                              <p className="text-xs text-muted-foreground py-4 text-center">{t("builder.instruction.noInfohubMatch")}</p>
-                            ) : filteredInstructionResources.map(resource => (
-                              <button
-                                key={resource.id}
-                                type="button"
-                                onClick={() => {
-                                  updateQuestion(si, qi, {
-                                    config: {
-                                      ...cfg,
-                                      instructionLinkId: resource.id,
-                                      instructionLinkTitle: resource.title,
-                                      instructionLinkSection: resource.section,
-                                    },
-                                  });
-                                  setInstructionPickerQuestionId(null);
-                                }}
-                                className="w-full rounded-xl border border-border px-3 py-3 text-left hover:border-sage/40 hover:bg-muted/30 transition-colors"
-                              >
-                                <div className="flex items-center gap-2">
-                                  {resource.section === "library" ? (
-                                    <BookOpen size={14} className="text-sage shrink-0" />
-                                  ) : (
-                                    <GraduationCap size={14} className="text-sage shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-foreground">{resource.title}</p>
-                                  </div>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <InfohubLinkPicker
+                          onSelect={doc => {
+                            updateQuestion(si, qi, {
+                              config: {
+                                ...cfg,
+                                instructionLinkId: doc.id,
+                                instructionLinkTitle: doc.title,
+                                instructionLinkSection: doc.section,
+                              },
+                            });
+                            setInstructionPickerQuestionId(null);
+                          }}
+                        />
                       )}
                     </div>
                   )}

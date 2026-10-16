@@ -578,14 +578,15 @@
     "instruction": {
       "invalidImageUrl": "La URL de imagen no está permitida. Sube un archivo de imagen o usa un enlace de tu almacenamiento de Supabase.",
       "removeInvalidImageUrl": "Eliminar URL de imagen no válida",
-      "changeInfohubLink": "Cambiar enlace de Infohub",
-      "linkInfohubContent": "Vincular contenido de Infohub",
+      "changeInfohubLink": "Cambiar enlace",
+      "linkInfohubContent": "Vincular",
       "removeLinkedContent": "Eliminar contenido vinculado de Infohub",
       "searchLibraryTraining": "Buscar en biblioteca o capacitación",
       "filterAll": "Todo",
       "filterLibrary": "Biblioteca",
       "filterTraining": "Capacitación",
-      "noInfohubMatch": "Ningún contenido de Infohub coincide con esa búsqueda."
+      "noInfohubMatch": "Ningún contenido de Infohub coincide con esa búsqueda.",
+      "emptyFolder": "Esta carpeta está vacía."
     },
     "insert": {
       "ariaLabel": "Insertar pregunta o sección",

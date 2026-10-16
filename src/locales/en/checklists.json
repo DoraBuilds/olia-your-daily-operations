@@ -578,14 +578,15 @@
     "instruction": {
       "invalidImageUrl": "Image URL is not allowed. Upload an image file or use a link from your Supabase storage.",
       "removeInvalidImageUrl": "Remove invalid image URL",
-      "changeInfohubLink": "Change Infohub link",
-      "linkInfohubContent": "Link Infohub content",
+      "changeInfohubLink": "Change link",
+      "linkInfohubContent": "Link",
       "removeLinkedContent": "Remove linked Infohub content",
       "searchLibraryTraining": "Search library or training",
       "filterAll": "All",
       "filterLibrary": "Library",
       "filterTraining": "Training",
-      "noInfohubMatch": "No Infohub content matches that search."
+      "noInfohubMatch": "No Infohub content matches that search.",
+      "emptyFolder": "This folder is empty."
     },
     "insert": {
       "ariaLabel": "Insert question or section",
