@@ -428,12 +428,14 @@ export function FollowUpQuestionEditor({
       </div>
 
       {renderResponseConfig()}
-      <LogicRulesEditor
-        question={question}
-        onChange={onChange}
-        notifyRecipients={notifyRecipients}
-        depth={depth}
-      />
+      {question.responseType !== "instruction" && (
+        <LogicRulesEditor
+          question={question}
+          onChange={onChange}
+          notifyRecipients={notifyRecipients}
+          depth={depth}
+        />
+      )}
 
       {showResponsePicker && (
         <ResponseTypePicker
