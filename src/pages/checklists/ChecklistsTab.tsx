@@ -350,7 +350,9 @@ export function ChecklistsTab({ onBuilderTitleChange }: { onBuilderTitleChange?:
     const posB = newOrder.indexOf(siblings[targetIdx].id);
     [newOrder[posA], newOrder[posB]] = [newOrder[posB], newOrder[posA]];
     setFolderOrder(newOrder);
-    reorderFoldersMut.mutate(newOrder.map((id, idx) => ({ id, sort_order: idx })));
+    reorderFoldersMut.mutate(newOrder.map((id, idx) => ({ id, sort_order: idx })), {
+      onError: () => toast.error(t("reorderFailed")),
+    });
   };
 
   // Dropping a checklist on a folder moves it in; dropping it on another

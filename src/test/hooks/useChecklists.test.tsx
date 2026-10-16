@@ -154,21 +154,16 @@ describe("useReorderFolders", () => {
     expect(typeof result.current.mutate).toBe("function");
   });
 
-  it("calls update with correct sort_order for each folder", async () => {
-    const update = vi.fn().mockReturnValue({
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
-    mockFrom.mockReturnValue({ update });
+  it("calls reorder_folders with ids in sort order", async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
 
     const { result } = renderHook(() => useReorderFolders(), { wrapper: makeWrapper() });
     await result.current.mutateAsync([
-      { id: "f1", sort_order: 0 },
       { id: "f2", sort_order: 1 },
+      { id: "f1", sort_order: 0 },
     ]);
 
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(update).toHaveBeenCalledWith({ sort_order: 0 });
-    expect(update).toHaveBeenCalledWith({ sort_order: 1 });
+    expect(mockRpc).toHaveBeenCalledWith("reorder_folders", { p_ids: ["f1", "f2"] });
   });
 });
 

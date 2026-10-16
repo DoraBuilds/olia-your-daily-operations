@@ -26,11 +26,15 @@ export function useSaveConcept() {
   return useMutation({
     mutationFn: async (concept: { id?: string; name: string }) => {
       if (concept.id) {
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from("concepts")
           .update({ name: concept.name })
-          .eq("id", concept.id);
+          .eq("id", concept.id)
+          .select("id");
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error(i18n.t("errors.saveConcept", { ns: "common" }));
+        }
         return concept.id;
       }
       if (!teamMember?.organization_id) {
@@ -52,8 +56,11 @@ export function useDeleteConcept() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("concepts").delete().eq("id", id);
+      const { data: deleted, error } = await supabase.from("concepts").delete().eq("id", id).select("id");
       if (error) throw error;
+      if (!deleted || deleted.length === 0) {
+        throw new Error(i18n.t("errors.deleteConcept", { ns: "common" }));
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["concepts"] });

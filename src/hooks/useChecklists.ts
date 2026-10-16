@@ -82,13 +82,12 @@ export function useReorderFolders() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (items: Array<{ id: string; sort_order: number }>) => {
-      await Promise.all(
-        items.map(({ id, sort_order }) =>
-          supabase.from("folders").update({ sort_order }).eq("id", id)
-        )
-      );
+      // items arrive with sort_order = index; the RPC takes the ids in order.
+      const ids = [...items].sort((a, b) => a.sort_order - b.sort_order).map(i => i.id);
+      const { error } = await supabase.rpc("reorder_folders", { p_ids: ids });
+      if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["folders"] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["folders"] }),
   });
 }
 

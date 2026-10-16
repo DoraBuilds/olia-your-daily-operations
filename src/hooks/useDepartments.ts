@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import i18n from "@/lib/i18n";
 import type {
   CompanyDepartment, Department, DepartmentAssignment, LocationDepartment,
 } from "@/lib/admin-repository";
@@ -78,8 +79,11 @@ export function useSaveDepartment() {
     mutationFn: async (dep: { id?: string; name: string; assignments: DepartmentAssignment[] }) => {
       let id = dep.id;
       if (id) {
-        const { error } = await supabase.from("departments").update({ name: dep.name }).eq("id", id);
+        const { data: updated, error } = await supabase.from("departments").update({ name: dep.name }).eq("id", id).select("id");
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error(i18n.t("errors.saveDepartment", { ns: "common" }));
+        }
       } else {
         const { data, error } = await supabase
           .from("departments")
