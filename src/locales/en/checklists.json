@@ -439,19 +439,10 @@
       "to": "to"
     },
     "text": {
-      "heading": "Text answer preview",
       "placeholder": "Respondent types here…",
       "maxChars": "max 160 chars"
     },
-    "checkbox": {
-      "heading": "Checkbox answer preview"
-    },
-    "media": {
-      "heading": "Media capture",
-      "notice": "Tapping will open the device camera on the kiosk."
-    },
     "multipleChoice": {
-      "heading": "Multiple choice options",
       "modeSingle": "Single",
       "modeMultiple": "Multiple",
       "choosePreset": "Choose a preset to add answer options.",
@@ -467,7 +458,6 @@
       }
     },
     "instruction": {
-      "heading": "Instruction content",
       "placeholder": "Write your instruction text here…",
       "imageAlt": "Instruction",
       "replaceImage": "Replace image",

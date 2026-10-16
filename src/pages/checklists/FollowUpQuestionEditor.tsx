@@ -159,7 +159,6 @@ export function FollowUpQuestionEditor({
   if (question.responseType === "text") {
     return (
       <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.text.heading")}</p>
           <div className="relative">
             <input
               type="text"
@@ -177,7 +176,6 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "checkbox") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.checkbox.heading")}</p>
           <div className="flex gap-2 flex-wrap">
             <div className="flex items-center px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground">
               <Square size={14} />
@@ -190,12 +188,10 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "media") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.media.heading")}</p>
           <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sage text-primary-foreground text-sm font-medium hover:bg-sage-deep transition-colors">
             <Camera size={16} />
             {t("preview.takePhoto")}
           </button>
-          <p className="text-xs text-muted-foreground">{t("followUpEditor.media.notice")}</p>
         </div>
       );
     }
@@ -205,7 +201,6 @@ export function FollowUpQuestionEditor({
         <div className="bg-muted/50 rounded-lg p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.multipleChoice.heading")}</p>
               {mcSet && <p className="text-xs text-muted-foreground mt-0.5">{getMcSetName(mcSet)}</p>}
             </div>
             <div className="flex gap-1 rounded-full bg-background p-1 border border-border shrink-0">
@@ -307,7 +302,6 @@ export function FollowUpQuestionEditor({
     if (question.responseType === "instruction") {
       return (
         <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground">{t("followUpEditor.instruction.heading")}</p>
           <textarea
             placeholder={t("followUpEditor.instruction.placeholder")}
             rows={3}
