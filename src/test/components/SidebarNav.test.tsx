@@ -56,50 +56,24 @@ describe("SidebarNav", () => {
     expect(screen.queryByRole("link", { name: "Locations" })).toBeNull();
   });
 
-  it("marks Dashboard as active when on /dashboard with a teal underline, not a filled pill", () => {
+  it("marks Dashboard as active with a white pill and teal text", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
     const dashLink = screen.getByRole("link", { name: "Dashboard" });
     expect(dashLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
-    expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
-    expect(dashLink.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(dashLink.className).toContain("bg-card");
   });
 
-  it("marks Admin as active when on an /admin/* route with a teal underline, not a filled pill", () => {
+  it("marks Admin as active when on an /admin/* route", () => {
     renderWithProviders(<SidebarNav />, { initialEntries: ["/admin/location"] });
     const adminLink = screen.getByRole("link", { name: "Admin" });
     expect(adminLink.className).toContain("text-[hsl(var(--powder-blue-deep))]");
-    expect(adminLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
   });
 
-  it("shows a small teal underline mark under the icon (not a filled pill) when collapsed", () => {
-    localStorage.setItem("olia_sidebar_collapsed", "1");
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-
-    const dashLink = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashLink.className).not.toContain("bg-[var(--nav-active-bg-soft)]");
-    expect(dashLink.querySelector('[aria-hidden="true"]')).not.toBeNull();
-
-    localStorage.removeItem("olia_sidebar_collapsed");
-  });
-
-  it("collapses to icon-only on toggle and hides nav labels", () => {
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-    expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("Dashboard");
-
-    fireEvent.click(screen.getByRole("button", { name: /collapse sidebar/i }));
-
+  it("renders icon-only (no labels) when collapsed", () => {
+    renderWithProviders(<SidebarNav collapsed />, { initialEntries: ["/dashboard"] });
     // The label span is gone — only the icon (and the title attribute, which
     // becomes the link's accessible name) remains.
     expect(screen.getByRole("link", { name: "Dashboard" }).textContent).toBe("");
-    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
-  });
-
-  it("persists the collapsed state across mounts", () => {
-    localStorage.setItem("olia_sidebar_collapsed", "1");
-    renderWithProviders(<SidebarNav />, { initialEntries: ["/dashboard"] });
-
-    expect(screen.getByRole("button", { name: /expand sidebar/i })).toBeInTheDocument();
-    localStorage.removeItem("olia_sidebar_collapsed");
   });
 
   it("has no concept picker — each tab filters by concept itself", () => {
