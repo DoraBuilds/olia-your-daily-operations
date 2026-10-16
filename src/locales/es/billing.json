@@ -20,6 +20,12 @@
     "genericError": "Algo salió mal. Inténtalo de nuevo.",
     "stripeNotConfigured": "Las actualizaciones en línea aún no están disponibles. Para actualizar tu plan, escríbenos a hello@olia.app y te ayudaremos."
   },
+  "activeStaff": {
+    "title": "Personal activo por ubicación",
+    "hint": "Personal que usó Olia en los últimos 30 días. Quienes se van dejan de contar automáticamente. El precio se revisa en la renovación, nunca a mitad de temporada.",
+    "row": "{{count}} activos · {{band}}",
+    "band": { "standard": "Estándar (hasta ~50)", "large": "Grande (~50-150)", "custom": "Personalizado (150+)" }
+  },
   "planSummary": {
     "billingUnavailableBadge": "Facturación no disponible",
     "couldNotVerify": "No pudimos verificar tu plan de facturación en este momento.",
