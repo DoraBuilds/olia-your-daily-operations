@@ -75,8 +75,8 @@
     "keepEditing": "Seguir editando",
     "discard": "Salir",
     "bodyAutosave": "Tus últimos cambios no se pudieron guardar y se perderán si sales.",
-    "headingDraft": "¿Salir sin publicar?",
-    "bodyDraft": "Tus cambios están guardados como borrador. El quiosco sigue mostrando la versión publicada hasta que publiques."
+    "headingDraft": "Cambios guardados",
+    "bodyDraft": "Tu equipo no los verá hasta que publiques."
   },
   "breadcrumb": {
     "all": "Todo"

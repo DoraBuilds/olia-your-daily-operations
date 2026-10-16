@@ -148,7 +148,7 @@ describe("ChecklistBuilderModal - autosave", () => {
     fireEvent.pointerDown(screen.getByPlaceholderText(/Morning Opening Checklist/));
     editTitle("Opening v2");
     fireEvent.click(screen.getByText("Exit"));
-    expect(await screen.findByText("Leave without publishing?")).toBeInTheDocument();
+    expect(await screen.findByText("Changes saved")).toBeInTheDocument();
     expect(onSaveDraft).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("Leave"));
