@@ -68,7 +68,8 @@
     "cancelConfirmTitle": "¿Salir de la lista de verificación?",
     "cancelConfirmBody": "Tus respuestas se guardan como borrador. Puedes continuar donde lo dejaste la próxima vez.",
     "keepGoing": "Continuar",
-    "closeLinkedResource": "Cerrar recurso vinculado"
+    "closeLinkedResource": "Cerrar recurso vinculado",
+    "linkedUnavailable": "Este documento no está disponible para ti."
   },
   "preview": {
     "banner": "Modo de prueba · no se vincula nada",

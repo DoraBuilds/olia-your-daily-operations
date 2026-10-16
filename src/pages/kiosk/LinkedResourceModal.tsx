@@ -40,7 +40,6 @@ export function LinkedResourceModal({
 
   // Older checklists may link to a built-in sample document.
   const legacy = !doc && !loading ? getLinkableInfohubResource(resourceId) : null;
-  if (!doc && !loading && !legacy) return null;
 
   return (
     <div
@@ -54,7 +53,7 @@ export function LinkedResourceModal({
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{doc?.section ?? legacy?.section}</p>
-            <h3 className="text-base font-semibold text-foreground mt-1">{doc?.title ?? legacy?.title}</h3>
+            <h3 className="text-base font-semibold text-foreground mt-1">{doc?.title ?? legacy?.title ?? (loading ? "" : t("runner.linkedUnavailable"))}</h3>
           </div>
           <button
             type="button"

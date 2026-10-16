@@ -68,7 +68,8 @@
     "cancelConfirmTitle": "Exit checklist?",
     "cancelConfirmBody": "Your answers are saved as a draft. You can pick up where you left off next time.",
     "keepGoing": "Keep going",
-    "closeLinkedResource": "Close linked resource"
+    "closeLinkedResource": "Close linked resource",
+    "linkedUnavailable": "This document is not available to you."
   },
   "preview": {
     "banner": "Test mode · nothing is paired",

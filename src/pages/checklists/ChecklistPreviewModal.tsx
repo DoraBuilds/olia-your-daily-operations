@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { X, Pencil, CheckSquare, Square, Thermometer, Type, Calendar, Camera, PenLine, User, Info, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ChecklistItem, ResponseType } from "./types";
 import { getScheduleLabel } from "./types";
+import { useInfohubContent } from "@/hooks/useInfohubContent";
+import { RichTextView } from "@/components/RichTextView";
+import { resolveInfohubImages } from "@/lib/infohub-images";
 import { RESPONSE_TYPES, getResponseTypeLabel, translateChoice } from "./data";
 
 function formatTime12h(time24: string) {
@@ -12,6 +15,45 @@ function formatTime12h(time24: string) {
   const ampm = h >= 12 ? "pm" : "am";
   const h12 = h % 12 || 12;
   return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, "0")}${ampm}`;
+}
+
+// The Info Hub document an instruction links to, as staff will see it.
+function LinkedDocPreview({ docId, onClose }: { docId: string; onClose: () => void }) {
+  const { t } = useTranslation("checklists");
+  const { data } = useInfohubContent();
+  const libDoc = data.libraryDocs.find(d => d.id === docId);
+  const trainDoc = data.trainingDocs.find(d => d.id === docId);
+  const title = libDoc?.title ?? trainDoc?.title;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/30 backdrop-blur-sm px-4 py-8"
+      onClick={e => { e.stopPropagation(); onClose(); }}
+    >
+      <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border shrink-0">
+          <h3 className="text-base font-semibold text-foreground min-w-0">{title ?? t("preview.linkedUnavailable")}</h3>
+          <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-muted transition-colors shrink-0" aria-label={t("preview.closeLinked")}>
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="px-5 py-5 overflow-y-auto flex-1 space-y-3">
+          {libDoc?.summary && <p className="text-sm text-muted-foreground leading-relaxed">{libDoc.summary}</p>}
+          {libDoc?.content && !libDoc.filePath && (
+            <RichTextView body={libDoc.content} resolveImages={resolveInfohubImages} />
+          )}
+          {libDoc?.filePath && <p className="text-sm text-muted-foreground">{t("preview.linkedFileNote")}</p>}
+          {trainDoc && (
+            <ol className="space-y-2">
+              {trainDoc.steps.map((step, i) => (
+                <li key={i} className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{i + 1}. {step}</li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 }
 
 function MockResponse({
@@ -28,10 +70,12 @@ function MockResponse({
     numberMin?: number;
     numberMax?: number;
     temperatureUnit?: "C" | "F";
+    instructionLinkId?: string;
     instructionLinkTitle?: string;
     instructionLinkSection?: "library" | "training";
   };
 }) {
+  const [linkedOpen, setLinkedOpen] = useState(false);
   const { t } = useTranslation("checklists");
   if (responseType === "checkbox") {
     return (
@@ -125,12 +169,19 @@ function MockResponse({
           <span className="text-xs text-muted-foreground italic">{t("preview.instructionPlaceholder")}</span>
         </div>
         {questionConfig?.instructionLinkTitle && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-sage/20 bg-background/70 px-3 py-1 text-xs text-sage-deep">
+          <button
+            type="button"
+            onClick={() => setLinkedOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-sage/20 bg-background/70 px-3 py-1 text-xs text-sage-deep hover:bg-background transition-colors"
+          >
             <ChevronRight size={10} />
             {questionConfig.instructionLinkSection === "training"
               ? t("preview.openLinkedTraining", { title: questionConfig.instructionLinkTitle })
               : t("preview.openLinkedDocument", { title: questionConfig.instructionLinkTitle })}
-          </div>
+          </button>
+        )}
+        {linkedOpen && questionConfig?.instructionLinkId && (
+          <LinkedDocPreview docId={questionConfig.instructionLinkId} onClose={() => setLinkedOpen(false)} />
         )}
       </div>
     );
