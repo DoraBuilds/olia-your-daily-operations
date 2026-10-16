@@ -434,12 +434,9 @@
     "questionTextPlaceholder": "Texto de la pregunta de seguimiento",
     "emailSubjectPlaceholder": "Asunto del correo (opcional — se genera automáticamente si está vacío)",
     "number": {
-      "heading": "Temperatura",
-      "description": "Define el rango aceptable y la unidad. El personal introduce la lectura con un teclado en el kiosco. Para números simples, usa una respuesta de texto.",
       "min": "Mín",
       "max": "Máx",
-      "to": "a",
-      "unit": "Unidad"
+      "to": "a"
     },
     "text": {
       "heading": "Vista previa de respuesta de texto",
@@ -565,12 +562,9 @@
       "dismissWarning": "Descartar advertencia"
     },
     "number": {
-      "heading": "Temperatura",
-      "description": "Define el rango aceptable y la unidad. El personal introduce la lectura con un teclado en el kiosco. Para números simples, usa una respuesta de texto.",
       "min": "Mín",
       "max": "Máx",
-      "to": "a",
-      "unit": "Unidad"
+      "to": "a"
     },
     "multipleChoice": {
       "selectionMode": "Modo de selección"
