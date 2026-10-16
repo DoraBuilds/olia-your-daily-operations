@@ -154,7 +154,7 @@ export function Layout({ children, title, subtitle, headerRight, headerLeft }: L
           {/* Sidebar: outside the scroll container so it never scrolls */}
           <SidebarNav />
           {/* Same hairline as the one under the Olia mark in SidebarNav */}
-          <div aria-hidden className="hidden md:block w-px self-stretch bg-border/60" />
+          <div aria-hidden className="hidden md:block w-px shrink-0 self-stretch bg-border" />
 
           {/* Only this column scrolls */}
           <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 animate-fade-in flex flex-col">
